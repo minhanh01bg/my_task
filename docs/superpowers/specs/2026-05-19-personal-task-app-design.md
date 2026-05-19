@@ -494,8 +494,8 @@ All loaded and Zod-parsed in `src/config/env.ts`; app refuses to boot on invalid
 - Rate limiting + CSP tightening.
 - Optional worker service split.
 
-## 14. Open Questions
+## 14. Resolved Decisions
 
-- Confirm timezone default (`Asia/Ho_Chi_Minh`)?
-- Mobile PWA install + offline read-only — phase 1 nice-to-have or defer?
-- Backup destination (local VPS only, or push to S3-compatible)?
+- Timezone default: `Asia/Ho_Chi_Minh`.
+- PWA: phase 1 ships `manifest.json` + icons for "Add to Home Screen" only. Offline cache deferred to phase 2 (conflict risk with Web Push SW; not worth the complexity for single user).
+- Backup: local VPS only. Daily `mongodump` to `/backups/{date}.gz`, 14-day retention. No off-site sync.
