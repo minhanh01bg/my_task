@@ -3,6 +3,7 @@ export { ChipToggle } from "./chip-toggle";
 export { CollapsibleFormCard } from "./collapsible-form-card";
 export { DataTableShell } from "./data-table-shell";
 export { EmptyState } from "./empty-state";
+export { ImagePicker } from "./image-picker";
 export { Money } from "./money";
 export { PageHeader } from "./page-header";
 export { ProductImage } from "./product-image";

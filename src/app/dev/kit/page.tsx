@@ -5,6 +5,7 @@ import {
   CollapsibleFormCard,
   DataTableShell,
   EmptyState,
+  ImagePicker,
   Money,
   PageHeader,
   ProductImage,
@@ -134,6 +135,10 @@ export default function KitGalleryPage() {
             />
           ))}
         </ResultList>
+      </Section>
+
+      <Section title="ImagePicker">
+        <ImagePicker name="demo-image" productName="Bugi Wave" />
       </Section>
 
       <Section title="StatTile">

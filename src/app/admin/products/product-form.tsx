@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { ImagePicker } from "@/components/kit/image-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -107,6 +108,15 @@ export function ProductForm({ categories }: ProductFormProps) {
               name="costPrice"
               type="number"
               defaultValue="0"
+            />
+          </div>
+
+          <div className="col-span-2 space-y-1.5">
+            <Label htmlFor="product-image">Ảnh sản phẩm</Label>
+            <ImagePicker
+              name="image"
+              productName="Sản phẩm"
+              currentUrl={null}
             />
           </div>
 
