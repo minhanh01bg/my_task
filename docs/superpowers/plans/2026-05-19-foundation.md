@@ -1,5 +1,7 @@
 # Foundation Implementation Plan
 
+> **SUPERSEDED (2026-09-04)** — plan này thuộc spec personal task app đã bị thay thế bởi POS bán hàng. Không thực thi.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Bootstrap the auth + database foundation for the personal task app. After this plan, a user can sign in with GitHub, land on a session-gated app shell, and see empty Today / Inbox / Settings routes. No task domain yet — that ships in Plan 2.

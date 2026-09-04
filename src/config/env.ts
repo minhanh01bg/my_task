@@ -10,6 +10,12 @@ const serverSchema = z.object({
   SENTRY_AUTH_TOKEN: z.string().optional(),
   SENTRY_ORG: z.string().optional(),
   SENTRY_PROJECT: z.string().optional(),
+  DATABASE_URL: z.string().min(1).default("file:./dev.db"),
+  SESSION_SECRET: z
+    .string()
+    .min(32)
+    .default("dev-only-secret-please-change-me!!"),
+  STORE_PASSWORD_HASH: z.string().default(""),
 });
 
 const parsed = serverSchema.safeParse({
@@ -20,6 +26,9 @@ const parsed = serverSchema.safeParse({
   SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN,
   SENTRY_ORG: process.env.SENTRY_ORG,
   SENTRY_PROJECT: process.env.SENTRY_PROJECT,
+  DATABASE_URL: process.env.DATABASE_URL,
+  SESSION_SECRET: process.env.SESSION_SECRET,
+  STORE_PASSWORD_HASH: process.env.STORE_PASSWORD_HASH,
 });
 
 if (!parsed.success) {
