@@ -2,6 +2,24 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+## Execution status (2026-09-04)
+
+Tasks 1-18 implemented and committed on `feat/pos-core` (transcribed from this
+plan's own code blocks; no task was skipped or left partial). **Not run**:
+node/pnpm are unavailable in this session's sandbox, so none of the
+`pnpm vitest run ...`, `pnpm typecheck`, `pnpm lint`, `pnpm build`,
+`pnpm test:e2e`, or `pnpm dev` manual-check steps in this plan were executed.
+Nothing here has been verified beyond a manual read-through for import/export
+consistency. Before trusting this branch:
+
+1. `pnpm install` (adds `idb`, `qrcode`, `fake-indexeddb`, `@types/qrcode` —
+   lockfile not regenerated in this session).
+2. `pnpm db:reset` then `pnpm check && pnpm build && pnpm test:e2e`.
+3. Do the manual smoke tests called out in Task 10 Step 7, Task 11 Step 4,
+   Task 14/16/17's "kiểm tra bằng tay" steps, and Task 15 Step 8 — in
+   particular the offline queue flow (DevTools Network → Offline) and the
+   VietQR canvas rendering, since those can't be verified without a browser.
+
 **Goal:** Hoàn tất Spec 1 — quầy bán được cả khi mất mạng (đơn xếp hàng rồi tự đồng bộ), nhận được chuyển khoản VietQR và ghi nợ, giữ được đơn dở, và chủ cửa hàng quản lý được sản phẩm, đơn hàng, công nợ, báo cáo qua `/admin`.
 
 **Architecture:** Thêm một tầng đồng bộ độc lập (`src/lib/sync/`) đứng giữa UI bán hàng và server — UI chỉ gọi `submitOrder(payload)` và không bao giờ biết mình đang online hay offline. Hàng đợi nằm trong IndexedDB, chống trùng đơn bằng `clientId` mà `createOrder` của Plan 1 đã hỗ trợ sẵn. VietQR sinh ngay trong máy theo chuẩn EMVCo nên mất mạng vẫn hiện được QR. `/admin` là Server Components thuần, không offline, dùng Server Actions cho mọi thao tác ghi.
