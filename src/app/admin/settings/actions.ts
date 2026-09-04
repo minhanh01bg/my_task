@@ -15,7 +15,7 @@ const schema = z.object({
   accountName: z.string().min(1),
 });
 
-export async function saveSettingsAction(formData: FormData) {
+export async function saveSettingsAction(formData: FormData): Promise<void> {
   const parsed = schema.safeParse({
     storeName: formData.get("storeName"),
     bankBin: formData.get("bankBin"),
@@ -23,12 +23,7 @@ export async function saveSettingsAction(formData: FormData) {
     accountName: formData.get("accountName"),
   });
 
-  if (!parsed.success) {
-    return {
-      ok: false as const,
-      message: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
+  if (!parsed.success) return;
 
   await saveStoreName(parsed.data.storeName);
   await saveStoreBankAccount({
@@ -39,6 +34,4 @@ export async function saveSettingsAction(formData: FormData) {
 
   revalidatePath("/admin/settings");
   revalidatePath("/pos");
-
-  return { ok: true as const };
 }

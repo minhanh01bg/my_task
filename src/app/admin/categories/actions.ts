@@ -10,20 +10,16 @@ const schema = z.object({
   sortOrder: z.coerce.number().int().default(0),
 });
 
-export async function saveCategoryAction(formData: FormData) {
+export async function saveCategoryAction(formData: FormData): Promise<void> {
   const parsed = schema.safeParse({
     name: formData.get("name"),
     sortOrder: formData.get("sortOrder"),
   });
 
-  if (!parsed.success) {
-    return { ok: false as const, message: "Tên danh mục không được để trống" };
-  }
+  if (!parsed.success) return;
 
   await prisma.category.create({ data: parsed.data });
 
   revalidatePath("/admin/categories");
   revalidatePath("/pos");
-
-  return { ok: true as const };
 }
