@@ -44,7 +44,8 @@ test.describe("Quản lý sản phẩm", () => {
     await page.getByRole("button", { name: /đơn mới/i }).click();
 
     await page.goto("/admin/debts");
-    await expect(page.getByText("Bà Lan")).toBeVisible();
+    // Trang no hien ten khach hai lan: mot o dau nhom, mot o dong don.
+    await expect(page.getByText("Bà Lan").first()).toBeVisible();
 
     await page.getByRole("button", { name: /khách trả tiền/i }).click();
     await expect(page.getByText(/không ai đang nợ/i)).toBeVisible();
