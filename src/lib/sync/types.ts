@@ -19,6 +19,7 @@ export interface OrderPayloadPayment {
 /** Dung shape ma POST /api/orders nhan. */
 export interface OrderPayload {
   clientId: string;
+  preferredCode?: string | null;
   channel: "pos" | "online";
   lines: OrderPayloadLine[];
   orderDiscount: number;

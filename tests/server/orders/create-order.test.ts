@@ -212,4 +212,50 @@ describe("createOrder", () => {
       createOrder({ clientId: "c10", lines: [], payments: [] }),
     ).rejects.toThrow(/rỗng/i);
   });
+
+  it("dung ma don do may ban dat truoc", async () => {
+    const product = await seedProduct();
+
+    const result = await createOrder({
+      clientId: "pref1",
+      preferredCode: "DH7777",
+      lines: [cashLine(product.id)],
+      payments: [{ method: "cash", amount: 30000 }],
+    });
+
+    expect(result.order.code).toBe("DH7777");
+  });
+
+  it("ma dat truoc bi trung thi tu sinh ma khac", async () => {
+    const product = await seedProduct();
+
+    await createOrder({
+      clientId: "pref2",
+      preferredCode: "DH8888",
+      lines: [cashLine(product.id)],
+      payments: [{ method: "cash", amount: 30000 }],
+    });
+
+    const second = await createOrder({
+      clientId: "pref3",
+      preferredCode: "DH8888",
+      lines: [cashLine(product.id)],
+      payments: [{ method: "cash", amount: 30000 }],
+    });
+
+    expect(second.order.code).not.toBe("DH8888");
+    expect(second.order.code).toMatch(/^DH\d+$/);
+  });
+
+  it("khong dat truoc thi van sinh ma tu dong", async () => {
+    const product = await seedProduct();
+
+    const result = await createOrder({
+      clientId: "pref4",
+      lines: [cashLine(product.id)],
+      payments: [{ method: "cash", amount: 30000 }],
+    });
+
+    expect(result.order.code).toMatch(/^DH\d+$/);
+  });
 });

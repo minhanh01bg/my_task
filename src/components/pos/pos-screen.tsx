@@ -60,6 +60,11 @@ export function PosScreen({
   const [lastSale, setLastSale] = useState<LastSale | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
 
+  // Ma dat truoc de QR mang dung ma don. Sinh lai sau moi lan ban xong.
+  const [pendingCode, setPendingCode] = useState(
+    () => `DH${Date.now().toString().slice(-6)}`,
+  );
+
   const totals = useMemo(
     () => calculateCart(lines, orderDiscount),
     [lines, orderDiscount],
@@ -105,6 +110,7 @@ export function PosScreen({
 
     const outcome = await submitOrder({
       clientId: crypto.randomUUID(),
+      preferredCode: pendingCode,
       channel: "pos",
       lines: lines.map((line) => ({
         productId: line.productId,
@@ -129,6 +135,7 @@ export function PosScreen({
       synced: outcome.synced,
     });
 
+    setPendingCode(`DH${Date.now().toString().slice(-6)}`);
     clear();
     focusSearch();
   }
@@ -194,7 +201,7 @@ export function PosScreen({
       <PaymentDialog
         open={paymentOpen}
         total={totals.total}
-        orderCode="DH"
+        orderCode={pendingCode}
         bankAccount={bankAccount}
         onCancel={() => setPaymentOpen(false)}
         onConfirm={handleConfirm}

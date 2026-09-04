@@ -24,6 +24,8 @@ export interface CreateOrderPayment {
 
 export interface CreateOrderInput {
   clientId: string;
+  /** Ma do may ban dat truoc de gan vao noi dung QR. Trung thi server tu doi. */
+  preferredCode?: string | null;
   channel?: "pos" | "online";
   lines: CreateOrderLine[];
   orderDiscount?: number;
@@ -125,9 +127,19 @@ export async function createOrder(
   return prisma.$transaction(async (tx) => {
     const sequence = (await tx.order.count()) + 1;
 
+    // Ma dat truoc chi duoc dung neu chua ai chiem — tranh vi pham unique.
+    let code = generateOrderCode(sequence);
+    if (input.preferredCode) {
+      const taken = await tx.order.findUnique({
+        where: { code: input.preferredCode },
+        select: { id: true },
+      });
+      if (!taken) code = input.preferredCode;
+    }
+
     const order = await tx.order.create({
       data: {
-        code: generateOrderCode(sequence),
+        code,
         channel: input.channel ?? "pos",
         status,
         subtotal: totals.subtotal,

@@ -23,6 +23,11 @@ const paymentSchema = z.object({
 
 const bodySchema = z.object({
   clientId: z.string().min(1),
+  preferredCode: z
+    .string()
+    .regex(/^DH\d+$/)
+    .nullable()
+    .optional(),
   channel: z.enum(["pos", "online"]).default("pos"),
   lines: z.array(lineSchema).min(1),
   orderDiscount: z.number().int().min(0).default(0),
