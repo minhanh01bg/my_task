@@ -15,6 +15,7 @@ const sugar: SearchableProduct = {
   stock: 10,
   categoryId: null,
   soldCount: 0,
+  imageUrl: null,
   searchText: "duong trang",
 };
 

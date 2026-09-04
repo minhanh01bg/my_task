@@ -11,6 +11,8 @@ export interface SaveProductInput {
   costPrice: number;
   stock: number;
   aliases?: string | null;
+  /** Bo qua (undefined) nghia la giu nguyen anh dang co. */
+  imageUrl?: string | null;
   isActive: boolean;
 }
 
@@ -46,16 +48,22 @@ export async function saveProduct(
     }),
   };
 
+  const dataWithImage =
+    input.imageUrl === undefined ? data : { ...data, imageUrl: input.imageUrl };
+
   if (input.id) {
     const updated = await prisma.product.update({
       where: { id: input.id },
-      data,
+      data: dataWithImage,
       select: { id: true },
     });
     return updated;
   }
 
-  const created = await prisma.product.create({ data, select: { id: true } });
+  const created = await prisma.product.create({
+    data: dataWithImage,
+    select: { id: true },
+  });
   return created;
 }
 
