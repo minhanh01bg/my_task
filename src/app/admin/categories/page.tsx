@@ -1,4 +1,7 @@
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { prisma } from "@/server/db/prisma";
 
 import { saveCategoryAction } from "./actions";
@@ -15,37 +18,44 @@ export default async function CategoriesPage() {
     <div className="max-w-xl space-y-6">
       <h1 className="text-2xl font-semibold">Danh mục</h1>
 
-      <form action={saveCategoryAction} className="flex items-end gap-2">
-        <label className="flex-1">
-          <span className="text-sm text-muted-foreground">Tên danh mục</span>
-          <input
-            name="name"
-            required
-            className="mt-1 w-full rounded border px-3 py-2"
-          />
-        </label>
-        <label className="w-24">
-          <span className="text-sm text-muted-foreground">Thứ tự</span>
-          <input
-            name="sortOrder"
-            type="number"
-            defaultValue="0"
-            className="mt-1 w-full rounded border px-3 py-2"
-          />
-        </label>
-        <Button type="submit">Thêm</Button>
-      </form>
+      <Card>
+        <CardContent>
+          <form action={saveCategoryAction} className="flex items-end gap-2">
+            <div className="flex-1 space-y-1.5">
+              <Label htmlFor="category-name">Tên danh mục</Label>
+              <Input id="category-name" name="name" required />
+            </div>
+            <div className="w-24 space-y-1.5">
+              <Label htmlFor="category-order">Thứ tự</Label>
+              <Input
+                id="category-order"
+                name="sortOrder"
+                type="number"
+                defaultValue="0"
+              />
+            </div>
+            <Button type="submit">Thêm</Button>
+          </form>
+        </CardContent>
+      </Card>
 
-      <ul className="divide-y">
-        {categories.map((category) => (
-          <li key={category.id} className="flex justify-between py-3">
-            <span>{category.name}</span>
-            <span className="text-sm text-muted-foreground">
-              {category._count.products} sản phẩm
-            </span>
-          </li>
-        ))}
-      </ul>
+      <Card>
+        <CardHeader>
+          <CardTitle>Danh sách ({categories.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul className="divide-y">
+            {categories.map((category) => (
+              <li key={category.id} className="flex justify-between py-3">
+                <span>{category.name}</span>
+                <span className="text-muted-foreground text-sm">
+                  {category._count.products} sản phẩm
+                </span>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
     </div>
   );
 }

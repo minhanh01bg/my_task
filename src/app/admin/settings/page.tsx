@@ -1,4 +1,7 @@
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   getStoreBankAccount,
   getStoreName,
@@ -18,54 +21,54 @@ export default async function SettingsPage() {
     <div className="max-w-xl space-y-6">
       <h1 className="text-2xl font-semibold">Cài đặt</h1>
 
-      <form action={saveSettingsAction} className="space-y-4">
-        <label className="block">
-          <span className="text-sm text-muted-foreground">Tên cửa hàng</span>
-          <input
-            name="storeName"
-            defaultValue={storeName}
-            className="mt-1 w-full rounded border px-4 py-3"
-          />
-        </label>
+      <form action={saveSettingsAction} className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Cửa hàng</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1.5">
+            <Label htmlFor="store-name">Tên cửa hàng</Label>
+            <Input id="store-name" name="storeName" defaultValue={storeName} />
+          </CardContent>
+        </Card>
 
-        <fieldset className="space-y-3 rounded-lg border p-4">
-          <legend className="px-2 text-sm font-medium">
-            Tài khoản nhận chuyển khoản
-          </legend>
+        <Card>
+          <CardHeader>
+            <CardTitle>Tài khoản nhận chuyển khoản</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="bank-bin">Mã ngân hàng (BIN, 6 chữ số)</Label>
+              <Input
+                id="bank-bin"
+                name="bankBin"
+                defaultValue={account?.bankBin ?? ""}
+                placeholder="VD: 970423"
+              />
+            </div>
 
-          <label className="block">
-            <span className="text-sm text-muted-foreground">
-              Mã ngân hàng (BIN, 6 chữ số)
-            </span>
-            <input
-              name="bankBin"
-              defaultValue={account?.bankBin ?? ""}
-              placeholder="VD: 970423"
-              className="mt-1 w-full rounded border px-4 py-3"
-            />
-          </label>
+            <div className="space-y-1.5">
+              <Label htmlFor="bank-account-number">Số tài khoản</Label>
+              <Input
+                id="bank-account-number"
+                name="accountNumber"
+                defaultValue={account?.accountNumber ?? ""}
+              />
+            </div>
 
-          <label className="block">
-            <span className="text-sm text-muted-foreground">Số tài khoản</span>
-            <input
-              name="accountNumber"
-              defaultValue={account?.accountNumber ?? ""}
-              className="mt-1 w-full rounded border px-4 py-3"
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-sm text-muted-foreground">
-              Tên chủ tài khoản (không dấu)
-            </span>
-            <input
-              name="accountName"
-              defaultValue={account?.accountName ?? ""}
-              placeholder="NGUYEN VAN A"
-              className="mt-1 w-full rounded border px-4 py-3"
-            />
-          </label>
-        </fieldset>
+            <div className="space-y-1.5">
+              <Label htmlFor="bank-account-name">
+                Tên chủ tài khoản (không dấu)
+              </Label>
+              <Input
+                id="bank-account-name"
+                name="accountName"
+                defaultValue={account?.accountName ?? ""}
+                placeholder="NGUYEN VAN A"
+              />
+            </div>
+          </CardContent>
+        </Card>
 
         <Button type="submit">Lưu cài đặt</Button>
       </form>
