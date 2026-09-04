@@ -76,8 +76,10 @@ phản WCAG AA (≥4.5:1 cho chữ thường) trên cả hai theme.
 
 ### Tầng 2 — Primitive còn thiếu (`src/components/ui/`)
 
-Thêm từ registry shadcn, giữ nguyên 10 primitive đã có:
-`collapsible`, `separator`, `skeleton`, `sonner`, `popover`.
+Thêm từ registry shadcn, giữ nguyên 10 primitive đã có: **`collapsible`**, và
+chỉ nó. Bản nháp trước liệt thêm `separator`, `skeleton`, `sonner`, `popover`
+nhưng không component nào của §4.3 cần tới — thêm vào là vi phạm YAGNI. Khi nào
+có component thật sự cần thì thêm lúc đó.
 
 ### Tầng 3 — Kit (`src/components/kit/`)
 
