@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CartPanel } from "@/components/pos/cart-panel";
@@ -52,9 +53,7 @@ export function PosScreen({
 
   const [catalog, setCatalog] = useState(initialCatalog);
   const [stale, setStale] = useState(false);
-  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(
-    null,
-  );
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [serviceOpen, setServiceOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [lastSale, setLastSale] = useState<LastSale | null>(null);
@@ -143,6 +142,16 @@ export function PosScreen({
   return (
     <main className="grid h-dvh grid-cols-1 gap-4 p-4 lg:grid-cols-[1fr_420px]">
       <section className="flex min-h-0 flex-col gap-4 overflow-y-auto">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-semibold">Bán hàng</h1>
+          <Link
+            href="/admin/products"
+            className="text-muted-foreground text-sm hover:underline"
+          >
+            Quản lý →
+          </Link>
+        </div>
+
         <div className="flex items-center gap-3">
           <SyncIndicator />
           {stale ? (
@@ -209,14 +218,14 @@ export function PosScreen({
 
       {lastSale ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md space-y-4 rounded-lg bg-background p-8 text-center">
+          <div className="bg-background w-full max-w-md space-y-4 rounded-lg p-8 text-center">
             <p className="text-muted-foreground">
               {lastSale.synced
                 ? `Đã lưu đơn ${lastSale.code}`
                 : "Đã lưu tạm — sẽ đồng bộ khi có mạng"}
             </p>
             <p className="text-lg">Khách đưa {formatVnd(lastSale.received)}</p>
-            <p className="text-sm text-muted-foreground">Tiền thối lại</p>
+            <p className="text-muted-foreground text-sm">Tiền thối lại</p>
             <p
               data-testid="last-sale-change"
               className="text-7xl font-bold tabular-nums"
