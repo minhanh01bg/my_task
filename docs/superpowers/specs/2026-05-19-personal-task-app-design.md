@@ -3,7 +3,7 @@
 - **Date:** 2026-05-19
 - **Owner:** minhanh01bg
 - **Base:** `nextjs-with-agent` (Next 16 + React 19 + TS strict + Tailwind 4 + shadcn + React Query + Zod)
-- **Status:** Draft, awaiting user review
+- **Status:** SUPERSEDED (2026-09-04) — repo chuyển hướng sang POS bán hàng. Xem `docs/superpowers/specs/2026-09-04-pos-store-design.md`.
 
 ## 1. Purpose & Scope
 
