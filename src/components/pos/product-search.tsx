@@ -2,11 +2,14 @@
 
 import { useMemo, useRef, useState } from "react";
 
-import { Input } from "@/components/ui/input";
-import { formatVnd } from "@/lib/money";
+import {
+  EmptyState,
+  ResultList,
+  ResultRow,
+  SearchField,
+} from "@/components/kit";
 import { searchProducts } from "@/lib/search/match";
 import type { SearchableProduct } from "@/lib/search/types";
-import { cn } from "@/lib/utils";
 
 interface ProductSearchProps {
   products: SearchableProduct[];
@@ -69,8 +72,8 @@ export function ProductSearch({ products, onSelect }: ProductSearchProps) {
   const showEmpty = query.trim().length > 0 && results.length === 0;
 
   return (
-    <div className="flex flex-col gap-2">
-      <Input
+    <div className="flex flex-col gap-3">
+      <SearchField
         ref={inputRef}
         role="combobox"
         aria-expanded={results.length > 0}
@@ -83,45 +86,32 @@ export function ProductSearch({ products, onSelect }: ProductSearchProps) {
           setActiveIndex(0);
         }}
         onKeyDown={handleKeyDown}
-        className="h-14 px-4 text-xl"
+        onClear={reset}
       />
 
       {showEmpty ? (
-        <p className="text-muted-foreground px-4 py-6 text-center">
-          Không tìm thấy sản phẩm nào
-        </p>
+        <EmptyState
+          title="Không tìm thấy sản phẩm nào"
+          description="Thử gõ ít chữ hơn, hoặc chọn theo danh mục bên dưới."
+        />
       ) : null}
 
-      <ul
-        id="pos-search-results"
-        role="listbox"
-        className="flex flex-col gap-1"
-      >
-        {results.map((product, index) => (
-          <li key={product.id}>
-            <button
-              type="button"
-              role="option"
-              aria-selected={index === activeIndex}
-              onClick={() => choose(product)}
-              className={cn(
-                "flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-lg",
-                index === activeIndex ? "bg-accent" : "hover:bg-accent/50",
-              )}
-            >
-              <span className="flex flex-col">
-                <span className="font-medium">{product.name}</span>
-                <span className="text-muted-foreground text-sm">
-                  Còn {product.stock} {product.unit}
-                </span>
-              </span>
-              <span className="font-semibold tabular-nums">
-                {formatVnd(product.price)}
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
+      {results.length > 0 ? (
+        <ResultList id="pos-search-results">
+          {results.map((product, index) => (
+            <ResultRow
+              key={product.id}
+              name={product.name}
+              price={product.price}
+              unit={product.unit}
+              stock={product.stock}
+              imageUrl={product.imageUrl}
+              active={index === activeIndex}
+              onSelect={() => choose(product)}
+            />
+          ))}
+        </ResultList>
+      ) : null}
     </div>
   );
 }
