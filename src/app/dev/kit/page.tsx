@@ -1,3 +1,5 @@
+"use client";
+
 import { notFound } from "next/navigation";
 
 import {
@@ -54,6 +56,9 @@ function Section({
 /**
  * Trang xem toan bo kit. Khong phai giao dien nguoi dung — day la cho de
  * kiem mat moi component o ca hai theme truoc khi tin vao chung.
+ *
+ * La Client Component vi gallery phai truyen callback gia (onToggle, onSelect)
+ * xuong tung component; Server Component khong serialize duoc ham.
  */
 export default function KitGalleryPage() {
   if (!isGalleryEnabled(process.env.NODE_ENV)) notFound();

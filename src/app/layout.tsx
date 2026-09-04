@@ -23,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className="h-full antialiased">
-      <body className="min-h-full bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+      <body className="bg-background text-foreground min-h-full">
         <Providers>{children}</Providers>
         <ObservabilityProvider />
         <ServiceWorkerRegistrar />
