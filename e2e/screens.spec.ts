@@ -19,6 +19,12 @@ test.describe("anh chup man hinh", () => {
         path: `test-results/admin-products-${scheme}.png`,
         fullPage: true,
       });
+
+      await page.goto("/admin/reports");
+      await page.screenshot({
+        path: `test-results/admin-reports-${scheme}.png`,
+        fullPage: true,
+      });
     });
   }
 });
