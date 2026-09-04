@@ -43,13 +43,13 @@ hiện ở lưới POS và bảng admin, và **mất mạng vẫn hiện đượ
 
 ## 3. Chỗ code đang lệch Spec 1
 
-| Chỗ | Hiện tại | Spec 1 đòi |
-|---|---|---|
-| Chip danh mục (`category-grid.tsx`) | `px-4 py-2 text-base` ≈ cao 40px | nút to, bấm ngón tay phải trúng (≥44px) |
-| Thẻ sản phẩm (`category-grid.tsx`) | `p-3`, không `min-h` → cao thấp so le; `ring-foreground/10` viền mờ | nút to, thoáng, nhìn ra được |
-| Kết quả tìm (`product-search.tsx`) | `<ul>` trần không khung; dòng active chỉ khác nền `bg-accent` | rõ đang chọn dòng nào khi gõ nhanh cả ngày |
-| Tồn kho (cả hai) | "Còn 0 cái" chữ xám, y hệt "Còn 50 cái" | thu ngân phải liếc là thấy |
-| `/admin/products` | form luôn xoè chiếm nửa màn trên; bảng không hover; không empty state; báo "Đã lưu" chữ xám | trang quản trị thường, cần gọn |
+| Chỗ                                 | Hiện tại                                                                                    | Spec 1 đòi                                 |
+| ----------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| Chip danh mục (`category-grid.tsx`) | `px-4 py-2 text-base` ≈ cao 40px                                                            | nút to, bấm ngón tay phải trúng (≥44px)    |
+| Thẻ sản phẩm (`category-grid.tsx`)  | `p-3`, không `min-h` → cao thấp so le; `ring-foreground/10` viền mờ                         | nút to, thoáng, nhìn ra được               |
+| Kết quả tìm (`product-search.tsx`)  | `<ul>` trần không khung; dòng active chỉ khác nền `bg-accent`                               | rõ đang chọn dòng nào khi gõ nhanh cả ngày |
+| Tồn kho (cả hai)                    | "Còn 0 cái" chữ xám, y hệt "Còn 50 cái"                                                     | thu ngân phải liếc là thấy                 |
+| `/admin/products`                   | form luôn xoè chiếm nửa màn trên; bảng không hover; không empty state; báo "Đã lưu" chữ xám | trang quản trị thường, cần gọn             |
 
 ## 4. Kiến trúc — sáu tầng
 
@@ -68,8 +68,10 @@ Thay bảng xám bằng bảng có màu, định nghĩa cho cả light và dark:
 ```
 
 Thang chữ display cho "tiền thối lại (chữ rất to)" ở Spec 1 mục 5.
-`components.json` đổi `baseColor` thành `blue` để lần chạy shadcn CLI sau
-không kéo lại bảng xám.
+`components.json` giữ nguyên `baseColor: "neutral"`. Trường này chỉ nhận một
+tập cố định do registry quy định (`gray`, `neutral`, `slate`, `stone`, `zinc`),
+không nhận màu thật, và CLI chỉ đọc nó lúc `init` chứ không phải lúc `add` —
+nên khối token ở trên là nguồn sự thật duy nhất về màu.
 
 Mỗi token màu mới đi kèm một token `-foreground` tương ứng, và phải đạt tương
 phản WCAG AA (≥4.5:1 cho chữ thường) trên cả hai theme.
@@ -87,21 +89,21 @@ Thuần trình bày. **Không import Prisma, không import store, không gọi
 Server Action.** Nhận dữ liệu qua props, phát sự kiện ra ngoài qua callback.
 Đây là ranh giới khiến kit copy sang dự án khác được.
 
-| Component | Việc |
-|---|---|
-| `Money` | Định dạng VND qua `formatVnd`, `tabular-nums`, size `sm`/`base`/`display` |
-| `StockBadge` | 3 mức: hết (`≤0`, destructive) / sắp hết (`≤ threshold`, warning) / còn (success) |
-| `ChipToggle` | Chip danh mục, cao ≥ `--touch-target`, có trạng thái chọn |
-| `TouchButton` | Bọc `Button`, ép `min-height: var(--touch-target)` |
-| `ProductImage` | Ảnh + dự phòng: chữ cái đầu của tên trên nền màu sinh từ tên |
-| `ProductTile` | Thẻ sản phẩm đều cỡ: ảnh + tên + giá + đơn vị, `min-h`, border rõ, hover nhấc |
-| `SearchField` | Input + icon kính lúp + nút xoá |
-| `ResultList` / `ResultRow` | Khung `divide-y`; dòng active có thanh nhấn trái + nền đậm |
-| `PageHeader` | Tiêu đề + mô tả + slot hành động (cho `/admin/*`) |
-| `DataTableShell` | Bảng hover row, cột số canh phải, có empty state |
-| `EmptyState` | Icon + câu dẫn + hành động |
-| `CollapsibleFormCard` | Card form gập được |
-| `StatTile` | Ô số liệu cho `/admin/reports` |
+| Component                  | Việc                                                                              |
+| -------------------------- | --------------------------------------------------------------------------------- |
+| `Money`                    | Định dạng VND qua `formatVnd`, `tabular-nums`, size `sm`/`base`/`display`         |
+| `StockBadge`               | 3 mức: hết (`≤0`, destructive) / sắp hết (`≤ threshold`, warning) / còn (success) |
+| `ChipToggle`               | Chip danh mục, cao ≥ `--touch-target`, có trạng thái chọn                         |
+| `TouchButton`              | Bọc `Button`, ép `min-height: var(--touch-target)`                                |
+| `ProductImage`             | Ảnh + dự phòng: chữ cái đầu của tên trên nền màu sinh từ tên                      |
+| `ProductTile`              | Thẻ sản phẩm đều cỡ: ảnh + tên + giá + đơn vị, `min-h`, border rõ, hover nhấc     |
+| `SearchField`              | Input + icon kính lúp + nút xoá                                                   |
+| `ResultList` / `ResultRow` | Khung `divide-y`; dòng active có thanh nhấn trái + nền đậm                        |
+| `PageHeader`               | Tiêu đề + mô tả + slot hành động (cho `/admin/*`)                                 |
+| `DataTableShell`           | Bảng hover row, cột số canh phải, có empty state                                  |
+| `EmptyState`               | Icon + câu dẫn + hành động                                                        |
+| `CollapsibleFormCard`      | Card form gập được                                                                |
+| `StatTile`                 | Ô số liệu cho `/admin/reports`                                                    |
 
 **Ngưỡng "sắp hết"** là hằng số trong kit, mặc định `5`, ghi đè qua prop
 `threshold`. Không thêm cột vào schema.
@@ -173,9 +175,9 @@ component. Đây là chỗ "sau chỉ lấy ra dùng thôi".
 
 ## 7. Rủi ro
 
-| Rủi ro | Xử lý |
-|---|---|
-| Đổi token màu làm hỏng màn hình chưa được xem tới | Trang `/dev/kit` + ảnh chụp Playwright trước/sau |
-| Ảnh làm phình payload catalog (POS nạp cả danh mục một lần) | Chỉ trả `imageUrl` (chuỗi), không nhúng ảnh; ảnh tải lười qua `next/image` |
-| Upload lúc chạy khoá app vào self-host | Ghi rõ ở §4; đổi sang object storage là thay đúng `save-image.ts` |
-| `sharp` là native dep, có thể vấp lúc cài | `pnpm-workspace.yaml` đang liệt `sharp` trong `ignoredBuiltDependencies` (không cho chạy build script). Khi thêm `sharp` làm dependency thật, phải chuyển nó sang `onlyBuiltDependencies`, nếu không binary native sẽ không được biên dịch và `save-image.ts` sẽ ném lỗi lúc chạy. Kiểm bằng một test Vitest gọi resize thật. |
+| Rủi ro                                                      | Xử lý                                                                                                                                                                                                                                                                                                                         |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Đổi token màu làm hỏng màn hình chưa được xem tới           | Trang `/dev/kit` + ảnh chụp Playwright trước/sau                                                                                                                                                                                                                                                                              |
+| Ảnh làm phình payload catalog (POS nạp cả danh mục một lần) | Chỉ trả `imageUrl` (chuỗi), không nhúng ảnh; ảnh tải lười qua `next/image`                                                                                                                                                                                                                                                    |
+| Upload lúc chạy khoá app vào self-host                      | Ghi rõ ở §4; đổi sang object storage là thay đúng `save-image.ts`                                                                                                                                                                                                                                                             |
+| `sharp` là native dep, có thể vấp lúc cài                   | `pnpm-workspace.yaml` đang liệt `sharp` trong `ignoredBuiltDependencies` (không cho chạy build script). Khi thêm `sharp` làm dependency thật, phải chuyển nó sang `onlyBuiltDependencies`, nếu không binary native sẽ không được biên dịch và `save-image.ts` sẽ ném lỗi lúc chạy. Kiểm bằng một test Vitest gọi resize thật. |
