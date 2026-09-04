@@ -3,10 +3,9 @@
 import { useMemo } from "react";
 
 import { CartLineRow } from "@/components/pos/cart-line-row";
-import { Button } from "@/components/ui/button";
-import { formatVnd } from "@/lib/money";
 import { calculateCart } from "@/lib/pricing/calculate";
 import { useCartStore } from "@/stores/cart-store";
+import { Money, TouchButton } from "@/components/kit";
 
 interface CartPanelProps {
   onCheckout: () => void;
@@ -44,18 +43,18 @@ export function CartPanel({ onCheckout }: CartPanelProps) {
             data-testid="cart-total"
             className="text-4xl font-bold tabular-nums"
           >
-            {formatVnd(totals.total)}
+            <Money amount={totals.total} className="text-3xl" />
           </span>
         </div>
 
-        <Button
+        <TouchButton
           size="lg"
           disabled={lines.length === 0}
           onClick={onCheckout}
           className="mt-4 h-16 w-full text-xl"
         >
           Thanh toán (F4)
-        </Button>
+        </TouchButton>
       </div>
     </section>
   );

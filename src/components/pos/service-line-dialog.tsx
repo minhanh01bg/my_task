@@ -1,8 +1,8 @@
 "use client";
 
+import { TouchButton } from "@/components/kit";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCartStore } from "@/stores/cart-store";
@@ -70,17 +70,17 @@ export function ServiceLineDialog({
         </div>
 
         <div className="flex gap-2">
-          <Button
+          <TouchButton
             type="button"
             variant="outline"
             className="flex-1"
             onClick={() => onOpenChange(false)}
           >
             Huỷ
-          </Button>
-          <Button type="submit" className="flex-1">
+          </TouchButton>
+          <TouchButton type="submit" className="flex-1">
             Thêm
-          </Button>
+          </TouchButton>
         </div>
       </form>
     </div>

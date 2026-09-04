@@ -3,9 +3,9 @@
 import QRCode from "qrcode";
 import { useEffect, useRef } from "react";
 
-import { formatVnd } from "@/lib/money";
 import { buildVietQrPayload } from "@/lib/vietqr/build";
 import type { BankAccount } from "@/lib/vietqr/types";
+import { Money } from "@/components/kit";
 
 interface TransferPanelProps {
   amount: number;
@@ -40,7 +40,7 @@ export function TransferPanel({
 
   if (!bankAccount) {
     return (
-      <p className="py-10 text-center text-muted-foreground">
+      <p className="text-muted-foreground py-10 text-center">
         Chưa cấu hình tài khoản ngân hàng. Vào Quản lý → Cài đặt để khai báo.
       </p>
     );
@@ -50,11 +50,11 @@ export function TransferPanel({
     <div className="flex flex-col items-center gap-3">
       <canvas ref={canvasRef} data-testid="vietqr-canvas" />
       <div className="text-center">
-        <p className="text-2xl font-bold tabular-nums">{formatVnd(amount)}</p>
-        <p className="text-sm text-muted-foreground">
+        <Money amount={amount} className="text-2xl" />
+        <p className="text-muted-foreground text-sm">
           Nội dung: <span className="font-medium">{description}</span>
         </p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           {bankAccount.accountName} — {bankAccount.accountNumber}
         </p>
       </div>

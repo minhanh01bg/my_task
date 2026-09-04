@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/kit";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,10 @@ export default async function SettingsPage() {
 
   return (
     <div className="max-w-xl space-y-6">
-      <h1 className="text-2xl font-semibold">Cài đặt</h1>
+      <PageHeader
+        title="Cài đặt"
+        description="Thông tin ngân hàng dùng để sinh mã QR khi khách chuyển khoản."
+      />
 
       <form action={saveSettingsAction} className="space-y-6">
         <Card>

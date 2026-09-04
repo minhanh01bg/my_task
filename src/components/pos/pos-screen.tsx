@@ -14,8 +14,6 @@ import { ProductSearch } from "@/components/pos/product-search";
 import { ServiceLineDialog } from "@/components/pos/service-line-dialog";
 import { SyncIndicator } from "@/components/pos/sync-indicator";
 import { usePosShortcuts } from "@/components/pos/use-pos-shortcuts";
-import { Button } from "@/components/ui/button";
-import { formatVnd } from "@/lib/money";
 import { calculateCart } from "@/lib/pricing/calculate";
 import {
   isCatalogStale,
@@ -27,6 +25,7 @@ import type { BankAccount } from "@/lib/vietqr/types";
 import { useCartStore } from "@/stores/cart-store";
 import { useHeldOrdersStore } from "@/stores/held-orders-store";
 import type { CatalogResponse } from "@/types/catalog";
+import { Money, TouchButton } from "@/components/kit";
 
 interface PosScreenProps {
   catalog: CatalogResponse;
@@ -186,21 +185,21 @@ export function PosScreen({
 
       <section className="bg-card ring-foreground/10 flex min-h-0 flex-col gap-2 rounded-xl p-4 ring-1">
         <div className="flex gap-2">
-          <Button
+          <TouchButton
             variant="outline"
             className="flex-1"
             onClick={() => setServiceOpen(true)}
           >
             + Tiền công
-          </Button>
-          <Button
+          </TouchButton>
+          <TouchButton
             variant="outline"
             className="flex-1"
             disabled={lines.length === 0}
             onClick={holdCurrent}
           >
             Giữ đơn (F8)
-          </Button>
+          </TouchButton>
         </div>
         <CartPanel onCheckout={() => setPaymentOpen(true)} />
       </section>
@@ -224,21 +223,27 @@ export function PosScreen({
                 ? `Đã lưu đơn ${lastSale.code}`
                 : "Đã lưu tạm — sẽ đồng bộ khi có mạng"}
             </p>
-            <p className="text-lg">Khách đưa {formatVnd(lastSale.received)}</p>
+            <p className="text-lg">
+              Khách đưa <Money amount={lastSale.received} />
+            </p>
             <p className="text-muted-foreground text-sm">Tiền thối lại</p>
             <p
               data-testid="last-sale-change"
               className="text-7xl font-bold tabular-nums"
             >
-              {formatVnd(lastSale.change)}
+              <Money
+                amount={lastSale.change}
+                size="display"
+                className="text-7xl"
+              />
             </p>
-            <Button
+            <TouchButton
               autoFocus
               className="h-16 w-full text-xl"
               onClick={() => setLastSale(null)}
             >
               Đơn mới
-            </Button>
+            </TouchButton>
           </div>
         </div>
       ) : null}

@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/kit";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,10 @@ export default async function CategoriesPage() {
 
   return (
     <div className="max-w-xl space-y-6">
-      <h1 className="text-2xl font-semibold">Danh mục</h1>
+      <PageHeader
+        title="Danh mục"
+        description="Nhóm hàng hoá, quyết định thứ tự các chip trên màn bán hàng."
+      />
 
       <Card>
         <CardContent>
