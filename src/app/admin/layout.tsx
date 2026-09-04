@@ -16,14 +16,17 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="grid min-h-dvh grid-cols-[220px_1fr]">
-      <nav className="border-r p-4">
+    <div className="bg-muted/30 grid min-h-dvh grid-cols-[220px_1fr]">
+      <nav className="bg-background border-r p-4">
+        <p className="text-muted-foreground mb-4 px-3 text-xs font-semibold tracking-wide uppercase">
+          Quản lý
+        </p>
         <ul className="flex flex-col gap-1">
           {NAV.map((item) => (
             <li key={item.href}>
               <Link
                 href={item.href}
-                className="block rounded px-3 py-2 hover:bg-accent"
+                className="hover:bg-accent block rounded-lg px-3 py-2 text-sm"
               >
                 {item.label}
               </Link>

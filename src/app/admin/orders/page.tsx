@@ -1,3 +1,6 @@
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatVnd } from "@/lib/money";
 import { prisma } from "@/server/db/prisma";
 
@@ -10,6 +13,13 @@ const STATUS_LABEL: Record<string, string> = {
   pending: "Chờ thanh toán",
   debt: "Ghi nợ",
   cancelled: "Đã huỷ",
+};
+
+const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline"> = {
+  paid: "default",
+  pending: "secondary",
+  debt: "outline",
+  cancelled: "outline",
 };
 
 export default async function OrdersPage() {
@@ -26,47 +36,60 @@ export default async function OrdersPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Đơn hàng</h1>
 
-      <ul className="divide-y">
-        {orders.map((order) => (
-          <li key={order.id} className="flex items-start justify-between py-3">
-            <div>
-              <p className="font-medium">
-                {order.code}
-                {order.hasStockWarning ? (
-                  <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-900">
-                    Tồn âm
-                  </span>
-                ) : null}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {order.items
-                  .map((item) => `${item.nameSnapshot} ×${item.quantity}`)
-                  .join(", ")}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {STATUS_LABEL[order.status] ?? order.status}
-                {order.customer ? ` — ${order.customer.name}` : ""}
-              </p>
-            </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Gần đây ({orders.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul className="divide-y">
+            {orders.map((order) => (
+              <li
+                key={order.id}
+                className="flex items-start justify-between py-3"
+              >
+                <div>
+                  <p className="flex items-center gap-2 font-medium">
+                    {order.code}
+                    <Badge variant={STATUS_VARIANT[order.status] ?? "outline"}>
+                      {STATUS_LABEL[order.status] ?? order.status}
+                    </Badge>
+                    {order.hasStockWarning ? (
+                      <Badge variant="destructive">Tồn âm</Badge>
+                    ) : null}
+                  </p>
+                  <p className="text-muted-foreground text-sm">
+                    {order.items
+                      .map((item) => `${item.nameSnapshot} ×${item.quantity}`)
+                      .join(", ")}
+                  </p>
+                  {order.customer ? (
+                    <p className="text-muted-foreground text-sm">
+                      {order.customer.name}
+                    </p>
+                  ) : null}
+                </div>
 
-            <div className="flex items-center gap-3">
-              <span className="text-lg font-semibold tabular-nums">
-                {formatVnd(order.total)}
-              </span>
-              {order.status !== "cancelled" ? (
-                <form action={cancelOrderAction.bind(null, order.id)}>
-                  <button
-                    type="submit"
-                    className="text-sm text-red-600 hover:underline"
-                  >
-                    Huỷ đơn
-                  </button>
-                </form>
-              ) : null}
-            </div>
-          </li>
-        ))}
-      </ul>
+                <div className="flex items-center gap-3">
+                  <span className="text-lg font-semibold tabular-nums">
+                    {formatVnd(order.total)}
+                  </span>
+                  {order.status !== "cancelled" ? (
+                    <form action={cancelOrderAction.bind(null, order.id)}>
+                      <Button
+                        type="submit"
+                        variant="ghost"
+                        className="text-destructive"
+                      >
+                        Huỷ đơn
+                      </Button>
+                    </form>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
     </div>
   );
 }

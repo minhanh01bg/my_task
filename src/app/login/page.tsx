@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,22 +36,28 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center p-6">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
-        <h1 className="text-2xl font-semibold">Đăng nhập</h1>
-        <input
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder="Mật khẩu cửa hàng"
-          autoFocus
-          className="w-full rounded-md border px-4 py-3 text-lg"
-        />
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        <Button type="submit" disabled={pending} className="w-full">
-          {pending ? "Đang kiểm tra..." : "Vào bán hàng"}
-        </Button>
-      </form>
+    <main className="bg-muted/30 flex min-h-dvh items-center justify-center p-6">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle className="text-2xl">Đăng nhập</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Mật khẩu cửa hàng"
+              autoFocus
+              className="h-11 text-base"
+            />
+            {error ? <p className="text-destructive text-sm">{error}</p> : null}
+            <Button type="submit" disabled={pending} className="w-full">
+              {pending ? "Đang kiểm tra..." : "Vào bán hàng"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </main>
   );
 }

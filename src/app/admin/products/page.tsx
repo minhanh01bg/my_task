@@ -1,3 +1,13 @@
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { formatVnd } from "@/lib/money";
 import { prisma } from "@/server/db/prisma";
 
@@ -24,41 +34,54 @@ export default async function ProductsPage() {
 
       <ProductForm categories={categories} />
 
-      <table className="w-full text-left">
-        <thead className="border-b text-sm text-muted-foreground">
-          <tr>
-            <th className="py-2">Tên</th>
-            <th>Danh mục</th>
-            <th className="text-right">Giá bán</th>
-            <th className="text-right">Tồn</th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.map((product) => (
-            <tr key={product.id} className="border-b">
-              <td className="py-2">
-                <span className="font-medium">{product.name}</span>
-                {product.aliases ? (
-                  <span className="ml-2 text-sm text-muted-foreground">
-                    ({product.aliases})
-                  </span>
-                ) : null}
-              </td>
-              <td className="text-sm text-muted-foreground">
-                {product.category?.name ?? "—"}
-              </td>
-              <td className="text-right tabular-nums">
-                {formatVnd(product.price)}
-              </td>
-              <td className="text-right tabular-nums">
-                <span className={product.stock < 0 ? "text-red-600" : undefined}>
-                  {product.stock} {product.unit}
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <Card>
+        <CardHeader>
+          <CardTitle>Danh sách ({products.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Tên</TableHead>
+                <TableHead>Danh mục</TableHead>
+                <TableHead className="text-right">Giá bán</TableHead>
+                <TableHead className="text-right">Tồn</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {products.map((product) => (
+                <TableRow key={product.id}>
+                  <TableCell>
+                    <span className="font-medium">{product.name}</span>
+                    {product.aliases ? (
+                      <span className="text-muted-foreground ml-2 text-sm">
+                        ({product.aliases})
+                      </span>
+                    ) : null}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {product.category?.name ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatVnd(product.price)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {product.stock < 0 ? (
+                      <Badge variant="destructive">
+                        {product.stock} {product.unit}
+                      </Badge>
+                    ) : (
+                      <span>
+                        {product.stock} {product.unit}
+                      </span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

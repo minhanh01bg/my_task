@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 
+import { Input } from "@/components/ui/input";
 import { formatVnd } from "@/lib/money";
 import { searchProducts } from "@/lib/search/match";
 import type { SearchableProduct } from "@/lib/search/types";
@@ -69,7 +70,7 @@ export function ProductSearch({ products, onSelect }: ProductSearchProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      <input
+      <Input
         ref={inputRef}
         role="combobox"
         aria-expanded={results.length > 0}
@@ -82,7 +83,7 @@ export function ProductSearch({ products, onSelect }: ProductSearchProps) {
           setActiveIndex(0);
         }}
         onKeyDown={handleKeyDown}
-        className="w-full rounded-lg border px-4 py-4 text-xl outline-none focus:ring-2"
+        className="h-14 px-4 text-xl"
       />
 
       {showEmpty ? (

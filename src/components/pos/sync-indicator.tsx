@@ -25,12 +25,12 @@ export function SyncIndicator() {
   }, [refresh]);
 
   useEffect(() => {
-    void refresh();
-
+    const initial = setTimeout(() => void refresh(), 0);
     const timer = setInterval(() => void flush(), POLL_INTERVAL_MS);
     window.addEventListener("online", () => void flush());
 
     return () => {
+      clearTimeout(initial);
       clearInterval(timer);
       window.removeEventListener("online", () => void flush());
     };

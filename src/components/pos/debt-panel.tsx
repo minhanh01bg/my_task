@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { CustomerOption } from "@/types/catalog";
 
 interface DebtPanelProps {
@@ -13,14 +14,13 @@ interface DebtPanelProps {
 /** Khach quen mua chiu — go ten la goi y khach cu, khong co thi tao ngay. */
 export function DebtPanel({ selected, onSelect }: DebtPanelProps) {
   const [query, setQuery] = useState("");
-  const [options, setOptions] = useState<CustomerOption[]>([]);
+  const [fetchedOptions, setFetchedOptions] = useState<CustomerOption[]>([]);
   const [creating, setCreating] = useState(false);
 
+  const options = query.trim().length === 0 ? [] : fetchedOptions;
+
   useEffect(() => {
-    if (query.trim().length === 0) {
-      setOptions([]);
-      return;
-    }
+    if (query.trim().length === 0) return;
 
     let cancelled = false;
     const timer = setTimeout(async () => {
@@ -30,7 +30,7 @@ export function DebtPanel({ selected, onSelect }: DebtPanelProps) {
       if (!response?.ok || cancelled) return;
 
       const body = (await response.json()) as { customers: CustomerOption[] };
-      setOptions(body.customers);
+      setFetchedOptions(body.customers);
     }, 200);
 
     return () => {
@@ -53,7 +53,7 @@ export function DebtPanel({ selected, onSelect }: DebtPanelProps) {
     const body = (await response.json()) as { customer: CustomerOption };
     onSelect(body.customer);
     setQuery("");
-    setOptions([]);
+    setFetchedOptions([]);
   }
 
   if (selected) {
@@ -69,13 +69,13 @@ export function DebtPanel({ selected, onSelect }: DebtPanelProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      <input
+      <Input
         aria-label="Tên khách nợ"
         value={query}
         autoFocus
         placeholder="Tên khách nợ"
         onChange={(event) => setQuery(event.target.value)}
-        className="w-full rounded border px-4 py-3 text-lg"
+        className="h-11 text-lg"
       />
 
       <ul className="flex flex-col gap-1">
@@ -84,11 +84,11 @@ export function DebtPanel({ selected, onSelect }: DebtPanelProps) {
             <button
               type="button"
               onClick={() => onSelect(customer)}
-              className="w-full rounded px-4 py-3 text-left hover:bg-accent"
+              className="hover:bg-accent w-full rounded px-4 py-3 text-left"
             >
               {customer.name}
               {customer.phone ? (
-                <span className="ml-2 text-sm text-muted-foreground">
+                <span className="text-muted-foreground ml-2 text-sm">
                   {customer.phone}
                 </span>
               ) : null}
