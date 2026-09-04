@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  sortOrder Int       @default(0)
+  products  Product[]
+
+  @@index([sortOrder])
+}
+
+model Product {
+  id         String    @id @default(cuid())
+  name       String
+  sku        String?   @unique
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  unit       String    @default("cái")
+  /// Tien: so nguyen VND
+  price      Int       @default(0)
+  costPrice  Int       @default(0)
+  /// So luong: so thuc (kg, met)
+  stock      Float     @default(0)
+  /// Ten goi khac, ngan cach bang dau phay
+  aliases    String?
+  /// Chuoi da chuan hoa, sinh boi buildSearchText luc luu
+  searchText String    @default("")
+  imageUrl   String?
+  isActive   Boolean   @default(true)
+  isService  Boolean   @default(false)
+  /// Phuc vu xep hang tim kiem
+  soldCount  Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  orderItems     OrderItem[]
+  stockMovements StockMovement[]
+
+  @@index([isActive])
+  @@index([categoryId])
+}
+
+model Customer {
+  id     String  @id @default(cuid())
+  name   String
+  phone  String?
+  orders Order[]
+
+  @@index([name])
+}
+
+model Order {
+  id         String    @id @default(cuid())
+  code       String    @unique
+  /// pos | online
+  channel    String    @default("pos")
+  /// paid | pending | debt | cancelled
+  status     String    @default("paid")
+  subtotal   Int       @default(0)
+  discount   Int       @default(0)
+  total      Int       @default(0)
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  note       String?
+  /// Ma duy nhat do may ban sinh TRUOC khi gui — chong trung don
+  clientId   String    @unique
+  createdAt  DateTime  @default(now())
+  syncedAt   DateTime?
+  /// Danh dau don co dong lam ton kho bi am
+  hasStockWarning Boolean @default(false)
+
+  items    OrderItem[]
+  payments Payment[]
+
+  @@index([createdAt])
+  @@index([status])
+}
+
+model OrderItem {
+  id            String   @id @default(cuid())
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId     String?
+  product       Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  /// Ten TAI THOI DIEM BAN — doi ten hang sau nay khong lam sai don cu
+  nameSnapshot  String
+  unitPrice     Int
+  originalPrice Int
+  quantity      Float
+  discount      Int      @default(0)
+  lineTotal     Int
+  unit          String   @default("cái")
+  isService     Boolean  @default(false)
+
+  @@index([orderId])
+}
+
+model Payment {
+  id         String    @id @default(cuid())
+  orderId    String
+  order      Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  /// cash | transfer | debt
+  method     String
+  amount     Int
+  receivedAt DateTime?
+  note       String?
+  createdAt  DateTime  @default(now())
+
+  @@index([orderId])
+}
+
+model StockMovement {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// Am khi ban ra, duong khi nhap vao
+  delta     Float
+  /// sale | adjust | purchase | count | cancel
+  reason    String
+  /// Id cua don hang hoac phieu lien quan
+  refId     String?
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([createdAt])
+}
+
+model Setting {
+  key   String @id
+  value String
+}
