@@ -11,3 +11,9 @@ export interface CatalogResponse {
   products: SearchableProduct[];
   fetchedAt: string;
 }
+
+export interface CustomerOption {
+  id: string;
+  name: string;
+  phone: string | null;
+}
