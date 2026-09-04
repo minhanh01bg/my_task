@@ -1,5 +1,6 @@
 import { PosScreen } from "@/components/pos/pos-screen";
 import { prisma } from "@/server/db/prisma";
+import { getStoreBankAccount } from "@/server/settings/store-settings";
 import type { CatalogResponse } from "@/types/catalog";
 
 export const dynamic = "force-dynamic";
@@ -37,5 +38,7 @@ export default async function PosPage() {
     fetchedAt: new Date().toISOString(),
   };
 
-  return <PosScreen catalog={catalog} />;
+  const bankAccount = await getStoreBankAccount();
+
+  return <PosScreen catalog={catalog} bankAccount={bankAccount} />;
 }

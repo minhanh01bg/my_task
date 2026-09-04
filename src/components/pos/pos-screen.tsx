@@ -1,106 +1,164 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CartPanel } from "@/components/pos/cart-panel";
-import { CashPaymentDialog } from "@/components/pos/cash-payment-dialog";
 import { CategoryGrid } from "@/components/pos/category-grid";
+import { HeldOrdersBar } from "@/components/pos/held-orders-bar";
+import {
+  PaymentDialog,
+  type PaymentResult,
+} from "@/components/pos/payment-dialog";
 import { ProductSearch } from "@/components/pos/product-search";
 import { ServiceLineDialog } from "@/components/pos/service-line-dialog";
+import { SyncIndicator } from "@/components/pos/sync-indicator";
+import { usePosShortcuts } from "@/components/pos/use-pos-shortcuts";
 import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/lib/money";
 import { calculateCart } from "@/lib/pricing/calculate";
+import {
+  isCatalogStale,
+  loadCatalog,
+  saveCatalog,
+} from "@/lib/sync/catalog-cache";
+import { submitOrder } from "@/lib/sync/submit";
+import type { BankAccount } from "@/lib/vietqr/types";
 import { useCartStore } from "@/stores/cart-store";
+import { useHeldOrdersStore } from "@/stores/held-orders-store";
 import type { CatalogResponse } from "@/types/catalog";
 
 interface PosScreenProps {
   catalog: CatalogResponse;
+  bankAccount: BankAccount | null;
 }
 
 interface LastSale {
-  code: string;
+  code: string | null;
   total: number;
   received: number;
   change: number;
+  synced: boolean;
 }
 
-export function PosScreen({ catalog }: PosScreenProps) {
+export function PosScreen({
+  catalog: initialCatalog,
+  bankAccount,
+}: PosScreenProps) {
   const lines = useCartStore((state) => state.lines);
   const orderDiscount = useCartStore((state) => state.orderDiscount);
   const addProduct = useCartStore((state) => state.addProduct);
   const clear = useCartStore((state) => state.clear);
+  const hold = useHeldOrdersStore((state) => state.hold);
 
-  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+  const [catalog, setCatalog] = useState(initialCatalog);
+  const [stale, setStale] = useState(false);
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(
+    null,
+  );
   const [serviceOpen, setServiceOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [lastSale, setLastSale] = useState<LastSale | null>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   const totals = useMemo(
     () => calculateCart(lines, orderDiscount),
     [lines, orderDiscount],
   );
 
+  // Luu danh muc vao IndexedDB de lan sau mat mang van ban duoc.
   useEffect(() => {
-    function handleKey(event: KeyboardEvent) {
-      if (event.key === "F4" && lines.length > 0) {
-        event.preventDefault();
-        setPaymentOpen(true);
-      }
-    }
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [lines.length]);
+    void saveCatalog(initialCatalog);
+  }, [initialCatalog]);
 
-  async function handleConfirm(received: number) {
-    setSubmitting(true);
+  // Mat mang thi Server Component tra ve danh muc rong — dung ban cache.
+  useEffect(() => {
+    if (initialCatalog.products.length > 0) return;
 
-    const response = await fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        clientId: crypto.randomUUID(),
-        channel: "pos",
-        lines: lines.map((line) => ({
-          productId: line.productId,
-          name: line.name,
-          unitPrice: line.unitPrice,
-          originalPrice: line.originalPrice,
-          quantity: line.quantity,
-          discount: line.discount,
-          unit: line.unit,
-          isService: line.isService,
-        })),
-        orderDiscount,
-        payments: [{ method: "cash", amount: totals.total }],
-      }),
+    void loadCatalog().then((cached) => {
+      if (!cached) return;
+      setCatalog(cached);
+      setStale(isCatalogStale(cached));
     });
+  }, [initialCatalog.products.length]);
 
-    setSubmitting(false);
+  const focusSearch = useCallback(() => {
+    searchRef.current?.querySelector("input")?.focus();
+  }, []);
 
-    if (!response.ok) {
-      window.alert("Lưu đơn thất bại. Thử lại.");
-      return;
-    }
+  const holdCurrent = useCallback(() => {
+    if (lines.length === 0) return;
+    hold(lines, orderDiscount);
+    clear();
+    focusSearch();
+  }, [lines, orderDiscount, hold, clear, focusSearch]);
 
-    const result = (await response.json()) as {
-      order: { code: string; total: number };
-    };
+  usePosShortcuts({
+    onSearch: focusSearch,
+    onCheckout: () => {
+      if (lines.length > 0) setPaymentOpen(true);
+    },
+    onHold: holdCurrent,
+  });
+
+  async function handleConfirm(result: PaymentResult) {
+    setPaymentOpen(false);
+
+    const outcome = await submitOrder({
+      clientId: crypto.randomUUID(),
+      channel: "pos",
+      lines: lines.map((line) => ({
+        productId: line.productId,
+        name: line.name,
+        unitPrice: line.unitPrice,
+        originalPrice: line.originalPrice,
+        quantity: line.quantity,
+        discount: line.discount,
+        unit: line.unit,
+        isService: line.isService,
+      })),
+      orderDiscount,
+      payments: result.payments,
+      customerId: result.customerId,
+    });
 
     setLastSale({
-      code: result.order.code,
-      total: result.order.total,
-      received,
-      change: Math.max(0, received - result.order.total),
+      code: outcome.order?.code ?? null,
+      total: totals.total,
+      received: result.received,
+      change: Math.max(0, result.received - totals.total),
+      synced: outcome.synced,
     });
-    setPaymentOpen(false);
+
     clear();
+    focusSearch();
   }
 
   return (
     <main className="grid h-dvh grid-cols-1 gap-4 p-4 lg:grid-cols-[1fr_420px]">
       <section className="flex min-h-0 flex-col gap-4 overflow-y-auto">
-        <ProductSearch products={catalog.products} onSelect={addProduct} />
+        <div className="flex items-center gap-3">
+          <SyncIndicator />
+          {stale ? (
+            <span className="rounded-full bg-amber-100 px-4 py-2 text-sm text-amber-900">
+              Danh mục đã cũ — nên làm mới khi có mạng
+            </span>
+          ) : null}
+        </div>
+
+        <HeldOrdersBar
+          onResume={(order) => {
+            useCartStore.setState({
+              lines: order.lines,
+              orderDiscount: order.orderDiscount,
+            });
+            focusSearch();
+          }}
+        />
+
+        <div ref={searchRef}>
+          <ProductSearch products={catalog.products} onSelect={addProduct} />
+        </div>
+
         <CategoryGrid
           categories={catalog.categories}
           products={catalog.products}
@@ -111,27 +169,47 @@ export function PosScreen({ catalog }: PosScreenProps) {
       </section>
 
       <section className="flex min-h-0 flex-col gap-2 rounded-lg border p-4">
-        <Button variant="outline" onClick={() => setServiceOpen(true)}>
-          + Thêm tiền công
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => setServiceOpen(true)}
+          >
+            + Tiền công
+          </Button>
+          <Button
+            variant="outline"
+            className="flex-1"
+            disabled={lines.length === 0}
+            onClick={holdCurrent}
+          >
+            Giữ đơn (F8)
+          </Button>
+        </div>
         <CartPanel onCheckout={() => setPaymentOpen(true)} />
       </section>
 
       <ServiceLineDialog open={serviceOpen} onOpenChange={setServiceOpen} />
 
-      <CashPaymentDialog
-        open={paymentOpen && !submitting}
+      <PaymentDialog
+        open={paymentOpen}
         total={totals.total}
+        orderCode="DH"
+        bankAccount={bankAccount}
         onCancel={() => setPaymentOpen(false)}
         onConfirm={handleConfirm}
       />
 
       {lastSale ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-background w-full max-w-md space-y-4 rounded-lg p-8 text-center">
-            <p className="text-muted-foreground">Đã lưu đơn {lastSale.code}</p>
+          <div className="w-full max-w-md space-y-4 rounded-lg bg-background p-8 text-center">
+            <p className="text-muted-foreground">
+              {lastSale.synced
+                ? `Đã lưu đơn ${lastSale.code}`
+                : "Đã lưu tạm — sẽ đồng bộ khi có mạng"}
+            </p>
             <p className="text-lg">Khách đưa {formatVnd(lastSale.received)}</p>
-            <p className="text-muted-foreground text-sm">Tiền thối lại</p>
+            <p className="text-sm text-muted-foreground">Tiền thối lại</p>
             <p
               data-testid="last-sale-change"
               className="text-7xl font-bold tabular-nums"
