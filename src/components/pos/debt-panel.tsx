@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { CustomerOption } from "@/types/catalog";
 
 interface DebtPanelProps {
@@ -68,13 +69,13 @@ export function DebtPanel({ selected, onSelect }: DebtPanelProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      <input
+      <Input
         aria-label="Tên khách nợ"
         value={query}
         autoFocus
         placeholder="Tên khách nợ"
         onChange={(event) => setQuery(event.target.value)}
-        className="w-full rounded border px-4 py-3 text-lg"
+        className="h-11 text-lg"
       />
 
       <ul className="flex flex-col gap-1">

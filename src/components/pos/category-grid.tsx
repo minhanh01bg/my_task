@@ -55,7 +55,7 @@ export function CategoryGrid({
             key={product.id}
             type="button"
             onClick={() => onSelect(product)}
-            className="hover:bg-accent flex flex-col items-start rounded-lg border p-3 text-left"
+            className="bg-card ring-foreground/10 hover:bg-accent flex flex-col items-start rounded-xl p-3 text-left ring-1 transition-colors"
           >
             <span className="line-clamp-2 font-medium">{product.name}</span>
             <span className="mt-1 font-semibold tabular-nums">

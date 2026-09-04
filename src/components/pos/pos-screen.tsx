@@ -184,7 +184,7 @@ export function PosScreen({
         />
       </section>
 
-      <section className="flex min-h-0 flex-col gap-2 rounded-lg border p-4">
+      <section className="bg-card ring-foreground/10 flex min-h-0 flex-col gap-2 rounded-xl p-4 ring-1">
         <div className="flex gap-2">
           <Button
             variant="outline"

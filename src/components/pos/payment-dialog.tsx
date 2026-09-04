@@ -5,6 +5,8 @@ import { useState } from "react";
 import { DebtPanel } from "@/components/pos/debt-panel";
 import { TransferPanel } from "@/components/pos/transfer-panel";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { formatVnd } from "@/lib/money";
 import type { OrderPayloadPayment } from "@/lib/sync/types";
 import type { BankAccount } from "@/lib/vietqr/types";
@@ -87,7 +89,7 @@ export function PaymentDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg space-y-4 rounded-lg bg-background p-6">
+      <div className="bg-background ring-foreground/10 w-full max-w-lg space-y-4 rounded-xl p-6 shadow-lg ring-1">
         <div className="flex items-baseline justify-between">
           <span className="text-lg">Khách phải trả</span>
           <span
@@ -120,20 +122,19 @@ export function PaymentDialog({
 
         {method === "cash" ? (
           <div className="space-y-4">
-            <label className="block">
-              <span className="text-sm text-muted-foreground">
-                Tiền khách đưa
-              </span>
-              <input
+            <div className="space-y-1.5">
+              <Label htmlFor="cash-received">Tiền khách đưa</Label>
+              <Input
+                id="cash-received"
                 aria-label="Tiền khách đưa"
                 type="number"
                 min="0"
                 autoFocus
                 value={received}
                 onChange={(event) => setReceived(event.target.value)}
-                className="mt-1 w-full rounded border px-4 py-4 text-right text-2xl tabular-nums"
+                className="h-14 text-right text-2xl tabular-nums"
               />
-            </label>
+            </div>
 
             <div className="grid grid-cols-3 gap-2">
               {QUICK_AMOUNTS.map((amount) => (
@@ -156,7 +157,7 @@ export function PaymentDialog({
               </Button>
             </div>
 
-            <div className="flex items-baseline justify-between rounded-lg bg-accent p-4">
+            <div className="bg-accent flex items-baseline justify-between rounded-lg p-4">
               <span className="text-lg">Tiền thối lại</span>
               <span
                 data-testid="payment-change"

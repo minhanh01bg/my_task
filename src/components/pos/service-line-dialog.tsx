@@ -3,6 +3,8 @@
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useCartStore } from "@/stores/cart-store";
 
 interface ServiceLineDialogProps {
@@ -40,24 +42,32 @@ export function ServiceLineDialog({
       >
         <h2 className="text-xl font-semibold">Thêm tiền công</h2>
 
-        <input
-          aria-label="Tên dịch vụ"
-          value={name}
-          autoFocus
-          onChange={(event) => setName(event.target.value)}
-          placeholder="VD: Công thay nhớt"
-          className="w-full rounded border px-4 py-3 text-lg"
-        />
+        <div className="space-y-1.5">
+          <Label htmlFor="service-name">Tên dịch vụ</Label>
+          <Input
+            id="service-name"
+            aria-label="Tên dịch vụ"
+            value={name}
+            autoFocus
+            onChange={(event) => setName(event.target.value)}
+            placeholder="VD: Công thay nhớt"
+            className="h-11 text-lg"
+          />
+        </div>
 
-        <input
-          aria-label="Số tiền"
-          type="number"
-          min="0"
-          value={amount}
-          onChange={(event) => setAmount(event.target.value)}
-          placeholder="Số tiền"
-          className="w-full rounded border px-4 py-3 text-right text-lg tabular-nums"
-        />
+        <div className="space-y-1.5">
+          <Label htmlFor="service-amount">Số tiền</Label>
+          <Input
+            id="service-amount"
+            aria-label="Số tiền"
+            type="number"
+            min="0"
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            placeholder="Số tiền"
+            className="h-11 text-right text-lg tabular-nums"
+          />
+        </div>
 
         <div className="flex gap-2">
           <Button

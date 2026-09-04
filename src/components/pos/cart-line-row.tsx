@@ -2,6 +2,7 @@
 
 import { Trash2 } from "lucide-react";
 
+import { Input } from "@/components/ui/input";
 import { formatVnd } from "@/lib/money";
 import type { CartLine } from "@/lib/pricing/types";
 import { useCartStore } from "@/stores/cart-store";
@@ -31,41 +32,35 @@ export function CartLineRow({ line, lineTotal }: CartLineRowProps) {
       </div>
 
       <div className="flex items-center gap-2">
-        <label className="flex items-center gap-1 text-sm">
-          <span className="sr-only">Số lượng {line.name}</span>
-          <input
-            aria-label={`Số lượng ${line.name}`}
-            type="number"
-            step="any"
-            min="0"
-            value={line.quantity}
-            onChange={(event) =>
-              updateQuantity(line.id, Number(event.target.value) || 0)
-            }
-            className="w-20 rounded border px-2 py-2 text-right tabular-nums"
-          />
-        </label>
+        <Input
+          aria-label={`Số lượng ${line.name}`}
+          type="number"
+          step="any"
+          min="0"
+          value={line.quantity}
+          onChange={(event) =>
+            updateQuantity(line.id, Number(event.target.value) || 0)
+          }
+          className="h-9 w-20 text-right tabular-nums"
+        />
         <span className="text-muted-foreground text-sm">{line.unit}</span>
 
         <span className="text-muted-foreground">×</span>
 
-        <label className="flex items-center gap-1 text-sm">
-          <span className="sr-only">Đơn giá {line.name}</span>
-          <input
-            aria-label={`Đơn giá ${line.name}`}
-            type="number"
-            step="1"
-            min="0"
-            value={line.unitPrice}
-            onChange={(event) =>
-              updateUnitPrice(
-                line.id,
-                Math.round(Number(event.target.value) || 0),
-              )
-            }
-            className="w-28 rounded border px-2 py-2 text-right tabular-nums"
-          />
-        </label>
+        <Input
+          aria-label={`Đơn giá ${line.name}`}
+          type="number"
+          step="1"
+          min="0"
+          value={line.unitPrice}
+          onChange={(event) =>
+            updateUnitPrice(
+              line.id,
+              Math.round(Number(event.target.value) || 0),
+            )
+          }
+          className="h-9 w-28 text-right tabular-nums"
+        />
 
         <span className="ml-auto text-lg font-semibold tabular-nums">
           {formatVnd(lineTotal)}
