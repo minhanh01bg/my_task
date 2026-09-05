@@ -20,11 +20,23 @@ import { saveProductAction } from "./actions";
 
 interface ProductFormProps {
   categories: CatalogCategory[];
+  product?: {
+    id: string;
+    name: string;
+    aliases: string | null;
+    sku: string | null;
+    categoryId: string | null;
+    unit: string;
+    stock: number;
+    price: number;
+    costPrice: number;
+    imageUrl: string | null;
+  };
 }
 
-export function ProductForm({ categories }: ProductFormProps) {
+export function ProductForm({ categories, product }: ProductFormProps) {
   const [message, setMessage] = useState<string | null>(null);
-  const [imageUrl, setImageUrl] = useState("");
+  const [imageUrl, setImageUrl] = useState(product?.imageUrl ?? "");
 
   async function handleAction(formData: FormData) {
     const result = await saveProductAction(formData);
@@ -34,16 +46,26 @@ export function ProductForm({ categories }: ProductFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Thêm sản phẩm</CardTitle>
+        <CardTitle>
+          {product ? `Sửa ${product.name}` : "Thêm sản phẩm"}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form
           action={handleAction}
           className="grid grid-cols-1 gap-4 sm:grid-cols-2"
         >
-          <div className="col-span-2 space-y-1.5">
+          {product ? (
+            <input type="hidden" name="id" value={product.id} />
+          ) : null}
+          <div className="col-span-full space-y-1.5">
             <Label htmlFor="product-name">Tên sản phẩm</Label>
-            <Input id="product-name" name="name" required />
+            <Input
+              id="product-name"
+              name="name"
+              defaultValue={product?.name}
+              required
+            />
           </div>
 
           <div className="col-span-full space-y-1.5">
@@ -84,18 +106,27 @@ export function ProductForm({ categories }: ProductFormProps) {
             <Input
               id="product-aliases"
               name="aliases"
+              defaultValue={product?.aliases ?? ""}
               placeholder="bugi wave, bugi thường"
             />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="product-sku">Mã nội bộ</Label>
-            <Input id="product-sku" name="sku" placeholder="PT-102" />
+            <Input
+              id="product-sku"
+              name="sku"
+              defaultValue={product?.sku ?? ""}
+              placeholder="PT-102"
+            />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="product-category">Danh mục</Label>
-            <Select name="categoryId">
+            <Select
+              name="categoryId"
+              defaultValue={product?.categoryId ?? undefined}
+            >
               <SelectTrigger id="product-category" className="w-full">
                 <SelectValue placeholder="— Không —" />
               </SelectTrigger>
@@ -111,7 +142,12 @@ export function ProductForm({ categories }: ProductFormProps) {
 
           <div className="space-y-1.5">
             <Label htmlFor="product-unit">Đơn vị</Label>
-            <Input id="product-unit" name="unit" defaultValue="cái" required />
+            <Input
+              id="product-unit"
+              name="unit"
+              defaultValue={product?.unit ?? "cái"}
+              required
+            />
           </div>
 
           <div className="space-y-1.5">
@@ -121,7 +157,7 @@ export function ProductForm({ categories }: ProductFormProps) {
               name="stock"
               type="number"
               step="any"
-              defaultValue="0"
+              defaultValue={product?.stock ?? 0}
             />
           </div>
 
@@ -131,7 +167,7 @@ export function ProductForm({ categories }: ProductFormProps) {
               id="product-price"
               name="price"
               type="number"
-              defaultValue="0"
+              defaultValue={product?.price ?? 0}
             />
           </div>
 
@@ -141,12 +177,14 @@ export function ProductForm({ categories }: ProductFormProps) {
               id="product-cost-price"
               name="costPrice"
               type="number"
-              defaultValue="0"
+              defaultValue={product?.costPrice ?? 0}
             />
           </div>
 
           <div className="col-span-full flex items-center gap-3">
-            <Button type="submit">Thêm sản phẩm</Button>
+            <Button type="submit">
+              {product ? "Lưu thay đổi" : "Thêm sản phẩm"}
+            </Button>
             {message ? (
               <span className="text-muted-foreground text-sm">{message}</span>
             ) : null}
