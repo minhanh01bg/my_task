@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { prisma } from "@/server/db/prisma";
 
-import { saveCategoryAction } from "./actions";
+import { deleteCategoryAction, saveCategoryAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +15,14 @@ export default async function CategoriesPage() {
   });
 
   return (
-    <div className="max-w-xl space-y-6">
-      <h1 className="text-2xl font-semibold">Danh mục</h1>
+    <div className="max-w-3xl space-y-6">
+      <div>
+        <p className="eyebrow">Sắp xếp quầy hàng</p>
+        <h1 className="font-heading mt-1 text-3xl font-bold">Danh mục</h1>
+        <p className="text-muted-foreground mt-1">
+          Thứ tự tại đây cũng là thứ tự hiển thị ở quầy bán hàng.
+        </p>
+      </div>
 
       <Card>
         <CardContent>
@@ -46,11 +52,45 @@ export default async function CategoriesPage() {
         <CardContent>
           <ul className="divide-y">
             {categories.map((category) => (
-              <li key={category.id} className="flex justify-between py-3">
-                <span>{category.name}</span>
-                <span className="text-muted-foreground text-sm">
-                  {category._count.products} sản phẩm
-                </span>
+              <li
+                key={category.id}
+                className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center"
+              >
+                <form
+                  action={saveCategoryAction}
+                  className="grid flex-1 grid-cols-[minmax(0,1fr)_5rem_auto] gap-2"
+                >
+                  <input type="hidden" name="id" value={category.id} />
+                  <Input
+                    aria-label={`Tên danh mục ${category.name}`}
+                    name="name"
+                    defaultValue={category.name}
+                    required
+                  />
+                  <Input
+                    aria-label={`Thứ tự ${category.name}`}
+                    name="sortOrder"
+                    type="number"
+                    defaultValue={category.sortOrder}
+                  />
+                  <Button type="submit" variant="outline">
+                    Lưu
+                  </Button>
+                </form>
+                <div className="flex items-center justify-between gap-3 sm:justify-end">
+                  <span className="text-muted-foreground text-sm whitespace-nowrap">
+                    {category._count.products} sản phẩm
+                  </span>
+                  <form action={deleteCategoryAction.bind(null, category.id)}>
+                    <Button
+                      type="submit"
+                      variant="ghost"
+                      className="text-destructive"
+                    >
+                      Xóa
+                    </Button>
+                  </form>
+                </div>
               </li>
             ))}
           </ul>
