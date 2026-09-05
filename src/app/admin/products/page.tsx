@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Pencil, Search } from "lucide-react";
 
 import { ConfirmAction } from "@/components/shared/confirm-action";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -13,11 +12,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatVnd } from "@/lib/money";
 import { ProductImage } from "@/components/shared/product-image";
 import { prisma } from "@/server/db/prisma";
 
 import { ProductForm } from "./product-form";
+import { QuickProductEdit } from "./quick-product-edit";
 import { deleteProductAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -134,19 +133,8 @@ export default async function ProductsPage({
                   <TableCell className="text-muted-foreground">
                     {product.category?.name ?? "—"}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatVnd(product.price)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {product.stock < 0 ? (
-                      <Badge variant="destructive">
-                        {product.stock} {product.unit}
-                      </Badge>
-                    ) : (
-                      <span>
-                        {product.stock} {product.unit}
-                      </span>
-                    )}
+                  <TableCell colSpan={2}>
+                    <QuickProductEdit product={product} />
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
