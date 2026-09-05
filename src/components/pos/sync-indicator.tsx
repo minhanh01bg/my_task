@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { CloudArrowUp } from "@phosphor-icons/react";
 
 import { flushQueue } from "@/lib/sync/flush";
 import { countQueuedOrders } from "@/lib/sync/queue";
@@ -27,12 +28,13 @@ export function SyncIndicator() {
   useEffect(() => {
     const initial = setTimeout(() => void refresh(), 0);
     const timer = setInterval(() => void flush(), POLL_INTERVAL_MS);
-    window.addEventListener("online", () => void flush());
+    const handleOnline = () => void flush();
+    window.addEventListener("online", handleOnline);
 
     return () => {
       clearTimeout(initial);
       clearInterval(timer);
-      window.removeEventListener("online", () => void flush());
+      window.removeEventListener("online", handleOnline);
     };
   }, [flush, refresh]);
 
@@ -42,8 +44,9 @@ export function SyncIndicator() {
     <button
       type="button"
       onClick={() => void flush()}
-      className="rounded-full bg-amber-100 px-4 py-2 text-sm text-amber-900"
+      className="focus-visible:ring-ring inline-flex min-h-11 items-center gap-2 rounded-xl border-2 border-amber-700/20 bg-amber-100 px-4 py-2 text-sm font-extrabold text-amber-950 transition-colors hover:bg-amber-200 focus-visible:ring-3 focus-visible:outline-none"
     >
+      <CloudArrowUp aria-hidden="true" weight="duotone" className="size-5" />
       {pending} đơn chờ đồng bộ — bấm để thử lại
     </button>
   );

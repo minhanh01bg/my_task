@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { ArrowRight, ShoppingCart } from "lucide-react";
+import { ArrowRight, Basket } from "@phosphor-icons/react";
 
 import { CartLineRow } from "@/components/pos/cart-line-row";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,7 @@ export function CartPanel({ onCheckout }: CartPanelProps) {
       <div className="flex items-center justify-between border-b pb-4">
         <div className="flex items-center gap-3">
           <span className="bg-primary text-primary-foreground flex size-10 items-center justify-center rounded-xl">
-            <ShoppingCart aria-hidden="true" className="size-5" />
+            <Basket aria-hidden="true" weight="duotone" className="size-6" />
           </span>
           <div>
             <h2 className="font-heading text-xl font-bold">Đơn hiện tại</h2>
@@ -41,7 +41,7 @@ export function CartPanel({ onCheckout }: CartPanelProps) {
       {lines.length === 0 ? (
         <div className="text-muted-foreground flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center">
           <span className="bg-muted flex size-16 items-center justify-center rounded-full">
-            <ShoppingCart aria-hidden="true" className="size-7" />
+            <Basket aria-hidden="true" weight="duotone" className="size-8" />
           </span>
           <p className="text-foreground font-bold">Chưa có sản phẩm nào</p>
           <p className="max-w-60 text-sm">
@@ -78,7 +78,7 @@ export function CartPanel({ onCheckout }: CartPanelProps) {
           <span>
             Thanh toán <span className="hidden opacity-75 sm:inline">(F4)</span>
           </span>
-          <ArrowRight aria-hidden="true" className="size-5" />
+          <ArrowRight aria-hidden="true" weight="bold" className="size-5" />
         </Button>
       </div>
     </section>

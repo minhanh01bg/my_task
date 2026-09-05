@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Search, SearchX } from "lucide-react";
+import { MagnifyingGlass, MagnifyingGlassMinus } from "@phosphor-icons/react";
 
 import { Input } from "@/components/ui/input";
 import { ProductImage } from "@/components/shared/product-image";
@@ -79,9 +79,10 @@ export function ProductSearch({ products, onSelect }: ProductSearchProps) {
         Bạn muốn bán sản phẩm nào?
       </label>
       <div className="relative">
-        <Search
+        <MagnifyingGlass
           aria-hidden="true"
-          className="text-muted-foreground pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2"
+          weight="bold"
+          className="text-primary pointer-events-none absolute top-1/2 left-4 size-6 -translate-y-1/2"
         />
         <Input
           id="product-search"
@@ -110,7 +111,11 @@ export function ProductSearch({ products, onSelect }: ProductSearchProps) {
           className="text-muted-foreground flex flex-col items-center gap-2 px-4 py-7 text-center"
           role="status"
         >
-          <SearchX aria-hidden="true" className="size-7" />
+          <MagnifyingGlassMinus
+            aria-hidden="true"
+            weight="duotone"
+            className="size-8"
+          />
           Không tìm thấy sản phẩm. Thử nhập tên ngắn hơn.
         </p>
       ) : null}
