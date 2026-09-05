@@ -18,6 +18,7 @@ const schema = z.object({
   imageUrl: z
     .union([
       z.literal(""),
+      z.string().regex(/^\/uploads\/products\/[a-zA-Z0-9.-]+$/),
       z
         .string()
         .url("Ảnh phải là một đường dẫn hợp lệ")

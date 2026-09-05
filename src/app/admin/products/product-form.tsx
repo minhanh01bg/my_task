@@ -1,12 +1,13 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { CheckCircle, ImageSquare, Sparkle } from "@phosphor-icons/react";
+import { CheckCircle, Sparkle } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ImageUploader } from "@/features/product-image/image-uploader";
 import type { CatalogCategory } from "@/types/catalog";
 
 import { saveProductAction } from "./actions";
@@ -215,35 +216,8 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                 </p>
               </div>
               <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="product-image-url">Ảnh sản phẩm</Label>
-                <div className="flex items-center gap-3">
-                  <span
-                    aria-hidden="true"
-                    className="bg-background text-muted-foreground border-border flex size-16 shrink-0 items-center justify-center rounded-xl border bg-cover bg-center"
-                    style={
-                      imageUrl
-                        ? {
-                            backgroundImage: `url(${JSON.stringify(imageUrl)})`,
-                          }
-                        : undefined
-                    }
-                  >
-                    {!imageUrl ? <ImageSquare className="size-6" /> : null}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <Input
-                      id="product-image-url"
-                      name="imageUrl"
-                      type="url"
-                      value={imageUrl}
-                      onChange={(event) => setImageUrl(event.target.value)}
-                      placeholder="Dán đường dẫn ảnh nếu có"
-                    />
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      Có thể bỏ qua và bổ sung ảnh sau.
-                    </p>
-                  </div>
-                </div>
+                <Label>Ảnh sản phẩm</Label>
+                <ImageUploader value={imageUrl} onChange={setImageUrl} />
               </div>
             </div>
           </details>
