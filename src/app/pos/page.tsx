@@ -1,6 +1,9 @@
 import { PosScreen } from "@/components/pos/pos-screen";
 import { prisma } from "@/server/db/prisma";
-import { getStoreBankAccount } from "@/server/settings/store-settings";
+import {
+  getStoreBankAccount,
+  getStoreName,
+} from "@/server/settings/store-settings";
 import type { CatalogResponse } from "@/types/catalog";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +13,7 @@ export const dynamic = "force-dynamic";
  * Tim kiem sau do chay hoan toan trong bo nho trinh duyet.
  */
 export default async function PosPage() {
-  const [categories, products] = await Promise.all([
+  const [categories, products, bankAccount, storeName] = await Promise.all([
     prisma.category.findMany({
       orderBy: { sortOrder: "asc" },
       select: { id: true, name: true, sortOrder: true },
@@ -31,6 +34,8 @@ export default async function PosPage() {
         searchText: true,
       },
     }),
+    getStoreBankAccount(),
+    getStoreName(),
   ]);
 
   const catalog: CatalogResponse = {
@@ -39,7 +44,11 @@ export default async function PosPage() {
     fetchedAt: new Date().toISOString(),
   };
 
-  const bankAccount = await getStoreBankAccount();
-
-  return <PosScreen catalog={catalog} bankAccount={bankAccount} />;
+  return (
+    <PosScreen
+      catalog={catalog}
+      bankAccount={bankAccount}
+      storeName={storeName}
+    />
+  );
 }

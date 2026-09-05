@@ -38,6 +38,7 @@ import type { CatalogResponse } from "@/types/catalog";
 interface PosScreenProps {
   catalog: CatalogResponse;
   bankAccount: BankAccount | null;
+  storeName: string;
 }
 
 interface LastSale {
@@ -51,6 +52,7 @@ interface LastSale {
 export function PosScreen({
   catalog: initialCatalog,
   bankAccount,
+  storeName,
 }: PosScreenProps) {
   const lines = useCartStore((state) => state.lines);
   const orderDiscount = useCartStore((state) => state.orderDiscount);
@@ -151,9 +153,8 @@ export function PosScreen({
       <section className="flex min-h-0 flex-col gap-4 lg:overflow-y-auto lg:pr-1">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <span className="bg-accent text-accent-foreground mb-2 inline-flex items-center gap-1.5 rounded-full border border-amber-700/20 px-3 py-1 text-xs font-extrabold">
-              <Storefront aria-hidden="true" weight="fill" /> Tiệm tạp hóa An
-              Phát
+            <span className="bg-accent/15 text-accent-foreground border-accent/20 mb-2 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold shadow-sm backdrop-blur-sm">
+              <Storefront aria-hidden="true" weight="fill" /> {storeName}
             </span>
             <h1 className="font-heading mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
               Hôm nay bán gì đây?
