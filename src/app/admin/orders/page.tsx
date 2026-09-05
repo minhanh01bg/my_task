@@ -52,7 +52,12 @@ export default async function OrdersPage() {
               >
                 <div>
                   <p className="flex items-center gap-2 font-medium">
-                    {order.code}
+                    <Link
+                      href={`/admin/orders/${order.id}`}
+                      className="hover:text-primary focus-visible:ring-ring rounded underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                    >
+                      {order.code}
+                    </Link>
                     <Badge variant={STATUS_VARIANT[order.status] ?? "outline"}>
                       {STATUS_LABEL[order.status] ?? order.status}
                     </Badge>
@@ -96,3 +101,4 @@ export default async function OrdersPage() {
     </div>
   );
 }
+import Link from "next/link";

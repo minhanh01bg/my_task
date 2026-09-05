@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ImagePlus } from "lucide-react";
 
 import {
   CollapsibleFormCard,
@@ -22,10 +23,23 @@ import { saveProductAction } from "./actions";
 
 interface ProductFormProps {
   categories: CatalogCategory[];
+  product?: {
+    id: string;
+    name: string;
+    aliases: string | null;
+    sku: string | null;
+    categoryId: string | null;
+    unit: string;
+    stock: number;
+    price: number;
+    costPrice: number;
+    imageUrl: string | null;
+  };
 }
 
-export function ProductForm({ categories }: ProductFormProps) {
+export function ProductForm({ categories, product }: ProductFormProps) {
   const [message, setMessage] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState(product?.imageUrl ?? "");
 
   async function handleAction(formData: FormData) {
     const result = await saveProductAction(formData);

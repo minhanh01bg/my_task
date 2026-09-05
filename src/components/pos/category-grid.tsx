@@ -26,7 +26,10 @@ export function CategoryGrid({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-2">
+      <div
+        className="flex gap-2 overflow-x-auto pb-2 sm:flex-wrap"
+        aria-label="Danh mục sản phẩm"
+      >
         {categories.map((category) => (
           <ChipToggle
             key={category.id}

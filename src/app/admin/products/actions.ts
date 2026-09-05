@@ -16,6 +16,19 @@ const schema = z.object({
   costPrice: z.coerce.number().int().min(0),
   stock: z.coerce.number(),
   aliases: z.string().nullable(),
+  imageUrl: z
+    .union([
+      z.literal(""),
+      z
+        .string()
+        .url("Ảnh phải là một đường dẫn hợp lệ")
+        .refine(
+          (value) =>
+            value.startsWith("https://") || value.startsWith("http://"),
+          "Ảnh phải dùng đường dẫn http hoặc https",
+        ),
+    ])
+    .nullable(),
 });
 
 export async function saveProductAction(formData: FormData) {
@@ -29,6 +42,7 @@ export async function saveProductAction(formData: FormData) {
     costPrice: formData.get("costPrice"),
     stock: formData.get("stock"),
     aliases: (formData.get("aliases") as string) || null,
+    imageUrl: (formData.get("imageUrl") as string) || null,
   };
 
   const parsed = schema.safeParse(raw);

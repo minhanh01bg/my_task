@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { Search, SearchX } from "lucide-react";
 
 import {
   EmptyState,

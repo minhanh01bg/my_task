@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Geist_Mono, Nunito_Sans, Rubik } from "next/font/google";
 
 import { siteConfig } from "@/config/site";
 import { ObservabilityProvider } from "@/components/providers/observability-provider";
@@ -6,6 +7,19 @@ import { ServiceWorkerRegistrar } from "@/components/pos/service-worker-registra
 import { Providers } from "@/providers";
 
 import "./globals.css";
+
+const sans = Nunito_Sans({
+  variable: "--font-sans",
+  subsets: ["latin", "vietnamese"],
+});
+const heading = Rubik({
+  variable: "--font-heading-family",
+  subsets: ["latin", "latin-ext"],
+});
+const mono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: {

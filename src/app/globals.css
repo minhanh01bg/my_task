@@ -64,10 +64,10 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: oklch(0.975 0.008 250);
+  --foreground: oklch(0.22 0.035 257);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.22 0.035 257);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.55 0.19 255);
@@ -154,8 +154,41 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image: radial-gradient(
+      circle at 0 0,
+      oklch(0.93 0.04 250 / 0.65),
+      transparent 32rem
+    );
   }
   html {
     @apply font-sans;
+  }
+
+  button,
+  [role="button"],
+  a {
+    @apply cursor-pointer;
+  }
+}
+
+@layer utilities {
+  .surface-panel {
+    @apply border-border/80 bg-card rounded-2xl border;
+    box-shadow: 0 12px 32px -24px oklch(0.25 0.08 255 / 0.45);
+  }
+
+  .eyebrow {
+    @apply text-primary text-xs font-bold tracking-[0.16em] uppercase;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

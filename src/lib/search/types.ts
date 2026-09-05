@@ -5,6 +5,7 @@ export interface SearchableProduct {
   price: number;
   unit: string;
   stock: number;
+  imageUrl?: string | null;
   categoryId: string | null;
   soldCount: number;
   imageUrl: string | null;
