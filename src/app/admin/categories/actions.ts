@@ -72,3 +72,33 @@ export async function deleteCategoryAction(id: string): Promise<void> {
   revalidatePath("/admin/products");
   revalidatePath("/pos");
 }
+
+export async function moveCategoryAction(
+  id: string,
+  direction: "up" | "down",
+): Promise<void> {
+  const categories = await prisma.category.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true },
+  });
+  const index = categories.findIndex((category) => category.id === id);
+  const targetIndex = direction === "up" ? index - 1 : index + 1;
+  if (index < 0 || targetIndex < 0 || targetIndex >= categories.length) return;
+
+  const reordered = [...categories];
+  [reordered[index], reordered[targetIndex]] = [
+    reordered[targetIndex]!,
+    reordered[index]!,
+  ];
+  await prisma.$transaction(
+    reordered.map((category, position) =>
+      prisma.category.update({
+        where: { id: category.id },
+        data: { sortOrder: position + 1 },
+      }),
+    ),
+  );
+
+  revalidatePath("/admin/categories");
+  revalidatePath("/pos");
+}
