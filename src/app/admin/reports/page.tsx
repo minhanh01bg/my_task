@@ -1,6 +1,6 @@
+import { Money, PageHeader, StatTile } from "@/components/kit";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatVnd } from "@/lib/money";
 import {
   getDailyRevenue,
   getLowStockProducts,
@@ -16,9 +16,27 @@ export default async function ReportsPage() {
     getLowStockProducts(5),
   ]);
 
+  // Con so tong cua ca ky — chu quan nhin cai la thay, khong phai cong nham.
+  const totalRevenue = revenue.reduce((sum, row) => sum + row.revenue, 0);
+  const totalOrders = revenue.reduce((sum, row) => sum + row.orderCount, 0);
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Báo cáo</h1>
+      <PageHeader
+        title="Báo cáo"
+        description="Doanh thu và hàng bán chạy, xem nhanh tình hình cửa hàng."
+      />
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <StatTile
+          label="Doanh thu"
+          value={totalRevenue}
+          format="money"
+          hint="14 ngày gần nhất"
+        />
+        <StatTile label="Số đơn" value={totalOrders} hint="14 ngày gần nhất" />
+        <StatTile label="Sắp hết hàng" value={lowStock.length} />
+      </div>
 
       <Card>
         <CardHeader>
@@ -38,7 +56,7 @@ export default async function ReportsPage() {
                     </span>
                   </span>
                   <span className="font-semibold tabular-nums">
-                    {formatVnd(row.revenue)}
+                    <Money amount={row.revenue} />
                   </span>
                 </li>
               ))}

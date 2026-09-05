@@ -28,6 +28,7 @@ export default async function PosPage() {
         imageUrl: true,
         categoryId: true,
         soldCount: true,
+        imageUrl: true,
         searchText: true,
       },
     }),

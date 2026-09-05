@@ -168,3 +168,45 @@ describe("softDeleteProduct", () => {
     expect(saved.isActive).toBe(false);
   });
 });
+
+describe("saveProduct — anh", () => {
+  it("luu duoc duong dan anh", async () => {
+    const { id } = await saveProduct({
+      name: "Bugi Wave",
+      unit: "cái",
+      price: 15000,
+      costPrice: 10000,
+      stock: 10,
+      isActive: true,
+      imageUrl: "/uploads/abc.webp",
+    });
+
+    const saved = await prisma.product.findUniqueOrThrow({ where: { id } });
+    expect(saved.imageUrl).toBe("/uploads/abc.webp");
+  });
+
+  it("khong truyen imageUrl thi khong xoa mat anh dang co", async () => {
+    const { id } = await saveProduct({
+      name: "Bugi Wave",
+      unit: "cái",
+      price: 15000,
+      costPrice: 10000,
+      stock: 10,
+      isActive: true,
+      imageUrl: "/uploads/abc.webp",
+    });
+
+    await saveProduct({
+      id,
+      name: "Bugi Wave 110",
+      unit: "cái",
+      price: 16000,
+      costPrice: 10000,
+      stock: 10,
+      isActive: true,
+    });
+
+    const saved = await prisma.product.findUniqueOrThrow({ where: { id } });
+    expect(saved.imageUrl).toBe("/uploads/abc.webp");
+  });
+});

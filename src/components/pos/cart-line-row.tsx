@@ -3,9 +3,9 @@
 import { Trash2 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
-import { formatVnd } from "@/lib/money";
 import type { CartLine } from "@/lib/pricing/types";
 import { useCartStore } from "@/stores/cart-store";
+import { Money } from "@/components/kit";
 
 interface CartLineRowProps {
   line: CartLine;
@@ -63,7 +63,7 @@ export function CartLineRow({ line, lineTotal }: CartLineRowProps) {
         />
 
         <span className="ml-auto text-lg font-semibold tabular-nums">
-          {formatVnd(lineTotal)}
+          <Money amount={lineTotal} />
         </span>
       </div>
     </li>

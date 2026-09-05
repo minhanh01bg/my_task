@@ -12,13 +12,14 @@ test.describe("Quản lý sản phẩm", () => {
     page,
   }) => {
     await page.goto("/admin/products");
+    await page.getByRole("button", { name: "Thêm sản phẩm" }).click();
 
     await page.getByLabel("Tên sản phẩm").fill("Ruột xe Dream");
     await page.getByLabel(/tên gọi khác/i).fill("sam dream, ruot dream");
     await page.getByLabel("Đơn vị").fill("cái");
     await page.getByLabel("Giá bán (VND)").fill("55000");
     await page.getByLabel("Tồn kho").fill("10");
-    await page.getByRole("button", { name: /thêm sản phẩm/i }).click();
+    await page.getByRole("button", { name: "Lưu sản phẩm" }).click();
 
     await expect(page.getByText("Ruột xe Dream")).toBeVisible();
 
@@ -43,7 +44,8 @@ test.describe("Quản lý sản phẩm", () => {
     await page.getByRole("button", { name: /đơn mới/i }).click();
 
     await page.goto("/admin/debts");
-    await expect(page.getByText("Bà Lan")).toBeVisible();
+    // Trang no hien ten khach hai lan: mot o dau nhom, mot o dong don.
+    await expect(page.getByText("Bà Lan").first()).toBeVisible();
 
     await page.getByRole("button", { name: /khách trả tiền/i }).click();
     await expect(page.getByText(/không ai đang nợ/i)).toBeVisible();

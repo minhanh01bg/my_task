@@ -4,14 +4,13 @@ import { useState } from "react";
 
 import { DebtPanel } from "@/components/pos/debt-panel";
 import { TransferPanel } from "@/components/pos/transfer-panel";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { formatVnd } from "@/lib/money";
 import type { OrderPayloadPayment } from "@/lib/sync/types";
 import type { BankAccount } from "@/lib/vietqr/types";
 import { cn } from "@/lib/utils";
 import type { CustomerOption } from "@/types/catalog";
+import { Money, TouchButton } from "@/components/kit";
 
 type Method = "cash" | "transfer" | "debt";
 
@@ -96,7 +95,7 @@ export function PaymentDialog({
             data-testid="payment-total"
             className="text-3xl font-bold tabular-nums"
           >
-            {formatVnd(total)}
+            <Money amount={total} className="text-3xl" />
           </span>
         </div>
 
@@ -138,23 +137,23 @@ export function PaymentDialog({
 
             <div className="grid grid-cols-3 gap-2">
               {QUICK_AMOUNTS.map((amount) => (
-                <Button
+                <TouchButton
                   key={amount}
                   type="button"
                   variant="outline"
                   onClick={() => setReceived(String(amount))}
                 >
-                  {formatVnd(amount)}
-                </Button>
+                  <Money amount={amount} />
+                </TouchButton>
               ))}
-              <Button
+              <TouchButton
                 type="button"
                 variant="outline"
                 className="col-span-2"
                 onClick={() => setReceived(String(total))}
               >
                 Đúng số tiền
-              </Button>
+              </TouchButton>
             </div>
 
             <div className="bg-accent flex items-baseline justify-between rounded-lg p-4">
@@ -163,7 +162,7 @@ export function PaymentDialog({
                 data-testid="payment-change"
                 className="text-5xl font-bold tabular-nums"
               >
-                {formatVnd(change)}
+                <Money amount={change} size="display" />
               </span>
             </div>
           </div>
@@ -182,42 +181,42 @@ export function PaymentDialog({
         ) : null}
 
         <div className="flex gap-2">
-          <Button
+          <TouchButton
             type="button"
             variant="outline"
             className="h-14 flex-1"
             onClick={onCancel}
           >
             Huỷ
-          </Button>
+          </TouchButton>
 
           {method === "transfer" ? (
             <>
-              <Button
+              <TouchButton
                 type="button"
                 variant="outline"
                 className="h-14 flex-1"
                 onClick={() => confirmTransfer(false)}
               >
                 Chưa nhận được tiền
-              </Button>
-              <Button
+              </TouchButton>
+              <TouchButton
                 type="button"
                 className="h-14 flex-1 text-lg"
                 onClick={() => confirmTransfer(true)}
               >
                 Đã nhận tiền
-              </Button>
+              </TouchButton>
             </>
           ) : (
-            <Button
+            <TouchButton
               type="button"
               className="h-14 flex-1 text-lg"
               disabled={method === "cash" ? !cashEnough : !customer}
               onClick={method === "cash" ? confirmCash : confirmDebt}
             >
               Xác nhận
-            </Button>
+            </TouchButton>
           )}
         </div>
       </div>

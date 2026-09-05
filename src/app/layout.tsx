@@ -36,12 +36,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="vi"
-      suppressHydrationWarning
-      className={`h-full antialiased ${sans.variable} ${heading.variable} ${mono.variable}`}
-    >
-      <body className="min-h-full font-sans">
+    <html lang="en" suppressHydrationWarning className="h-full antialiased">
+      <body className="bg-background text-foreground min-h-full">
         <Providers>{children}</Providers>
         <ObservabilityProvider />
         <ServiceWorkerRegistrar />

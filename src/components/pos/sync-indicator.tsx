@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { flushQueue } from "@/lib/sync/flush";
-import { countQueuedOrders } from "@/lib/sync/queue";
+import { QUEUE_CHANGED_EVENT, countQueuedOrders } from "@/lib/sync/queue";
 
 const POLL_INTERVAL_MS = 15_000;
 
@@ -25,14 +25,22 @@ export function SyncIndicator() {
   }, [refresh]);
 
   useEffect(() => {
+    const onFlush = () => void flush();
+    const onQueueChanged = () => void refresh();
+
     const initial = setTimeout(() => void refresh(), 0);
-    const timer = setInterval(() => void flush(), POLL_INTERVAL_MS);
-    window.addEventListener("online", () => void flush());
+    const timer = setInterval(onFlush, POLL_INTERVAL_MS);
+
+    window.addEventListener("online", onFlush);
+    window.addEventListener(QUEUE_CHANGED_EVENT, onQueueChanged);
 
     return () => {
       clearTimeout(initial);
       clearInterval(timer);
-      window.removeEventListener("online", () => void flush());
+      // Phai go dung tham chieu da gan — ban cu truyen mot ham moi vao
+      // removeEventListener nen listener khong bao gio duoc go.
+      window.removeEventListener("online", onFlush);
+      window.removeEventListener(QUEUE_CHANGED_EVENT, onQueueChanged);
     };
   }, [flush, refresh]);
 

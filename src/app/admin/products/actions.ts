@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { saveProductImage } from "@/server/products/save-image";
 import { saveProduct, softDeleteProduct } from "@/server/products/save-product";
 
 const schema = z.object({
@@ -53,7 +54,18 @@ export async function saveProductAction(formData: FormData) {
     };
   }
 
-  await saveProduct({ ...parsed.data, isActive: true });
+  const image = formData.get("image");
+  let imageUrl: string | undefined;
+
+  if (image instanceof File && image.size > 0) {
+    const saved = await saveProductImage(image);
+    if (!saved.ok) {
+      return { ok: false as const, message: saved.message };
+    }
+    imageUrl = saved.imageUrl;
+  }
+
+  await saveProduct({ ...parsed.data, isActive: true, imageUrl });
 
   revalidatePath("/admin/products");
   revalidatePath("/pos");

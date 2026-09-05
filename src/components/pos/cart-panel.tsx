@@ -4,10 +4,9 @@ import { useMemo } from "react";
 import { ArrowRight, ShoppingCart } from "lucide-react";
 
 import { CartLineRow } from "@/components/pos/cart-line-row";
-import { Button } from "@/components/ui/button";
-import { formatVnd } from "@/lib/money";
 import { calculateCart } from "@/lib/pricing/calculate";
 import { useCartStore } from "@/stores/cart-store";
+import { Money, TouchButton } from "@/components/kit";
 
 interface CartPanelProps {
   onCheckout: () => void;
@@ -65,21 +64,18 @@ export function CartPanel({ onCheckout }: CartPanelProps) {
             data-testid="cart-total"
             className="font-heading text-3xl font-bold tracking-tight tabular-nums"
           >
-            {formatVnd(totals.total)}
+            <Money amount={totals.total} className="text-3xl" />
           </span>
         </div>
 
-        <Button
+        <TouchButton
           size="lg"
           disabled={lines.length === 0}
           onClick={onCheckout}
           className="mt-4 h-16 w-full justify-between px-5 text-lg"
         >
-          <span>
-            Thanh toán <span className="hidden opacity-75 sm:inline">(F4)</span>
-          </span>
-          <ArrowRight aria-hidden="true" className="size-5" />
-        </Button>
+          Thanh toán (F4)
+        </TouchButton>
       </div>
     </section>
   );

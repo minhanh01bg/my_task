@@ -20,6 +20,7 @@ function product(
     stock: 10,
     categoryId: null,
     soldCount: 0,
+    imageUrl: null,
     searchText: buildSearchText({ name, aliases }),
   };
 }

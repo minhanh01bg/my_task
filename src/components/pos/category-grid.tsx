@@ -1,9 +1,7 @@
 "use client";
 
-import { formatVnd } from "@/lib/money";
-import { ProductImage } from "@/components/shared/product-image";
+import { ChipToggle, ProductTile } from "@/components/kit";
 import type { SearchableProduct } from "@/lib/search/types";
-import { cn } from "@/lib/utils";
 import type { CatalogCategory } from "@/types/catalog";
 
 interface CategoryGridProps {
@@ -33,50 +31,30 @@ export function CategoryGrid({
         aria-label="Danh mục sản phẩm"
       >
         {categories.map((category) => (
-          <button
+          <ChipToggle
             key={category.id}
-            type="button"
-            onClick={() =>
+            label={category.name}
+            selected={activeCategoryId === category.id}
+            onToggle={() =>
               onCategoryChange(
                 activeCategoryId === category.id ? null : category.id,
               )
             }
-            className={cn(
-              "focus-visible:ring-ring min-h-11 shrink-0 cursor-pointer rounded-xl border px-4 py-2 text-base font-bold transition-colors focus-visible:ring-3 focus-visible:outline-none",
-              activeCategoryId === category.id
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-background hover:bg-accent",
-            )}
-          >
-            {category.name}
-          </button>
+          />
         ))}
       </div>
 
-      {activeCategoryId === null ? (
-        <p className="bg-muted/60 text-muted-foreground rounded-xl px-4 py-5 text-center text-sm">
-          Chọn một danh mục ở trên để xem các sản phẩm bên trong.
-        </p>
-      ) : null}
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {visible.map((product) => (
-          <button
+          <ProductTile
             key={product.id}
-            type="button"
-            onClick={() => onSelect(product)}
-            className="bg-card border-border hover:border-primary/40 hover:bg-accent focus-visible:ring-ring flex min-h-44 cursor-pointer flex-col items-start rounded-xl border p-3 text-left transition-colors focus-visible:ring-3 focus-visible:outline-none"
-          >
-            <ProductImage
-              src={product.imageUrl}
-              alt={`Ảnh ${product.name}`}
-              className="mb-3 aspect-[4/3] w-full"
-            />
-            <span className="line-clamp-2 font-bold">{product.name}</span>
-            <span className="mt-1 font-semibold tabular-nums">
-              {formatVnd(product.price)}
-            </span>
-          </button>
+            name={product.name}
+            price={product.price}
+            unit={product.unit}
+            stock={product.stock}
+            imageUrl={product.imageUrl}
+            onSelect={() => onSelect(product)}
+          />
         ))}
       </div>
     </div>

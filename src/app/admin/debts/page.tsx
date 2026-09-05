@@ -1,9 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatVnd } from "@/lib/money";
 import { prisma } from "@/server/db/prisma";
 
 import { settleDebtAction } from "./actions";
+import { Money, PageHeader } from "@/components/kit";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +29,10 @@ export default async function DebtsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Công nợ</h1>
+      <PageHeader
+        title="Công nợ"
+        description="Khách đang nợ tiền. Khách trả xong thì tất toán ở đây."
+      />
 
       <Card>
         <CardHeader>
@@ -44,7 +47,7 @@ export default async function DebtsPage() {
                 <li key={row.name} className="flex justify-between py-2">
                   <span>{row.name}</span>
                   <span className="font-semibold tabular-nums">
-                    {formatVnd(row.total)}
+                    <Money amount={row.total} />
                   </span>
                 </li>
               ))}
@@ -73,7 +76,7 @@ export default async function DebtsPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-lg font-semibold tabular-nums">
-                    {formatVnd(order.total)}
+                    <Money amount={order.total} />
                   </span>
                   <form action={settleDebtAction.bind(null, order.id)}>
                     <Button

@@ -48,3 +48,10 @@ next-env.d.ts
 *.db
 *.db-journal
 prisma/*.db
+
+# anh san pham nguoi dung upload luc chay
+/public/uploads/
+
+# ket qua chay test — san pham sinh ra, khong thuoc ve repo
+/playwright-report/
+/test-results/
