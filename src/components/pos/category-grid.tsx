@@ -27,7 +27,10 @@ export function CategoryGrid({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-2">
+      <div
+        className="flex gap-2 overflow-x-auto pb-2 sm:flex-wrap"
+        aria-label="Danh mục sản phẩm"
+      >
         {categories.map((category) => (
           <button
             key={category.id}
@@ -38,10 +41,10 @@ export function CategoryGrid({
               )
             }
             className={cn(
-              "rounded-full px-4 py-2 text-base",
+              "focus-visible:ring-ring min-h-11 shrink-0 cursor-pointer rounded-xl border px-4 py-2 text-base font-bold transition-colors focus-visible:ring-3 focus-visible:outline-none",
               activeCategoryId === category.id
-                ? "bg-primary text-primary-foreground"
-                : "bg-accent",
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-background hover:bg-accent",
             )}
           >
             {category.name}
@@ -49,13 +52,19 @@ export function CategoryGrid({
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      {activeCategoryId === null ? (
+        <p className="bg-muted/60 text-muted-foreground rounded-xl px-4 py-5 text-center text-sm">
+          Chọn một danh mục ở trên để xem các sản phẩm bên trong.
+        </p>
+      ) : null}
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
         {visible.map((product) => (
           <button
             key={product.id}
             type="button"
             onClick={() => onSelect(product)}
-            className="bg-card ring-foreground/10 hover:bg-accent flex flex-col items-start rounded-xl p-3 text-left ring-1 transition-colors"
+            className="bg-card border-border hover:border-primary/40 hover:bg-accent focus-visible:ring-ring flex min-h-24 cursor-pointer flex-col items-start justify-between rounded-xl border p-4 text-left transition-colors focus-visible:ring-3 focus-visible:outline-none"
           >
             <span className="line-clamp-2 font-medium">{product.name}</span>
             <span className="mt-1 font-semibold tabular-nums">

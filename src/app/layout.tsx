@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Inter } from "next/font/google";
+import { Geist_Mono, Nunito_Sans, Rubik } from "next/font/google";
 
 import { siteConfig } from "@/config/site";
 import { ObservabilityProvider } from "@/components/providers/observability-provider";
@@ -8,10 +8,13 @@ import { Providers } from "@/providers";
 
 import "./globals.css";
 
-// Inter co subset "vietnamese" — bat buoc vi toan bo giao dien la tieng Viet.
-const sans = Inter({
+const sans = Nunito_Sans({
   variable: "--font-sans",
   subsets: ["latin", "vietnamese"],
+});
+const heading = Rubik({
+  variable: "--font-heading-family",
+  subsets: ["latin", "latin-ext"],
 });
 const mono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -36,9 +39,9 @@ export default function RootLayout({
     <html
       lang="vi"
       suppressHydrationWarning
-      className={`h-full antialiased ${sans.variable} ${mono.variable}`}
+      className={`h-full antialiased ${sans.variable} ${heading.variable} ${mono.variable}`}
     >
-      <body className="min-h-full bg-zinc-50 font-sans text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+      <body className="min-h-full font-sans">
         <Providers>{children}</Providers>
         <ObservabilityProvider />
         <ServiceWorkerRegistrar />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { Search, SearchX } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { formatVnd } from "@/lib/money";
@@ -70,32 +71,53 @@ export function ProductSearch({ products, onSelect }: ProductSearchProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      <Input
-        ref={inputRef}
-        role="combobox"
-        aria-expanded={results.length > 0}
-        aria-controls="pos-search-results"
-        value={query}
-        autoFocus
-        placeholder="Tìm sản phẩm... (F2)"
-        onChange={(event) => {
-          setQuery(event.target.value);
-          setActiveIndex(0);
-        }}
-        onKeyDown={handleKeyDown}
-        className="h-14 px-4 text-xl"
-      />
+      <label
+        htmlFor="product-search"
+        className="font-heading text-base font-bold"
+      >
+        Bạn muốn bán sản phẩm nào?
+      </label>
+      <div className="relative">
+        <Search
+          aria-hidden="true"
+          className="text-muted-foreground pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2"
+        />
+        <Input
+          id="product-search"
+          ref={inputRef}
+          role="combobox"
+          aria-expanded={query.trim().length > 0 && results.length > 0}
+          aria-controls="pos-search-results"
+          aria-autocomplete="list"
+          value={query}
+          autoFocus
+          placeholder="Nhập tên, mã hoặc loại sản phẩm..."
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setActiveIndex(0);
+          }}
+          onKeyDown={handleKeyDown}
+          className="h-14 rounded-xl pr-4 pl-12 text-lg shadow-none"
+        />
+        <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-4 hidden -translate-y-1/2 rounded-md border px-2 py-1 text-xs sm:block">
+          F2
+        </span>
+      </div>
 
       {showEmpty ? (
-        <p className="text-muted-foreground px-4 py-6 text-center">
-          Không tìm thấy sản phẩm nào
+        <p
+          className="text-muted-foreground flex flex-col items-center gap-2 px-4 py-7 text-center"
+          role="status"
+        >
+          <SearchX aria-hidden="true" className="size-7" />
+          Không tìm thấy sản phẩm. Thử nhập tên ngắn hơn.
         </p>
       ) : null}
 
       <ul
         id="pos-search-results"
         role="listbox"
-        className="flex flex-col gap-1"
+        className="flex max-h-72 flex-col gap-1 overflow-y-auto"
       >
         {results.map((product, index) => (
           <li key={product.id}>
@@ -105,8 +127,10 @@ export function ProductSearch({ products, onSelect }: ProductSearchProps) {
               aria-selected={index === activeIndex}
               onClick={() => choose(product)}
               className={cn(
-                "flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-lg",
-                index === activeIndex ? "bg-accent" : "hover:bg-accent/50",
+                "focus-visible:ring-ring flex min-h-14 w-full cursor-pointer items-center justify-between rounded-xl px-4 py-3 text-left text-lg transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                index === activeIndex
+                  ? "bg-accent text-accent-foreground"
+                  : "hover:bg-muted",
               )}
             >
               <span className="flex flex-col">
