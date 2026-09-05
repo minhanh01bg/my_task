@@ -1,8 +1,8 @@
 "use client";
 
+import { TouchButton } from "@/components/kit";
 import { useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { CustomerOption } from "@/types/catalog";
 
@@ -60,9 +60,9 @@ export function DebtPanel({ selected, onSelect }: DebtPanelProps) {
     return (
       <div className="flex items-center justify-between rounded-lg border p-4">
         <span className="text-lg font-medium">{selected.name}</span>
-        <Button variant="outline" onClick={() => onSelect(null)}>
+        <TouchButton variant="outline" onClick={() => onSelect(null)}>
           Đổi khách
-        </Button>
+        </TouchButton>
       </div>
     );
   }
@@ -98,9 +98,13 @@ export function DebtPanel({ selected, onSelect }: DebtPanelProps) {
       </ul>
 
       {query.trim().length > 0 && options.length === 0 ? (
-        <Button variant="outline" disabled={creating} onClick={createCustomer}>
+        <TouchButton
+          variant="outline"
+          disabled={creating}
+          onClick={createCustomer}
+        >
           {creating ? "Đang tạo..." : `Tạo khách mới "${query.trim()}"`}
-        </Button>
+        </TouchButton>
       ) : null}
     </div>
   );

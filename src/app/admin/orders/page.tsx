@@ -4,10 +4,10 @@ import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatVnd } from "@/lib/money";
 import { prisma } from "@/server/db/prisma";
 
 import { cancelOrderAction } from "./actions";
+import { Money, PageHeader } from "@/components/kit";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +48,10 @@ export default async function OrdersPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Đơn hàng</h1>
+      <PageHeader
+        title="Đơn hàng"
+        description="Mọi đơn đã bán, tra lại theo mã đơn hoặc ngày."
+      />
 
       <form className="surface-panel flex flex-wrap items-end gap-3 p-4">
         <label className="flex min-w-44 flex-1 flex-col gap-1.5 text-sm font-bold">
@@ -122,7 +125,7 @@ export default async function OrdersPage({
 
                 <div className="flex items-center gap-3">
                   <span className="text-lg font-semibold tabular-nums">
-                    {formatVnd(order.total)}
+                    <Money amount={order.total} />
                   </span>
                   {order.status !== "cancelled" ? (
                     <ConfirmAction

@@ -38,7 +38,6 @@ export async function saveProduct(
     costPrice: Math.round(input.costPrice),
     stock: input.stock,
     aliases: input.aliases || null,
-    imageUrl: input.imageUrl || null,
     isActive: input.isActive,
     searchText: buildSearchText({
       name: input.name,
@@ -48,16 +47,24 @@ export async function saveProduct(
     }),
   };
 
+  const dataWithImage =
+    input.imageUrl === undefined
+      ? data
+      : { ...data, imageUrl: input.imageUrl || null };
+
   if (input.id) {
     const updated = await prisma.product.update({
       where: { id: input.id },
-      data,
+      data: dataWithImage,
       select: { id: true },
     });
     return updated;
   }
 
-  const created = await prisma.product.create({ data, select: { id: true } });
+  const created = await prisma.product.create({
+    data: dataWithImage,
+    select: { id: true },
+  });
   return created;
 }
 

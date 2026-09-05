@@ -1,10 +1,7 @@
 "use client";
 
-import { formatVnd } from "@/lib/money";
-import {
-  useHeldOrdersStore,
-  type HeldOrder,
-} from "@/stores/held-orders-store";
+import { Money } from "@/components/kit";
+import { useHeldOrdersStore, type HeldOrder } from "@/stores/held-orders-store";
 
 interface HeldOrdersBarProps {
   onResume: (order: HeldOrder) => void;
@@ -18,7 +15,7 @@ export function HeldOrdersBar({ onResume }: HeldOrdersBarProps) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-sm text-muted-foreground">Đơn đang giữ:</span>
+      <span className="text-muted-foreground text-sm">Đơn đang giữ:</span>
       {held.map((order, index) => (
         <button
           key={order.id}
@@ -27,9 +24,9 @@ export function HeldOrdersBar({ onResume }: HeldOrdersBarProps) {
             const resumed = resume(order.id);
             if (resumed) onResume(resumed);
           }}
-          className="rounded-full bg-accent px-4 py-2 text-sm"
+          className="bg-accent rounded-full px-4 py-2 text-sm"
         >
-          #{index + 1} — {formatVnd(order.total)}
+          #{index + 1} — <Money amount={order.total} size="sm" />
         </button>
       ))}
     </div>

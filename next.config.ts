@@ -29,6 +29,12 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  /*
+   * Playwright goi qua 127.0.0.1 con `next dev` phuc vu localhost, nen Next
+   * coi la cross-origin va chan tai nguyen dev — trang khong hydrate duoc va
+   * form submit kieu native.
+   */
+  allowedDevOrigins: ["127.0.0.1"],
   poweredByHeader: false,
   async headers() {
     return [

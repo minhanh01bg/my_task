@@ -31,6 +31,19 @@ export function getSyncDb(): Promise<IDBPDatabase> {
  * Xep don vao hang doi khi khong gui duoc. Khoa la clientId nen goi lai
  * cung mot don khong tao ban ghi thu hai.
  */
+/**
+ * Su kien bao hang doi vua doi. Chi bao dong bo lang nghe su kien nay thay
+ * vi cho vong hoi 15 giay — thu ngan ban offline xong phai thay ngay la don
+ * dang cho, khong phai doi.
+ */
+export const QUEUE_CHANGED_EVENT = "pos:queue-changed";
+
+export function notifyQueueChanged(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(QUEUE_CHANGED_EVENT));
+  }
+}
+
 export async function enqueueOrder(payload: OrderPayload): Promise<void> {
   const db = await getSyncDb();
   const existing = await db.get(ORDER_STORE, payload.clientId);
@@ -45,6 +58,7 @@ export async function enqueueOrder(payload: OrderPayload): Promise<void> {
   };
 
   await db.put(ORDER_STORE, entry);
+  notifyQueueChanged();
 }
 
 /** Tra ve theo dung thu tu ban — don cu duoc gui truoc. */
@@ -57,6 +71,7 @@ export async function listQueuedOrders(): Promise<QueuedOrder[]> {
 export async function removeQueuedOrder(clientId: string): Promise<void> {
   const db = await getSyncDb();
   await db.delete(ORDER_STORE, clientId);
+  notifyQueueChanged();
 }
 
 export async function markQueuedFailure(

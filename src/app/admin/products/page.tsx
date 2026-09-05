@@ -106,7 +106,7 @@ export default async function ProductsPage({
                 <TableHead>Danh mục</TableHead>
                 <TableHead className="text-right">Giá bán</TableHead>
                 <TableHead className="text-right">Tồn</TableHead>
-                <TableHead>
+                <TableHead className="text-right">
                   <span className="sr-only">Thao tác</span>
                 </TableHead>
               </TableRow>
@@ -137,6 +137,17 @@ export default async function ProductsPage({
                   <TableCell className="text-right tabular-nums">
                     {formatVnd(product.price)}
                   </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {product.stock < 0 ? (
+                      <Badge variant="destructive">
+                        {product.stock} {product.unit}
+                      </Badge>
+                    ) : (
+                      <span>
+                        {product.stock} {product.unit}
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
                       <Button
@@ -160,17 +171,6 @@ export default async function ProductsPage({
                         triggerClassName="text-destructive"
                       />
                     </div>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {product.stock < 0 ? (
-                      <Badge variant="destructive">
-                        {product.stock} {product.unit}
-                      </Badge>
-                    ) : (
-                      <span>
-                        {product.stock} {product.unit}
-                      </span>
-                    )}
                   </TableCell>
                 </TableRow>
               ))}
