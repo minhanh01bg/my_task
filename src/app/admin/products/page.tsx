@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Pencil, Search, Trash2 } from "lucide-react";
+import { Pencil, Search } from "lucide-react";
 
+import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -150,17 +151,14 @@ export default async function ProductsPage({
                       >
                         <Pencil aria-hidden="true" />
                       </Button>
-                      <form action={deleteProductAction.bind(null, product.id)}>
-                        <Button
-                          type="submit"
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Xóa ${product.name}`}
-                          className="text-destructive"
-                        >
-                          <Trash2 aria-hidden="true" />
-                        </Button>
-                      </form>
+                      <ConfirmAction
+                        action={deleteProductAction.bind(null, product.id)}
+                        triggerLabel="Xóa"
+                        title={`Ngừng bán “${product.name}”?`}
+                        description="Sản phẩm sẽ không còn xuất hiện tại quầy bán hàng. Các đơn hàng cũ vẫn được giữ nguyên để tra cứu."
+                        confirmLabel="Ngừng bán sản phẩm"
+                        triggerClassName="text-destructive"
+                      />
                     </div>
                   </TableCell>
                   <TableCell className="text-right tabular-nums">

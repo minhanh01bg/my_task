@@ -1,3 +1,6 @@
+import Link from "next/link";
+
+import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -122,15 +125,14 @@ export default async function OrdersPage({
                     {formatVnd(order.total)}
                   </span>
                   {order.status !== "cancelled" ? (
-                    <form action={cancelOrderAction.bind(null, order.id)}>
-                      <Button
-                        type="submit"
-                        variant="ghost"
-                        className="text-destructive"
-                      >
-                        Huỷ đơn
-                      </Button>
-                    </form>
+                    <ConfirmAction
+                      action={cancelOrderAction.bind(null, order.id)}
+                      triggerLabel="Hủy đơn"
+                      title={`Hủy đơn ${order.code}?`}
+                      description="Tồn kho của các sản phẩm trong đơn sẽ được hoàn lại. Thao tác này không thể hoàn tác."
+                      confirmLabel="Xác nhận hủy đơn"
+                      triggerClassName="text-destructive"
+                    />
                   ) : null}
                 </div>
               </li>
@@ -141,4 +143,3 @@ export default async function OrdersPage({
     </div>
   );
 }
-import Link from "next/link";

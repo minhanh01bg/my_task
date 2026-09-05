@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -81,15 +82,18 @@ export default async function CategoriesPage() {
                   <span className="text-muted-foreground text-sm whitespace-nowrap">
                     {category._count.products} sản phẩm
                   </span>
-                  <form action={deleteCategoryAction.bind(null, category.id)}>
-                    <Button
-                      type="submit"
-                      variant="ghost"
-                      className="text-destructive"
-                    >
-                      Xóa
-                    </Button>
-                  </form>
+                  <ConfirmAction
+                    action={deleteCategoryAction.bind(null, category.id)}
+                    triggerLabel="Xóa"
+                    title={`Xóa danh mục “${category.name}”?`}
+                    description={
+                      category._count.products > 0
+                        ? `${category._count.products} sản phẩm sẽ được chuyển sang trạng thái chưa phân loại. Sản phẩm không bị xóa.`
+                        : "Danh mục sẽ bị xóa khỏi quầy hàng. Thao tác này không thể hoàn tác."
+                    }
+                    confirmLabel="Xóa danh mục"
+                    triggerClassName="text-destructive"
+                  />
                 </div>
               </li>
             ))}
