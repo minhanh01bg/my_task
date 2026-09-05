@@ -1,3 +1,6 @@
+import Link from "next/link";
+
+import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,8 +25,19 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline"> = {
   cancelled: "outline",
 };
 
-export default async function OrdersPage() {
+export default async function OrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string; date?: string }>;
+}) {
+  const { status = "", date = "" } = await searchParams;
+  const start = date ? new Date(`${date}T00:00:00`) : null;
+  const end = date ? new Date(`${date}T23:59:59.999`) : null;
   const orders = await prisma.order.findMany({
+    where: {
+      ...(status ? { status } : {}),
+      ...(start && end ? { createdAt: { gte: start, lte: end } } : {}),
+    },
     orderBy: { createdAt: "desc" },
     take: 100,
     include: {
@@ -38,6 +52,38 @@ export default async function OrdersPage() {
         title="Đơn hàng"
         description="Mọi đơn đã bán, tra lại theo mã đơn hoặc ngày."
       />
+
+      <form className="surface-panel flex flex-wrap items-end gap-3 p-4">
+        <label className="flex min-w-44 flex-1 flex-col gap-1.5 text-sm font-bold">
+          Trạng thái
+          <select
+            name="status"
+            defaultValue={status}
+            className="border-input bg-background h-11 rounded-xl border px-3 font-medium"
+          >
+            <option value="">Tất cả trạng thái</option>
+            <option value="paid">Đã thanh toán</option>
+            <option value="debt">Ghi nợ</option>
+            <option value="cancelled">Đã hủy</option>
+            <option value="pending">Chờ thanh toán</option>
+          </select>
+        </label>
+        <label className="flex min-w-44 flex-1 flex-col gap-1.5 text-sm font-bold">
+          Ngày bán
+          <input
+            name="date"
+            type="date"
+            defaultValue={date}
+            className="border-input bg-background h-11 rounded-xl border px-3 font-medium"
+          />
+        </label>
+        <Button type="submit">Lọc đơn hàng</Button>
+        {status || date ? (
+          <Button variant="ghost" render={<Link href="/admin/orders" />}>
+            Xóa lọc
+          </Button>
+        ) : null}
+      </form>
 
       <Card>
         <CardHeader>
@@ -82,15 +128,14 @@ export default async function OrdersPage() {
                     <Money amount={order.total} />
                   </span>
                   {order.status !== "cancelled" ? (
-                    <form action={cancelOrderAction.bind(null, order.id)}>
-                      <Button
-                        type="submit"
-                        variant="ghost"
-                        className="text-destructive"
-                      >
-                        Huỷ đơn
-                      </Button>
-                    </form>
+                    <ConfirmAction
+                      action={cancelOrderAction.bind(null, order.id)}
+                      triggerLabel="Hủy đơn"
+                      title={`Hủy đơn ${order.code}?`}
+                      description="Tồn kho của các sản phẩm trong đơn sẽ được hoàn lại. Thao tác này không thể hoàn tác."
+                      confirmLabel="Xác nhận hủy đơn"
+                      triggerClassName="text-destructive"
+                    />
                   ) : null}
                 </div>
               </li>
@@ -101,4 +146,3 @@ export default async function OrdersPage() {
     </div>
   );
 }
-import Link from "next/link";

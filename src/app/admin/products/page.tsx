@@ -1,14 +1,7 @@
-import {
-  DataTableShell,
-  EmptyState,
-  Money,
-  PageHeader,
-  ProductImage,
-  StockBadge,
-} from "@/components/kit";
 import Link from "next/link";
-import { Pencil, Search, Trash2 } from "lucide-react";
+import { Pencil, Search } from "lucide-react";
 
+import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,9 +56,6 @@ export default async function ProductsPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Sản phẩm"
-        description="Hàng hoá đang bán tại quầy. Sửa ở đây là màn bán hàng đổi theo."
       <div>
         <p className="eyebrow">Danh mục hàng hóa</p>
         <h1 className="font-heading mt-1 text-3xl font-bold">Sản phẩm</h1>
@@ -104,60 +94,6 @@ export default async function ProductsPage({
         ) : null}
       </form>
 
-      <DataTableShell
-        title="Danh sách"
-        count={products.length}
-        isEmpty={products.length === 0}
-        empty={
-          <EmptyState
-            title="Chưa có sản phẩm nào"
-            description="Thêm sản phẩm đầu tiên để bắt đầu bán hàng."
-          />
-        }
-      >
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Tên</TableHead>
-              <TableHead>Danh mục</TableHead>
-              <TableHead className="text-right">Giá bán</TableHead>
-              <TableHead className="text-right">Tồn</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products.map((product) => (
-              <TableRow key={product.id} className="hover:bg-accent/50">
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <ProductImage
-                      src={product.imageUrl}
-                      name={product.name}
-                      size={40}
-                    />
-                    <div className="flex flex-col">
-                      <span className="font-medium">{product.name}</span>
-                      {product.aliases ? (
-                        <span className="text-muted-foreground text-sm">
-                          {product.aliases}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {product.category?.name ?? "—"}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Money amount={product.price} />
-                </TableCell>
-                <TableCell className="text-right">
-                  <StockBadge stock={product.stock} unit={product.unit} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </DataTableShell>
       <Card>
         <CardHeader>
           <CardTitle>Danh sách ({products.length})</CardTitle>
@@ -170,7 +106,7 @@ export default async function ProductsPage({
                 <TableHead>Danh mục</TableHead>
                 <TableHead className="text-right">Giá bán</TableHead>
                 <TableHead className="text-right">Tồn</TableHead>
-                <TableHead>
+                <TableHead className="text-right">
                   <span className="sr-only">Thao tác</span>
                 </TableHead>
               </TableRow>
@@ -201,6 +137,17 @@ export default async function ProductsPage({
                   <TableCell className="text-right tabular-nums">
                     {formatVnd(product.price)}
                   </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {product.stock < 0 ? (
+                      <Badge variant="destructive">
+                        {product.stock} {product.unit}
+                      </Badge>
+                    ) : (
+                      <span>
+                        {product.stock} {product.unit}
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
                       <Button
@@ -215,29 +162,15 @@ export default async function ProductsPage({
                       >
                         <Pencil aria-hidden="true" />
                       </Button>
-                      <form action={deleteProductAction.bind(null, product.id)}>
-                        <Button
-                          type="submit"
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Xóa ${product.name}`}
-                          className="text-destructive"
-                        >
-                          <Trash2 aria-hidden="true" />
-                        </Button>
-                      </form>
+                      <ConfirmAction
+                        action={deleteProductAction.bind(null, product.id)}
+                        triggerLabel="Xóa"
+                        title={`Ngừng bán “${product.name}”?`}
+                        description="Sản phẩm sẽ không còn xuất hiện tại quầy bán hàng. Các đơn hàng cũ vẫn được giữ nguyên để tra cứu."
+                        confirmLabel="Ngừng bán sản phẩm"
+                        triggerClassName="text-destructive"
+                      />
                     </div>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {product.stock < 0 ? (
-                      <Badge variant="destructive">
-                        {product.stock} {product.unit}
-                      </Badge>
-                    ) : (
-                      <span>
-                        {product.stock} {product.unit}
-                      </span>
-                    )}
                   </TableCell>
                 </TableRow>
               ))}

@@ -11,7 +11,6 @@ export interface SaveProductInput {
   costPrice: number;
   stock: number;
   aliases?: string | null;
-  /** Bo qua (undefined) nghia la giu nguyen anh dang co. */
   imageUrl?: string | null;
   isActive: boolean;
 }
@@ -39,7 +38,6 @@ export async function saveProduct(
     costPrice: Math.round(input.costPrice),
     stock: input.stock,
     aliases: input.aliases || null,
-    imageUrl: input.imageUrl || null,
     isActive: input.isActive,
     searchText: buildSearchText({
       name: input.name,
@@ -50,7 +48,9 @@ export async function saveProduct(
   };
 
   const dataWithImage =
-    input.imageUrl === undefined ? data : { ...data, imageUrl: input.imageUrl };
+    input.imageUrl === undefined
+      ? data
+      : { ...data, imageUrl: input.imageUrl || null };
 
   if (input.id) {
     const updated = await prisma.product.update({

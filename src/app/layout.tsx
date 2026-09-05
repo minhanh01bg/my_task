@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Nunito_Sans, Rubik } from "next/font/google";
+import { Be_Vietnam_Pro, Geist_Mono } from "next/font/google";
 
 import { siteConfig } from "@/config/site";
 import { ObservabilityProvider } from "@/components/providers/observability-provider";
@@ -8,13 +8,10 @@ import { Providers } from "@/providers";
 
 import "./globals.css";
 
-const sans = Nunito_Sans({
+const sans = Be_Vietnam_Pro({
   variable: "--font-sans",
+  weight: ["400", "500", "600", "700", "800"],
   subsets: ["latin", "vietnamese"],
-});
-const heading = Rubik({
-  variable: "--font-heading-family",
-  subsets: ["latin", "latin-ext"],
 });
 const mono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -36,8 +33,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className="h-full antialiased">
-      <body className="bg-background text-foreground min-h-full">
+    <html
+      lang="vi"
+      suppressHydrationWarning
+      className={`h-full antialiased ${sans.variable} ${mono.variable}`}
+    >
+      <body className="min-h-full font-sans">
         <Providers>{children}</Providers>
         <ObservabilityProvider />
         <ServiceWorkerRegistrar />

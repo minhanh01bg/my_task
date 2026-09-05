@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { CircleHelp, LayoutDashboard, Plus, ShoppingBag } from "lucide-react";
+import {
+  CheckCircle,
+  Plus,
+  ShoppingBagOpen,
+  Storefront,
+  Wrench,
+} from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CartPanel } from "@/components/pos/cart-panel";
@@ -15,6 +21,8 @@ import { ProductSearch } from "@/components/pos/product-search";
 import { ServiceLineDialog } from "@/components/pos/service-line-dialog";
 import { SyncIndicator } from "@/components/pos/sync-indicator";
 import { usePosShortcuts } from "@/components/pos/use-pos-shortcuts";
+import { Button } from "@/components/ui/button";
+import { formatVnd } from "@/lib/money";
 import { calculateCart } from "@/lib/pricing/calculate";
 import {
   isCatalogStale,
@@ -26,11 +34,11 @@ import type { BankAccount } from "@/lib/vietqr/types";
 import { useCartStore } from "@/stores/cart-store";
 import { useHeldOrdersStore } from "@/stores/held-orders-store";
 import type { CatalogResponse } from "@/types/catalog";
-import { Money, TouchButton } from "@/components/kit";
 
 interface PosScreenProps {
   catalog: CatalogResponse;
   bankAccount: BankAccount | null;
+  storeName: string;
 }
 
 interface LastSale {
@@ -44,6 +52,7 @@ interface LastSale {
 export function PosScreen({
   catalog: initialCatalog,
   bankAccount,
+  storeName,
 }: PosScreenProps) {
   const lines = useCartStore((state) => state.lines);
   const orderDiscount = useCartStore((state) => state.orderDiscount);
@@ -144,9 +153,11 @@ export function PosScreen({
       <section className="flex min-h-0 flex-col gap-4 lg:overflow-y-auto lg:pr-1">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="eyebrow">Quầy bán hàng</p>
+            <span className="bg-accent/15 text-accent-foreground border-accent/20 mb-2 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold shadow-sm backdrop-blur-sm">
+              <Storefront aria-hidden="true" weight="fill" /> {storeName}
+            </span>
             <h1 className="font-heading mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
-              Tạo đơn mới
+              Hôm nay bán gì đây?
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
               Tìm hoặc chọn mặt hàng, kiểm tra giỏ rồi thanh toán.
@@ -156,7 +167,7 @@ export function PosScreen({
             href="/admin/products"
             className="border-border bg-card text-foreground hover:bg-accent focus-visible:ring-ring inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold transition-colors focus-visible:ring-3 focus-visible:outline-none"
           >
-            <LayoutDashboard aria-hidden="true" className="size-4" />
+            <Wrench aria-hidden="true" weight="bold" className="size-5" />
             Quản lý cửa hàng
           </Link>
         </div>
@@ -190,7 +201,11 @@ export function PosScreen({
         <div className="surface-panel p-4 sm:p-5">
           <div className="mb-4 flex items-start gap-3">
             <span className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-xl">
-              <ShoppingBag aria-hidden="true" className="size-5" />
+              <ShoppingBagOpen
+                aria-hidden="true"
+                weight="duotone"
+                className="size-6"
+              />
             </span>
             <div>
               <h2 className="font-heading font-bold">
@@ -213,21 +228,21 @@ export function PosScreen({
 
       <section className="surface-panel flex min-h-[520px] flex-col gap-3 p-4 lg:min-h-0 lg:overflow-hidden lg:p-5">
         <div className="flex gap-2">
-          <TouchButton
+          <Button
             variant="outline"
             className="flex-1"
             onClick={() => setServiceOpen(true)}
           >
-            + Tiền công
-          </TouchButton>
-          <TouchButton
+            <Plus aria-hidden="true" weight="bold" /> Tiền công
+          </Button>
+          <Button
             variant="outline"
             className="flex-1"
             disabled={lines.length === 0}
             onClick={holdCurrent}
           >
-            Giữ đơn (F8)
-          </TouchButton>
+            Giữ đơn <span className="hidden xl:inline">(F8)</span>
+          </Button>
         </div>
         <CartPanel onCheckout={() => setPaymentOpen(true)} />
       </section>
@@ -252,7 +267,11 @@ export function PosScreen({
             className="bg-background w-full max-w-md space-y-4 rounded-3xl p-6 text-center shadow-2xl sm:p-8"
           >
             <div className="bg-primary/10 text-primary mx-auto flex size-14 items-center justify-center rounded-full">
-              <CircleHelp aria-hidden="true" className="size-7" />
+              <CheckCircle
+                aria-hidden="true"
+                weight="fill"
+                className="size-8"
+              />
             </div>
             <h2
               id="sale-success-title"
@@ -265,27 +284,21 @@ export function PosScreen({
                 ? `Đã lưu đơn ${lastSale.code}`
                 : "Đã lưu tạm — sẽ đồng bộ khi có mạng"}
             </p>
-            <p className="text-lg">
-              Khách đưa <Money amount={lastSale.received} />
-            </p>
+            <p className="text-lg">Khách đưa {formatVnd(lastSale.received)}</p>
             <p className="text-muted-foreground text-sm">Tiền thối lại</p>
             <p
               data-testid="last-sale-change"
               className="text-7xl font-bold tabular-nums"
             >
-              <Money
-                amount={lastSale.change}
-                size="display"
-                className="text-7xl"
-              />
+              {formatVnd(lastSale.change)}
             </p>
-            <TouchButton
+            <Button
               autoFocus
               className="h-16 w-full text-xl"
               onClick={() => setLastSale(null)}
             >
               Đơn mới
-            </TouchButton>
+            </Button>
           </div>
         </div>
       ) : null}

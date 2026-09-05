@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { CloudArrowUp } from "@phosphor-icons/react";
 
 import { flushQueue } from "@/lib/sync/flush";
-import { QUEUE_CHANGED_EVENT, countQueuedOrders } from "@/lib/sync/queue";
+import { countQueuedOrders } from "@/lib/sync/queue";
 
 const POLL_INTERVAL_MS = 15_000;
 
@@ -25,22 +26,15 @@ export function SyncIndicator() {
   }, [refresh]);
 
   useEffect(() => {
-    const onFlush = () => void flush();
-    const onQueueChanged = () => void refresh();
-
     const initial = setTimeout(() => void refresh(), 0);
-    const timer = setInterval(onFlush, POLL_INTERVAL_MS);
-
-    window.addEventListener("online", onFlush);
-    window.addEventListener(QUEUE_CHANGED_EVENT, onQueueChanged);
+    const timer = setInterval(() => void flush(), POLL_INTERVAL_MS);
+    const handleOnline = () => void flush();
+    window.addEventListener("online", handleOnline);
 
     return () => {
       clearTimeout(initial);
       clearInterval(timer);
-      // Phai go dung tham chieu da gan — ban cu truyen mot ham moi vao
-      // removeEventListener nen listener khong bao gio duoc go.
-      window.removeEventListener("online", onFlush);
-      window.removeEventListener(QUEUE_CHANGED_EVENT, onQueueChanged);
+      window.removeEventListener("online", handleOnline);
     };
   }, [flush, refresh]);
 
@@ -50,8 +44,9 @@ export function SyncIndicator() {
     <button
       type="button"
       onClick={() => void flush()}
-      className="rounded-full bg-amber-100 px-4 py-2 text-sm text-amber-900"
+      className="focus-visible:ring-ring inline-flex min-h-11 items-center gap-2 rounded-xl border-2 border-amber-700/20 bg-amber-100 px-4 py-2 text-sm font-extrabold text-amber-950 transition-colors hover:bg-amber-200 focus-visible:ring-3 focus-visible:outline-none"
     >
+      <CloudArrowUp aria-hidden="true" weight="duotone" className="size-5" />
       {pending} đơn chờ đồng bộ — bấm để thử lại
     </button>
   );

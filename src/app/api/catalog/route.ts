@@ -26,7 +26,6 @@ export async function GET() {
         imageUrl: true,
         categoryId: true,
         soldCount: true,
-        imageUrl: true,
         searchText: true,
       },
     }),

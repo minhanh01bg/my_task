@@ -1,4 +1,6 @@
-import { ImageIcon } from "lucide-react";
+"use client";
+
+import { Package } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/utils";
 
@@ -22,7 +24,7 @@ export function ProductImage({ src, alt, className }: ProductImageProps) {
         className,
       )}
     >
-      <ImageIcon aria-hidden="true" className="size-1/3" />
+      <Package aria-hidden="true" weight="duotone" className="size-1/3" />
       {src ? (
         <span
           aria-hidden="true"

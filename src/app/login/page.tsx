@@ -39,14 +39,22 @@ export default function LoginPage() {
 
   return (
     <main className="grid min-h-dvh lg:grid-cols-[1fr_1.1fr]">
-      <section className="bg-primary text-primary-foreground hidden flex-col justify-between p-10 lg:flex xl:p-16">
+      <section className="bg-primary text-primary-foreground relative hidden flex-col justify-between overflow-hidden p-10 lg:flex xl:p-16">
+        <div
+          aria-hidden="true"
+          className="absolute -top-32 -right-24 size-96 rounded-full bg-white/8 blur-3xl"
+        />
+        <div
+          aria-hidden="true"
+          className="bg-accent/15 absolute -bottom-32 -left-24 size-[28rem] rounded-full blur-3xl"
+        />
         <div className="flex items-center gap-3">
-          <span className="flex size-11 items-center justify-center rounded-xl bg-white/15">
+          <span className="flex size-11 items-center justify-center rounded-2xl border border-white/15 bg-white/10 shadow-lg backdrop-blur-sm">
             <Store aria-hidden="true" className="size-6" />
           </span>
           <span className="font-heading text-xl font-bold">An Phát POS</span>
         </div>
-        <div className="max-w-xl">
+        <div className="relative max-w-xl">
           <p className="mb-4 text-sm font-bold tracking-[0.16em] text-white/70 uppercase">
             Bán hàng nhẹ nhàng hơn
           </p>
@@ -64,7 +72,7 @@ export default function LoginPage() {
         </div>
       </section>
 
-      <section className="flex items-center justify-center p-5 sm:p-8">
+      <section className="relative flex items-center justify-center p-5 sm:p-8">
         <Card className="surface-panel w-full max-w-md border-0 p-1">
           <CardHeader className="space-y-4 p-6 pb-2 sm:p-8 sm:pb-3">
             <span className="bg-primary/10 text-primary flex size-12 items-center justify-center rounded-2xl lg:hidden">

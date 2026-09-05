@@ -1,6 +1,6 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { Minus, Plus, Trash } from "@phosphor-icons/react";
 
 import { Input } from "@/components/ui/input";
 import type { CartLine } from "@/lib/pricing/types";
@@ -25,24 +25,45 @@ export function CartLineRow({ line, lineTotal }: CartLineRowProps) {
           type="button"
           aria-label={`Xoá dòng ${line.name}`}
           onClick={() => removeLine(line.id)}
-          className="text-muted-foreground hover:bg-accent rounded p-2"
+          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:ring-ring flex size-11 items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
         >
-          <Trash2 className="size-4" />
+          <Trash aria-hidden="true" className="size-5" />
         </button>
       </div>
 
       <div className="flex items-center gap-2">
-        <Input
-          aria-label={`Số lượng ${line.name}`}
-          type="number"
-          step="any"
-          min="0"
-          value={line.quantity}
-          onChange={(event) =>
-            updateQuantity(line.id, Number(event.target.value) || 0)
-          }
-          className="h-9 w-20 text-right tabular-nums"
-        />
+        <div className="border-border bg-muted/45 flex items-center rounded-xl border p-0.5 shadow-inner">
+          <button
+            type="button"
+            aria-label={`Bớt một ${line.unit} ${line.name}`}
+            onClick={() =>
+              updateQuantity(line.id, Math.max(0, line.quantity - 1))
+            }
+            className="hover:bg-card focus-visible:ring-ring flex size-11 items-center justify-center rounded-[0.65rem] transition-colors focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+          >
+            <Minus aria-hidden="true" weight="bold" className="size-4" />
+          </button>
+          <Input
+            aria-label={`Số lượng ${line.name}`}
+            type="number"
+            inputMode="decimal"
+            step="any"
+            min="0"
+            value={line.quantity}
+            onChange={(event) =>
+              updateQuantity(line.id, Number(event.target.value) || 0)
+            }
+            className="h-10 w-16 border-0 bg-transparent px-1 text-center text-base font-bold tabular-nums shadow-none focus-visible:ring-0"
+          />
+          <button
+            type="button"
+            aria-label={`Thêm một ${line.unit} ${line.name}`}
+            onClick={() => updateQuantity(line.id, line.quantity + 1)}
+            className="bg-card text-primary hover:bg-primary hover:text-primary-foreground focus-visible:ring-ring flex size-11 items-center justify-center rounded-[0.65rem] shadow-sm transition-[color,background-color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+          >
+            <Plus aria-hidden="true" weight="bold" className="size-4" />
+          </button>
+        </div>
         <span className="text-muted-foreground text-sm">{line.unit}</span>
 
         <span className="text-muted-foreground">×</span>

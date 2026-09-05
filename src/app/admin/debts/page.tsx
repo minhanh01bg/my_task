@@ -1,5 +1,6 @@
-import { Button } from "@/components/ui/button";
+import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatVnd } from "@/lib/money";
 import { prisma } from "@/server/db/prisma";
 
 import { settleDebtAction } from "./actions";
@@ -78,15 +79,15 @@ export default async function DebtsPage() {
                   <span className="text-lg font-semibold tabular-nums">
                     <Money amount={order.total} />
                   </span>
-                  <form action={settleDebtAction.bind(null, order.id)}>
-                    <Button
-                      type="submit"
-                      variant="outline"
-                      className="text-green-700"
-                    >
-                      Khách trả tiền
-                    </Button>
-                  </form>
+                  <ConfirmAction
+                    action={settleDebtAction.bind(null, order.id)}
+                    triggerLabel="Khách đã trả"
+                    title={`Xác nhận đã thu ${formatVnd(order.total)}?`}
+                    description={`Đơn ${order.code} của ${order.customer?.name ?? "khách lẻ"} sẽ được đánh dấu đã thanh toán.`}
+                    confirmLabel="Đã nhận đủ tiền"
+                    triggerVariant="outline"
+                    triggerClassName="text-primary"
+                  />
                 </div>
               </li>
             ))}
