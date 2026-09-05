@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  ArrowClockwise,
   CheckCircle,
   Plus,
   ShoppingBagOpen,
@@ -66,6 +67,7 @@ export function PosScreen({
   const [serviceOpen, setServiceOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [lastSale, setLastSale] = useState<LastSale | null>(null);
+  const [refreshingCatalog, setRefreshingCatalog] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
   // Ma dat truoc de QR mang dung ma don. Sinh lai sau moi lan ban xong.
@@ -93,6 +95,20 @@ export function PosScreen({
       setStale(isCatalogStale(cached));
     });
   }, [initialCatalog.products.length]);
+
+  const refreshCatalog = useCallback(async () => {
+    setRefreshingCatalog(true);
+    try {
+      const response = await fetch("/api/catalog", { cache: "no-store" });
+      if (!response.ok) return;
+      const fresh = (await response.json()) as CatalogResponse;
+      setCatalog(fresh);
+      setStale(false);
+      await saveCatalog(fresh);
+    } finally {
+      setRefreshingCatalog(false);
+    }
+  }, []);
 
   const focusSearch = useCallback(() => {
     searchRef.current?.querySelector("input")?.focus();
@@ -178,9 +194,20 @@ export function PosScreen({
         >
           <SyncIndicator />
           {stale ? (
-            <span className="rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-950">
-              Danh mục đã cũ — nên làm mới khi có mạng
-            </span>
+            <div className="bg-warning/15 text-warning-foreground flex flex-wrap items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold">
+              <span>Danh mục đã cũ</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="bg-background min-h-11"
+                disabled={refreshingCatalog}
+                onClick={() => void refreshCatalog()}
+              >
+                <ArrowClockwise aria-hidden="true" weight="bold" />
+                {refreshingCatalog ? "Đang tải…" : "Tải lại hàng hóa"}
+              </Button>
+            </div>
           ) : null}
         </div>
 
