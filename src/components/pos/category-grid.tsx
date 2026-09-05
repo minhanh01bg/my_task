@@ -1,6 +1,7 @@
 "use client";
 
 import { formatVnd } from "@/lib/money";
+import { ProductImage } from "@/components/shared/product-image";
 import type { SearchableProduct } from "@/lib/search/types";
 import { cn } from "@/lib/utils";
 import type { CatalogCategory } from "@/types/catalog";
@@ -64,9 +65,14 @@ export function CategoryGrid({
             key={product.id}
             type="button"
             onClick={() => onSelect(product)}
-            className="bg-card border-border hover:border-primary/40 hover:bg-accent focus-visible:ring-ring flex min-h-24 cursor-pointer flex-col items-start justify-between rounded-xl border p-4 text-left transition-colors focus-visible:ring-3 focus-visible:outline-none"
+            className="bg-card border-border hover:border-primary/40 hover:bg-accent focus-visible:ring-ring flex min-h-44 cursor-pointer flex-col items-start rounded-xl border p-3 text-left transition-colors focus-visible:ring-3 focus-visible:outline-none"
           >
-            <span className="line-clamp-2 font-medium">{product.name}</span>
+            <ProductImage
+              src={product.imageUrl}
+              alt={`Ảnh ${product.name}`}
+              className="mb-3 aspect-[4/3] w-full"
+            />
+            <span className="line-clamp-2 font-bold">{product.name}</span>
             <span className="mt-1 font-semibold tabular-nums">
               {formatVnd(product.price)}
             </span>

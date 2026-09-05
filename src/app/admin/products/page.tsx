@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatVnd } from "@/lib/money";
+import { ProductImage } from "@/components/shared/product-image";
 import { prisma } from "@/server/db/prisma";
 
 import { ProductForm } from "./product-form";
@@ -42,7 +43,7 @@ export default async function ProductsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Tên</TableHead>
+                <TableHead>Sản phẩm</TableHead>
                 <TableHead>Danh mục</TableHead>
                 <TableHead className="text-right">Giá bán</TableHead>
                 <TableHead className="text-right">Tồn</TableHead>
@@ -52,12 +53,21 @@ export default async function ProductsPage() {
               {products.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell>
-                    <span className="font-medium">{product.name}</span>
-                    {product.aliases ? (
-                      <span className="text-muted-foreground ml-2 text-sm">
-                        ({product.aliases})
-                      </span>
-                    ) : null}
+                    <div className="flex items-center gap-3">
+                      <ProductImage
+                        src={product.imageUrl}
+                        alt={`Ảnh ${product.name}`}
+                        className="size-12"
+                      />
+                      <div className="min-w-0">
+                        <p className="font-bold">{product.name}</p>
+                        {product.aliases ? (
+                          <p className="text-muted-foreground truncate text-sm">
+                            {product.aliases}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {product.category?.name ?? "—"}

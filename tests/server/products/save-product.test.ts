@@ -32,6 +32,21 @@ describe("saveProduct", () => {
     expect(saved.price).toBe(25000);
   });
 
+  it("luu duong dan anh san pham", async () => {
+    const { id } = await saveProduct({
+      name: "Bugi NGK",
+      unit: "cái",
+      price: 35000,
+      costPrice: 24000,
+      stock: 20,
+      imageUrl: "https://example.com/bugi-ngk.jpg",
+      isActive: true,
+    });
+
+    const saved = await prisma.product.findUniqueOrThrow({ where: { id } });
+    expect(saved.imageUrl).toBe("https://example.com/bugi-ngk.jpg");
+  });
+
   it("sinh searchText da bo dau", async () => {
     const { id } = await saveProduct({
       name: "Nhớt Castrol Power1",

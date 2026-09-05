@@ -5,6 +5,7 @@ export interface SearchableProduct {
   price: number;
   unit: string;
   stock: number;
+  imageUrl?: string | null;
   categoryId: string | null;
   soldCount: number;
   /** Chuoi da chuan hoa, dung san khi luu san pham. */

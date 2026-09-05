@@ -11,6 +11,7 @@ export interface SaveProductInput {
   costPrice: number;
   stock: number;
   aliases?: string | null;
+  imageUrl?: string | null;
   isActive: boolean;
 }
 
@@ -37,6 +38,7 @@ export async function saveProduct(
     costPrice: Math.round(input.costPrice),
     stock: input.stock,
     aliases: input.aliases || null,
+    imageUrl: input.imageUrl || null,
     isActive: input.isActive,
     searchText: buildSearchText({
       name: input.name,

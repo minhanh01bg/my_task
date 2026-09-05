@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { Search, SearchX } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
+import { ProductImage } from "@/components/shared/product-image";
 import { formatVnd } from "@/lib/money";
 import { searchProducts } from "@/lib/search/match";
 import type { SearchableProduct } from "@/lib/search/types";
@@ -133,10 +134,17 @@ export function ProductSearch({ products, onSelect }: ProductSearchProps) {
                   : "hover:bg-muted",
               )}
             >
-              <span className="flex flex-col">
-                <span className="font-medium">{product.name}</span>
-                <span className="text-muted-foreground text-sm">
-                  Còn {product.stock} {product.unit}
+              <span className="flex min-w-0 items-center gap-3">
+                <ProductImage
+                  src={product.imageUrl}
+                  alt={`Ảnh ${product.name}`}
+                  className="size-12"
+                />
+                <span className="flex min-w-0 flex-col">
+                  <span className="font-medium">{product.name}</span>
+                  <span className="text-muted-foreground text-sm">
+                    Còn {product.stock} {product.unit}
+                  </span>
                 </span>
               </span>
               <span className="font-semibold tabular-nums">

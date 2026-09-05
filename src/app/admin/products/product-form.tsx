@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ImagePlus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +24,7 @@ interface ProductFormProps {
 
 export function ProductForm({ categories }: ProductFormProps) {
   const [message, setMessage] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState("");
 
   async function handleAction(formData: FormData) {
     const result = await saveProductAction(formData);
@@ -35,10 +37,43 @@ export function ProductForm({ categories }: ProductFormProps) {
         <CardTitle>Thêm sản phẩm</CardTitle>
       </CardHeader>
       <CardContent>
-        <form action={handleAction} className="grid grid-cols-2 gap-4">
+        <form
+          action={handleAction}
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+        >
           <div className="col-span-2 space-y-1.5">
             <Label htmlFor="product-name">Tên sản phẩm</Label>
             <Input id="product-name" name="name" required />
+          </div>
+
+          <div className="col-span-full space-y-1.5">
+            <Label htmlFor="product-image-url">Ảnh sản phẩm</Label>
+            <div className="flex items-center gap-3">
+              <span
+                aria-hidden="true"
+                className="bg-muted text-muted-foreground flex size-16 shrink-0 items-center justify-center rounded-xl bg-cover bg-center"
+                style={
+                  imageUrl
+                    ? { backgroundImage: `url(${JSON.stringify(imageUrl)})` }
+                    : undefined
+                }
+              >
+                {!imageUrl ? <ImagePlus className="size-6" /> : null}
+              </span>
+              <div className="min-w-0 flex-1">
+                <Input
+                  id="product-image-url"
+                  name="imageUrl"
+                  type="url"
+                  value={imageUrl}
+                  onChange={(event) => setImageUrl(event.target.value)}
+                  placeholder="https://example.com/san-pham.jpg"
+                />
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Dán đường dẫn ảnh công khai. Nên dùng ảnh vuông, nền sáng.
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="col-span-2 space-y-1.5">
@@ -110,7 +145,7 @@ export function ProductForm({ categories }: ProductFormProps) {
             />
           </div>
 
-          <div className="col-span-2 flex items-center gap-3">
+          <div className="col-span-full flex items-center gap-3">
             <Button type="submit">Thêm sản phẩm</Button>
             {message ? (
               <span className="text-muted-foreground text-sm">{message}</span>
