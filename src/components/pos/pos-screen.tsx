@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CircleHelp, LayoutDashboard, Plus, ShoppingBag } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CartPanel } from "@/components/pos/cart-panel";
@@ -140,22 +141,34 @@ export function PosScreen({
   }
 
   return (
-    <main className="grid h-dvh grid-cols-1 gap-4 p-4 lg:grid-cols-[1fr_420px]">
-      <section className="flex min-h-0 flex-col gap-4 overflow-y-auto">
-        <div className="flex items-center justify-between">
-          <h1 className="text-lg font-semibold">Bán hàng</h1>
+    <main className="mx-auto grid min-h-dvh w-full max-w-[1800px] grid-cols-1 gap-4 p-3 sm:p-5 lg:h-dvh lg:grid-cols-[minmax(0,1fr)_430px] lg:gap-5 lg:p-6">
+      <section className="flex min-h-0 flex-col gap-4 lg:overflow-y-auto lg:pr-1">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="eyebrow">Quầy bán hàng</p>
+            <h1 className="font-heading mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
+              Tạo đơn mới
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Tìm hoặc chọn mặt hàng, kiểm tra giỏ rồi thanh toán.
+            </p>
+          </div>
           <Link
             href="/admin/products"
-            className="text-muted-foreground text-sm hover:underline"
+            className="border-border bg-card text-foreground hover:bg-accent focus-visible:ring-ring inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold transition-colors focus-visible:ring-3 focus-visible:outline-none"
           >
-            Quản lý →
+            <LayoutDashboard aria-hidden="true" className="size-4" />
+            Quản lý cửa hàng
           </Link>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div
+          className="flex flex-wrap items-center gap-3"
+          aria-label="Trạng thái hệ thống"
+        >
           <SyncIndicator />
           {stale ? (
-            <span className="rounded-full bg-amber-100 px-4 py-2 text-sm text-amber-900">
+            <span className="rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-950">
               Danh mục đã cũ — nên làm mới khi có mạng
             </span>
           ) : null}
@@ -171,27 +184,42 @@ export function PosScreen({
           }}
         />
 
-        <div ref={searchRef}>
+        <div ref={searchRef} className="surface-panel p-3 sm:p-4">
           <ProductSearch products={catalog.products} onSelect={addProduct} />
         </div>
 
-        <CategoryGrid
-          categories={catalog.categories}
-          products={catalog.products}
-          activeCategoryId={activeCategoryId}
-          onCategoryChange={setActiveCategoryId}
-          onSelect={addProduct}
-        />
+        <div className="surface-panel p-4 sm:p-5">
+          <div className="mb-4 flex items-start gap-3">
+            <span className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-xl">
+              <ShoppingBag aria-hidden="true" className="size-5" />
+            </span>
+            <div>
+              <h2 className="font-heading font-bold">
+                Chọn nhanh theo danh mục
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                Dành cho khi bạn không nhớ chính xác tên sản phẩm.
+              </p>
+            </div>
+          </div>
+          <CategoryGrid
+            categories={catalog.categories}
+            products={catalog.products}
+            activeCategoryId={activeCategoryId}
+            onCategoryChange={setActiveCategoryId}
+            onSelect={addProduct}
+          />
+        </div>
       </section>
 
-      <section className="bg-card ring-foreground/10 flex min-h-0 flex-col gap-2 rounded-xl p-4 ring-1">
+      <section className="surface-panel flex min-h-[520px] flex-col gap-3 p-4 lg:min-h-0 lg:overflow-hidden lg:p-5">
         <div className="flex gap-2">
           <Button
             variant="outline"
             className="flex-1"
             onClick={() => setServiceOpen(true)}
           >
-            + Tiền công
+            <Plus aria-hidden="true" /> Tiền công
           </Button>
           <Button
             variant="outline"
@@ -199,7 +227,7 @@ export function PosScreen({
             disabled={lines.length === 0}
             onClick={holdCurrent}
           >
-            Giữ đơn (F8)
+            Giữ đơn <span className="hidden xl:inline">(F8)</span>
           </Button>
         </div>
         <CartPanel onCheckout={() => setPaymentOpen(true)} />
@@ -218,7 +246,21 @@ export function PosScreen({
 
       {lastSale ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-background w-full max-w-md space-y-4 rounded-lg p-8 text-center">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sale-success-title"
+            className="bg-background w-full max-w-md space-y-4 rounded-3xl p-6 text-center shadow-2xl sm:p-8"
+          >
+            <div className="bg-primary/10 text-primary mx-auto flex size-14 items-center justify-center rounded-full">
+              <CircleHelp aria-hidden="true" className="size-7" />
+            </div>
+            <h2
+              id="sale-success-title"
+              className="font-heading text-2xl font-bold"
+            >
+              Thanh toán thành công
+            </h2>
             <p className="text-muted-foreground">
               {lastSale.synced
                 ? `Đã lưu đơn ${lastSale.code}`

@@ -25,6 +25,7 @@ export default async function PosPage() {
         price: true,
         unit: true,
         stock: true,
+        imageUrl: true,
         categoryId: true,
         soldCount: true,
         searchText: true,
