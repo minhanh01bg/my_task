@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle, Sparkle } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,45 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const [unit, setUnit] = useState(product?.unit ?? "cái");
   const [isSaving, setIsSaving] = useState(false);
 
+  useEffect(() => {
+    if (product) return;
+
+    const draft = localStorage.getItem("an-phat-product-draft");
+    if (!draft || !formRef.current) return;
+
+    try {
+      const values = JSON.parse(draft) as Record<string, string>;
+      for (const element of formRef.current.elements) {
+        if (
+          element instanceof HTMLInputElement &&
+          element.name &&
+          values[element.name] !== undefined
+        ) {
+          element.value = values[element.name];
+        }
+      }
+      const restoreState = window.setTimeout(() => {
+        setCategoryId(values.categoryId ?? "");
+        setUnit(values.unit ?? "cái");
+        setImageUrl(values.imageUrl ?? "");
+        setMessage("Đã khôi phục thông tin đang nhập dở");
+      }, 0);
+
+      return () => window.clearTimeout(restoreState);
+    } catch {
+      localStorage.removeItem("an-phat-product-draft");
+    }
+  }, [product]);
+
+  function saveDraft(form: HTMLFormElement) {
+    if (product) return;
+    const draft: Record<string, string> = {};
+    new FormData(form).forEach((value, key) => {
+      if (typeof value === "string") draft[key] = value;
+    });
+    localStorage.setItem("an-phat-product-draft", JSON.stringify(draft));
+  }
+
   async function handleAction(formData: FormData) {
     setIsSaving(true);
     setMessage(null);
@@ -46,6 +85,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       setMessage(result.ok ? "Đã lưu sản phẩm thành công" : result.message);
 
       if (result.ok && !product) {
+        localStorage.removeItem("an-phat-product-draft");
         formRef.current?.reset();
         setImageUrl("");
         // Giữ lại danh mục và đơn vị để nhập liên tiếp nhiều mặt hàng cùng loại.
@@ -67,6 +107,8 @@ export function ProductForm({ categories, product }: ProductFormProps) {
         <form
           ref={formRef}
           action={handleAction}
+          onInput={(event) => saveDraft(event.currentTarget)}
+          onChange={(event) => saveDraft(event.currentTarget)}
           className="grid grid-cols-1 gap-5 sm:grid-cols-2"
         >
           {product ? (
