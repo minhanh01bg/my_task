@@ -1,30 +1,94 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 import { prisma } from "@/server/db/prisma";
 
-/** Khach tra tien no — ghi them mot khoan thanh toan tien mat va dong don. */
-export async function settleDebtAction(orderId: string) {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    select: { total: true, status: true },
+const paymentSchema = z.object({
+  orderId: z.string().min(1),
+  amount: z.coerce.number().int().positive("Số tiền phải lớn hơn 0"),
+  method: z.enum(["cash", "transfer"]),
+});
+
+export async function recordDebtPaymentAction(formData: FormData) {
+  const parsed = paymentSchema.safeParse({
+    orderId: formData.get("orderId"),
+    amount: formData.get("amount"),
+    method: formData.get("method"),
   });
 
-  if (!order || order.status !== "debt") return;
+  if (!parsed.success) {
+    return {
+      ok: false as const,
+      message: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
 
-  await prisma.$transaction([
-    prisma.payment.create({
+  const result = await prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({
+      where: { id: parsed.data.orderId },
+      select: {
+        total: true,
+        status: true,
+        payments: {
+          where: {
+            method: { in: ["cash", "transfer"] },
+            receivedAt: { not: null },
+          },
+          select: { amount: true },
+        },
+      },
+    });
+
+    if (!order || order.status !== "debt") {
+      return { ok: false as const, message: "Đơn nợ không còn tồn tại" };
+    }
+
+    const paid = order.payments.reduce(
+      (sum, payment) => sum + payment.amount,
+      0,
+    );
+    const balance = Math.max(0, order.total - paid);
+
+    if (balance === 0) {
+      await tx.order.update({
+        where: { id: parsed.data.orderId },
+        data: { status: "paid" },
+      });
+      return { ok: true as const };
+    }
+
+    if (parsed.data.amount > balance) {
+      return {
+        ok: false as const,
+        message: `Số tiền vượt quá dư nợ còn lại ${balance.toLocaleString("vi-VN")} ₫`,
+      };
+    }
+
+    await tx.payment.create({
       data: {
-        orderId,
-        method: "cash",
-        amount: order.total,
+        orderId: parsed.data.orderId,
+        method: parsed.data.method,
+        amount: parsed.data.amount,
         receivedAt: new Date(),
         note: "Khách trả nợ",
       },
-    }),
-    prisma.order.update({ where: { id: orderId }, data: { status: "paid" } }),
-  ]);
+    });
+
+    if (parsed.data.amount === balance) {
+      await tx.order.update({
+        where: { id: parsed.data.orderId },
+        data: { status: "paid" },
+      });
+    }
+
+    return { ok: true as const };
+  });
 
   revalidatePath("/admin/debts");
+  revalidatePath("/admin/orders");
+  revalidatePath(`/admin/orders/${parsed.data.orderId}`);
+
+  return result;
 }

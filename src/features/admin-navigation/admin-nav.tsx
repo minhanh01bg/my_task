@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  ArrowsClockwise,
   ChartBar,
   CreditCard,
   Gear,
@@ -19,6 +20,7 @@ const NAV = [
   { href: "/admin/categories", label: "Danh mục", icon: SquaresFour },
   { href: "/admin/orders", label: "Đơn hàng", icon: TextAlignLeft },
   { href: "/admin/debts", label: "Công nợ", icon: CreditCard },
+  { href: "/admin/offline", label: "Đơn chờ đồng bộ", icon: ArrowsClockwise },
   { href: "/admin/reports", label: "Báo cáo", icon: ChartBar },
   { href: "/admin/settings", label: "Cài đặt", icon: Gear },
 ] as const;

@@ -3,8 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { prisma } from "@/server/db/prisma";
 import { saveProductImage } from "@/server/products/save-image";
 import { saveProduct, softDeleteProduct } from "@/server/products/save-product";
+
+const quickUpdateSchema = z.object({
+  id: z.string().min(1),
+  price: z.coerce.number().int().min(0, "Giá bán không được âm"),
+  stock: z.coerce.number().finite("Tồn kho không hợp lệ"),
+});
 
 const schema = z.object({
   id: z.string().optional(),
@@ -67,6 +74,31 @@ export async function saveProductAction(formData: FormData) {
   }
 
   await saveProduct({ ...parsed.data, isActive: true, imageUrl });
+
+  revalidatePath("/admin/products");
+  revalidatePath("/pos");
+
+  return { ok: true as const };
+}
+
+export async function quickUpdateProductAction(formData: FormData) {
+  const parsed = quickUpdateSchema.safeParse({
+    id: formData.get("id"),
+    price: formData.get("price"),
+    stock: formData.get("stock"),
+  });
+
+  if (!parsed.success) {
+    return {
+      ok: false as const,
+      message: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  await prisma.product.update({
+    where: { id: parsed.data.id, deletedAt: null },
+    data: { price: parsed.data.price, stock: parsed.data.stock },
+  });
 
   revalidatePath("/admin/products");
   revalidatePath("/pos");
