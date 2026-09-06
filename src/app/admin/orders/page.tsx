@@ -34,12 +34,14 @@ interface OrdersSearchParams {
   to?: string;
   q?: string;
   page?: string;
+  channel?: string;
 }
 
 function buildPageHref(params: OrdersSearchParams, page: number) {
   const query = new URLSearchParams();
   if (params.q) query.set("q", params.q);
   if (params.status) query.set("status", params.status);
+  if (params.channel) query.set("channel", params.channel);
   if (params.from) query.set("from", params.from);
   if (params.to) query.set("to", params.to);
   query.set("page", String(page));
@@ -54,6 +56,7 @@ export default async function OrdersPage({
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
   const status = params.status ?? "";
+  const channel = params.channel ?? "";
   const from = params.from ?? "";
   const to = params.to ?? "";
   const requestedPage = Math.max(
@@ -63,6 +66,7 @@ export default async function OrdersPage({
   const start = from ? new Date(`${from}T00:00:00`) : null;
   const end = to ? new Date(`${to}T23:59:59.999`) : null;
   const where = {
+    ...(channel ? { channel } : {}),
     ...(status ? { status } : {}),
     ...(start || end
       ? {
@@ -103,7 +107,7 @@ export default async function OrdersPage({
         description="Tìm nhanh theo mã đơn, tên hoặc số điện thoại khách hàng."
       />
 
-      <form className="surface-panel grid gap-3 p-4 lg:grid-cols-[minmax(16rem,1.5fr)_repeat(3,minmax(10rem,1fr))_auto] lg:items-end">
+      <form className="surface-panel grid gap-3 p-4 lg:grid-cols-[minmax(16rem,1.5fr)_repeat(4,minmax(9rem,1fr))_auto] lg:items-end">
         <label className="flex flex-col gap-1.5 text-sm font-bold">
           Tìm đơn hoặc khách hàng
           <span className="relative">
@@ -118,6 +122,19 @@ export default async function OrdersPage({
               className="border-input bg-background h-12 w-full rounded-xl border pr-3 pl-10 font-medium outline-none focus-visible:ring-3"
             />
           </span>
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm font-bold">
+          Kênh bán
+          <DropdownField
+            name="channel"
+            defaultValue={channel}
+            aria-label="Kênh bán"
+            options={[
+              { value: "", label: "Tất cả kênh" },
+              { value: "online", label: "Online" },
+              { value: "pos", label: "Tại quầy" },
+            ]}
+          />
         </label>
         <label className="flex flex-col gap-1.5 text-sm font-bold">
           Trạng thái
@@ -156,7 +173,7 @@ export default async function OrdersPage({
           <Button type="submit" className="min-h-12">
             Tìm đơn
           </Button>
-          {q || status || from || to ? (
+          {q || status || channel || from || to ? (
             <Button
               variant="ghost"
               className="min-h-12"
@@ -201,6 +218,14 @@ export default async function OrdersPage({
                       >
                         {STATUS_LABEL[order.status] ?? order.status}
                       </Badge>
+                      <Badge variant="outline">
+                        {order.channel === "online" ? "Online" : "Tại quầy"}
+                      </Badge>
+                      {order.fulfillmentStatus ? (
+                        <Badge variant="secondary">
+                          {order.fulfillmentStatus}
+                        </Badge>
+                      ) : null}
                       {order.hasStockWarning ? (
                         <Badge variant="destructive">Tồn âm</Badge>
                       ) : null}
