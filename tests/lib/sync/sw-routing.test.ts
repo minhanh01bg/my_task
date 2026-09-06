@@ -44,3 +44,15 @@ describe("routeFor", () => {
     expect(routeFor("/")).toBe("skip");
   });
 });
+
+describe("vong doi cache giao dien", () => {
+  it("dung cache co version de deploy moi khong giu shell cu", () => {
+    expect(source).toMatch(/const CACHE_VERSION = "v\d+"/);
+    expect(source).toContain("pos-shell-${CACHE_VERSION}");
+  });
+
+  it("luon hoi mang bo qua HTTP cache khi lam moi shell", () => {
+    expect(source).toContain('cache: "reload"');
+    expect(source).toContain('cache: "no-store"');
+  });
+});
