@@ -6,7 +6,15 @@ import {
 
 import { createOrder } from "./create-order";
 
-export async function createOnlineOrder(input: OnlineCheckoutInput) {
+export interface OnlineOrderAccessContext {
+  customerAccountId?: string | null;
+  guestAccess?: { tokenHash: string; expiresAt: Date };
+}
+
+export async function createOnlineOrder(
+  input: OnlineCheckoutInput,
+  access: OnlineOrderAccessContext = {},
+) {
   const existing = await prisma.order.findUnique({
     where: { clientId: input.clientId },
     select: { id: true },
@@ -28,6 +36,7 @@ export async function createOnlineOrder(input: OnlineCheckoutInput) {
         },
       ],
       payments: [{ method: "transfer", amount: 0 }],
+      customerAccountId: access.customerAccountId,
     });
   }
 
@@ -100,6 +109,8 @@ export async function createOnlineOrder(input: OnlineCheckoutInput) {
         amount: total,
       },
     ],
+    customerAccountId: access.customerAccountId,
+    guestAccess: access.customerAccountId ? undefined : access.guestAccess,
     initialStatus: "pending",
     autoReceiveCash: false,
     note: input.note || null,

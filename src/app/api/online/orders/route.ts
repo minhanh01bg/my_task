@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { logger } from "@/lib/logger";
+import {
+  createOpaqueToken,
+  digestOpaqueToken,
+  resolveCustomerSessionToken,
+} from "@/server/customer-auth/session";
 import { createOnlineOrder } from "@/server/orders/create-online-order";
 import { OnlineOrderError, onlineCheckoutSchema } from "@/types/online-order";
 
@@ -23,7 +28,22 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await createOnlineOrder(parsed.data);
+    const customerToken = request.headers
+      .get("cookie")
+      ?.match(/(?:^|;\s*)customer_session=([^;]+)/)?.[1];
+    const session = await resolveCustomerSessionToken(
+      customerToken ? decodeURIComponent(customerToken) : null,
+    );
+    const guestToken = session ? null : createOpaqueToken();
+    const result = await createOnlineOrder(parsed.data, {
+      customerAccountId: session?.accountId,
+      guestAccess: guestToken
+        ? {
+            tokenHash: digestOpaqueToken(guestToken),
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          }
+        : undefined,
+    });
     return NextResponse.json(
       {
         data: {
@@ -32,11 +52,22 @@ export async function POST(request: Request) {
             total: result.order.total,
             status: result.order.status,
             fulfillmentStatus: "new",
+            accessUrl: session
+              ? `/account/orders/${result.order.id}`
+              : guestToken && !result.duplicated
+                ? `/orders/guest/${guestToken}`
+                : undefined,
           },
           duplicated: result.duplicated,
         },
       },
-      { status: result.duplicated ? 200 : 201 },
+      {
+        status: result.duplicated ? 200 : 201,
+        headers: {
+          "Cache-Control": "private, no-store",
+          "Referrer-Policy": "no-referrer",
+        },
+      },
     );
   } catch (error) {
     if (error instanceof OnlineOrderError) {

@@ -57,25 +57,54 @@ model Customer {
   @@index([name])
 }
 
+model CustomerAccount {
+  id              String    @id @default(cuid())
+  phoneNormalized String    @unique
+  displayName     String
+  passwordHash    String
+  phoneVerifiedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  disabledAt      DateTime?
+
+  sessions CustomerSession[]
+  orders   Order[]
+}
+
+model CustomerSession {
+  id         String          @id @default(cuid())
+  accountId  String
+  account    CustomerAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  tokenHash  String          @unique
+  expiresAt  DateTime
+  createdAt  DateTime        @default(now())
+  lastSeenAt DateTime?
+  revokedAt  DateTime?
+
+  @@index([accountId, expiresAt])
+}
+
 model Order {
-  id         String    @id @default(cuid())
-  code       String    @unique
+  id                String           @id @default(cuid())
+  code              String           @unique
   /// pos | online
-  channel    String    @default("pos")
+  channel           String           @default("pos")
   /// paid | pending | debt | cancelled
-  status     String    @default("paid")
-  subtotal   Int       @default(0)
-  discount   Int       @default(0)
-  total      Int       @default(0)
-  customerId String?
-  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  note       String?
+  status            String           @default("paid")
+  subtotal          Int              @default(0)
+  discount          Int              @default(0)
+  total             Int              @default(0)
+  customerId        String?
+  customer          Customer?        @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerAccountId String?
+  customerAccount   CustomerAccount? @relation(fields: [customerAccountId], references: [id], onDelete: SetNull)
+  note              String?
   /// Ma duy nhat do may ban sinh TRUOC khi gui — chong trung don
-  clientId   String    @unique
-  createdAt  DateTime  @default(now())
-  syncedAt   DateTime?
+  clientId          String           @unique
+  createdAt         DateTime         @default(now())
+  syncedAt          DateTime?
   /// Danh dau don co dong lam ton kho bi am
-  hasStockWarning Boolean @default(false)
+  hasStockWarning   Boolean          @default(false)
   /// Online-only fulfillment metadata; null for POS orders
   fulfillmentStatus String?
   fulfillmentType   String?
@@ -86,15 +115,27 @@ model Order {
   deliveryWard      String?
   deliveryDistrict  String?
   deliveryProvince  String?
-  shippingFee       Int     @default(0)
+  shippingFee       Int              @default(0)
 
-  items    OrderItem[]
-  payments Payment[]
+  items       OrderItem[]
+  payments    Payment[]
+  guestAccess GuestOrderAccess?
 
   @@index([createdAt])
   @@index([status])
   @@index([channel])
   @@index([fulfillmentStatus])
+  @@index([customerAccountId])
+}
+
+model GuestOrderAccess {
+  id        String    @id @default(cuid())
+  orderId   String    @unique
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
 }
 
 model OrderItem {

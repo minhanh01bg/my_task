@@ -31,6 +31,8 @@ export interface CreateOrderInput {
   orderDiscount?: number;
   payments: CreateOrderPayment[];
   customerId?: string | null;
+  customerAccountId?: string | null;
+  guestAccess?: { tokenHash: string; expiresAt: Date };
   note?: string | null;
   initialStatus?: string;
   autoReceiveCash?: boolean;
@@ -160,6 +162,7 @@ export async function createOrder(
         discount: totals.discount,
         total: totals.total,
         customerId: input.customerId ?? null,
+        customerAccountId: input.customerAccountId ?? null,
         note: input.note ?? null,
         clientId: input.clientId,
         syncedAt: new Date(),
@@ -199,6 +202,9 @@ export async function createOrder(
             note: payment.note ?? null,
           })),
         },
+        guestAccess: input.guestAccess
+          ? { create: input.guestAccess }
+          : undefined,
       },
     });
 

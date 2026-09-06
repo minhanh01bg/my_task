@@ -73,6 +73,7 @@ export const onlineOrderResponseSchema = z.object({
       total: z.number().int(),
       status: z.string(),
       fulfillmentStatus: z.string(),
+      accessUrl: z.string().startsWith("/").optional(),
     }),
     duplicated: z.boolean(),
   }),

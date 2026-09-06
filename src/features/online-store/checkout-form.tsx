@@ -64,7 +64,8 @@ function FormContent() {
       const parsed = onlineOrderResponseSchema.parse(body);
       clear();
       router.push(
-        `/order-success/${encodeURIComponent(parsed.data.order.code)}`,
+        parsed.data.order.accessUrl ??
+          `/order-success/${encodeURIComponent(parsed.data.order.code)}`,
       );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Không thể đặt hàng");
