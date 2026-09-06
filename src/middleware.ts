@@ -1,13 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { SESSION_COOKIE, verifySession } from "@/server/auth/session";
-
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/health"];
+import { isPublicPath } from "@/lib/auth/public-paths";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (PUBLIC_PATHS.some((path) => pathname.startsWith(path))) {
+  if (pathname === "/login" || isPublicPath(pathname)) {
     return NextResponse.next();
   }
 
