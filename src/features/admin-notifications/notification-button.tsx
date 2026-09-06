@@ -1,13 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell, CheckCircle, X } from "@phosphor-icons/react";
 
 import { useAdminNotifications } from "./notification-provider";
 
-export function NotificationButton() {
+export function NotificationButton({
+  placement = "desktop",
+}: {
+  placement?: "desktop" | "mobile";
+}) {
   const [open, setOpen] = useState(false);
+  const panelId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const { items, unreadCount, loading, error, refresh, markOne, markAll } =
     useAdminNotifications();
@@ -17,24 +22,32 @@ export function NotificationButton() {
   }, [open]);
 
   return (
-    <div className="relative md:mb-4">
+    <div className={placement === "desktop" ? "relative mb-4" : "relative"}>
       <button
         type="button"
         aria-label={`Thông báo${unreadCount ? `, ${unreadCount} chưa đọc` : ""}`}
         aria-expanded={open}
-        aria-controls="admin-notification-panel"
+        aria-controls={panelId}
         onClick={() => setOpen((value) => !value)}
-        className="hover:bg-accent/12 focus-visible:ring-ring relative flex min-h-11 w-full items-center justify-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold focus-visible:ring-3 focus-visible:outline-none md:justify-start"
+        className={
+          placement === "desktop"
+            ? "hover:bg-accent/12 focus-visible:ring-ring relative flex min-h-11 w-full items-center justify-start gap-3 rounded-xl px-3 py-2 text-sm font-semibold focus-visible:ring-3 focus-visible:outline-none"
+            : "hover:bg-accent focus-visible:ring-ring relative flex size-11 items-center justify-center rounded-xl focus-visible:ring-2 focus-visible:outline-none"
+        }
       >
         <Bell
           aria-hidden="true"
           className="size-5"
           weight={unreadCount ? "fill" : "regular"}
         />
-        <span className="hidden md:inline">Thông báo</span>
+        {placement === "desktop" ? <span>Thông báo</span> : null}
         {unreadCount > 0 && (
           <span
-            className="bg-destructive text-destructive-foreground min-w-5 rounded-full px-1.5 text-center text-xs"
+            className={
+              placement === "desktop"
+                ? "bg-destructive text-destructive-foreground min-w-5 rounded-full px-1.5 text-center text-xs"
+                : "bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 min-w-5 rounded-full px-1 text-center text-[0.65rem] font-bold"
+            }
             data-testid="notification-badge"
           >
             {unreadCount > 99 ? "99+" : unreadCount}
@@ -43,9 +56,13 @@ export function NotificationButton() {
       </button>
       {open && (
         <section
-          id="admin-notification-panel"
+          id={panelId}
           aria-label="Thông báo quản trị"
-          className="bg-popover text-popover-foreground fixed inset-x-3 top-16 z-50 max-h-[75dvh] overflow-auto rounded-2xl border p-3 shadow-xl md:absolute md:inset-x-auto md:top-0 md:left-full md:ml-3 md:w-96"
+          className={
+            placement === "desktop"
+              ? "bg-popover text-popover-foreground absolute top-0 left-full z-50 ml-3 max-h-[75dvh] w-96 overflow-auto rounded-2xl border p-3 shadow-xl"
+              : "bg-popover text-popover-foreground fixed inset-x-3 top-18 z-50 max-h-[calc(100dvh-6rem)] overflow-auto rounded-2xl border p-3 shadow-xl"
+          }
         >
           <header className="mb-2 flex items-center justify-between gap-2">
             <h2 className="font-heading font-bold">Thông báo</h2>

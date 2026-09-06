@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import { PrismaClient } from "@prisma/client";
 
 test("API notification từ chối anonymous và customer cookie", async ({
   request,
@@ -17,12 +16,19 @@ test("admin thấy badge, mở panel, đọc và đi đúng order detail", async
 }) => {
   await page.goto("/login");
   await page.getByRole("textbox", { name: "Mật khẩu cửa hàng" }).fill("123456");
-  await page.getByRole("button", { name: /vào bán hàng/i }).click();
+  const loginButton = page.getByRole("button", { name: /vào bán hàng/i });
+  await expect(loginButton).toBeEnabled();
+  await loginButton.click();
+  await page.waitForURL("**/pos");
 
-  const prisma = new PrismaClient();
-  const productId = (await prisma.product.findFirst({ select: { id: true } }))
-    ?.id;
-  await prisma.$disconnect();
+  const catalog = await page.request.get("/api/catalog");
+  expect(catalog.ok()).toBeTruthy();
+  const catalogBody = (await catalog.json()) as {
+    products: Array<{ id: string; stock: number }>;
+  };
+  const productId = catalogBody.products.find(
+    (product) => product.stock >= 1,
+  )?.id;
   expect(productId).toBeTruthy();
 
   const checkout = await page.request.post("/api/online/orders", {
@@ -40,11 +46,17 @@ test("admin thấy badge, mở panel, đọc và đi đúng order detail", async
       note: "",
     },
   });
-  expect(checkout.ok()).toBeTruthy();
+  const checkoutBody = await checkout.text();
+  expect(checkout.ok(), checkoutBody).toBeTruthy();
 
   await page.goto("/admin/orders");
-  await expect(page.getByTestId("notification-badge")).toBeVisible();
-  await page.getByRole("button", { name: /Thông báo/ }).click();
+  const desktopNotificationButton = page
+    .getByRole("complementary")
+    .getByRole("button", { name: /^Thông báo/ });
+  await expect(
+    desktopNotificationButton.getByTestId("notification-badge"),
+  ).toBeVisible();
+  await desktopNotificationButton.click();
   const item = page.getByRole("link", { name: /Có đơn online mới/ }).first();
   const href = await item.getAttribute("href");
   expect(href).toMatch(/^\/admin\/orders\//);

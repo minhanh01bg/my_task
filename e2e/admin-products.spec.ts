@@ -23,12 +23,14 @@ test.describe("Quản lý sản phẩm", () => {
     await page.getByLabel("Số lượng đang có").fill("10");
     await page.getByRole("button", { name: "Lưu và nhập món tiếp" }).click();
 
-    await expect(page.getByText("Ruột xe Dream")).toBeVisible();
+    await expect(page.getByText("Ruột xe Dream").first()).toBeVisible();
 
     // Tim duoc bang ten goi khac, khong dau
     await page.goto("/pos");
     await page.getByRole("combobox").fill("sam dream");
-    await expect(page.getByText("Ruột xe Dream")).toBeVisible();
+    await expect(
+      page.getByRole("option", { name: /Ruột xe Dream/ }).first(),
+    ).toBeVisible();
   });
 
   test("ban ghi no roi tat toan o trang cong no", async ({ page }) => {
@@ -49,7 +51,10 @@ test.describe("Quản lý sản phẩm", () => {
     // Trang no hien ten khach hai lan: mot o dau nhom, mot o dong don.
     await expect(page.getByText("Bà Lan").first()).toBeVisible();
 
-    await page.getByRole("button", { name: /ghi nhận trả nợ/i }).click();
+    await page
+      .getByRole("button", { name: /ghi nhận trả nợ/i })
+      .first()
+      .click();
     await page.getByRole("button", { name: /xác nhận đã nhận/i }).click();
     await expect(
       page.getByText("0 đơn đã trả đủ", { exact: true }),
