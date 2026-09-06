@@ -76,12 +76,25 @@ model Order {
   syncedAt   DateTime?
   /// Danh dau don co dong lam ton kho bi am
   hasStockWarning Boolean @default(false)
+  /// Online-only fulfillment metadata; null for POS orders
+  fulfillmentStatus String?
+  fulfillmentType   String?
+  paymentMethod     String?
+  contactName       String?
+  contactPhone      String?
+  deliveryAddress   String?
+  deliveryWard      String?
+  deliveryDistrict  String?
+  deliveryProvince  String?
+  shippingFee       Int     @default(0)
 
   items    OrderItem[]
   payments Payment[]
 
   @@index([createdAt])
   @@index([status])
+  @@index([channel])
+  @@index([fulfillmentStatus])
 }
 
 model OrderItem {
