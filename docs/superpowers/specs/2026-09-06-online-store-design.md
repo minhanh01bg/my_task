@@ -3,7 +3,7 @@
 - **Ngày:** 2026-09-06
 - **Owner:** minhanh01bg
 - **Base:** POS hiện tại (Next.js 16 App Router, React 19, Prisma 6 + SQLite, Zod 4)
-- **Trạng thái:** Approved for implementation
+- **Trạng thái:** Approved for implementation; revised after auth/notification audit
 - **Tiền đề:** `docs/superpowers/specs/2026-09-04-pos-store-design.md`, mục 12
 
 ## 1. Mục tiêu và phạm vi
@@ -154,3 +154,83 @@ Action server validate Zod, đọc order hiện tại, chỉ cho `channel=online
 ## 13. Migration và tương thích
 
 Tất cả field mới nullable/default-safe nên record POS hiện tại hợp lệ. Không đổi route `/api/orders` hoặc contract POS. Seed thêm dữ liệu online chỉ khi cần cho E2E. Prisma migration/push phải chạy trước deploy; rollback ứng dụng cũ vẫn đọc được các cột mới. Báo cáo doanh thu tiếp tục dựa trên `Order.status`; đơn online pending không tính là doanh thu paid cho đến khi xác nhận tiền theo quy ước hiện tại.
+
+## 14. Audit hiện trạng cho customer auth và admin notifications
+
+Audit tại base commit `83d5dedc04dac64b237e068ac03c15e833c83c9a` xác nhận:
+
+- Auth hiện tại là auth nội bộ dùng một mật khẩu cửa hàng, cookie `pos_session` ký HMAC và middleware chỉ bảo vệ `/pos`, `/admin/**`, `/api/**` không nằm trong public allowlist. Token không mang user id hay role và không thể dùng làm danh tính khách hàng.
+- `Customer` hiện là hồ sơ nghiệp vụ POS/công nợ (`name`, `phone`, quan hệ `orders`), chưa phải credential principal. Ghép tài khoản online vào model này sẽ làm lẫn quyền sở hữu đơn với quan hệ công nợ.
+- `Order.customerId` hiện phục vụ khách công nợ POS; đơn online chỉ có contact snapshot và chưa có principal sở hữu. Endpoint tạo đơn là public và trang success theo code không phải cơ chế authorization.
+- Checkout đã có `clientId` và lõi đơn dùng unique constraint để chống tạo trùng. Notification chưa có model, endpoint, badge hay navigation item; nếu phát notification sau transaction bằng side effect thì retry/crash có thể làm mất hoặc nhân đôi thông báo.
+- Admin navigation là một client component tĩnh, phù hợp để gắn badge nhỏ nhưng không nên tự giữ nguồn dữ liệu notification trong local state.
+
+Kết luận: triển khai customer identity/session và notification như hai bounded context mới. Không sửa nghĩa admin session, `Customer`, `Order.customerId` hoặc idempotency hiện hữu.
+
+## 15. Customer identity và session tách hoàn toàn khỏi admin
+
+### 15.1 Mô hình dữ liệu
+
+Thêm các model độc lập:
+
+- `CustomerAccount`: `id`, `phoneNormalized @unique`, `displayName`, `passwordHash`, `phoneVerifiedAt?`, `createdAt`, `updatedAt`, `disabledAt?`. Không chứa role admin và không tái sử dụng secret/mật khẩu cửa hàng.
+- `CustomerSession`: `id`, `accountId`, `tokenHash @unique`, `expiresAt`, `createdAt`, `lastSeenAt?`, `revokedAt?`; index `(accountId, expiresAt)`. Chỉ digest SHA-256 của token ngẫu nhiên tối thiểu 256 bit được lưu DB.
+- `Order.customerAccountId?` là ownership online, relation `onDelete: SetNull`, có index. Giữ nguyên `Order.customerId?` cho hồ sơ POS/công nợ và giữ contact fields trên Order làm snapshot giao nhận.
+- `GuestOrderAccess`: `id`, `orderId @unique`, `tokenHash @unique`, `expiresAt`, `createdAt`, `revokedAt?`; token plaintext chỉ xuất hiện một lần trong URL trả về sau checkout. Không lưu plaintext và không dùng order code làm credential.
+
+Không tự động hợp nhất `CustomerAccount` với `Customer` theo số điện thoại. Một tác vụ liên kết rõ ràng có kiểm chứng có thể được thiết kế sau; MVP tránh account takeover do số điện thoại nhập tay ở POS.
+
+### 15.2 Cookie và biên authorization
+
+- Giữ admin cookie `pos_session` và module auth hiện tại không đổi. Customer dùng cookie riêng `customer_session`, opaque, `HttpOnly`, `Secure` ở production, `SameSite=Lax`, `Path=/`, có hạn ngắn hợp lý và được kiểm tra bằng session row còn hạn/chưa revoke.
+- Tách namespace: `/api/auth/**` và `/login` tiếp tục dành cho admin; customer dùng `/api/customer-auth/register|login|logout` và `/account/**`. Không có fallback kiểu “admin session cũng là customer session” hoặc ngược lại.
+- Middleware chỉ phân loại route thô. Mọi server page, route handler và server action customer phải gọi helper `requireCustomerSession`; mọi truy vấn order phải có predicate ownership `customerAccountId = session.accountId`, không fetch theo id/code rồi mới so sánh trong application.
+- Password dùng primitive chuyên dụng có salt và work factor được version hóa; rate-limit register/login theo IP và phone, trả lỗi đăng nhập chung, rotate session khi login, revoke server-side khi logout/disable. Không log password, session token, guest token hoặc PII đầy đủ.
+- CSRF dựa trên `SameSite=Lax` cộng kiểm tra Origin cho mutation cookie-authenticated; mọi input tiếp tục qua Zod strict.
+
+### 15.3 Guest checkout, ownership và guest link
+
+- Guest checkout vẫn là luồng mặc định. Khi request có customer session hợp lệ, server gắn `customerAccountId`; client không được gửi account id.
+- Trong cùng transaction tạo Order, server tạo đúng một `GuestOrderAccess` cho đơn guest. Retry cùng `clientId` trả lại kết quả logical của đơn cũ nhưng không tạo token/access row thứ hai. API chỉ có thể phát lại plaintext token nếu thiết kế một cơ chế sealed response/recovery an toàn; mặc định UI phải giữ response thành công đầu tiên và không hứa có thể lấy lại token đã mất.
+- Route guest là `/orders/guest/[token]`; server hash token rồi truy vấn access row còn hạn/chưa revoke cùng Order. URL không chứa phone, code hoặc database id. Response/page dùng `Referrer-Policy: no-referrer`, `Cache-Control: private, no-store` và không nhúng analytics payload chứa token.
+- Account order history chỉ hiển thị order có `customerAccountId` thuộc session. Guest link cấp quyền xem đúng một đơn, không tạo customer session và không tự động claim ownership.
+- Claim guest order là mutation riêng: yêu cầu customer session, guest token hợp lệ và bước xác minh contact phone phù hợp với `phoneNormalized` đã verified; update `customerAccountId` atomically nếu đang null rồi revoke guest access. Nếu chưa có phone verification đáng tin cậy thì hoãn claim thay vì dựa vào chuỗi phone nhập tay.
+- Dữ liệu chi tiết/PII không còn được public qua `/order-success/[code]`. Route này chỉ là receipt tối thiểu; chi tiết order dùng customer ownership hoặc guest token.
+
+## 16. Persistent idempotent admin notifications
+
+### 16.1 Mô hình và quy tắc ghi
+
+Thêm `AdminNotification`:
+
+- `id`, `eventKey @unique`, `kind`, `title`, `body`, `entityType`, `entityId`, `href`, `createdAt`, `readAt?`.
+- Index `(readAt, createdAt)` cho unread badge và `(createdAt, id)` cho cursor ổn định. Nội dung là snapshot vận hành tối thiểu, không chứa địa chỉ hay số điện thoại đầy đủ.
+- Event tạo đơn online dùng deterministic key `online-order:{orderId}:created`. Các event tương lai phải định nghĩa version/event name trong key, ví dụ `online-order:{orderId}:status:ready:v1`.
+
+Notification “đơn online mới” phải được insert trong **cùng Prisma transaction** tạo Order và stock movements. Unique `eventKey` là hàng rào idempotency ở DB; retry `clientId`, concurrent request hoặc retry transaction đều cho một Order và tối đa một notification. Không dùng fire-and-forget sau response và không dựa vào in-memory event emitter. Nếu việc tạo notification thất bại, transaction tạo order thất bại để không có đơn online vô hình với admin.
+
+### 16.2 Đọc, polling và actions
+
+- API nội bộ `GET /api/admin/notifications?cursor=&limit=` trả envelope Zod-typed gồm items mới nhất, `nextCursor` và `unreadCount`; chỉ admin session hiện hữu được phép truy cập. Cursor dùng cặp `(createdAt,id)`, limit bị chặn và response `private, no-store`.
+- Client provider duy nhất dưới admin layout poll mỗi 15 giây khi tab visible, dừng khi hidden, refetch ngay khi focus/online và dùng request deduplication. Không poll từ từng nav item/page và không dùng SSE/WebSocket cho quy mô SQLite MVP.
+- Bell/badge nằm trong admin shell/navigation; badge hiển thị `99+`, panel có loading/empty/error, keyboard/focus semantics và link `href` nội bộ đã lưu. Không render PII nhạy cảm trong toast.
+- Mutation `POST /api/admin/notifications/read` nhận strict union `{ id } | { allBefore }`. Mark-one dùng `updateMany where {id, readAt:null}`; mark-all dùng cutoff do server xác nhận để không vô tình đọc các item đến sau thao tác. Mutation idempotent, kiểm tra Origin và trả unread count mới.
+- Click item điều hướng tới entity và mark-read theo best effort có retry; thất bại mark-read không chặn navigation. Xóa Order không cascade notification; snapshot và `href` có thể dẫn tới not-found an toàn để giữ audit trail.
+
+### 16.3 Retention và consistency
+
+- MVP giữ notification 90 ngày; cleanup theo batch trong maintenance command/cron khi có hạ tầng, không nằm trên request path.
+- SQLite là nguồn thật duy nhất. Badge sau mutation được cập nhật optimistic rồi reconcile ở lần poll; không dùng `localStorage` làm read state.
+- Nếu sau này có nhiều admin principal, thay `readAt` toàn cục bằng `AdminNotificationReceipt(notificationId, adminId, readAt)`; auth hiện tại chỉ có một principal cửa hàng nên không giả lập per-user read state lúc này.
+
+## 17. Acceptance criteria bổ sung
+
+1. Admin session không truy cập được account history với tư cách customer; customer session không mở `/admin`, `/pos` hoặc API nội bộ.
+2. Session customer revoke/expire bị từ chối server-side; token plaintext không có trong DB/log/client-readable cookie.
+3. Account chỉ đọc được Order có `customerAccountId` của chính mình; thay id/code không làm lộ đơn khác.
+4. Guest token chỉ đọc đúng một Order, có expiry/revoke, được lưu dạng hash và không suy ra từ order code.
+5. Guest checkout retry cùng `clientId` tạo một Order, một guest access row và một notification event.
+6. Tạo Order online và notification là atomic; unique `eventKey` chống duplicate dưới retry/concurrency.
+7. Admin badge tồn tại qua restart/browser khác, poll không chạy khi tab hidden và mark-read lặp lại vẫn an toàn.
+8. Mark-all dùng cutoff, không đánh dấu notification mới đến sau thao tác; API notification không public và không trả PII đầy đủ.
+9. Migration giữ nguyên dữ liệu/semantics của `Customer`, `Order.customerId`, admin `pos_session` và đơn POS cũ.

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** Execute task-by-task in order. Every task ends in focused tests and an independent commit.
 
-**Goal:** Ship a production-ready public guest storefront sharing catalog, inventory and order infrastructure with the existing POS.
+**Goal:** Ship a production-ready public storefront sharing catalog, inventory and order infrastructure with the existing POS, then add isolated customer identity/order access and persistent idempotent admin notifications.
 
 **Architecture:** Server Components own catalog and page composition. Interactive cart/search/form code is isolated in `src/features/online-store/` client leaves. A strict public Zod contract accepts only product ids, quantities and fulfillment/contact fields; `src/server/orders/create-online-order.ts` resolves authoritative product data before delegating persistence to the shared order core. Nullable online metadata preserves every POS record and behavior.
 
@@ -18,6 +18,8 @@
 - Public client never supplies price, product name, discount, channel, status or payment amount.
 - Validate every boundary with exported Zod schemas; use minimal Prisma selects.
 - Preserve `/api/orders` and POS negative-stock policy unchanged.
+- Keep customer auth/session completely separate from admin `pos_session`; never reinterpret the POS `Customer` record as a login principal.
+- Persist notification events atomically with the business write and enforce idempotency with a database unique key.
 - Tests live under `tests/**` and `e2e/**`; no secrets or real bank/customer data.
 
 ---
@@ -240,6 +242,129 @@
 - [ ] Push with `git push origin feat/pos-core`.
 - [ ] Record final check/build/E2E results and commit hashes in completion report.
 
+---
+
+## Task 11: Isolated customer identity and revocable sessions
+
+**Depends on:** Tasks 1–10 are stable. This task must not modify admin auth semantics.
+
+**Files:**
+
+- Modify: `prisma/schema.prisma`
+- Create: `src/server/customer-auth/password.ts`
+- Create: `src/server/customer-auth/session.ts`
+- Create: `src/types/customer-auth.ts`
+- Create: `src/app/api/customer-auth/register/route.ts`
+- Create: `src/app/api/customer-auth/login/route.ts`
+- Create: `src/app/api/customer-auth/logout/route.ts`
+- Modify: `src/lib/auth/public-paths.ts`
+- Modify: `src/middleware.ts`
+- Create focused tests under `tests/server/customer-auth/`, `tests/types/` and `tests/api/`
+
+**Steps:**
+
+- [ ] Add `CustomerAccount` and `CustomerSession` exactly as specified; create additive migration and prove existing POS `Customer`/Order rows remain valid.
+- [ ] Write failing tests that admin cookie cannot authenticate customer routes, customer cookie cannot authenticate admin routes, expired/revoked/disabled sessions fail and valid sessions resolve account id.
+- [ ] Implement versioned password hashing, normalized unique phone identity, opaque random customer token, SHA-256 token digest persistence, rotation on login and DB-backed revoke on logout.
+- [ ] Define strict Zod request/response envelopes; rate-limit register/login, use generic credential errors and enforce Origin on cookie-authenticated mutations.
+- [ ] Add route classification only where needed; authorization remains in `requireCustomerSession` at each server data boundary.
+- [ ] Confirm cookies are distinct (`pos_session` versus `customer_session`) and customer code does not import admin signing/verification helpers.
+- [ ] Run focused tests, `pnpm lint`, `pnpm typecheck` and migration smoke test.
+- [ ] Commit: `feat(customer-auth): add isolated customer sessions`.
+
+---
+
+## Task 12: Order ownership, account history and guest capability links
+
+**Files:**
+
+- Modify: `prisma/schema.prisma`
+- Modify: `src/server/orders/create-online-order.ts`
+- Modify: `src/app/api/online/orders/route.ts`
+- Create: `src/server/orders/order-access.ts`
+- Create: `src/app/account/orders/page.tsx`
+- Create: `src/app/account/orders/[id]/page.tsx`
+- Create: `src/app/orders/guest/[token]/page.tsx`
+- Create: `src/app/api/customer/orders/claim/route.ts` only when verified-phone claim is enabled
+- Modify checkout/success UI only as required to carry the one-time guest capability
+- Add focused domain, route, component and middleware tests
+
+**Steps:**
+
+- [ ] Add nullable indexed `Order.customerAccountId` and `GuestOrderAccess` with unique order/token digest, expiry and revoke fields; do not alter `Order.customerId`.
+- [ ] Test ownership queries at the database predicate: account A cannot enumerate/read account B, unauthenticated requests fail, and order code alone grants no detailed access.
+- [ ] If customer session exists at checkout, derive account id server-side and bind ownership; reject any client-supplied account identity.
+- [ ] For guest checkout, generate a 256-bit token and persist only its hash in the same order transaction. Retry the same `clientId` without a second access row; explicitly test concurrent retries.
+- [ ] Return token only in the successful guest capability URL, apply `private, no-store` and `Referrer-Policy: no-referrer`, and prevent logging/analytics from capturing it.
+- [ ] Build Server Component history/detail pages using `requireCustomerSession` and ownership-scoped Prisma queries; add loading, empty, not-found and safe error states.
+- [ ] Keep `/order-success/[code]` receipt minimal and move PII/detail behind account ownership or valid guest capability.
+- [ ] Implement claim only after verified phone exists: atomically set ownership if null and revoke capability. Otherwise document claim as deferred and do not compare unverified phone strings.
+- [ ] Run focused tests, `pnpm check`, and Playwright cross-account/guest-link authorization cases.
+- [ ] Commit: `feat(customer-orders): secure order ownership and guest access`.
+
+---
+
+## Task 13: Atomic persistent admin notification events
+
+**Files:**
+
+- Modify: `prisma/schema.prisma`
+- Modify: `src/server/orders/create-order.ts` and/or transaction boundary selected during implementation
+- Modify: `src/server/orders/create-online-order.ts`
+- Create: `src/server/notifications/create-admin-notification.ts`
+- Create focused tests under `tests/server/notifications/` and `tests/server/orders/`
+
+**Steps:**
+
+- [ ] Add `AdminNotification` with unique `eventKey`, kind/content/entity/href snapshots, timestamps and indexes `(readAt, createdAt)` plus `(createdAt, id)`.
+- [ ] First write concurrency/idempotency tests: one online order yields event key `online-order:{orderId}:created`; same `clientId`, transaction retry and competing requests yield at most one event.
+- [ ] Put Order, stock movements, optional guest access and notification insert in one Prisma transaction. Do not dispatch an in-memory/fire-and-forget event after commit.
+- [ ] Treat duplicate deterministic event key as the same logical event while preserving unexpected database failures. A notification failure must roll back new online-order creation.
+- [ ] Ensure title/body snapshots omit full phone/address and persisted `href` is an internal allowlisted path.
+- [ ] Test POS orders do not emit the online-order event and existing order idempotency response remains unchanged.
+- [ ] Run focused tests plus order regression suite, `pnpm lint` and `pnpm typecheck`.
+- [ ] Commit: `feat(notifications): persist online order events atomically`.
+
+---
+
+## Task 14: Admin notification inbox, polling and read actions
+
+**Files:**
+
+- Create: `src/types/admin-notification.ts`
+- Create: `src/app/api/admin/notifications/route.ts`
+- Create: `src/app/api/admin/notifications/read/route.ts`
+- Create: `src/features/admin-notifications/notification-provider.tsx`
+- Create: `src/features/admin-notifications/notification-button.tsx`
+- Create: `src/features/admin-notifications/notification-panel.tsx`
+- Modify: admin layout/navigation composition, including `src/features/admin-navigation/admin-nav.tsx`
+- Add focused API/component tests and E2E coverage
+
+**Steps:**
+
+- [ ] Define strict Zod contracts for cursor pagination and read union `{ id } | { allBefore }`; cap page size and reject arbitrary href/input fields.
+- [ ] Implement admin-protected `GET` with `(createdAt,id)` cursor, minimal selects, total unread count and `private, no-store`.
+- [ ] Implement idempotent mark-one and cutoff-based mark-all with Origin validation; test a notification arriving after cutoff stays unread.
+- [ ] Mount one client provider in admin shell. Poll every 15 seconds only while visible, refetch on focus/online, deduplicate in-flight requests and reconcile optimistic unread state.
+- [ ] Add accessible bell, `99+` badge and keyboard-operable loading/empty/error panel; click navigates even if best-effort mark-read must retry.
+- [ ] Keep read state in SQLite, not localStorage; verify restart and a second browser observe the same state.
+- [ ] Add Playwright coverage for new-order badge, deep link, mark-one, mark-all cutoff and anonymous 401/redirect behavior.
+- [ ] Run focused tests, `pnpm check`, `pnpm build` and relevant Playwright suites.
+- [ ] Commit: `feat(admin): add persistent notification inbox`.
+
+---
+
+## Task 15: Extended security and migration quality gate
+
+**Steps:**
+
+- [ ] Exercise migrations against a copy containing legacy POS Customer/debt/orders; verify rollback strategy before deployment.
+- [ ] Run customer auth abuse tests (credential enumeration, rate limit, session fixation/revoke), cross-account IDOR tests, expired/revoked guest token tests and notification concurrency tests.
+- [ ] Search logs, URLs, responses and tracked files for plaintext passwords/session tokens/guest tokens/full PII; verify customer capability pages disable caching/referrers.
+- [ ] Run `pnpm exec prettier --check .`, `pnpm check`, `pnpm build` and full Playwright; document only infrastructure blockers.
+- [ ] Inspect `git diff --check`, migration SQL and query indexes; confirm no source path treats admin and customer sessions as interchangeable.
+- [ ] Commit fixes by concern; do not squash them into unrelated feature commits.
+
 ## Definition of done
 
-All acceptance criteria in the spec pass; public routes need no session while internal routes remain protected; online price/stock is server authoritative; POS behavior regresses neither contract nor inventory policy; admin can complete the online lifecycle; tests/check/build are green; commits are scoped; branch is pushed without secrets.
+All acceptance criteria in the spec pass; public routes need no admin session while internal routes remain protected; online price/stock is server authoritative; POS behavior regresses neither contract nor inventory policy; customer and admin security domains are isolated; account ownership and guest capabilities cannot expose another order; every online-order notification is atomic, persistent and idempotent; admin can complete the online lifecycle; tests/check/build are green; commits are scoped; branch is pushed without secrets.
