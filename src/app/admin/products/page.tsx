@@ -87,7 +87,11 @@ export default async function ProductsPage({
         </div>
         <Button type="submit">Tìm sản phẩm</Button>
         {q ? (
-          <Button variant="ghost" render={<Link href="/admin/products" />}>
+          <Button
+            variant="ghost"
+            nativeButton={false}
+            render={<Link href="/admin/products" />}
+          >
             Xóa lọc
           </Button>
         ) : null}
@@ -141,6 +145,7 @@ export default async function ProductsPage({
                       <Button
                         variant="ghost"
                         size="icon"
+                        nativeButton={false}
                         aria-label={`Sửa ${product.name}`}
                         render={
                           <Link

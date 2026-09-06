@@ -157,6 +157,7 @@ export default async function OrdersPage({
             <Button
               variant="ghost"
               className="min-h-12"
+              nativeButton={false}
               render={<Link href="/admin/orders" />}
             >
               Xóa lọc
@@ -240,6 +241,7 @@ export default async function OrdersPage({
               <Button
                 variant="outline"
                 disabled={page <= 1}
+                nativeButton={page <= 1}
                 render={
                   page > 1 ? (
                     <Link href={buildPageHref(params, page - 1)} />
@@ -255,6 +257,7 @@ export default async function OrdersPage({
               <Button
                 variant="outline"
                 disabled={page >= totalPages}
+                nativeButton={page >= totalPages}
                 render={
                   page < totalPages ? (
                     <Link href={buildPageHref(params, page + 1)} />
