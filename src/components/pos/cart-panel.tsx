@@ -23,8 +23,8 @@ export function CartPanel({ onCheckout }: CartPanelProps) {
   );
 
   return (
-    <section className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b pb-4">
+    <section className="flex min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 items-center justify-between border-b pb-4">
         <div className="flex items-center gap-3">
           <span className="bg-primary text-primary-foreground flex size-10 items-center justify-center rounded-xl">
             <Basket aria-hidden="true" weight="duotone" className="size-6" />
@@ -49,14 +49,14 @@ export function CartPanel({ onCheckout }: CartPanelProps) {
           </p>
         </div>
       ) : (
-        <ul className="flex-1 overflow-y-auto py-2">
+        <ul className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2 pr-1 [scrollbar-gutter:stable]">
           {totals.lines.map((line) => (
             <CartLineRow key={line.id} line={line} lineTotal={line.lineTotal} />
           ))}
         </ul>
       )}
 
-      <div className="border-t pt-4">
+      <div className="bg-card shrink-0 border-t pt-4">
         <div className="flex items-baseline justify-between">
           <span className="text-muted-foreground font-semibold">
             Khách cần trả

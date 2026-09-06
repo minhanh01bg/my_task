@@ -37,6 +37,17 @@ describe("CartPanel", () => {
     expect(screen.getAllByText(/15\.000/).length).toBeGreaterThan(0);
   });
 
+  it("danh sach hang cuon doc de khong day nut thanh toan khoi man hinh", () => {
+    useCartStore.getState().addProduct(sugar);
+    render(<CartPanel onCheckout={vi.fn()} />);
+
+    const list = screen.getByRole("list");
+    expect(list).toHaveClass("min-h-0", "flex-1", "overflow-y-auto");
+    expect(
+      screen.getByRole("button", { name: /thanh toán/i }).parentElement,
+    ).toHaveClass("shrink-0");
+  });
+
   it("hien tong tien cong don nhieu dong", () => {
     useCartStore.getState().addProduct(sugar);
     useCartStore.getState().addProduct(sugar);

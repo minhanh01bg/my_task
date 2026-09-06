@@ -254,7 +254,7 @@ export function PosScreen({
       </section>
 
       <section className="surface-panel flex min-h-[520px] flex-col gap-3 p-4 lg:min-h-0 lg:overflow-hidden lg:p-5">
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           <Button
             variant="outline"
             className="flex-1"
