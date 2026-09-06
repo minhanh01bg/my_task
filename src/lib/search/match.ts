@@ -10,6 +10,39 @@ const RANK_WORD_PREFIX = 2;
 const RANK_INFIX = 3;
 const RANK_NONE = 99;
 
+interface PreparedProduct {
+  normalizedName: string;
+  normalizedSku: string;
+  searchText: string;
+}
+
+/**
+ * Cache theo object: catalog giu cung cac object trong suot phien POS, nen moi
+ * san pham chi can chuan hoa mot lan thay vi sau moi phim bam.
+ */
+const preparedCache = new WeakMap<SearchableProduct, PreparedProduct>();
+
+function prepareProduct(item: SearchableProduct): PreparedProduct {
+  const cached = preparedCache.get(item);
+  if (cached) return cached;
+
+  const normalizedName = normalize(item.name);
+  const normalizedSku = item.sku ? normalize(item.sku) : "";
+  const persistedSearchText = normalize(item.searchText);
+  const prepared = {
+    normalizedName,
+    normalizedSku,
+    // Luon ghep ten/SKU hien tai. Nhu vay du lieu searchText cu hoac rong sau
+    // migrate/offline sync khong the lam "bu" bo sot san pham "Bugi".
+    searchText: [normalizedName, normalizedSku, persistedSearchText]
+      .filter(Boolean)
+      .join(" "),
+  };
+
+  preparedCache.set(item, prepared);
+  return prepared;
+}
+
 /**
  * Bac khop cua MOT tu trong chuoi searchText da chuan hoa.
  */
@@ -47,10 +80,9 @@ export function searchProducts(
   const scored: Array<{ item: SearchableProduct; rank: number }> = [];
 
   for (const item of products) {
-    const searchText = item.searchText;
-    const normalizedName = normalize(item.name);
+    const { searchText, normalizedName, normalizedSku } = prepareProduct(item);
 
-    if (item.sku && normalize(item.sku) === normalizedQuery) {
+    if (normalizedSku && normalizedSku === normalizedQuery) {
       scored.push({ item, rank: RANK_SKU_EXACT });
       continue;
     }

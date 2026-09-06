@@ -47,6 +47,19 @@ describe("ProductSearch", () => {
     expect(screen.queryByText("Đường trắng")).not.toBeInTheDocument();
   });
 
+  it("cap nhat ket qua ngay trong luc go, khong can Enter", async () => {
+    const user = userEvent.setup();
+    render(<ProductSearch products={PRODUCTS} onSelect={vi.fn()} />);
+
+    const input = screen.getByRole("combobox");
+    await user.type(input, "b");
+    expect(screen.getByText("Bugi NGK C7HSA")).toBeInTheDocument();
+
+    await user.type(input, "u");
+    expect(input).toHaveValue("bu");
+    expect(screen.getByText("Bugi NGK C7HSA")).toBeInTheDocument();
+  });
+
   it("hien gia cua ket qua", async () => {
     const user = userEvent.setup();
     render(<ProductSearch products={PRODUCTS} onSelect={vi.fn()} />);
