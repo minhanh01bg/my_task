@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { CollapsibleFormCard } from "@/components/kit/collapsible-form-card";
 import { DataTableShell } from "@/components/kit/data-table-shell";
+import { DropdownField } from "@/components/kit/dropdown-field";
 import { EmptyState } from "@/components/kit/empty-state";
 import { PageHeader } from "@/components/kit/page-header";
 import { StatTile } from "@/components/kit/stat-tile";
@@ -22,6 +23,45 @@ describe("EmptyState", () => {
   it("hien loi dan thay vi mot bang trong", () => {
     render(<EmptyState title="Chưa có sản phẩm nào" />);
     expect(screen.getByText("Chưa có sản phẩm nào")).toBeInTheDocument();
+  });
+});
+
+describe("DropdownField", () => {
+  const options = [
+    { value: "cash", label: "Tiền mặt" },
+    { value: "transfer", label: "Chuyển khoản" },
+  ];
+
+  it("hien gia tri mac dinh va mo danh sach bang nut", async () => {
+    const user = userEvent.setup();
+    render(
+      <DropdownField
+        aria-label="Hình thức nhận"
+        defaultValue="cash"
+        options={options}
+      />,
+    );
+
+    const trigger = screen.getByRole("combobox", { name: "Hình thức nhận" });
+    expect(trigger).toHaveTextContent("Tiền mặt");
+
+    await user.click(trigger);
+    expect(screen.getByRole("option", { name: "Chuyển khoản" })).toBeVisible();
+  });
+
+  it("tham gia submit form qua name", () => {
+    render(
+      <form data-testid="form">
+        <DropdownField
+          name="method"
+          defaultValue="transfer"
+          options={options}
+        />
+      </form>,
+    );
+
+    const form = screen.getByTestId("form") as HTMLFormElement;
+    expect(new FormData(form).get("method")).toBe("transfer");
   });
 });
 

@@ -6,6 +6,7 @@ import {
   ChipToggle,
   CollapsibleFormCard,
   DataTableShell,
+  DropdownField,
   EmptyState,
   ImagePicker,
   Money,
@@ -125,6 +126,34 @@ export default function KitGalleryPage() {
             readOnly
             onChange={() => {}}
             onClear={() => {}}
+          />
+        </div>
+      </Section>
+
+      <Section title="DropdownField">
+        <div className="grid max-w-xl gap-4 sm:grid-cols-2">
+          <DropdownField
+            aria-label="Trạng thái mẫu"
+            defaultValue="paid"
+            options={[
+              { value: "all", label: "Tất cả trạng thái" },
+              {
+                value: "paid",
+                label: "Đã thanh toán",
+                description: "Đơn đã thu đủ tiền",
+              },
+              {
+                value: "debt",
+                label: "Ghi nợ",
+                description: "Khách sẽ thanh toán sau",
+              },
+            ]}
+          />
+          <DropdownField
+            aria-label="Dropdown bị vô hiệu hóa"
+            placeholder="Không thể chọn"
+            options={[]}
+            disabled
           />
         </div>
       </Section>

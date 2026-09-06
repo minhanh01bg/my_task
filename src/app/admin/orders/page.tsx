@@ -5,6 +5,7 @@ import { Money, PageHeader } from "@/components/kit";
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DropdownField } from "@/components/kit/dropdown-field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/server/db/prisma";
 
@@ -119,17 +120,18 @@ export default async function OrdersPage({
         </label>
         <label className="flex flex-col gap-1.5 text-sm font-bold">
           Trạng thái
-          <select
+          <DropdownField
             name="status"
             defaultValue={status}
-            className="border-input bg-background h-12 rounded-xl border px-3 font-medium"
-          >
-            <option value="">Tất cả trạng thái</option>
-            <option value="paid">Đã thanh toán</option>
-            <option value="debt">Ghi nợ</option>
-            <option value="cancelled">Đã hủy</option>
-            <option value="pending">Chờ thanh toán</option>
-          </select>
+            aria-label="Trạng thái đơn hàng"
+            options={[
+              { value: "", label: "Tất cả trạng thái" },
+              { value: "paid", label: "Đã thanh toán" },
+              { value: "debt", label: "Ghi nợ" },
+              { value: "cancelled", label: "Đã hủy" },
+              { value: "pending", label: "Chờ thanh toán" },
+            ]}
+          />
         </label>
         <label className="flex flex-col gap-1.5 text-sm font-bold">
           Từ ngày
