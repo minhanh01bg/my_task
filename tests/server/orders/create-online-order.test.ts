@@ -9,6 +9,7 @@ import { OnlineOrderError } from "@/types/online-order";
 const productId = "online-test-product";
 
 beforeEach(async () => {
+  await prisma.adminNotification.deleteMany();
   await prisma.stockMovement.deleteMany({ where: { productId } });
   await prisma.order.deleteMany({ where: { channel: "online" } });
   await prisma.product.upsert({
@@ -31,6 +32,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  await prisma.adminNotification.deleteMany();
   await prisma.order.deleteMany({ where: { channel: "online" } });
   await prisma.stockMovement.deleteMany({ where: { productId } });
   await prisma.product.deleteMany({ where: { id: productId } });
@@ -75,6 +77,15 @@ describe("createOnlineOrder", () => {
     const second = await createOnlineOrder(payload);
     expect(second.order.id).toBe(first.order.id);
     expect(second.duplicated).toBe(true);
+    const notifications = await prisma.adminNotification.findMany();
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]).toMatchObject({
+      eventKey: `online-order:${first.order.id}:created`,
+      entityId: first.order.id,
+      href: `/admin/orders/${first.order.id}`,
+    });
+    expect(notifications[0]?.body).not.toContain("0901234567");
+    expect(notifications[0]?.body).not.toContain("Nguyễn Văn An");
   });
 
   it("từ chối thiếu tồn mà không tạo đơn", async () => {
@@ -82,5 +93,6 @@ describe("createOnlineOrder", () => {
       OnlineOrderError,
     );
     expect(await prisma.order.count({ where: { channel: "online" } })).toBe(0);
+    expect(await prisma.adminNotification.count()).toBe(0);
   });
 });

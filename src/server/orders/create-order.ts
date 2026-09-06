@@ -1,6 +1,7 @@
 import { calculateCart } from "@/lib/pricing/calculate";
 import type { CartLine } from "@/lib/pricing/types";
 import { prisma } from "@/server/db/prisma";
+import { createOnlineOrderNotification } from "@/server/notifications/create-admin-notification";
 
 import { generateOrderCode } from "./order-code";
 
@@ -225,6 +226,10 @@ export async function createOrder(
           refId: order.id,
         },
       });
+    }
+
+    if (input.channel === "online") {
+      await createOnlineOrderNotification(tx, order);
     }
 
     return {

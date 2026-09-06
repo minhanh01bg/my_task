@@ -13,6 +13,7 @@ import {
   Storefront,
   TextAlignLeft,
 } from "@phosphor-icons/react";
+import { NotificationButton } from "@/features/admin-notifications/notification-button";
 
 const NAV = [
   { href: "/pos", label: "Về quầy bán hàng", icon: ShoppingCart },
@@ -42,6 +43,7 @@ export function AdminNav() {
           <p className="text-muted-foreground text-xs">Dễ nhìn · dễ thao tác</p>
         </div>
       </div>
+      <NotificationButton />
       <ul className="flex gap-2 overflow-x-auto pb-1 md:flex-col md:gap-1.5 md:overflow-visible">
         {NAV.map((item) => {
           const active =

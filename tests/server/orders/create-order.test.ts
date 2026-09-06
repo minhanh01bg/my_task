@@ -35,6 +35,7 @@ function cashLine(productId: string, overrides: Record<string, unknown> = {}) {
 }
 
 beforeEach(async () => {
+  await prisma.adminNotification.deleteMany();
   await prisma.stockMovement.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.orderItem.deleteMany();
@@ -71,6 +72,7 @@ describe("createOrder", () => {
     expect(result.order.total).toBe(30000);
     expect(result.order.code).toMatch(/^DH\d+$/);
     expect(result.order.status).toBe("paid");
+    expect(await prisma.adminNotification.count()).toBe(0);
   });
 
   it("BO QUA tong tien do client gui, tinh lai tu dau", async () => {

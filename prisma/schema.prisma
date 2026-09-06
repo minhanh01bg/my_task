@@ -138,6 +138,22 @@ model GuestOrderAccess {
   revokedAt DateTime?
 }
 
+model AdminNotification {
+  id         String    @id @default(cuid())
+  eventKey   String    @unique
+  kind       String
+  title      String
+  body       String
+  entityType String
+  entityId   String
+  href       String
+  createdAt  DateTime  @default(now())
+  readAt     DateTime?
+
+  @@index([readAt, createdAt])
+  @@index([createdAt, id])
+}
+
 model OrderItem {
   id            String   @id @default(cuid())
   orderId       String
