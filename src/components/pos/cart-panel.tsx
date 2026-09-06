@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { ArrowRight, Basket } from "@phosphor-icons/react";
 
 import { CartLineRow } from "@/components/pos/cart-line-row";
+import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/lib/money";
 import { calculateCart } from "@/lib/pricing/calculate";
@@ -16,6 +17,7 @@ interface CartPanelProps {
 export function CartPanel({ onCheckout }: CartPanelProps) {
   const lines = useCartStore((state) => state.lines);
   const orderDiscount = useCartStore((state) => state.orderDiscount);
+  const clear = useCartStore((state) => state.clear);
 
   const totals = useMemo(
     () => calculateCart(lines, orderDiscount),
@@ -36,6 +38,17 @@ export function CartPanel({ onCheckout }: CartPanelProps) {
             </p>
           </div>
         </div>
+        {lines.length > 0 ? (
+          <ConfirmAction
+            action={async () => clear()}
+            triggerLabel="Xóa cả đơn"
+            title="Xóa toàn bộ đơn hiện tại?"
+            description={`Đơn đang có ${lines.length} mặt hàng, tổng cộng ${formatVnd(totals.total)}. Chỉ xóa khi bạn chắc chắn không tiếp tục bán đơn này.`}
+            confirmLabel="Xóa toàn bộ đơn"
+            triggerVariant="ghost"
+            triggerClassName="text-destructive min-h-11 shrink-0"
+          />
+        ) : null}
       </div>
 
       {lines.length === 0 ? (
