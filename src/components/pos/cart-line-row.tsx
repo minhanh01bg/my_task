@@ -7,6 +7,10 @@ import type { CartLine } from "@/lib/pricing/types";
 import { useCartStore } from "@/stores/cart-store";
 import { Money } from "@/components/kit";
 
+const PRICE_STEP = 1000;
+const stepperButtonClass =
+  "hover:bg-card focus-visible:ring-ring flex size-11 shrink-0 items-center justify-center rounded-[0.65rem] transition-[color,background-color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-95";
+
 interface CartLineRowProps {
   line: CartLine;
   lineTotal: number;
@@ -39,7 +43,7 @@ export function CartLineRow({ line, lineTotal }: CartLineRowProps) {
             onClick={() =>
               updateQuantity(line.id, Math.max(0, line.quantity - 1))
             }
-            className="hover:bg-card focus-visible:ring-ring flex size-11 items-center justify-center rounded-[0.65rem] transition-colors focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+            className={stepperButtonClass}
           >
             <Minus aria-hidden="true" weight="bold" className="size-4" />
           </button>
@@ -53,13 +57,13 @@ export function CartLineRow({ line, lineTotal }: CartLineRowProps) {
             onChange={(event) =>
               updateQuantity(line.id, Number(event.target.value) || 0)
             }
-            className="h-11 w-16 rounded-none border-0 bg-transparent px-1 text-center text-base font-bold tabular-nums shadow-none focus-visible:ring-0"
+            className="h-11 w-16 appearance-none rounded-none border-0 bg-transparent px-1 text-center text-base font-bold tabular-nums shadow-none focus-visible:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
           <button
             type="button"
             aria-label={`Thêm một ${line.unit} ${line.name}`}
             onClick={() => updateQuantity(line.id, line.quantity + 1)}
-            className="bg-card text-primary hover:bg-primary hover:text-primary-foreground focus-visible:ring-ring flex size-11 items-center justify-center rounded-[0.65rem] shadow-sm transition-[color,background-color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+            className={`${stepperButtonClass} bg-card text-primary hover:bg-primary hover:text-primary-foreground shadow-sm`}
           >
             <Plus aria-hidden="true" weight="bold" className="size-4" />
           </button>
@@ -68,20 +72,43 @@ export function CartLineRow({ line, lineTotal }: CartLineRowProps) {
 
         <span className="text-muted-foreground">×</span>
 
-        <Input
-          aria-label={`Đơn giá ${line.name}`}
-          type="number"
-          step="1"
-          min="0"
-          value={line.unitPrice}
-          onChange={(event) =>
-            updateUnitPrice(
-              line.id,
-              Math.round(Number(event.target.value) || 0),
-            )
-          }
-          className="h-9 w-28 text-right tabular-nums"
-        />
+        <div className="border-border bg-muted/45 flex h-12 items-center rounded-xl border p-0.5 shadow-inner">
+          <button
+            type="button"
+            aria-label={`Giảm đơn giá ${line.name} 1.000 đồng`}
+            onClick={() =>
+              updateUnitPrice(line.id, Math.max(0, line.unitPrice - PRICE_STEP))
+            }
+            className={stepperButtonClass}
+          >
+            <Minus aria-hidden="true" weight="bold" className="size-4" />
+          </button>
+          <Input
+            aria-label={`Đơn giá ${line.name}`}
+            type="number"
+            inputMode="numeric"
+            step={PRICE_STEP}
+            min="0"
+            value={line.unitPrice}
+            onChange={(event) =>
+              updateUnitPrice(
+                line.id,
+                Math.max(0, Math.round(Number(event.target.value) || 0)),
+              )
+            }
+            className="h-11 w-24 appearance-none rounded-none border-0 bg-transparent px-1 text-center text-base font-bold tabular-nums shadow-none focus-visible:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          />
+          <button
+            type="button"
+            aria-label={`Tăng đơn giá ${line.name} 1.000 đồng`}
+            onClick={() =>
+              updateUnitPrice(line.id, line.unitPrice + PRICE_STEP)
+            }
+            className={`${stepperButtonClass} bg-card text-primary hover:bg-primary hover:text-primary-foreground shadow-sm`}
+          >
+            <Plus aria-hidden="true" weight="bold" className="size-4" />
+          </button>
+        </div>
 
         <span className="ml-auto text-lg font-semibold tabular-nums">
           <Money amount={lineTotal} />

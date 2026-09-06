@@ -73,11 +73,35 @@ describe("CartPanel", () => {
     useCartStore.getState().addProduct(sugar);
     render(<CartPanel onCheckout={vi.fn()} />);
 
-    const priceInput = screen.getByLabelText(/đơn giá/i);
+    const priceInput = screen.getByRole("spinbutton", { name: /^đơn giá/i });
     await user.clear(priceInput);
     await user.type(priceInput, "12000");
 
     expect(screen.getByTestId("cart-total")).toHaveTextContent("12.000");
+  });
+
+  it("nut gia tang giam moi lan 1.000 dong va khong am", async () => {
+    const user = userEvent.setup();
+    useCartStore.getState().addProduct(sugar);
+    render(<CartPanel onCheckout={vi.fn()} />);
+
+    await user.click(
+      screen.getByRole("button", { name: /tăng đơn giá.*1\.000 đồng/i }),
+    );
+    expect(screen.getByTestId("cart-total")).toHaveTextContent("16.000");
+
+    await user.click(
+      screen.getByRole("button", { name: /giảm đơn giá.*1\.000 đồng/i }),
+    );
+    expect(screen.getByTestId("cart-total")).toHaveTextContent("15.000");
+
+    const priceInput = screen.getByRole("spinbutton", { name: /^đơn giá/i });
+    await user.clear(priceInput);
+    await user.type(priceInput, "500");
+    await user.click(
+      screen.getByRole("button", { name: /giảm đơn giá.*1\.000 đồng/i }),
+    );
+    expect(priceInput).toHaveValue(0);
   });
 
   it("xoa dong khoi gio", async () => {
