@@ -32,7 +32,7 @@ export function CartLineRow({ line, lineTotal }: CartLineRowProps) {
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="border-border bg-muted/45 flex items-center rounded-xl border p-0.5 shadow-inner">
+        <div className="border-border bg-muted/45 flex h-12 items-center rounded-xl border p-0.5 shadow-inner">
           <button
             type="button"
             aria-label={`Bớt một ${line.unit} ${line.name}`}
@@ -53,7 +53,7 @@ export function CartLineRow({ line, lineTotal }: CartLineRowProps) {
             onChange={(event) =>
               updateQuantity(line.id, Number(event.target.value) || 0)
             }
-            className="h-10 w-16 border-0 bg-transparent px-1 text-center text-base font-bold tabular-nums shadow-none focus-visible:ring-0"
+            className="h-11 w-16 rounded-none border-0 bg-transparent px-1 text-center text-base font-bold tabular-nums shadow-none focus-visible:ring-0"
           />
           <button
             type="button"
