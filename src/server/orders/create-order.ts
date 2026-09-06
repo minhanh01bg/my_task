@@ -1,6 +1,7 @@
 import { calculateCart } from "@/lib/pricing/calculate";
 import type { CartLine } from "@/lib/pricing/types";
 import { prisma } from "@/server/db/prisma";
+import { createOnlineOrderNotification } from "@/server/notifications/create-admin-notification";
 
 import { generateOrderCode } from "./order-code";
 
@@ -31,7 +32,23 @@ export interface CreateOrderInput {
   orderDiscount?: number;
   payments: CreateOrderPayment[];
   customerId?: string | null;
+  customerAccountId?: string | null;
+  guestAccess?: { tokenHash: string; expiresAt: Date };
   note?: string | null;
+  initialStatus?: string;
+  autoReceiveCash?: boolean;
+  online?: {
+    fulfillmentStatus: "new";
+    fulfillmentType: "delivery" | "pickup";
+    paymentMethod: "cod" | "bank_transfer";
+    contactName: string;
+    contactPhone: string;
+    deliveryAddress?: string | null;
+    deliveryWard?: string | null;
+    deliveryDistrict?: string | null;
+    deliveryProvince?: string | null;
+    shippingFee?: number;
+  };
 }
 
 export interface CreateOrderResult {
@@ -108,7 +125,7 @@ export async function createOrder(
   }));
 
   const totals = calculateCart(cartLines, input.orderDiscount ?? 0);
-  const status = resolveStatus(input.payments);
+  const status = input.initialStatus ?? resolveStatus(input.payments);
 
   const stockLines = input.lines.filter(
     (line) => !line.isService && line.productId,
@@ -146,10 +163,21 @@ export async function createOrder(
         discount: totals.discount,
         total: totals.total,
         customerId: input.customerId ?? null,
+        customerAccountId: input.customerAccountId ?? null,
         note: input.note ?? null,
         clientId: input.clientId,
         syncedAt: new Date(),
         hasStockWarning,
+        fulfillmentStatus: input.online?.fulfillmentStatus ?? null,
+        fulfillmentType: input.online?.fulfillmentType ?? null,
+        paymentMethod: input.online?.paymentMethod ?? null,
+        contactName: input.online?.contactName ?? null,
+        contactPhone: input.online?.contactPhone ?? null,
+        deliveryAddress: input.online?.deliveryAddress ?? null,
+        deliveryWard: input.online?.deliveryWard ?? null,
+        deliveryDistrict: input.online?.deliveryDistrict ?? null,
+        deliveryProvince: input.online?.deliveryProvince ?? null,
+        shippingFee: input.online?.shippingFee ?? 0,
         items: {
           create: totals.lines.map((line) => ({
             productId: line.productId,
@@ -169,10 +197,15 @@ export async function createOrder(
             amount: payment.amount,
             receivedAt:
               payment.receivedAt ??
-              (payment.method === "cash" ? new Date() : null),
+              (payment.method === "cash" && input.autoReceiveCash !== false
+                ? new Date()
+                : null),
             note: payment.note ?? null,
           })),
         },
+        guestAccess: input.guestAccess
+          ? { create: input.guestAccess }
+          : undefined,
       },
     });
 
@@ -193,6 +226,10 @@ export async function createOrder(
           refId: order.id,
         },
       });
+    }
+
+    if (input.channel === "online") {
+      await createOnlineOrderNotification(tx, order);
     }
 
     return {

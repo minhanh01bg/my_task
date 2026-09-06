@@ -51,6 +51,26 @@ describe("searchProducts", () => {
     expect(found.map((p) => p.name)).toEqual(["Bugi NGK C7HSA"]);
   });
 
+  it("go tien to ngan tim thay bugi ngay", () => {
+    const items = [product("Bugi NGK C7HSA"), product("Bộ nhông sên dĩa")];
+    expect(searchProducts(items, "bu").map((p) => p.name)).toEqual([
+      "Bugi NGK C7HSA",
+    ]);
+  });
+
+  it("van tim theo ten khi searchText trong database bi rong hoac cu", () => {
+    const emptySearchText = product("Bugi NGK C7HSA", { searchText: "" });
+    const staleSearchText = product("Bugi Denso U22", {
+      searchText: "san pham cu",
+    });
+
+    expect(
+      searchProducts([emptySearchText, staleSearchText], "bu").map(
+        (p) => p.name,
+      ),
+    ).toEqual(["Bugi Denso U22", "Bugi NGK C7HSA"]);
+  });
+
   it("trung sku len dau tuyet doi", () => {
     const items = [
       product("Aaa hàng đầu bảng", { sku: null }),

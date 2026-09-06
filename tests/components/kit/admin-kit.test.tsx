@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 
 import { CollapsibleFormCard } from "@/components/kit/collapsible-form-card";
 import { DataTableShell } from "@/components/kit/data-table-shell";
+import { DateField } from "@/components/kit/date-field";
+import { DropdownField } from "@/components/kit/dropdown-field";
 import { EmptyState } from "@/components/kit/empty-state";
 import { PageHeader } from "@/components/kit/page-header";
 import { StatTile } from "@/components/kit/stat-tile";
@@ -22,6 +24,72 @@ describe("EmptyState", () => {
   it("hien loi dan thay vi mot bang trong", () => {
     render(<EmptyState title="Chưa có sản phẩm nào" />);
     expect(screen.getByText("Chưa có sản phẩm nào")).toBeInTheDocument();
+  });
+});
+
+describe("DropdownField", () => {
+  const options = [
+    { value: "cash", label: "Tiền mặt" },
+    { value: "transfer", label: "Chuyển khoản" },
+  ];
+
+  it("hien gia tri mac dinh va mo danh sach bang nut", async () => {
+    const user = userEvent.setup();
+    render(
+      <DropdownField
+        aria-label="Hình thức nhận"
+        defaultValue="cash"
+        options={options}
+      />,
+    );
+
+    const trigger = screen.getByRole("combobox", { name: "Hình thức nhận" });
+    expect(trigger).toHaveTextContent("Tiền mặt");
+
+    await user.click(trigger);
+    expect(screen.getByRole("option", { name: "Chuyển khoản" })).toBeVisible();
+  });
+
+  it("tham gia submit form qua name", () => {
+    render(
+      <form data-testid="form">
+        <DropdownField
+          name="method"
+          defaultValue="transfer"
+          options={options}
+        />
+      </form>,
+    );
+
+    const form = screen.getByTestId("form") as HTMLFormElement;
+    expect(new FormData(form).get("method")).toBe("transfer");
+  });
+});
+
+describe("DateField", () => {
+  it("hien ngay theo dinh dang Viet Nam va submit gia tri ISO", () => {
+    render(
+      <form data-testid="date-form">
+        <DateField name="from" aria-label="Từ ngày" defaultValue="2026-09-06" />
+      </form>,
+    );
+
+    expect(screen.getByRole("button", { name: "Từ ngày" })).toHaveTextContent(
+      "06/09/2026",
+    );
+    const form = screen.getByTestId("date-form") as HTMLFormElement;
+    expect(new FormData(form).get("from")).toBe("2026-09-06");
+  });
+
+  it("mo lich va chuyen sang thang tiep theo", async () => {
+    const user = userEvent.setup();
+    render(<DateField aria-label="Từ ngày" defaultValue="2026-09-06" />);
+
+    await user.click(screen.getByRole("button", { name: "Từ ngày" }));
+    expect(screen.getByText("Tháng 9 2026")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Tháng sau" }));
+    expect(screen.getByText("Tháng 10 2026")).toBeVisible();
   });
 });
 

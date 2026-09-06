@@ -6,6 +6,16 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatVnd } from "@/lib/money";
 import { prisma } from "@/server/db/prisma";
+import {
+  getNextOnlineOrderStatuses,
+  isOnlineOrderStatus,
+  ONLINE_ORDER_STATUS_LABELS,
+} from "@/server/orders/online-order-status";
+import {
+  markOnlineOrderPaidAction,
+  transitionOnlineOrderAction,
+} from "../actions";
+import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +41,10 @@ export default async function OrderDetailPage({
   });
 
   if (!order) notFound();
+  const onlineStatus =
+    order.fulfillmentStatus && isOnlineOrderStatus(order.fulfillmentStatus)
+      ? order.fulfillmentStatus
+      : null;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -141,6 +155,94 @@ export default async function OrderDetailPage({
           </CardContent>
         </Card>
       </div>
+      {order.channel === "online" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Xử lý đơn online</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <dl className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <dt className="text-muted-foreground text-sm">Liên hệ</dt>
+                <dd className="font-bold">
+                  {order.contactName} · {order.contactPhone}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground text-sm">Nhận hàng</dt>
+                <dd className="font-bold">
+                  {order.fulfillmentType === "delivery"
+                    ? "Giao tận nơi"
+                    : "Nhận tại cửa hàng"}
+                </dd>
+              </div>
+              {order.fulfillmentType === "delivery" ? (
+                <div className="sm:col-span-2">
+                  <dt className="text-muted-foreground text-sm">Địa chỉ</dt>
+                  <dd>
+                    {[
+                      order.deliveryAddress,
+                      order.deliveryWard,
+                      order.deliveryDistrict,
+                      order.deliveryProvince,
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </dd>
+                </div>
+              ) : null}
+              <div>
+                <dt className="text-muted-foreground text-sm">Phương thức</dt>
+                <dd>
+                  {order.paymentMethod === "bank_transfer"
+                    ? "Chuyển khoản"
+                    : "COD"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground text-sm">
+                  Trạng thái xử lý
+                </dt>
+                <dd>
+                  {onlineStatus
+                    ? ONLINE_ORDER_STATUS_LABELS[onlineStatus]
+                    : "—"}
+                </dd>
+              </div>
+            </dl>
+            <div className="flex flex-wrap gap-3">
+              {order.status === "pending" ? (
+                <form action={markOnlineOrderPaidAction.bind(null, order.id)}>
+                  <Button type="submit" variant="outline">
+                    Đánh dấu đã thanh toán
+                  </Button>
+                </form>
+              ) : null}
+              {onlineStatus
+                ? getNextOnlineOrderStatuses(onlineStatus).map((next) => (
+                    <form
+                      key={next}
+                      action={transitionOnlineOrderAction.bind(
+                        null,
+                        order.id,
+                        next,
+                      )}
+                    >
+                      <Button
+                        type="submit"
+                        variant={
+                          next === "cancelled" ? "destructive" : "default"
+                        }
+                      >
+                        {ONLINE_ORDER_STATUS_LABELS[next]}
+                      </Button>
+                    </form>
+                  ))
+                : null}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

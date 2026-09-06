@@ -3,7 +3,9 @@ import { expect, test } from "@playwright/test";
 test.describe("Bán hàng tiền mặt", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/login");
-    await page.getByPlaceholder("Mật khẩu cửa hàng").fill("123456");
+    await page
+      .getByRole("textbox", { name: "Mật khẩu cửa hàng" })
+      .fill("123456");
     await page.getByRole("button", { name: /vào bán hàng/i }).click();
     await page.waitForURL("**/pos");
   });

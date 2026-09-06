@@ -14,6 +14,7 @@ export default async function globalSetup() {
   const prisma = new PrismaClient();
 
   try {
+    await prisma.adminNotification.deleteMany();
     await prisma.payment.deleteMany();
     await prisma.orderItem.deleteMany();
     await prisma.stockMovement.deleteMany();

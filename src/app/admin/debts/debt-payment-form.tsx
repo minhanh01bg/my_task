@@ -1,10 +1,11 @@
 "use client";
 
-import { CheckCircle, HandCoins } from "@phosphor-icons/react";
+import { Bank, CheckCircle, HandCoins, Money } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DropdownField } from "@/components/kit/dropdown-field";
 import { formatVnd } from "@/lib/money";
 
 import { recordDebtPaymentAction } from "./actions";
@@ -81,14 +82,25 @@ export function DebtPaymentForm({
       </label>
       <label className="grid gap-1.5 text-sm font-bold">
         Hình thức nhận
-        <select
+        <DropdownField
           name="method"
           defaultValue="cash"
-          className="border-input bg-background h-12 rounded-xl border px-3 font-semibold"
-        >
-          <option value="cash">Tiền mặt</option>
-          <option value="transfer">Chuyển khoản</option>
-        </select>
+          aria-label="Hình thức nhận"
+          options={[
+            {
+              value: "cash",
+              label: "Tiền mặt",
+              description: "Nhận tiền trực tiếp",
+              icon: <Money weight="duotone" className="size-5" />,
+            },
+            {
+              value: "transfer",
+              label: "Chuyển khoản",
+              description: "Nhận qua ngân hàng",
+              icon: <Bank weight="duotone" className="size-5" />,
+            },
+          ]}
+        />
       </label>
       {message ? (
         <p role="alert" className="text-destructive text-sm font-semibold">

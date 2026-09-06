@@ -5,6 +5,8 @@ import { Money, PageHeader } from "@/components/kit";
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/kit/date-field";
+import { DropdownField } from "@/components/kit/dropdown-field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/server/db/prisma";
 
@@ -32,12 +34,14 @@ interface OrdersSearchParams {
   to?: string;
   q?: string;
   page?: string;
+  channel?: string;
 }
 
 function buildPageHref(params: OrdersSearchParams, page: number) {
   const query = new URLSearchParams();
   if (params.q) query.set("q", params.q);
   if (params.status) query.set("status", params.status);
+  if (params.channel) query.set("channel", params.channel);
   if (params.from) query.set("from", params.from);
   if (params.to) query.set("to", params.to);
   query.set("page", String(page));
@@ -52,6 +56,7 @@ export default async function OrdersPage({
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
   const status = params.status ?? "";
+  const channel = params.channel ?? "";
   const from = params.from ?? "";
   const to = params.to ?? "";
   const requestedPage = Math.max(
@@ -61,6 +66,7 @@ export default async function OrdersPage({
   const start = from ? new Date(`${from}T00:00:00`) : null;
   const end = to ? new Date(`${to}T23:59:59.999`) : null;
   const where = {
+    ...(channel ? { channel } : {}),
     ...(status ? { status } : {}),
     ...(start || end
       ? {
@@ -101,7 +107,7 @@ export default async function OrdersPage({
         description="Tìm nhanh theo mã đơn, tên hoặc số điện thoại khách hàng."
       />
 
-      <form className="surface-panel grid gap-3 p-4 lg:grid-cols-[minmax(16rem,1.5fr)_repeat(3,minmax(10rem,1fr))_auto] lg:items-end">
+      <form className="surface-panel grid gap-3 p-4 lg:grid-cols-[minmax(16rem,1.5fr)_repeat(4,minmax(9rem,1fr))_auto] lg:items-end">
         <label className="flex flex-col gap-1.5 text-sm font-bold">
           Tìm đơn hoặc khách hàng
           <span className="relative">
@@ -118,42 +124,56 @@ export default async function OrdersPage({
           </span>
         </label>
         <label className="flex flex-col gap-1.5 text-sm font-bold">
+          Kênh bán
+          <DropdownField
+            name="channel"
+            defaultValue={channel}
+            aria-label="Kênh bán"
+            options={[
+              { value: "", label: "Tất cả kênh" },
+              { value: "online", label: "Online" },
+              { value: "pos", label: "Tại quầy" },
+            ]}
+          />
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm font-bold">
           Trạng thái
-          <select
+          <DropdownField
             name="status"
             defaultValue={status}
-            className="border-input bg-background h-12 rounded-xl border px-3 font-medium"
-          >
-            <option value="">Tất cả trạng thái</option>
-            <option value="paid">Đã thanh toán</option>
-            <option value="debt">Ghi nợ</option>
-            <option value="cancelled">Đã hủy</option>
-            <option value="pending">Chờ thanh toán</option>
-          </select>
+            aria-label="Trạng thái đơn hàng"
+            options={[
+              { value: "", label: "Tất cả trạng thái" },
+              { value: "paid", label: "Đã thanh toán" },
+              { value: "debt", label: "Ghi nợ" },
+              { value: "cancelled", label: "Đã hủy" },
+              { value: "pending", label: "Chờ thanh toán" },
+            ]}
+          />
         </label>
         <label className="flex flex-col gap-1.5 text-sm font-bold">
           Từ ngày
-          <input
+          <DateField
             name="from"
-            type="date"
             defaultValue={from}
-            className="border-input bg-background h-12 rounded-xl border px-3 font-medium"
+            aria-label="Từ ngày"
+            placeholder="Chọn ngày bắt đầu"
           />
         </label>
         <label className="flex flex-col gap-1.5 text-sm font-bold">
           Đến ngày
-          <input
+          <DateField
             name="to"
-            type="date"
             defaultValue={to}
-            className="border-input bg-background h-12 rounded-xl border px-3 font-medium"
+            aria-label="Đến ngày"
+            placeholder="Chọn ngày kết thúc"
           />
         </label>
         <div className="flex gap-2">
           <Button type="submit" className="min-h-12">
             Tìm đơn
           </Button>
-          {q || status || from || to ? (
+          {q || status || channel || from || to ? (
             <Button
               variant="ghost"
               className="min-h-12"
@@ -198,6 +218,14 @@ export default async function OrdersPage({
                       >
                         {STATUS_LABEL[order.status] ?? order.status}
                       </Badge>
+                      <Badge variant="outline">
+                        {order.channel === "online" ? "Online" : "Tại quầy"}
+                      </Badge>
+                      {order.fulfillmentStatus ? (
+                        <Badge variant="secondary">
+                          {order.fulfillmentStatus}
+                        </Badge>
+                      ) : null}
                       {order.hasStockWarning ? (
                         <Badge variant="destructive">Tồn âm</Badge>
                       ) : null}
