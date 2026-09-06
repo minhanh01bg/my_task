@@ -1,5 +1,8 @@
-const CACHE_NAME = "pos-shell-v1";
-const IMAGE_CACHE = "pos-images-v1";
+// Tang version moi khi shell/CSS thay doi. Khong tai su dung HTML cua build cu:
+// HTML Next.js chua ten CSS chunk theo hash, chunk do se bien mat sau deploy moi.
+const CACHE_VERSION = "v2";
+const CACHE_NAME = `pos-shell-${CACHE_VERSION}`;
+const IMAGE_CACHE = `pos-images-${CACHE_VERSION}`;
 const SHELL_URLS = ["/pos"];
 
 /**
@@ -16,7 +19,15 @@ function routeFor(pathname) {
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_URLS)),
+    caches
+      .open(CACHE_NAME)
+      .then((cache) =>
+        Promise.all(
+          SHELL_URLS.map((url) =>
+            cache.add(new Request(url, { cache: "reload" })),
+          ),
+        ),
+      ),
   );
   self.skipWaiting();
 });
@@ -39,10 +50,14 @@ self.addEventListener("activate", (event) => {
 
 /** Network-first: man hinh ban phai moi, nhung mat mang thi lay ban cache. */
 function shellStrategy(request) {
-  return fetch(request)
+  const freshRequest = new Request(request, { cache: "no-store" });
+
+  return fetch(freshRequest)
     .then((response) => {
-      const copy = response.clone();
-      void caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+      if (response.ok) {
+        const copy = response.clone();
+        void caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+      }
       return response;
     })
     .catch(() =>

@@ -1,7 +1,13 @@
 import Link from "next/link";
-import { Pencil, Search } from "lucide-react";
+import {
+  MagnifyingGlass,
+  NotePencil,
+  Trash,
+} from "@phosphor-icons/react/dist/ssr";
 
 import { ConfirmAction } from "@/components/shared/confirm-action";
+import { ProductImage } from "@/components/shared/product-image";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -12,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ProductImage } from "@/components/shared/product-image";
+import { formatVnd } from "@/lib/money";
 import { prisma } from "@/server/db/prisma";
 
 import { ProductForm } from "./product-form";
@@ -73,7 +79,7 @@ export default async function ProductsPage({
         role="search"
       >
         <div className="relative flex-1">
-          <Search
+          <MagnifyingGlass
             aria-hidden="true"
             className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2"
           />
@@ -87,7 +93,11 @@ export default async function ProductsPage({
         </div>
         <Button type="submit">Tìm sản phẩm</Button>
         {q ? (
-          <Button variant="ghost" render={<Link href="/admin/products" />}>
+          <Button
+            variant="ghost"
+            nativeButton={false}
+            render={<Link href="/admin/products" />}
+          >
             Xóa lọc
           </Button>
         ) : null}
@@ -133,14 +143,28 @@ export default async function ProductsPage({
                   <TableCell className="text-muted-foreground">
                     {product.category?.name ?? "—"}
                   </TableCell>
-                  <TableCell colSpan={2}>
-                    <QuickProductEdit product={product} />
+                  <TableCell className="text-right font-bold tabular-nums">
+                    {formatVnd(product.price)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {product.stock < 0 ? (
+                      <Badge variant="destructive">
+                        {product.stock} {product.unit}
+                      </Badge>
+                    ) : (
+                      <span className="font-semibold">
+                        {product.stock} {product.unit}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell>
-                    <div className="flex justify-end gap-1">
+                    <div className="flex items-center justify-end gap-2">
+                      <QuickProductEdit product={product} />
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="icon"
+                        nativeButton={false}
+                        className="size-11"
                         aria-label={`Sửa ${product.name}`}
                         render={
                           <Link
@@ -148,15 +172,18 @@ export default async function ProductsPage({
                           />
                         }
                       >
-                        <Pencil aria-hidden="true" />
+                        <NotePencil aria-hidden="true" weight="bold" />
                       </Button>
                       <ConfirmAction
                         action={deleteProductAction.bind(null, product.id)}
                         triggerLabel="Xóa"
+                        triggerIcon={<Trash aria-hidden="true" weight="bold" />}
+                        triggerAriaLabel={`Ngừng bán ${product.name}`}
                         title={`Ngừng bán “${product.name}”?`}
                         description="Sản phẩm sẽ không còn xuất hiện tại quầy bán hàng. Các đơn hàng cũ vẫn được giữ nguyên để tra cứu."
                         confirmLabel="Ngừng bán sản phẩm"
-                        triggerClassName="text-destructive"
+                        triggerVariant="outline"
+                        triggerClassName="border-destructive/20 text-destructive hover:border-destructive/40 hover:bg-destructive/10"
                       />
                     </div>
                   </TableCell>

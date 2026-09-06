@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -35,6 +35,17 @@ describe("CartPanel", () => {
 
     expect(screen.getByText("Đường trắng")).toBeInTheDocument();
     expect(screen.getAllByText(/15\.000/).length).toBeGreaterThan(0);
+  });
+
+  it("danh sach hang cuon doc de khong day nut thanh toan khoi man hinh", () => {
+    useCartStore.getState().addProduct(sugar);
+    render(<CartPanel onCheckout={vi.fn()} />);
+
+    const list = screen.getByRole("list");
+    expect(list).toHaveClass("min-h-0", "flex-1", "overflow-y-auto");
+    expect(
+      screen.getByRole("button", { name: /thanh toán/i }).parentElement,
+    ).toHaveClass("shrink-0");
   });
 
   it("hien tong tien cong don nhieu dong", () => {
@@ -75,6 +86,25 @@ describe("CartPanel", () => {
     render(<CartPanel onCheckout={vi.fn()} />);
 
     await user.click(screen.getByRole("button", { name: /xoá dòng/i }));
+
+    expect(screen.getByText(/chưa có sản phẩm/i)).toBeInTheDocument();
+  });
+
+  it("xoa ca don phai xac nhan truoc", async () => {
+    const user = userEvent.setup();
+    useCartStore.getState().addProduct(sugar);
+    useCartStore.getState().addService("Công giao hàng", 20000);
+    render(<CartPanel onCheckout={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: /xóa cả đơn/i }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText(/2 mặt hàng/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/35\.000/)).toBeInTheDocument();
+    expect(screen.getByText("Đường trắng")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /xóa toàn bộ đơn/i }));
 
     expect(screen.getByText(/chưa có sản phẩm/i)).toBeInTheDocument();
   });
