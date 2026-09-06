@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { WarningCircle } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,8 @@ interface ConfirmActionProps {
   confirmLabel?: string;
   triggerVariant?: "default" | "outline" | "ghost" | "destructive";
   triggerClassName?: string;
+  triggerIcon?: ReactNode;
+  triggerAriaLabel?: string;
 }
 
 export function ConfirmAction({
@@ -33,6 +35,8 @@ export function ConfirmAction({
   confirmLabel = "Xác nhận",
   triggerVariant = "ghost",
   triggerClassName,
+  triggerIcon,
+  triggerAriaLabel,
 }: ConfirmActionProps) {
   const [open, setOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
@@ -54,11 +58,17 @@ export function ConfirmAction({
           <Button
             type="button"
             variant={triggerVariant}
-            className={triggerClassName}
+            size={triggerIcon ? "icon" : "default"}
+            aria-label={triggerAriaLabel}
+            className={
+              triggerIcon
+                ? `size-11 ${triggerClassName ?? ""}`
+                : triggerClassName
+            }
           />
         }
       >
-        {triggerLabel}
+        {triggerIcon ?? triggerLabel}
       </DialogTrigger>
       <DialogContent className="gap-5 p-6 sm:max-w-md">
         <DialogHeader className="gap-3">
