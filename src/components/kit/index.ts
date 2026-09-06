@@ -2,6 +2,7 @@ export { avatarHue, initials } from "./avatar-color";
 export { ChipToggle } from "./chip-toggle";
 export { CollapsibleFormCard } from "./collapsible-form-card";
 export { DataTableShell } from "./data-table-shell";
+export { DateField } from "./date-field";
 export { DropdownField } from "./dropdown-field";
 export type { DropdownOption } from "./dropdown-field";
 export { EmptyState } from "./empty-state";

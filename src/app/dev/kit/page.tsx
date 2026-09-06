@@ -6,6 +6,7 @@ import {
   ChipToggle,
   CollapsibleFormCard,
   DataTableShell,
+  DateField,
   DropdownField,
   EmptyState,
   ImagePicker,
@@ -155,6 +156,13 @@ export default function KitGalleryPage() {
             options={[]}
             disabled
           />
+        </div>
+      </Section>
+
+      <Section title="DateField">
+        <div className="grid max-w-xl gap-4 sm:grid-cols-2">
+          <DateField aria-label="Ngày bắt đầu mẫu" defaultValue="2026-09-06" />
+          <DateField aria-label="Ngày kết thúc mẫu" placeholder="Chọn ngày" />
         </div>
       </Section>
 

@@ -5,6 +5,7 @@ import { Money, PageHeader } from "@/components/kit";
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/kit/date-field";
 import { DropdownField } from "@/components/kit/dropdown-field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/server/db/prisma";
@@ -135,20 +136,20 @@ export default async function OrdersPage({
         </label>
         <label className="flex flex-col gap-1.5 text-sm font-bold">
           Từ ngày
-          <input
+          <DateField
             name="from"
-            type="date"
             defaultValue={from}
-            className="border-input bg-background h-12 rounded-xl border px-3 font-medium"
+            aria-label="Từ ngày"
+            placeholder="Chọn ngày bắt đầu"
           />
         </label>
         <label className="flex flex-col gap-1.5 text-sm font-bold">
           Đến ngày
-          <input
+          <DateField
             name="to"
-            type="date"
             defaultValue={to}
-            className="border-input bg-background h-12 rounded-xl border px-3 font-medium"
+            aria-label="Đến ngày"
+            placeholder="Chọn ngày kết thúc"
           />
         </label>
         <div className="flex gap-2">
