@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 
+import { buildCspHeader } from "./src/server/security/csp";
+
+const cspResult = buildCspHeader();
+const cspHeaders =
+  cspResult.headerName && cspResult.headerValue
+    ? [{ key: cspResult.headerName, value: cspResult.headerValue }]
+    : [];
+
 const securityHeaders = [
+  ...cspHeaders,
   {
     key: "X-Frame-Options",
     value: "DENY",

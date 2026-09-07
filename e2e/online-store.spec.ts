@@ -61,3 +61,41 @@ test("receipt enumeration: sequential code returns 404 while invalid nonce is no
   const response = await page.goto("/order-success/DH0001");
   expect(response?.status()).toBe(404);
 });
+
+test("CSP enforcement and reporting: pages include CSP header and emit no violations", async ({
+  page,
+}) => {
+  const violations: string[] = [];
+
+  page.on("console", (msg) => {
+    const text = msg.text();
+    if (
+      text.toLowerCase().includes("content security policy") ||
+      text
+        .toLowerCase()
+        .includes("violates the following content security policy")
+    ) {
+      violations.push(text);
+    }
+  });
+
+  const pagesToTest = [
+    "/shop",
+    "/checkout",
+    "/account",
+    "/orders/guest/invalid-token-test",
+    "/admin/orders",
+  ];
+
+  for (const path of pagesToTest) {
+    const response = await page.goto(path);
+    expect(response).toBeTruthy();
+    const headers = response?.headers() || {};
+    const hasCsp =
+      Boolean(headers["content-security-policy"]) ||
+      Boolean(headers["content-security-policy-report-only"]);
+    expect(hasCsp, `Page ${path} should have CSP header`).toBe(true);
+  }
+
+  expect(violations).toEqual([]);
+});

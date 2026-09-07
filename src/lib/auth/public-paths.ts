@@ -13,6 +13,7 @@ const PUBLIC_API = [
   "/api/customer-auth/register",
   "/api/customer-auth/login",
   "/api/customer-auth/logout",
+  "/api/csp-report",
 ];
 
 export function isPublicPath(pathname: string): boolean {

@@ -621,18 +621,18 @@ flowchart LR
 
 **Tests first:**
 
-- [ ] Parse generated policy and assert `default-src`, `script-src`, `style-src`, `img-src`, `connect-src`, `frame-ancestors`, `base-uri`, `form-action` and `object-src` are present and restrictive.
-- [ ] Assert no broad `*`, unsafe object/frame source or accidental production `unsafe-eval`; nonce/hash handling must match actual Next.js rendering.
-- [ ] Test only required Sentry, Vercel and image origins are allowlisted per environment.
-- [ ] Add browser coverage that captures CSP violations on storefront, checkout, customer account, guest order and admin order pages.
+- [x] Parse generated policy and assert `default-src`, `script-src`, `style-src`, `img-src`, `connect-src`, `frame-ancestors`, `base-uri`, `form-action` and `object-src` are present and restrictive.
+- [x] Assert no broad `*`, unsafe object/frame source or accidental production `unsafe-eval`; nonce/hash handling must match actual Next.js rendering.
+- [x] Test only required Sentry, Vercel and image origins are allowlisted per environment.
+- [x] Add browser coverage that captures CSP violations on storefront, checkout, customer account, guest order and admin order pages.
 
 **Implementation steps:**
 
-- [ ] Build a deterministic environment-aware CSP generator and a safe report endpoint/provider configuration that does not collect query/path tokens.
-- [ ] Deploy `Content-Security-Policy-Report-Only` first; collect and classify only sanitized violations.
-- [ ] Remove legitimate violations by adding the narrowest host/hash/nonce, not broad unsafe directives.
-- [ ] Promote the same policy to enforcement through an environment flag after the report-only acceptance window; retain an immediate switch back to report-only.
-- [ ] Keep existing HSTS, MIME, frame, referrer and permissions headers.
+- [x] Build a deterministic environment-aware CSP generator and a safe report endpoint/provider configuration that does not collect query/path tokens.
+- [x] Deploy `Content-Security-Policy-Report-Only` first; collect and classify only sanitized violations.
+- [x] Remove legitimate violations by adding the narrowest host/hash/nonce, not broad unsafe directives.
+- [x] Promote the same policy to enforcement through an environment flag after the report-only acceptance window; retain an immediate switch back to report-only.
+- [x] Keep existing HSTS, MIME, frame, referrer and permissions headers.
 
 **Focused quality commands:**
 
