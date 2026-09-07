@@ -193,18 +193,18 @@ flowchart LR
 
 **Tests first:**
 
-- [ ] With an injected fake Redis adapter, test atomic consumption, expiry, remaining quota, retry-after rounding and independent multi-bucket evaluation.
-- [ ] Simulate two application instances sharing one store and prove limits cannot be bypassed by alternating instances.
-- [ ] Test Redis timeout, transport error and malformed response produce a typed unavailable decision; production-sensitive policy must fail closed.
-- [ ] Test HMAC-derived keys never contain plaintext IP, subnet, phone, product id or route input.
+- [x] With an injected fake Redis adapter, test atomic consumption, expiry, remaining quota, retry-after rounding and independent multi-bucket evaluation.
+- [x] Simulate two application instances sharing one store and prove limits cannot be bypassed by alternating instances.
+- [x] Test Redis timeout, transport error and malformed response produce a typed unavailable decision; production-sensitive policy must fail closed.
+- [x] Test HMAC-derived keys never contain plaintext IP, subnet, phone, product id or route input.
 
 **Implementation steps:**
 
-- [ ] Add a server-only Redis/Upstash REST client and an injectable adapter contract; avoid importing it into client bundles.
-- [ ] Implement an atomic Lua or provider-supported multi-region-safe limiter. Define versioned key prefixes and TTLs so policy migrations do not collide.
-- [ ] Model policies as named bucket sets and return only `allowed`, `retryAfterSeconds` and internal sanitized reason categories.
-- [ ] Add bounded timeouts. Never bypass checks after a Redis error on checkout, customer login/register or admin login.
-- [ ] Emit aggregate pseudonymous counters for allowed, limited and unavailable outcomes; never emit raw bucket keys.
+- [x] Add a server-only Redis/Upstash REST client and an injectable adapter contract; avoid importing it into client bundles.
+- [x] Implement an atomic Lua or provider-supported multi-region-safe limiter. Define versioned key prefixes and TTLs so policy migrations do not collide.
+- [x] Model policies as named bucket sets and return only `allowed`, `retryAfterSeconds` and internal sanitized reason categories.
+- [x] Add bounded timeouts. Never bypass checks after a Redis error on checkout, customer login/register or admin login.
+- [x] Emit aggregate pseudonymous counters for allowed, limited and unavailable outcomes; never emit raw bucket keys.
 
 **Focused quality commands:**
 
