@@ -108,20 +108,23 @@ test("CSP enforcement and reporting: pages include CSP header and emit no violat
 
 test("admin session lifecycle: unauthenticated redirect and logout cookie revocation", async ({
   page,
-  request,
 }) => {
   // Accessing /admin/orders without auth redirects to /login
   await page.goto("/admin/orders");
   await expect(page).toHaveURL(/.*\/login/);
 
-  // Calling logout clears the admin session cookie
-  const logoutRes = await request.post("/api/auth/logout", {
-    headers: { origin: "http://localhost:3000" },
-  });
-  expect(logoutRes.status()).toBe(200);
-  const setCookie = logoutRes.headers()["set-cookie"] || "";
-  expect(setCookie).toContain("pos_session=");
-  expect(setCookie).toContain("Max-Age=0");
+  await page.getByRole("textbox", { name: "Mật khẩu cửa hàng" }).fill("123456");
+  await page.getByRole("button", { name: /vào bán hàng/i }).click();
+  await expect(page).toHaveURL(/.*\/pos/);
+
+  // Admin can log out from the visible desktop navigation.
+  await page.goto("/admin/orders");
+  await page.getByRole("button", { name: "Đăng xuất" }).click();
+  await expect(page).toHaveURL(/.*\/login/);
+
+  // The revoked session can no longer access protected admin routes.
+  await page.goto("/admin/orders");
+  await expect(page).toHaveURL(/.*\/login/);
 });
 
 test("guest claim and guest revoke: access controls and unauthenticated protection", async ({
