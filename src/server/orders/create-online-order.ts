@@ -36,6 +36,7 @@ async function replayIdempotentOrder(
     recoveryDigest: string | null;
     encryptedGuestToken: string | null;
     responsePayload: string;
+    recoveredAt: Date | null;
     expiresAt: Date;
     order: {
       id: string;
@@ -62,6 +63,7 @@ async function replayIdempotentOrder(
     access.guestRecovery?.secret &&
     idempotency.recoveryDigest &&
     idempotency.encryptedGuestToken &&
+    idempotency.recoveredAt === null &&
     new Date() <= idempotency.expiresAt
   ) {
     if (
@@ -75,13 +77,22 @@ async function replayIdempotentOrder(
         access.guestRecovery.secret,
       );
       if (decrypted) {
-        recoveredGuestToken = decrypted;
-        await prisma.checkoutIdempotency
-          .update({
-            where: { id: idempotency.id },
-            data: { recoveredAt: new Date() },
-          })
-          .catch(() => {});
+        // Atomic conditional update ensuring strictly one-time consumption:
+        // Only the request that successfully transitions recoveredAt from null to now gets the token
+        const updateResult = await prisma.checkoutIdempotency.updateMany({
+          where: {
+            id: idempotency.id,
+            recoveredAt: null,
+          },
+          data: {
+            recoveredAt: new Date(),
+            encryptedGuestToken: null,
+            recoveryDigest: null,
+          },
+        });
+        if (updateResult.count === 1) {
+          recoveredGuestToken = decrypted;
+        }
       }
     }
   }

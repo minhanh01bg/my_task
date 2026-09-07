@@ -211,6 +211,46 @@ describe("Online Order Idempotency and Guest Recovery (Task 11)", () => {
     expect(retryRes.duplicated).toBe(true);
     expect(retryRes.order.id).toBe(firstRes.order.id);
     expect(retryRes.recoveredGuestToken).toBe(guestToken);
+
+    // Third request with SAME recoverySecret: one-time consumption prevents further recovery
+    const consumedRes = await createOnlineOrder(input, {
+      guestRecovery: {
+        secret: recoverySecret,
+      },
+    });
+    expect(consumedRes.duplicated).toBe(true);
+    expect(consumedRes.order.id).toBe(firstRes.order.id);
+    expect(consumedRes.recoveredGuestToken).toBeUndefined();
+  });
+
+  it("enforces atomic one-time recovery under concurrent recovery requests", async () => {
+    const clientId = randomUUID();
+    const input = makeOrderInput(clientId);
+    const recoverySecret = createRecoverySecret();
+    const guestToken = "guest-token-concurrent-123";
+
+    await createOnlineOrder(input, {
+      guestAccess: {
+        tokenHash: "hash-concurrent",
+        expiresAt: new Date(Date.now() + 86400000),
+      },
+      guestRecovery: {
+        secret: recoverySecret,
+        guestToken,
+      },
+    });
+
+    const results = await Promise.all([
+      createOnlineOrder(input, { guestRecovery: { secret: recoverySecret } }),
+      createOnlineOrder(input, { guestRecovery: { secret: recoverySecret } }),
+      createOnlineOrder(input, { guestRecovery: { secret: recoverySecret } }),
+    ]);
+
+    const recoveredTokens = results
+      .map((r) => r.recoveredGuestToken)
+      .filter(Boolean);
+    expect(recoveredTokens).toHaveLength(1);
+    expect(recoveredTokens[0]).toBe(guestToken);
   });
 
   it("denies guest capability recovery to another browser with different or missing secret", async () => {
