@@ -420,17 +420,17 @@ flowchart LR
 
 **Tests first:**
 
-- [ ] Invoke every Online Store admin Server Action directly with no cookie, customer cookie, invalid admin cookie and valid admin cookie.
-- [ ] Assert anonymous/customer callers cannot cancel, transition or mark orders paid and cause no writes/revalidation.
-- [ ] Test sensitive admin Server Components and route handlers call authorization at their own data boundary even if middleware is bypassed in the test.
-- [ ] Add a source-level inventory test listing exported admin mutation actions so a new unaudited action fails the suite.
+- [x] Invoke every Online Store admin Server Action directly with no cookie, customer cookie, invalid admin cookie and valid admin cookie.
+- [x] Assert anonymous/customer callers cannot cancel, transition or mark orders paid and cause no writes/revalidation.
+- [x] Test sensitive admin Server Components and route handlers call authorization at their own data boundary even if middleware is bypassed in the test.
+- [x] Add a source-level inventory test listing exported admin mutation actions so a new unaudited action fails the suite.
 
 **Implementation steps:**
 
-- [ ] Make `requireAdminSession()` usable consistently in Server Components, Server Actions and route handlers with typed unauthorized behavior.
-- [ ] Call it as the first operation in each Online Store admin mutation, before parsing identifiers or loading data.
-- [ ] Validate action arguments with strict schemas after authentication; retain domain-level channel and transition authorization.
-- [ ] Keep middleware protection but document it as the outer layer only.
+- [x] Make `requireAdminSession()` usable consistently in Server Components, Server Actions and route handlers with typed unauthorized behavior.
+- [x] Call it as the first operation in each Online Store admin mutation, before parsing identifiers or loading data.
+- [x] Validate action arguments with strict schemas after authentication; retain domain-level channel and transition authorization.
+- [x] Keep middleware protection but document it as the outer layer only.
 
 **Focused quality commands:**
 

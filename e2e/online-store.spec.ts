@@ -13,3 +13,10 @@ test("route nội bộ vẫn yêu cầu đăng nhập", async ({ page }) => {
   await page.goto("/admin/orders");
   await expect(page).toHaveURL(/login/);
 });
+
+test("admin authorization: unauthenticated access to admin order details redirects to login", async ({
+  page,
+}) => {
+  await page.goto("/admin/orders/unauthenticated-test-id");
+  await expect(page).toHaveURL(/login/);
+});

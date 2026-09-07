@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DateField } from "@/components/kit/date-field";
 import { DropdownField } from "@/components/kit/dropdown-field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { requireAdminSession } from "@/server/auth/require-admin-session";
 import { prisma } from "@/server/db/prisma";
 
 import { cancelOrderAction } from "./actions";
@@ -53,6 +54,8 @@ export default async function OrdersPage({
 }: {
   searchParams: Promise<OrdersSearchParams>;
 }) {
+  await requireAdminSession({ redirectToLogin: true });
+
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
   const status = params.status ?? "";
