@@ -583,18 +583,18 @@ flowchart LR
 
 **Tests first:**
 
-- [ ] Feed nested objects, arrays, errors and URL strings containing cookies, authorization, passwords, phone/address, guest token, receipt nonce and query values; assert output is removed, masked or replaced.
-- [ ] Test circular structures and hostile getters cannot crash the logger or leak values.
-- [ ] Test Sentry `beforeSend` redacts request headers, cookies, URL path/query, breadcrumbs, exception extras and user fields.
-- [ ] Test analytics never receives checkout form values, guest/receipt URLs or customer identifiers.
+- [x] Feed nested objects, arrays, errors and URL strings containing cookies, authorization, passwords, phone/address, guest token, receipt nonce and query values; assert output is removed, masked or replaced.
+- [x] Test circular structures and hostile getters cannot crash the logger or leak values.
+- [x] Test Sentry `beforeSend` redacts request headers, cookies, URL path/query, breadcrumbs, exception extras and user fields.
+- [x] Test analytics never receives checkout form values, guest/receipt URLs or customer identifiers.
 
 **Implementation steps:**
 
-- [ ] Replace arbitrary logger metadata with event-specific allowlisted schemas and recursive defense-in-depth redaction.
-- [ ] Normalize guest and receipt paths to route templates before access/APM logging; coordinate equivalent CDN/reverse-proxy redaction outside application code.
-- [ ] Configure Sentry hooks for server, edge and client. Disable body capture and sensitive default integrations where necessary.
-- [ ] Add log retention/access variables and an operational verification checklist; avoid logging limiter HMAC keys even though they are pseudonymous.
-- [ ] Sweep Online Store logging call sites and replace raw exceptions/requests with safe error class, code and correlation id.
+- [x] Replace arbitrary logger metadata with event-specific allowlisted schemas and recursive defense-in-depth redaction.
+- [x] Normalize guest and receipt paths to route templates before access/APM logging; coordinate equivalent CDN/reverse-proxy redaction outside application code.
+- [x] Configure Sentry hooks for server, edge and client. Disable body capture and sensitive default integrations where necessary.
+- [x] Add log retention/access variables and an operational verification checklist; avoid logging limiter HMAC keys even though they are pseudonymous.
+- [x] Sweep Online Store logging call sites and replace raw exceptions/requests with safe error class, code and correlation id.
 
 **Focused quality commands:**
 

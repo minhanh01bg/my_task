@@ -176,9 +176,25 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     }
-    logger.error("online_order_create_failed", { error });
+    const correlationId = crypto.randomUUID();
+    const errorClass =
+      error instanceof Error ? error.constructor.name : typeof error;
+    const errorCode =
+      typeof error === "object" && error !== null && "code" in error
+        ? String((error as { code: unknown }).code)
+        : "INTERNAL_ERROR";
+
+    logger.error("online_order_create_failed", {
+      correlationId,
+      errorClass,
+      errorCode,
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
+    });
     return NextResponse.json(
-      { message: "Không thể tạo đơn lúc này. Vui lòng thử lại." },
+      {
+        message: "Không thể tạo đơn lúc này. Vui lòng thử lại.",
+        correlationId,
+      },
       { status: 500 },
     );
   }

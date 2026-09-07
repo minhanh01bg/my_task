@@ -1,3 +1,5 @@
+import { normalizeSafePath, redactLogData } from "./log-redaction";
+
 type LogLevel = "info" | "warn" | "error";
 
 function formatMessage(level: LogLevel, message: string, meta?: unknown) {
@@ -5,8 +7,8 @@ function formatMessage(level: LogLevel, message: string, meta?: unknown) {
   return {
     timestamp,
     level,
-    message,
-    meta,
+    message: normalizeSafePath(message),
+    meta: meta !== undefined ? redactLogData(meta) : undefined,
   };
 }
 
