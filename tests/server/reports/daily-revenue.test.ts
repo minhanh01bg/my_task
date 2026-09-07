@@ -83,7 +83,12 @@ describe("getTopProducts", () => {
     await prisma.product.createMany({
       data: [
         { name: "Ít bán", price: 1000, searchText: "it ban", soldCount: 2 },
-        { name: "Bán chạy", price: 1000, searchText: "ban chay", soldCount: 50 },
+        {
+          name: "Bán chạy",
+          price: 1000,
+          searchText: "ban chay",
+          soldCount: 50,
+        },
       ],
     });
 
@@ -109,8 +114,20 @@ describe("getLowStockProducts", () => {
   it("chi lay hang duoi nguong", async () => {
     await prisma.product.createMany({
       data: [
-        { name: "Sắp hết", price: 1000, searchText: "sap het", stock: 2, unit: "cái" },
-        { name: "Còn nhiều", price: 1000, searchText: "con nhieu", stock: 50, unit: "cái" },
+        {
+          name: "Sắp hết",
+          price: 1000,
+          searchText: "sap het",
+          stock: 2,
+          unit: "cái",
+        },
+        {
+          name: "Còn nhiều",
+          price: 1000,
+          searchText: "con nhieu",
+          stock: 50,
+          unit: "cái",
+        },
       ],
     });
 
@@ -120,7 +137,13 @@ describe("getLowStockProducts", () => {
 
   it("bao gom ca hang bi ton am", async () => {
     await prisma.product.create({
-      data: { name: "Âm kho", price: 1000, searchText: "am kho", stock: -3, unit: "cái" },
+      data: {
+        name: "Âm kho",
+        price: 1000,
+        searchText: "am kho",
+        stock: -3,
+        unit: "cái",
+      },
     });
 
     const rows = await getLowStockProducts(5);

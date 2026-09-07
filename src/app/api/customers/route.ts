@@ -25,9 +25,7 @@ const createSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const parsed = createSchema.safeParse(
-    await request.json().catch(() => null),
-  );
+  const parsed = createSchema.safeParse(await request.json().catch(() => null));
 
   if (!parsed.success) {
     return NextResponse.json({ message: "Thiếu tên khách" }, { status: 400 });

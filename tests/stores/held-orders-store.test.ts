@@ -48,9 +48,7 @@ describe("giu don", () => {
   });
 
   it("tinh tong tien cua don giu de hien tren thanh", () => {
-    useHeldOrdersStore
-      .getState()
-      .hold([line("A", 15000), line("B", 25000)], 0);
+    useHeldOrdersStore.getState().hold([line("A", 15000), line("B", 25000)], 0);
     expect(useHeldOrdersStore.getState().held[0]?.total).toBe(40000);
   });
 
