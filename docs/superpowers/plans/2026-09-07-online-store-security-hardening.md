@@ -498,18 +498,18 @@ flowchart LR
 
 **Tests first:**
 
-- [ ] Launch two requests with the same `clientId`; assert both return a consistent successful logical result and only one order/inventory movement/notification exists.
-- [ ] Force a unique conflict after the pre-read and prove it is caught and replayed rather than returned as `500`.
-- [ ] Simulate loss of the first guest response and prove retry in the same browser recovers access without storing plaintext capability in the database or minting a second unrestricted capability.
-- [ ] Test another browser with only the `clientId` cannot recover guest access, and expired/consumed recovery state fails.
+- [x] Launch two requests with the same `clientId`; assert both return a consistent successful logical result and only one order/inventory movement/notification exists.
+- [x] Force a unique conflict after the pre-read and prove it is caught and replayed rather than returned as `500`.
+- [x] Simulate loss of the first guest response and prove retry in the same browser recovers access without storing plaintext capability in the database or minting a second unrestricted capability.
+- [x] Test another browser with only the `clientId` cannot recover guest access, and expired/consumed recovery state fails.
 
 **Implementation steps:**
 
-- [ ] Add a purpose-built idempotency/recovery record containing request fingerprint, status, order relation, expiry and a digest bound to a short-lived `HttpOnly`, `Secure`, `SameSite=Lax` pending-checkout cookie.
-- [ ] Canonicalize and hash security-relevant request fields. Reusing a `clientId` with a different fingerprint returns a conflict, never the original order.
-- [ ] Resolve concurrent unique conflicts inside/around the transaction by reading the committed record and replaying the allowlisted response.
-- [ ] Bind guest capability recovery to the pending cookie through a one-time exchange or deterministic encrypted response material; do not persist capability plaintext or expose recovery by `clientId` alone.
-- [ ] Expire/delete pending recovery state after exchange or bounded TTL while preserving durable order idempotency.
+- [x] Add a purpose-built idempotency/recovery record containing request fingerprint, status, order relation, expiry and a digest bound to a short-lived `HttpOnly`, `Secure`, `SameSite=Lax` pending-checkout cookie.
+- [x] Canonicalize and hash security-relevant request fields. Reusing a `clientId` with a different fingerprint returns a conflict, never the original order.
+- [x] Resolve concurrent unique conflicts inside/around the transaction by reading the committed record and replaying the allowlisted response.
+- [x] Bind guest capability recovery to the pending cookie through a one-time exchange or deterministic encrypted response material; do not persist capability plaintext or expose recovery by `clientId` alone.
+- [x] Expire/delete pending recovery state after exchange or bounded TTL while preserving durable order idempotency.
 
 **Focused quality commands:**
 

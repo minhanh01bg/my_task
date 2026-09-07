@@ -120,6 +120,7 @@ model Order {
   items       OrderItem[]
   payments    Payment[]
   guestAccess GuestOrderAccess?
+  idempotency CheckoutIdempotency?
 
   @@index([createdAt])
   @@index([status])
@@ -136,6 +137,23 @@ model GuestOrderAccess {
   expiresAt DateTime
   createdAt DateTime  @default(now())
   revokedAt DateTime?
+}
+
+model CheckoutIdempotency {
+  id                  String    @id @default(cuid())
+  clientId            String    @unique
+  requestFingerprint  String
+  orderId             String    @unique
+  order               Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  recoveryDigest      String?
+  encryptedGuestToken String?
+  responsePayload     String
+  recoveredAt         DateTime?
+  expiresAt           DateTime
+  createdAt           DateTime  @default(now())
+
+  @@index([createdAt])
+  @@index([expiresAt])
 }
 
 model AdminNotification {

@@ -15,6 +15,7 @@ function FormContent() {
   const [fulfillment, setFulfillment] = useState<"delivery" | "pickup">(
     "delivery",
   );
+  const [clientId, setClientId] = useState(() => crypto.randomUUID());
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const total = lines.reduce(
@@ -29,7 +30,7 @@ function FormContent() {
     setError("");
     const data = new FormData(event.currentTarget);
     const payload = {
-      clientId: crypto.randomUUID(),
+      clientId,
       lines: lines.map((line) => ({
         productId: line.id,
         quantity: line.quantity,
@@ -63,6 +64,7 @@ function FormContent() {
       }
       const parsed = onlineOrderResponseSchema.parse(body);
       clear();
+      setClientId(crypto.randomUUID());
       router.push(
         parsed.data.order.accessUrl ??
           `/order-success/${encodeURIComponent(parsed.data.order.code)}`,

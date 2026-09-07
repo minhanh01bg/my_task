@@ -1,43 +1,130 @@
 import { prisma } from "@/server/db/prisma";
 import {
+  computeCheckoutFingerprint,
+  decryptGuestToken,
+  digestRecoverySecret,
+  encryptGuestToken,
+  RECOVERY_TTL_MS,
+  verifyRecoverySecret,
+} from "@/server/orders/checkout-idempotency";
+import {
   OnlineOrderError,
   type OnlineCheckoutInput,
 } from "@/types/online-order";
 
-import { createOrder } from "./create-order";
+import { createOrder, type CreateOrderResult } from "./create-order";
 
 export interface OnlineOrderAccessContext {
   customerAccountId?: string | null;
   guestAccess?: { tokenHash: string; expiresAt: Date };
+  guestRecovery?: {
+    secret?: string;
+    guestToken?: string;
+  };
+}
+
+export interface CreateOnlineOrderResult extends CreateOrderResult {
+  recoveredGuestToken?: string;
+}
+
+async function replayIdempotentOrder(
+  idempotency: {
+    id: string;
+    requestFingerprint: string;
+    recoveryDigest: string | null;
+    encryptedGuestToken: string | null;
+    expiresAt: Date;
+    order: {
+      id: string;
+      code: string;
+      subtotal: number;
+      discount: number;
+      total: number;
+      status: string;
+      hasStockWarning: boolean;
+    };
+  },
+  currentFingerprint: string,
+  access: OnlineOrderAccessContext,
+): Promise<CreateOnlineOrderResult> {
+  if (idempotency.requestFingerprint !== currentFingerprint) {
+    throw new OnlineOrderError(
+      "IDEMPOTENCY_CONFLICT",
+      "Mã giao dịch đã được sử dụng cho đơn hàng khác",
+    );
+  }
+
+  let recoveredGuestToken: string | undefined;
+  if (
+    access.guestRecovery?.secret &&
+    idempotency.recoveryDigest &&
+    idempotency.encryptedGuestToken &&
+    new Date() <= idempotency.expiresAt
+  ) {
+    if (
+      verifyRecoverySecret(
+        access.guestRecovery.secret,
+        idempotency.recoveryDigest,
+      )
+    ) {
+      const decrypted = decryptGuestToken(
+        idempotency.encryptedGuestToken,
+        access.guestRecovery.secret,
+      );
+      if (decrypted) {
+        recoveredGuestToken = decrypted;
+        await prisma.checkoutIdempotency
+          .update({
+            where: { id: idempotency.id },
+            data: { recoveredAt: new Date() },
+          })
+          .catch(() => {});
+      }
+    }
+  }
+
+  return {
+    order: idempotency.order,
+    duplicated: true,
+    recoveredGuestToken,
+  };
 }
 
 export async function createOnlineOrder(
   input: OnlineCheckoutInput,
   access: OnlineOrderAccessContext = {},
-) {
-  const existing = await prisma.order.findUnique({
+): Promise<CreateOnlineOrderResult> {
+  const currentFingerprint = computeCheckoutFingerprint(input);
+
+  const existingIdempotency = await prisma.checkoutIdempotency.findUnique({
     where: { clientId: input.clientId },
-    select: { id: true },
+    include: { order: true },
   });
-  if (existing) {
-    return createOrder({
-      clientId: input.clientId,
-      channel: "online",
-      lines: [
-        {
-          productId: null,
-          name: "idempotent",
-          unitPrice: 0,
-          originalPrice: 0,
-          quantity: 1,
-          discount: 0,
-          unit: "cái",
-          isService: true,
-        },
-      ],
-      payments: [{ method: "transfer", amount: 0 }],
-      customerAccountId: access.customerAccountId,
-    });
+
+  if (existingIdempotency) {
+    return replayIdempotentOrder(
+      existingIdempotency,
+      currentFingerprint,
+      access,
+    );
+  }
+
+  const existingOrder = await prisma.order.findUnique({
+    where: { clientId: input.clientId },
+  });
+  if (existingOrder) {
+    return {
+      order: {
+        id: existingOrder.id,
+        code: existingOrder.code,
+        subtotal: existingOrder.subtotal,
+        discount: existingOrder.discount,
+        total: existingOrder.total,
+        status: existingOrder.status,
+        hasStockWarning: existingOrder.hasStockWarning,
+      },
+      duplicated: true,
+    };
   }
 
   const products = await prisma.product.findMany({
@@ -99,32 +186,100 @@ export async function createOnlineOrder(
     0,
   );
 
-  return createOrder({
-    clientId: input.clientId,
-    channel: "online",
-    lines,
-    payments: [
-      {
-        method: input.paymentMethod === "cod" ? "cash" : "transfer",
-        amount: total,
-      },
-    ],
-    customerAccountId: access.customerAccountId,
-    guestAccess: access.customerAccountId ? undefined : access.guestAccess,
-    initialStatus: "pending",
-    autoReceiveCash: false,
-    note: input.note || null,
-    online: {
-      fulfillmentStatus: "new",
-      fulfillmentType: input.fulfillmentType,
-      paymentMethod: input.paymentMethod,
-      contactName: input.contactName,
-      contactPhone: input.contactPhone,
-      deliveryAddress: input.deliveryAddress || null,
-      deliveryWard: input.deliveryWard || null,
-      deliveryDistrict: input.deliveryDistrict || null,
-      deliveryProvince: input.deliveryProvince || null,
-      shippingFee: 0,
-    },
+  let recoveryDigest: string | null = null;
+  let encryptedGuestToken: string | null = null;
+
+  if (
+    !access.customerAccountId &&
+    access.guestRecovery?.secret &&
+    access.guestRecovery.guestToken
+  ) {
+    recoveryDigest = digestRecoverySecret(access.guestRecovery.secret);
+    encryptedGuestToken = encryptGuestToken(
+      access.guestRecovery.guestToken,
+      access.guestRecovery.secret,
+    );
+  }
+
+  const expiresAt = new Date(Date.now() + RECOVERY_TTL_MS);
+  const responsePayload = JSON.stringify({
+    fulfillmentStatus: "new",
+    fulfillmentType: input.fulfillmentType,
   });
+
+  try {
+    const result = await createOrder({
+      clientId: input.clientId,
+      channel: "online",
+      lines,
+      payments: [
+        {
+          method: input.paymentMethod === "cod" ? "cash" : "transfer",
+          amount: total,
+        },
+      ],
+      customerAccountId: access.customerAccountId,
+      guestAccess: access.customerAccountId ? undefined : access.guestAccess,
+      idempotency: {
+        requestFingerprint: currentFingerprint,
+        recoveryDigest,
+        encryptedGuestToken,
+        responsePayload,
+        expiresAt,
+      },
+      initialStatus: "pending",
+      autoReceiveCash: false,
+      note: input.note || null,
+      online: {
+        fulfillmentStatus: "new",
+        fulfillmentType: input.fulfillmentType,
+        paymentMethod: input.paymentMethod,
+        contactName: input.contactName,
+        contactPhone: input.contactPhone,
+        deliveryAddress: input.deliveryAddress || null,
+        deliveryWard: input.deliveryWard || null,
+        deliveryDistrict: input.deliveryDistrict || null,
+        deliveryProvince: input.deliveryProvince || null,
+        shippingFee: 0,
+      },
+    });
+
+    if (result.duplicated) {
+      const committed = await prisma.checkoutIdempotency.findUnique({
+        where: { clientId: input.clientId },
+        include: { order: true },
+      });
+      if (committed) {
+        return replayIdempotentOrder(committed, currentFingerprint, access);
+      }
+    }
+
+    return result;
+  } catch (error: unknown) {
+    const committed = await prisma.checkoutIdempotency.findUnique({
+      where: { clientId: input.clientId },
+      include: { order: true },
+    });
+    if (committed) {
+      return replayIdempotentOrder(committed, currentFingerprint, access);
+    }
+    const orderFallback = await prisma.order.findUnique({
+      where: { clientId: input.clientId },
+    });
+    if (orderFallback) {
+      return {
+        order: {
+          id: orderFallback.id,
+          code: orderFallback.code,
+          subtotal: orderFallback.subtotal,
+          discount: orderFallback.discount,
+          total: orderFallback.total,
+          status: orderFallback.status,
+          hasStockWarning: orderFallback.hasStockWarning,
+        },
+        duplicated: true,
+      };
+    }
+    throw error;
+  }
 }

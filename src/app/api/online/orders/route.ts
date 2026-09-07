@@ -7,6 +7,10 @@ import {
   digestOpaqueToken,
   resolveCustomerSessionToken,
 } from "@/server/customer-auth/session";
+import {
+  CHECKOUT_RECOVERY_COOKIE,
+  createRecoverySecret,
+} from "@/server/orders/checkout-idempotency";
 import { createOnlineOrder } from "@/server/orders/create-online-order";
 import { OnlineOrderError, onlineCheckoutSchema } from "@/types/online-order";
 
@@ -73,12 +77,25 @@ export async function POST(request: Request) {
   }
 
   try {
-    const customerToken = request.headers
-      .get("cookie")
-      ?.match(/(?:^|;\s*)customer_session=([^;]+)/)?.[1];
+    const cookieHeader = request.headers.get("cookie") ?? "";
+    const customerToken = cookieHeader.match(
+      /(?:^|;\s*)customer_session=([^;]+)/,
+    )?.[1];
     const session = await resolveCustomerSessionToken(
       customerToken ? decodeURIComponent(customerToken) : null,
     );
+
+    let recoverySecret = cookieHeader.match(
+      /(?:^|;\s*)checkout_recovery=([^;]+)/,
+    )?.[1];
+    let isNewRecoverySecret = false;
+    if (recoverySecret) {
+      recoverySecret = decodeURIComponent(recoverySecret);
+    } else if (!session) {
+      recoverySecret = createRecoverySecret();
+      isNewRecoverySecret = true;
+    }
+
     const guestToken = session ? null : createOpaqueToken();
     const result = await createOnlineOrder(parsed.data, {
       customerAccountId: session?.accountId,
@@ -88,8 +105,26 @@ export async function POST(request: Request) {
             expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           }
         : undefined,
+      guestRecovery:
+        !session && recoverySecret
+          ? {
+              secret: recoverySecret,
+              guestToken: guestToken ?? undefined,
+            }
+          : undefined,
     });
-    return NextResponse.json(
+
+    const effectiveGuestToken = result.duplicated
+      ? result.recoveredGuestToken
+      : (guestToken ?? undefined);
+
+    const accessUrl = session
+      ? `/account/orders/${result.order.id}`
+      : effectiveGuestToken
+        ? `/orders/guest/${effectiveGuestToken}`
+        : undefined;
+
+    const response = NextResponse.json(
       {
         data: {
           order: {
@@ -97,11 +132,7 @@ export async function POST(request: Request) {
             total: result.order.total,
             status: result.order.status,
             fulfillmentStatus: "new",
-            accessUrl: session
-              ? `/account/orders/${result.order.id}`
-              : guestToken && !result.duplicated
-                ? `/orders/guest/${guestToken}`
-                : undefined,
+            accessUrl,
           },
           duplicated: result.duplicated,
         },
@@ -114,6 +145,21 @@ export async function POST(request: Request) {
         },
       },
     );
+
+    if (isNewRecoverySecret && recoverySecret) {
+      const isProduction = process.env.NODE_ENV === "production";
+      response.cookies.set({
+        name: CHECKOUT_RECOVERY_COOKIE,
+        value: recoverySecret,
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 1800,
+      });
+    }
+
+    return response;
   } catch (error) {
     if (error instanceof OnlineOrderError) {
       return NextResponse.json(

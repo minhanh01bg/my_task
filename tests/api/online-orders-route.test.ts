@@ -4,6 +4,7 @@ import { POST } from "@/app/api/online/orders/route";
 import * as createOnlineOrderModule from "@/server/orders/create-online-order";
 import { setCheckoutAbuseLimiter } from "@/server/security/checkout-abuse";
 import type { RateLimiter } from "@/server/security/rate-limit";
+import { OnlineOrderError } from "@/types/online-order";
 
 const fakePassLimiter: RateLimiter = {
   async check() {
@@ -157,5 +158,144 @@ describe("POST /api/online/orders (Task 4 & Task 5: Hard limits and Anti-Abuse)"
     expect(response.headers.get("cache-control")).toContain("no-store");
     expect(response.headers.get("retry-after")).toBe("45");
     expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  describe("Task 11: Concurrent Idempotency & Guest Recovery HTTP boundary", () => {
+    const samplePayload = {
+      clientId: "c45b85a6-9818-4a57-8d07-28d8b9d316e6",
+      lines: [{ productId: "prod-1", quantity: 1 }],
+      contactName: "Khách Hàng A",
+      contactPhone: "0901234567",
+      fulfillmentType: "pickup",
+      paymentMethod: "cod",
+    };
+
+    it("issues checkout_recovery cookie on first guest checkout and returns accessUrl", async () => {
+      vi.spyOn(
+        createOnlineOrderModule,
+        "createOnlineOrder",
+      ).mockResolvedValueOnce({
+        order: {
+          id: "order-1",
+          code: "DH0001",
+          subtotal: 100_000,
+          discount: 0,
+          total: 100_000,
+          status: "pending",
+          hasStockWarning: false,
+        },
+        duplicated: false,
+      });
+
+      const req = new Request("https://example.com/api/online/orders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(samplePayload),
+      });
+
+      const response = await POST(req);
+      expect(response.status).toBe(201);
+      const setCookie = response.headers.get("set-cookie");
+      expect(setCookie).toContain("checkout_recovery=");
+      expect(setCookie).toContain("HttpOnly");
+
+      const body = await response.json();
+      expect(body.data.duplicated).toBe(false);
+      expect(body.data.order.accessUrl).toMatch(/^\/orders\/guest\//);
+    });
+
+    it("recovers guest accessUrl when retried with the matching checkout_recovery cookie", async () => {
+      vi.spyOn(
+        createOnlineOrderModule,
+        "createOnlineOrder",
+      ).mockResolvedValueOnce({
+        order: {
+          id: "order-1",
+          code: "DH0001",
+          subtotal: 100_000,
+          discount: 0,
+          total: 100_000,
+          status: "pending",
+          hasStockWarning: false,
+        },
+        duplicated: true,
+        recoveredGuestToken: "recovered-guest-token-123",
+      });
+
+      const req = new Request("https://example.com/api/online/orders", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie: "checkout_recovery=some-recovery-secret",
+        },
+        body: JSON.stringify(samplePayload),
+      });
+
+      const response = await POST(req);
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.data.duplicated).toBe(true);
+      expect(body.data.order.accessUrl).toBe(
+        "/orders/guest/recovered-guest-token-123",
+      );
+    });
+
+    it("omits guest accessUrl when retried without matching cookie", async () => {
+      vi.spyOn(
+        createOnlineOrderModule,
+        "createOnlineOrder",
+      ).mockResolvedValueOnce({
+        order: {
+          id: "order-1",
+          code: "DH0001",
+          subtotal: 100_000,
+          discount: 0,
+          total: 100_000,
+          status: "pending",
+          hasStockWarning: false,
+        },
+        duplicated: true,
+        recoveredGuestToken: undefined,
+      });
+
+      const req = new Request("https://example.com/api/online/orders", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(samplePayload),
+      });
+
+      const response = await POST(req);
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.data.duplicated).toBe(true);
+      expect(body.data.order.accessUrl).toBeUndefined();
+    });
+
+    it("returns 409 Conflict when OnlineOrderError with IDEMPOTENCY_CONFLICT is thrown", async () => {
+      vi.spyOn(
+        createOnlineOrderModule,
+        "createOnlineOrder",
+      ).mockRejectedValueOnce(
+        new OnlineOrderError(
+          "IDEMPOTENCY_CONFLICT",
+          "Mã giao dịch đã được sử dụng cho đơn hàng khác",
+        ),
+      );
+
+      const req = new Request("https://example.com/api/online/orders", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(samplePayload),
+      });
+
+      const response = await POST(req);
+      expect(response.status).toBe(409);
+      const body = await response.json();
+      expect(body.code).toBe("IDEMPOTENCY_CONFLICT");
+    });
   });
 });

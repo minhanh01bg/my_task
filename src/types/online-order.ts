@@ -83,7 +83,10 @@ export type OnlineOrderResponse = z.infer<typeof onlineOrderResponseSchema>;
 
 export class OnlineOrderError extends Error {
   constructor(
-    public readonly code: "OUT_OF_STOCK" | "PRODUCT_UNAVAILABLE",
+    public readonly code:
+      | "OUT_OF_STOCK"
+      | "PRODUCT_UNAVAILABLE"
+      | "IDEMPOTENCY_CONFLICT",
     message: string,
     public readonly productIds: string[] = [],
   ) {
