@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Order" ADD COLUMN "anonymizedAt" DATETIME;
+ALTER TABLE "Order" ADD COLUMN "legalHold" BOOLEAN NOT NULL DEFAULT false;

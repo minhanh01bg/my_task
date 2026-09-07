@@ -118,6 +118,8 @@ model Order {
   shippingFee       Int              @default(0)
   /// Nonce SHA-256 digest for non-enumerable public receipt lookup
   receiptNonceHash  String?          @unique
+  anonymizedAt      DateTime?
+  legalHold         Boolean          @default(false)
 
   items       OrderItem[]
   payments    Payment[]

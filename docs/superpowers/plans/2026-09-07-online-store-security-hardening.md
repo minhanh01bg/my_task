@@ -784,19 +784,19 @@ flowchart LR
 
 **Tests first:**
 
-- [ ] Test the data inventory classifies contact/order/session/capability/idempotency/audit/log fields with owner, purpose and retention.
-- [ ] Test dry-run selection at exact retention boundaries, legal hold/exemptions, idempotent deletion/anonymization and preservation of financial/inventory invariants.
-- [ ] Test expired sessions, capabilities, pending recovery and rate-limit/telemetry identifiers are purged independently of retained order records.
-- [ ] Test customer PII anonymization does not break aggregate totals, stock movements, notification integrity or required audit attribution.
+- [x] Test the data inventory classifies contact/order/session/capability/idempotency/audit/log fields with owner, purpose and retention.
+- [x] Test dry-run selection at exact retention boundaries, legal hold/exemptions, idempotent deletion/anonymization and preservation of financial/inventory invariants.
+- [x] Test expired sessions, capabilities, pending recovery and rate-limit/telemetry identifiers are purged independently of retained order records.
+- [x] Test customer PII anonymization does not break aggregate totals, stock movements, notification integrity or required audit attribution.
 
 **Implementation steps:**
 
-- [ ] Record approved retention periods, legal/accounting basis, data-subject deletion/anonymization behavior, log/APM retention and access roles.
-- [ ] Implement a dry-run-by-default retention service and script with bounded batches, checkpoints, audit summary and explicit destructive confirmation.
-- [ ] Prefer anonymization of retained financial orders; delete transient tokens/sessions/idempotency records at shorter TTLs.
-- [ ] Document full-disk/volume and backup encryption, key ownership/rotation, least-privilege file/service accounts, backup restore tests and access audits.
-- [ ] Verify SQLite/database files and backups are excluded from source artifacts and are never copied into CI artifacts.
-- [ ] Decide field-level encryption only if the accepted threat model requires infrastructure administrators not to read PII; do not add ad hoc encryption without key-management design.
+- [x] Record approved retention periods, legal/accounting basis, data-subject deletion/anonymization behavior, log/APM retention and access roles.
+- [x] Implement a dry-run-by-default retention service and script with bounded batches, checkpoints, audit summary and explicit destructive confirmation.
+- [x] Prefer anonymization of retained financial orders; delete transient tokens/sessions/idempotency records at shorter TTLs.
+- [x] Document full-disk/volume and backup encryption, key ownership/rotation, least-privilege file/service accounts, backup restore tests and access audits.
+- [x] Verify SQLite/database files and backups are excluded from source artifacts and are never copied into CI artifacts.
+- [x] Decide field-level encryption only if the accepted threat model requires infrastructure administrators not to read PII; do not add ad hoc encryption without key-management design.
 
 **Focused quality commands:**
 
