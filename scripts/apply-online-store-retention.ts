@@ -1,11 +1,14 @@
-import { loadEnvConfig } from "@next/env";
+import { existsSync } from "node:fs";
+import { applyOnlineStoreRetention } from "@/server/privacy/retention";
 
-loadEnvConfig(process.cwd());
+if (existsSync(".env.local")) {
+  process.loadEnvFile(".env.local");
+} else if (existsSync(".env")) {
+  process.loadEnvFile(".env");
+}
 process.env.DATABASE_URL = process.env.DATABASE_URL || "file:./dev.db";
 
 async function main() {
-  const { applyOnlineStoreRetention } =
-    await import("@/server/privacy/retention");
   const args = process.argv.slice(2);
   const isExecute = args.includes("--execute");
   const dryRun = !isExecute;

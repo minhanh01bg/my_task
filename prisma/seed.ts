@@ -1,9 +1,13 @@
-import { loadEnvConfig } from "@next/env";
+import { existsSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 
 import { buildSearchText } from "../src/lib/search/search-text";
 
-loadEnvConfig(process.cwd());
+if (existsSync(".env.local")) {
+  process.loadEnvFile(".env.local");
+} else if (existsSync(".env")) {
+  process.loadEnvFile(".env");
+}
 process.env.DATABASE_URL = process.env.DATABASE_URL || "file:./dev.db";
 
 const prisma = new PrismaClient();
