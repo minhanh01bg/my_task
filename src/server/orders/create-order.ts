@@ -2,6 +2,7 @@ import { calculateCart } from "@/lib/pricing/calculate";
 import type { CartLine } from "@/lib/pricing/types";
 import { prisma } from "@/server/db/prisma";
 import { createOnlineOrderNotification } from "@/server/notifications/create-admin-notification";
+import { OnlineOrderError } from "@/types/online-order";
 
 import { generateOrderCode } from "./order-code";
 
@@ -211,13 +212,29 @@ export async function createOrder(
 
     for (const line of stockLines) {
       const productId = line.productId as string;
-      await tx.product.update({
-        where: { id: productId },
-        data: {
-          stock: { decrement: line.quantity },
-          soldCount: { increment: 1 },
-        },
-      });
+      if (input.channel === "online") {
+        const updatedCount = await tx.$executeRaw`
+          UPDATE "Product"
+          SET "stock" = "stock" - ${line.quantity},
+              "soldCount" = "soldCount" + 1
+          WHERE "id" = ${productId} AND "stock" >= ${line.quantity}
+        `;
+        if (updatedCount === 0) {
+          throw new OnlineOrderError(
+            "OUT_OF_STOCK",
+            "Một số sản phẩm không đủ tồn kho",
+            [productId],
+          );
+        }
+      } else {
+        await tx.product.update({
+          where: { id: productId },
+          data: {
+            stock: { decrement: line.quantity },
+            soldCount: { increment: 1 },
+          },
+        });
+      }
       await tx.stockMovement.create({
         data: {
           productId,

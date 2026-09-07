@@ -308,18 +308,18 @@ flowchart LR
 
 **Tests first:**
 
-- [ ] Add a real-database concurrency test where two different checkout requests compete for the final stock; exactly one succeeds and one returns `OUT_OF_STOCK`.
-- [ ] Assert final stock is zero, never negative, and only the winner has one order, one movement set and one notification.
-- [ ] Test a multi-line order rolls back all order/payment/item/movement/notification writes when any conditional decrement affects zero rows.
-- [ ] Lock POS regression tests proving POS can still sell into negative stock and retains `hasStockWarning` behavior.
+- [x] Add a real-database concurrency test where two different checkout requests compete for the final stock; exactly one succeeds and one returns `OUT_OF_STOCK`.
+- [x] Assert final stock is zero, never negative, and only the winner has one order, one movement set and one notification.
+- [x] Test a multi-line order rolls back all order/payment/item/movement/notification writes when any conditional decrement affects zero rows.
+- [x] Lock POS regression tests proving POS can still sell into negative stock and retains `hasStockWarning` behavior.
 
 **Implementation steps:**
 
-- [ ] Move the online stock invariant into the transaction that creates the order and related writes.
-- [ ] For each normalized online line, execute a conditional update with product eligibility and `stock >= requestedQuantity`; require exactly one affected row.
-- [ ] Throw a typed transaction error on any failed guard, rollback all lines, then map it to stable `OUT_OF_STOCK` without leaking current inventory.
-- [ ] Keep unconditional decrement for POS behind an explicit channel-specific branch. Do not globally change `createOrder` semantics.
-- [ ] Confirm SQLite transaction/locking behavior in tests and document the equivalent predicate needed before any future database-provider migration.
+- [x] Move the online stock invariant into the transaction that creates the order and related writes.
+- [x] For each normalized online line, execute a conditional update with product eligibility and `stock >= requestedQuantity`; require exactly one affected row.
+- [x] Throw a typed transaction error on any failed guard, rollback all lines, then map it to stable `OUT_OF_STOCK` without leaking current inventory.
+- [x] Keep unconditional decrement for POS behind an explicit channel-specific branch. Do not globally change `createOrder` semantics.
+- [x] Confirm SQLite transaction/locking behavior in tests and document the equivalent predicate needed before any future database-provider migration.
 
 **Focused quality commands:**
 
