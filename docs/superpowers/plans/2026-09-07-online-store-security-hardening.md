@@ -122,16 +122,16 @@ flowchart LR
 
 **Tests first:**
 
-- [ ] Add environment-schema tests proving production rejects absent/malformed Redis REST URL, Redis token, rate-limit key secret, trusted proxy mode/header and public canonical origin.
-- [ ] Prove test/development accept explicit safe test values without silently selecting a production in-memory limiter.
-- [ ] Run the current `db:generate`, typecheck and focused configuration tests; record the pre-existing failure before repairing it.
+- [x] Add environment-schema tests proving production rejects absent/malformed Redis REST URL, Redis token, rate-limit key secret, trusted proxy mode/header and public canonical origin.
+- [x] Prove test/development accept explicit safe test values without silently selecting a production in-memory limiter.
+- [x] Run the current `db:generate`, typecheck and focused configuration tests; record the pre-existing failure before repairing it.
 
 **Implementation steps:**
 
-- [ ] Add server-only validated variables for Redis/Upstash REST, keyed pseudonymization secret, trusted proxy/provider mode, authenticated client-IP header, canonical application origin, CSP report-only/enforce mode and retention settings.
-- [ ] Put placeholders and deployment explanations in `.env.example`; never include usable credentials.
-- [ ] Run Prisma generation and make only compatibility repairs necessary to restore the baseline. Keep those repairs in this commit only when they are inseparable from generated-client/config synchronization; otherwise create a separate prerequisite fix commit before continuing.
-- [ ] Document in code comments that production startup must fail before serving traffic when mandatory security configuration is absent.
+- [x] Add server-only validated variables for Redis/Upstash REST, keyed pseudonymization secret, trusted proxy/provider mode, authenticated client-IP header, canonical application origin, CSP report-only/enforce mode and retention settings.
+- [x] Put placeholders and deployment explanations in `.env.example`; never include usable credentials.
+- [x] Run Prisma generation and make only compatibility repairs necessary to restore the baseline. Keep those repairs in this commit only when they are inseparable from generated-client/config synchronization; otherwise create a separate prerequisite fix commit before continuing.
+- [x] Document in code comments that production startup must fail before serving traffic when mandatory security configuration is absent.
 
 **Focused quality commands:**
 
