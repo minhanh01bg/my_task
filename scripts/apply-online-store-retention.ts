@@ -1,6 +1,11 @@
-import { applyOnlineStoreRetention } from "@/server/privacy/retention";
+import { loadEnvConfig } from "@next/env";
+
+loadEnvConfig(process.cwd());
+process.env.DATABASE_URL = process.env.DATABASE_URL || "file:./dev.db";
 
 async function main() {
+  const { applyOnlineStoreRetention } =
+    await import("@/server/privacy/retention");
   const args = process.argv.slice(2);
   const isExecute = args.includes("--execute");
   const dryRun = !isExecute;
