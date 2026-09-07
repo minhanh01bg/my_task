@@ -382,17 +382,17 @@ flowchart LR
 
 **Tests first:**
 
-- [ ] Test repeated failures across instances hit IP/subnet/global admin-login buckets before expensive password verification.
-- [ ] Test successful and failed attempts receive bounded backoff, generic errors and no password/raw IP logging.
-- [ ] Test spoofed IP headers, missing trusted IP and Redis outage fail closed.
-- [ ] Test a successful login rotates/replaces any presented admin session cookie and emits a pseudonymous security event.
+- [x] Test repeated failures across instances hit IP/subnet/global admin-login buckets before expensive password verification.
+- [x] Test successful and failed attempts receive bounded backoff, generic errors and no password/raw IP logging.
+- [x] Test spoofed IP headers, missing trusted IP and Redis outage fail closed.
+- [x] Test a successful login rotates/replaces any presented admin session cookie and emits a pseudonymous security event.
 
 **Implementation steps:**
 
-- [ ] Add a stricter admin-login policy distinct from customer limits; do not share counters between auth domains.
-- [ ] Apply the trusted-IP resolver and distributed limiter before `verifyPassword()`.
-- [ ] Add alert thresholds for brute force/global failures without returning policy details.
-- [ ] Keep this commit compatible with the current stateless admin cookie; Task 16 replaces session persistence independently.
+- [x] Add a stricter admin-login policy distinct from customer limits; do not share counters between auth domains.
+- [x] Apply the trusted-IP resolver and distributed limiter before `verifyPassword()`.
+- [x] Add alert thresholds for brute force/global failures without returning policy details.
+- [x] Keep this commit compatible with the current stateless admin cookie; Task 16 replaces session persistence independently.
 
 **Focused quality commands:**
 
