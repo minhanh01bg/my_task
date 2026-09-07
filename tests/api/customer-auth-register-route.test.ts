@@ -76,7 +76,7 @@ function makeRequest(
 }
 
 describe("POST /api/customer-auth/register", () => {
-  it("creates new customer account with no-store headers", async () => {
+  it("creates new customer account with privacy-preserving accepted response", async () => {
     const req = makeRequest({
       phone: testPhone,
       displayName: "New User",
@@ -84,10 +84,59 @@ describe("POST /api/customer-auth/register", () => {
     });
     const res = await POST(req);
 
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toContain("no-store");
+    expect(res.headers.get("set-cookie")).toBeNull();
+
     const json = await res.json();
-    expect(json.data.account.displayName).toBe("New User");
+    expect(json.ok).toBe(true);
+    expect(json.message).toContain("Vui lòng đăng nhập");
+
+    const created = await prisma.customerAccount.findUnique({
+      where: { phoneNormalized: normalizedPhone },
+    });
+    expect(created).not.toBeNull();
+    expect(created?.displayName).toBe("New User");
+  });
+
+  it("returns identical 200 response for existing phone without leaking existence or overwriting account", async () => {
+    // 1. Pre-register
+    const req1 = makeRequest({
+      phone: testPhone,
+      displayName: "First User",
+      password: "initialPassword123",
+    });
+    const res1 = await POST(req1);
+    expect(res1.status).toBe(200);
+    const json1 = await res1.json();
+
+    const initialAccount = await prisma.customerAccount.findUnique({
+      where: { phoneNormalized: normalizedPhone },
+    });
+    expect(initialAccount).not.toBeNull();
+
+    // 2. Attempt registration again with existing phone
+    const req2 = makeRequest({
+      phone: testPhone,
+      displayName: "Attacker Trying Duplicate",
+      password: "attackerPassword123",
+    });
+    const res2 = await POST(req2);
+
+    expect(res2.status).toBe(200);
+    expect(res2.headers.get("cache-control")).toContain("no-store");
+    expect(res2.headers.get("set-cookie")).toBeNull();
+
+    const json2 = await res2.json();
+    // Body is completely identical to res1
+    expect(json2).toEqual(json1);
+
+    // Existing account data is unmodified
+    const untouchedAccount = await prisma.customerAccount.findUnique({
+      where: { phoneNormalized: normalizedPhone },
+    });
+    expect(untouchedAccount?.displayName).toBe("First User");
+    expect(untouchedAccount?.passwordHash).toBe(initialAccount?.passwordHash);
   });
 
   it("fails closed with 503 when limiter is unavailable", async () => {

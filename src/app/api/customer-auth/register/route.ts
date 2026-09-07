@@ -6,12 +6,7 @@ import {
   checkCustomerAuthAccount,
   checkCustomerAuthPreCheck,
 } from "@/server/customer-auth/rate-limit";
-import {
-  createCustomerSession,
-  CUSTOMER_SESSION_COOKIE,
-  customerCookieOptions,
-} from "@/server/customer-auth/session";
-import { prisma } from "@/server/db/prisma";
+import { registerCustomerAccountWithOptionalSession } from "@/server/customer-auth/session";
 import { customerRegisterSchema } from "@/types/customer-auth";
 
 export async function POST(request: Request) {
@@ -69,42 +64,27 @@ export async function POST(request: Request) {
     );
   }
 
-  const existing = await prisma.customerAccount.findUnique({
-    where: { phoneNormalized: parsed.data.phone },
-    select: { id: true },
-  });
-  if (existing) {
-    return NextResponse.json(
-      { message: "Không thể tạo tài khoản với thông tin này" },
-      {
-        status: 409,
-        headers: { "Cache-Control": "private, no-store" },
-      },
-    );
-  }
-
+  // Timing equalization: always hash password regardless of whether account exists
   const passwordHash = await hashCustomerPassword(parsed.data.password);
-  const account = await prisma.customerAccount.create({
-    data: {
-      phoneNormalized: parsed.data.phone,
-      displayName: parsed.data.displayName,
-      passwordHash,
-    },
-    select: { id: true, displayName: true },
+
+  // Atomic database persist with graceful conflict handling (P2002)
+  await registerCustomerAccountWithOptionalSession({
+    phoneNormalized: parsed.data.phone,
+    displayName: parsed.data.displayName,
+    passwordHash,
+    createSession: false,
   });
 
-  const session = await createCustomerSession(account.id);
-  const response = NextResponse.json(
-    { data: { account: { displayName: account.displayName } } },
+  // Privacy-first policy: externally equivalent accepted response for both new and existing phones
+  return NextResponse.json(
     {
-      status: 201,
+      ok: true,
+      message:
+        "Nếu thông tin hợp lệ, tài khoản đã được xử lý. Vui lòng đăng nhập hoặc sử dụng chức năng khôi phục tài khoản.",
+    },
+    {
+      status: 200,
       headers: { "Cache-Control": "private, no-store" },
     },
   );
-  response.cookies.set(
-    CUSTOMER_SESSION_COOKIE,
-    session.token,
-    customerCookieOptions,
-  );
-  return response;
 }

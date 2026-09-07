@@ -659,17 +659,17 @@ flowchart LR
 
 **Tests first:**
 
-- [ ] Run concurrent registration with one normalized phone; assert no `500`, no duplicate account and deterministic privacy-preserving responses.
-- [ ] Force session creation failure and assert the chosen account/session transaction or retry policy leaves a documented consistent state.
-- [ ] Compare existing-phone and new-phone observable status/body/timing class and ensure rate limiting applies equally.
-- [ ] Test no response or telemetry reveals phone/account existence.
+- [x] Run concurrent registration with one normalized phone; assert no `500`, no duplicate account and deterministic privacy-preserving responses.
+- [x] Force session creation failure and assert the chosen account/session transaction or retry policy leaves a documented consistent state.
+- [x] Compare existing-phone and new-phone observable status/body/timing class and ensure rate limiting applies equally.
+- [x] Test no response or telemetry reveals phone/account existence.
 
 **Implementation steps:**
 
-- [ ] Adopt the privacy-first policy: externally equivalent accepted response for existing and new normalized phones, with generic login/recovery guidance.
-- [ ] Catch Prisma unique conflicts as the expected concurrent outcome; never serialize the database error.
-- [ ] Make account plus initial session creation atomic, or explicitly persist an account without claiming login success and support safe retry.
-- [ ] Add bounded timing equalization compatible with rate limits; do not emulate expensive hashing without a reviewed constant dummy hash.
+- [x] Adopt the privacy-first policy: externally equivalent accepted response for existing and new normalized phones, with generic login/recovery guidance.
+- [x] Catch Prisma unique conflicts as the expected concurrent outcome; never serialize the database error.
+- [x] Make account plus initial session creation atomic, or explicitly persist an account without claiming login success and support safe retry.
+- [x] Add bounded timing equalization compatible with rate limits; do not emulate expensive hashing without a reviewed constant dummy hash.
 
 **Focused quality commands:**
 
