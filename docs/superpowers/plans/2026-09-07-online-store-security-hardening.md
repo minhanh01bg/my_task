@@ -744,18 +744,18 @@ flowchart LR
 
 **Tests first:**
 
-- [ ] Test wrong, expired, revoked and already-claimed capabilities fail with indistinguishable responses.
-- [ ] Test claim requires an authenticated, verified account satisfying the approved ownership proof; matching an unverified phone string is insufficient.
-- [ ] Test claim atomically assigns an unowned order and revokes guest access; concurrent claim attempts have exactly one valid outcome.
-- [ ] Test the owner can explicitly revoke remaining guest access and the old URL immediately stops working.
+- [x] Test wrong, expired, revoked and already-claimed capabilities fail with indistinguishable responses.
+- [x] Test claim requires an authenticated, verified account satisfying the approved ownership proof; matching an unverified phone string is insufficient.
+- [x] Test claim atomically assigns an unowned order and revokes guest access; concurrent claim attempts have exactly one valid outcome.
+- [x] Test the owner can explicitly revoke remaining guest access and the old URL immediately stops working.
 
 **Implementation steps:**
 
-- [ ] Finalize ownership proof, preferring verified phone/OTP established outside the capability itself.
-- [ ] Implement claim as one transaction with current ownership, expiry and revoke predicates.
-- [ ] Revoke capability after successful claim and expose an authenticated revoke action for owned orders.
-- [ ] Shorten default guest capability lifetime from 30 days to the approved bounded value; preserve no-store/no-referrer/noindex behavior.
-- [ ] Add cleanup for expired capability and pending-recovery records without deleting orders.
+- [x] Finalize ownership proof, preferring verified phone/OTP established outside the capability itself.
+- [x] Implement claim as one transaction with current ownership, expiry and revoke predicates.
+- [x] Revoke capability after successful claim and expose an authenticated revoke action for owned orders.
+- [x] Shorten default guest capability lifetime from 30 days to the approved bounded value; preserve no-store/no-referrer/noindex behavior.
+- [x] Add cleanup for expired capability and pending-recovery records without deleting orders.
 
 **Focused quality commands:**
 

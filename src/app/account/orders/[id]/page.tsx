@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
 import { CustomerOrderDetail } from "@/features/customer-account/order-detail";
+import { RevokeGuestButton } from "@/features/customer-account/revoke-guest-button";
 import { requireCustomerSession } from "@/server/customer-auth/session";
 import { findOwnedCustomerOrder } from "@/server/orders/order-access";
+
 export const dynamic = "force-dynamic";
+
 export default async function CustomerOrderPage({
   params,
 }: {
@@ -14,5 +17,13 @@ export default async function CustomerOrderPage({
   ]);
   const order = await findOwnedCustomerOrder(session.accountId, id);
   if (!order) notFound();
-  return <CustomerOrderDetail order={order} />;
+
+  return (
+    <div className="mx-auto max-w-3xl">
+      <CustomerOrderDetail order={order} />
+      <div className="px-4">
+        <RevokeGuestButton orderId={order.id} />
+      </div>
+    </div>
+  );
 }

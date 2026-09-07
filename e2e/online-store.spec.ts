@@ -117,3 +117,47 @@ test("admin session lifecycle: unauthenticated redirect and logout cookie revoca
   expect(setCookie).toContain("pos_session=");
   expect(setCookie).toContain("Max-Age=0");
 });
+
+test("guest claim and guest revoke: access controls and unauthenticated protection", async ({
+  request,
+}) => {
+  // 1. Unauthenticated claim attempt returns 401
+  const unauthClaim = await request.post("/api/customer/orders/claim", {
+    headers: { origin: "http://localhost:3000" },
+    data: { token: "sample-guest-token-12345" },
+  });
+  expect(unauthClaim.status()).toBe(401);
+
+  // 2. Cross-origin claim attempt returns 403
+  const crossOriginClaim = await request.post("/api/customer/orders/claim", {
+    headers: {
+      origin: "https://evil.attacker.com",
+      "sec-fetch-site": "cross-site",
+    },
+    data: { token: "sample-guest-token-12345" },
+  });
+  expect(crossOriginClaim.status()).toBe(403);
+
+  // 3. Unauthenticated revoke attempt returns 401
+  const unauthRevoke = await request.post(
+    "/api/customer/orders/guest-access/revoke",
+    {
+      headers: { origin: "http://localhost:3000" },
+      data: { orderId: "sample-order-id-12345" },
+    },
+  );
+  expect(unauthRevoke.status()).toBe(401);
+
+  // 4. Cross-origin revoke attempt returns 403
+  const crossOriginRevoke = await request.post(
+    "/api/customer/orders/guest-access/revoke",
+    {
+      headers: {
+        origin: "https://evil.attacker.com",
+        "sec-fetch-site": "cross-site",
+      },
+      data: { orderId: "sample-order-id-12345" },
+    },
+  );
+  expect(crossOriginRevoke.status()).toBe(403);
+});

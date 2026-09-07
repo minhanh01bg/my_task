@@ -22,6 +22,8 @@ export function isPublicPath(pathname: string): boolean {
     PUBLIC_PAGES.some(
       (path) =>
         pathname === path || (path !== "/" && pathname.startsWith(`${path}/`)),
-    ) || PUBLIC_API.includes(pathname)
+    ) ||
+    PUBLIC_API.includes(pathname) ||
+    pathname.startsWith("/api/customer/")
   );
 }

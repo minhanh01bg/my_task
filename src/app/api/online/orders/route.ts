@@ -12,6 +12,7 @@ import {
   createRecoverySecret,
 } from "@/server/orders/checkout-idempotency";
 import { createOnlineOrder } from "@/server/orders/create-online-order";
+import { GUEST_CAPABILITY_LIFETIME_MS } from "@/server/orders/order-access";
 import { OnlineOrderError, onlineCheckoutSchema } from "@/types/online-order";
 
 import {
@@ -102,7 +103,7 @@ export async function POST(request: Request) {
       guestAccess: guestToken
         ? {
             tokenHash: digestOpaqueToken(guestToken),
-            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            expiresAt: new Date(Date.now() + GUEST_CAPABILITY_LIFETIME_MS),
           }
         : undefined,
       guestRecovery:
