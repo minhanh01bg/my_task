@@ -20,6 +20,10 @@ export function consumeCustomerAuthAttempt(
   return true;
 }
 
+/**
+ * @deprecated Unsafe client IP resolver that trusts client-supplied x-forwarded-for.
+ * Use resolveTrustedClientIp from "@/server/http/client-ip" instead.
+ */
 export function getRequestIp(request: Request): string {
   return (
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local"

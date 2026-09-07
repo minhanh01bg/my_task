@@ -157,16 +157,16 @@ flowchart LR
 
 **Tests first:**
 
-- [ ] Test the configured platform-authenticated IP header, IPv4, IPv6 normalization, IPv4-mapped IPv6, malformed values and missing values.
-- [ ] Test spoofed `x-forwarded-for`, multiple conflicting values, private/reserved addresses and direct-origin requests under each configured trust mode.
-- [ ] Test that untrusted forwarding headers cannot alter the resulting identity and unresolved production IP returns a typed fail-closed result.
+- [x] Test the configured platform-authenticated IP header, IPv4, IPv6 normalization, IPv4-mapped IPv6, malformed values and missing values.
+- [x] Test spoofed `x-forwarded-for`, multiple conflicting values, private/reserved addresses and direct-origin requests under each configured trust mode.
+- [x] Test that untrusted forwarding headers cannot alter the resulting identity and unresolved production IP returns a typed fail-closed result.
 
 **Implementation steps:**
 
-- [ ] Implement one server-only `resolveTrustedClientIp()` with an explicit result union; do not return the ambiguous string `local`.
-- [ ] Normalize valid addresses and derive subnet dimensions without logging raw values.
-- [ ] Accept only the configured provider header under the documented trusted-proxy deployment. If self-hosting requires a hop chain, encode the exact trusted-hop count rather than choosing the first value.
-- [ ] Remove route usage of the old first-entry `x-forwarded-for` parser in later tasks; retain no production fallback that trusts user input.
+- [x] Implement one server-only `resolveTrustedClientIp()` with an explicit result union; do not return the ambiguous string `local`.
+- [x] Normalize valid addresses and derive subnet dimensions without logging raw values.
+- [x] Accept only the configured provider header under the documented trusted-proxy deployment. If self-hosting requires a hop chain, encode the exact trusted-hop count rather than choosing the first value.
+- [x] Remove route usage of the old first-entry `x-forwarded-for` parser in later tasks; retain no production fallback that trusts user input.
 
 **Focused quality commands:**
 

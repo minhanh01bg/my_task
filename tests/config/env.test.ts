@@ -26,7 +26,8 @@ describe("envSchema", () => {
     });
 
     it("rejects absent UPSTASH_REDIS_REST_URL in production", () => {
-      const { UPSTASH_REDIS_REST_URL: _, ...env } = validProd;
+      const env = { ...validProd };
+      delete (env as Record<string, unknown>).UPSTASH_REDIS_REST_URL;
       const result = envSchema.safeParse(env);
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -54,7 +55,8 @@ describe("envSchema", () => {
     });
 
     it("rejects absent UPSTASH_REDIS_REST_TOKEN in production", () => {
-      const { UPSTASH_REDIS_REST_TOKEN: _, ...env } = validProd;
+      const env = { ...validProd };
+      delete (env as Record<string, unknown>).UPSTASH_REDIS_REST_TOKEN;
       const result = envSchema.safeParse(env);
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -80,7 +82,8 @@ describe("envSchema", () => {
         ).toBe(true);
       }
 
-      const { RATE_LIMIT_KEY_SECRET: _, ...envAbsent } = validProd;
+      const envAbsent = { ...validProd };
+      delete (envAbsent as Record<string, unknown>).RATE_LIMIT_KEY_SECRET;
       const resultAbsent = envSchema.safeParse(envAbsent);
       expect(resultAbsent.success).toBe(false);
       if (!resultAbsent.success) {
@@ -132,7 +135,8 @@ describe("envSchema", () => {
     });
 
     it("rejects absent or malformed CANONICAL_ORIGIN in production", () => {
-      const { CANONICAL_ORIGIN: _, ...envAbsent } = validProd;
+      const envAbsent = { ...validProd };
+      delete (envAbsent as Record<string, unknown>).CANONICAL_ORIGIN;
       const resultAbsent = envSchema.safeParse(envAbsent);
       expect(resultAbsent.success).toBe(false);
       if (!resultAbsent.success) {
