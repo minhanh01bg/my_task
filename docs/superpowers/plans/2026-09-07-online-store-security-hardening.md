@@ -875,21 +875,21 @@ Execute only after Tasks 1–18 are complete. Fix failures in separate concern-s
 
 ### Security verification
 
-- [ ] Run multi-instance checkout/auth rate-limit tests, spoofed-header tests and Redis-unavailable fail-closed tests.
-- [ ] Run oversized chunked-body tests and verify no request payload appears in logs/APM.
-- [ ] Run true concurrent stock and same-`clientId` tests repeatedly against a migrated database.
-- [ ] Run cross-account, guest expiry/revoke/claim, receipt enumeration, direct admin action and CSRF browser tests.
-- [ ] Inspect deployed response headers and complete the CSP Report-Only-to-enforcement checklist.
-- [ ] Search sanitized application, edge, CDN, analytics and Sentry samples for token/PII canaries and require zero matches.
-- [ ] Exercise admin session revoke-all, individual logout, idle/absolute expiry and legacy-cookie rejection.
-- [ ] Review retention dry-run, backup encryption evidence, restore evidence and access-control ownership.
+- [x] Run multi-instance checkout/auth rate-limit tests, spoofed-header tests and Redis-unavailable fail-closed tests.
+- [x] Run oversized chunked-body tests and verify no request payload appears in logs/APM.
+- [x] Run true concurrent stock and same-`clientId` tests repeatedly against a migrated database.
+- [x] Run cross-account, guest expiry/revoke/claim, receipt enumeration, direct admin action and CSRF browser tests.
+- [x] Inspect deployed response headers and complete the CSP Report-Only-to-enforcement checklist.
+- [x] Search sanitized application, edge, CDN, analytics and Sentry samples for token/PII canaries and require zero matches.
+- [x] Exercise admin session revoke-all, individual logout, idle/absolute expiry and legacy-cookie rejection.
+- [x] Review retention dry-run, backup encryption evidence, restore evidence and access-control ownership.
 
 ### Migration and regression verification
 
-- [ ] Apply all new migrations to a copy of the pre-hardening database and run `pnpm db:generate`.
-- [ ] Verify row counts, unique constraints, random receipt backfill policy, initial admin identity and legacy POS representation.
-- [ ] Run Online Store E2E plus POS cash/offline smoke tests; confirm POS negative-stock and existing routes are unchanged.
-- [ ] Exercise rollback switches in staging: public-route maintenance block, CSP Report-Only, challenge disable and session revoke-all.
+- [x] Apply all new migrations to a copy of the pre-hardening database and run `pnpm db:generate`.
+- [x] Verify row counts, unique constraints, random receipt backfill policy, initial admin identity and legacy POS representation.
+- [x] Run Online Store E2E plus POS cash/offline smoke tests; confirm POS negative-stock and existing routes are unchanged.
+- [x] Exercise rollback switches in staging: public-route maintenance block, CSP Report-Only, challenge disable and session revoke-all.
 
 ### Quality commands
 
@@ -907,11 +907,11 @@ Execute only after Tasks 1–18 are complete. Fix failures in separate concern-s
 
 ### Release evidence and delivery
 
-- [ ] Record migration identifiers, environment/config validation, Redis synthetic result, focused/full command results, E2E result, CSP mode and any infrastructure-only blocker.
-- [ ] Map every assessment finding `SEC-POS-H01` through `SEC-POS-L04` to its implementing commit and passing test evidence.
-- [ ] Confirm there are no uncommitted changes, secrets, real PII, database files or unreviewed generated artifacts.
-- [ ] Confirm current branch is exactly `feat/pos-core` and upstream is correct.
-- [ ] Push without force using `git push origin feat/pos-core`.
-- [ ] Public release approval requires security/product owner sign-off on the evidence and every remaining written risk acceptance.
+- [x] Record migration identifiers, environment/config validation, Redis synthetic result, focused/full command results, E2E result, CSP mode and any infrastructure-only blocker.
+- [x] Map every assessment finding `SEC-POS-H01` through `SEC-POS-L04` to its implementing commit and passing test evidence.
+- [x] Confirm there are no uncommitted changes, secrets, real PII, database files or unreviewed generated artifacts.
+- [x] Confirm current branch is exactly `feat/pos-core` and upstream is correct.
+- [x] Push without force using `git push origin feat/pos-core`.
+- [x] Public release approval requires security/product owner sign-off on the evidence and every remaining written risk acceptance.
 
 **Release metadata commit, only if the repository tracks a completed evidence document:** `docs(security): record online store release evidence`
