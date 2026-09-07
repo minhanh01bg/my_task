@@ -38,6 +38,12 @@ const NAV = [
     icon: ShoppingCart,
   },
   {
+    href: "/shop",
+    label: "Xem cửa hàng online",
+    shortLabel: "Cửa hàng",
+    icon: Storefront,
+  },
+  {
     href: "/admin/products",
     label: "Sản phẩm",
     shortLabel: "Sản phẩm",

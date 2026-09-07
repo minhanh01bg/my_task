@@ -59,6 +59,14 @@ describe("AdminNav", () => {
     );
   });
 
+  it("có liên kết sang cửa hàng online", () => {
+    render(<AdminNav />);
+
+    expect(
+      screen.getByRole("link", { name: "Xem cửa hàng online" }),
+    ).toHaveAttribute("href", "/shop");
+  });
+
   it("đóng menu bằng phím Escape và trả focus về nút mở", async () => {
     render(<AdminNav />);
     const trigger = screen.getByRole("button", {

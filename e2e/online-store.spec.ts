@@ -117,8 +117,14 @@ test("admin session lifecycle: unauthenticated redirect and logout cookie revoca
   await page.getByRole("button", { name: /vào bán hàng/i }).click();
   await expect(page).toHaveURL(/.*\/pos/);
 
-  // Admin can log out from the visible desktop navigation.
+  // Admin can move to the public shop and return through an identity-aware link.
   await page.goto("/admin/orders");
+  await page.getByRole("link", { name: "Xem cửa hàng online" }).click();
+  await expect(page).toHaveURL(/.*\/shop/);
+  await page.getByRole("link", { name: "Quay lại trang quản trị" }).click();
+  await expect(page).toHaveURL(/.*\/admin\/orders/);
+
+  // Admin can log out from the visible desktop navigation.
   await page.getByRole("button", { name: "Đăng xuất" }).click();
   await expect(page).toHaveURL(/.*\/login/);
 

@@ -1,11 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingBag, UserRound } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, UserRound } from "lucide-react";
 
 import { useOnlineCart } from "./cart-context";
 
-export function StoreHeader({ storeName }: { storeName: string }) {
+export function StoreHeader({
+  storeName,
+  isAdmin = false,
+}: {
+  storeName: string;
+  isAdmin?: boolean;
+}) {
   const { lines, hydrated } = useOnlineCart();
   const count = lines.reduce((sum, line) => sum + line.quantity, 0);
   return (
@@ -15,6 +21,16 @@ export function StoreHeader({ storeName }: { storeName: string }) {
           {storeName}
         </Link>
         <div className="flex items-center gap-2">
+          {isAdmin ? (
+            <Link
+              href="/admin/orders"
+              aria-label="Quay lại trang quản trị"
+              className="border-border inline-flex min-h-11 items-center rounded-xl border px-3 font-bold"
+            >
+              <LayoutDashboard aria-hidden="true" className="size-5" />
+              <span className="ml-2 hidden sm:inline">Quản trị</span>
+            </Link>
+          ) : null}
           <Link
             href="/account/orders"
             aria-label="Tài khoản khách hàng"
