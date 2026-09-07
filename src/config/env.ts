@@ -115,7 +115,23 @@ export function validateEnv(rawEnv: Record<string, unknown> = process.env) {
   return envSchema.safeParse(rawEnv);
 }
 
-const parsed = envSchema.safeParse(process.env);
+const isBuildPhase =
+  process.env.NEXT_PHASE === "phase-production-build" ||
+  process.env.npm_lifecycle_event === "build";
+
+const envToParse =
+  isBuildPhase && !process.env.UPSTASH_REDIS_REST_URL
+    ? {
+        ...process.env,
+        UPSTASH_REDIS_REST_URL: "https://build-time-dummy.upstash.io",
+        UPSTASH_REDIS_REST_TOKEN: "build-time-dummy-token",
+        RATE_LIMIT_KEY_SECRET: "build-time-dummy-rate-limit-secret-32-chars",
+        TRUSTED_PROXY_MODE: "vercel",
+        CANONICAL_ORIGIN: "http://localhost:3000",
+      }
+    : process.env;
+
+const parsed = envSchema.safeParse(envToParse);
 
 if (!parsed.success) {
   console.error(
