@@ -10,7 +10,13 @@ import {
 import { createOnlineOrder } from "@/server/orders/create-online-order";
 import { OnlineOrderError, onlineCheckoutSchema } from "@/types/online-order";
 
+import {
+  checkPostParseAbuse,
+  checkPreParseAbuse,
+} from "@/server/security/checkout-abuse";
+
 export async function POST(request: Request) {
+  // Layer 1: Hard streamed body limit (64 KB cap & content-type check)
   const bodyResult = await readJsonBody(request, { maxBytes: 64_000 });
   if (!bodyResult.ok) {
     return NextResponse.json(
@@ -19,6 +25,21 @@ export async function POST(request: Request) {
         status: bodyResult.status,
         headers: { "Cache-Control": "private, no-store" },
       },
+    );
+  }
+
+  // Layer 2: Cheap pre-parse IP/subnet/global burst anti-abuse check
+  const preCheck = await checkPreParseAbuse(request);
+  if (!preCheck.ok) {
+    const headers: Record<string, string> = {
+      "Cache-Control": "private, no-store",
+    };
+    if (preCheck.retryAfterSeconds) {
+      headers["Retry-After"] = String(preCheck.retryAfterSeconds);
+    }
+    return NextResponse.json(
+      { message: preCheck.message },
+      { status: preCheck.status, headers },
     );
   }
 
@@ -33,6 +54,21 @@ export async function POST(request: Request) {
         status: 400,
         headers: { "Cache-Control": "private, no-store" },
       },
+    );
+  }
+
+  // Layer 3: Post-parse velocity anti-abuse check on phone and product IDs
+  const postCheck = await checkPostParseAbuse(parsed.data, request);
+  if (!postCheck.ok) {
+    const headers: Record<string, string> = {
+      "Cache-Control": "private, no-store",
+    };
+    if (postCheck.retryAfterSeconds) {
+      headers["Retry-After"] = String(postCheck.retryAfterSeconds);
+    }
+    return NextResponse.json(
+      { message: postCheck.message },
+      { status: postCheck.status, headers },
     );
   }
 

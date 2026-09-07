@@ -269,19 +269,19 @@ flowchart LR
 
 **Tests first:**
 
-- [ ] Test burst requests with fresh UUIDs hit IP and subnet buckets and return `429` plus `Retry-After` without order, stock, movement or notification writes.
-- [ ] Test post-parse velocity buckets for pseudonymized phone and product ids, and a bounded global emergency bucket.
-- [ ] Test limiter unavailability and unresolved trusted IP return generic `503` before expensive/database work.
-- [ ] Test legitimate retries with the same `clientId` are evaluated by a retry-safe policy without creating a bypass for rotating UUIDs.
-- [ ] Test risk escalation can request Turnstile/CAPTCHA only after policy threshold; challenge verification fails closed and does not affect low-risk traffic.
+- [x] Test burst requests with fresh UUIDs hit IP and subnet buckets and return `429` plus `Retry-After` without order, stock, movement or notification writes.
+- [x] Test post-parse velocity buckets for pseudonymized phone and product ids, and a bounded global emergency bucket.
+- [x] Test limiter unavailability and unresolved trusted IP return generic `503` before expensive/database work.
+- [x] Test legitimate retries with the same `clientId` are evaluated by a retry-safe policy without creating a bypass for rotating UUIDs.
+- [x] Test risk escalation can request Turnstile/CAPTCHA only after policy threshold; challenge verification fails closed and does not affect low-risk traffic.
 
 **Implementation steps:**
 
-- [ ] Apply cheap IP/subnet/global checks after hard body acceptance but before JSON/domain work; apply phone/product velocity after schema normalization and before persistence.
-- [ ] Use HMAC-pseudonymized dimensions and versioned policy names. Keep threshold values configurable server-side, not returned to clients.
-- [ ] Return sanitized `429`/`503` responses with `Cache-Control: no-store`; add `Retry-After` only when meaningful.
-- [ ] Add aggregate alerts for sustained limiter denial, global spikes, repeated product depletion attempts and challenge failures.
-- [ ] Define a disabled-by-default adaptive challenge adapter and explicit kill switch; do not require CAPTCHA for all buyers.
+- [x] Apply cheap IP/subnet/global checks after hard body acceptance but before JSON/domain work; apply phone/product velocity after schema normalization and before persistence.
+- [x] Use HMAC-pseudonymized dimensions and versioned policy names. Keep threshold values configurable server-side, not returned to clients.
+- [x] Return sanitized `429`/`503` responses with `Cache-Control: no-store`; add `Retry-After` only when meaningful.
+- [x] Add aggregate alerts for sustained limiter denial, global spikes, repeated product depletion attempts and challenge failures.
+- [x] Define a disabled-by-default adaptive challenge adapter and explicit kill switch; do not require CAPTCHA for all buyers.
 
 **Focused quality commands:**
 

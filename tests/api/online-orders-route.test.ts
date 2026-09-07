@@ -1,9 +1,30 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST } from "@/app/api/online/orders/route";
 import * as createOnlineOrderModule from "@/server/orders/create-online-order";
+import { setCheckoutAbuseLimiter } from "@/server/security/checkout-abuse";
+import type { RateLimiter } from "@/server/security/rate-limit";
 
-describe("POST /api/online/orders (Task 4: Hard request-body byte limit)", () => {
+const fakePassLimiter: RateLimiter = {
+  async check() {
+    return {
+      allowed: true as const,
+      remaining: 10,
+      limit: 10,
+      resetInSeconds: 60,
+    };
+  },
+};
+
+describe("POST /api/online/orders (Task 4 & Task 5: Hard limits and Anti-Abuse)", () => {
+  beforeEach(() => {
+    setCheckoutAbuseLimiter(fakePassLimiter);
+  });
+
+  afterEach(() => {
+    setCheckoutAbuseLimiter(null);
+  });
+
   it("rejects oversized declared Content-Length with 413 and no-store", async () => {
     const createSpy = vi.spyOn(createOnlineOrderModule, "createOnlineOrder");
 
@@ -104,6 +125,37 @@ describe("POST /api/online/orders (Task 4: Hard request-body byte limit)", () =>
     const response = await POST(req);
     expect(response.status).toBe(400);
     expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it("rejects requests exceeding IP/subnet rate limits with 429 and Retry-After", async () => {
+    const createSpy = vi.spyOn(createOnlineOrderModule, "createOnlineOrder");
+
+    const blockingLimiter: RateLimiter = {
+      async check() {
+        return {
+          allowed: false as const,
+          reason: "rate_limited" as const,
+          retryAfterSeconds: 45,
+          limit: 10,
+          remaining: 0 as const,
+        };
+      },
+    };
+    setCheckoutAbuseLimiter(blockingLimiter);
+
+    const req = new Request("https://example.com/api/online/orders", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ clientId: "test", customer: {}, items: [] }),
+    });
+
+    const response = await POST(req);
+    expect(response.status).toBe(429);
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(response.headers.get("retry-after")).toBe("45");
     expect(createSpy).not.toHaveBeenCalled();
   });
 });
