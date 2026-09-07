@@ -227,3 +227,51 @@ model Setting {
   key   String @id
   value String
 }
+
+model AdminIdentity {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  role         String    @default("owner") /// owner | manager | staff
+  passwordHash String?
+  version      Int       @default(1)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  disabledAt   DateTime?
+
+  sessions    AdminSession[]
+  auditEvents AdminAuditEvent[]
+
+  @@index([disabledAt])
+}
+
+model AdminSession {
+  id              String        @id @default(cuid())
+  identityId      String
+  identity        AdminIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  tokenHash       String        @unique
+  identityVersion Int           @default(1)
+  expiresAt       DateTime
+  idleExpiresAt   DateTime
+  lastSeenAt      DateTime      @default(now())
+  createdAt       DateTime      @default(now())
+  revokedAt       DateTime?
+
+  @@index([identityId, expiresAt])
+  @@index([tokenHash, revokedAt])
+}
+
+model AdminAuditEvent {
+  id         String         @id @default(cuid())
+  identityId String?
+  identity   AdminIdentity? @relation(fields: [identityId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String
+  metadata   String?
+  ipAddress  String?
+  createdAt  DateTime       @default(now())
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+  @@index([identityId, createdAt])
+}

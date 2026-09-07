@@ -6,7 +6,7 @@ import {
   hasAdminSession,
   requireAdminSession,
 } from "@/server/auth/require-admin-session";
-import { SESSION_COOKIE, signSession } from "@/server/auth/session";
+import { createAdminSession, SESSION_COOKIE } from "@/server/auth/session";
 import { CUSTOMER_SESSION_COOKIE } from "@/server/customer-auth/session";
 
 const mockCookies = new Map<string, string>();
@@ -114,7 +114,7 @@ describe("Admin Order Authorization (Task 9)", () => {
     });
 
     it("allows execution when caller presents a valid admin session cookie", async () => {
-      const validAdminToken = await signSession({ issuedAt: Date.now() });
+      const { token: validAdminToken } = await createAdminSession();
       mockCookies.set(SESSION_COOKIE, validAdminToken);
 
       await expect(
@@ -151,7 +151,7 @@ describe("Admin Order Authorization (Task 9)", () => {
     });
 
     it("authorizes route handlers via Request cookie header", async () => {
-      const validToken = await signSession({ issuedAt: Date.now() });
+      const { token: validToken } = await createAdminSession();
       const authedReq = new Request("https://example.com/api/admin/test", {
         headers: { cookie: `${SESSION_COOKIE}=${validToken}` },
       });

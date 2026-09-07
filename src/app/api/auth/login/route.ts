@@ -4,9 +4,10 @@ import { z } from "zod";
 import { env } from "@/config/env";
 import { checkAdminLoginRateLimit } from "@/server/auth/rate-limit";
 import {
+  adminCookieOptions,
+  createAdminSession,
+  ensureDefaultAdminIdentity,
   SESSION_COOKIE,
-  SESSION_MAX_AGE_SECONDS,
-  signSession,
   verifyPassword,
 } from "@/server/auth/session";
 import { readJsonBody } from "@/server/http/read-json-body";
@@ -79,18 +80,11 @@ export async function POST(request: Request) {
     },
   );
 
-  // Rotate/replace any presented admin session cookie
-  response.cookies.set(
-    SESSION_COOKIE,
-    await signSession({ issuedAt: Date.now() }),
-    {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: SESSION_MAX_AGE_SECONDS,
-    },
-  );
+  const adminIdentity = await ensureDefaultAdminIdentity();
+  const { token } = await createAdminSession(adminIdentity.id);
+
+  // Rotate/replace any presented admin session cookie with new DB-backed session
+  response.cookies.set(SESSION_COOKIE, token, adminCookieOptions);
 
   return response;
 }

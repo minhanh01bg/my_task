@@ -8,6 +8,7 @@ const PUBLIC_PAGES = [
 ];
 const PUBLIC_API = [
   "/api/auth/login",
+  "/api/auth/logout",
   "/api/health",
   "/api/online/orders",
   "/api/customer-auth/register",

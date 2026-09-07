@@ -1,7 +1,12 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { SESSION_COOKIE, verifySession } from "@/server/auth/session";
+import {
+  resolveAdminSession,
+  SESSION_COOKIE,
+  verifySession,
+  type AdminPrincipal,
+} from "@/server/auth/session";
 
 export class AdminUnauthorizedError extends Error {
   readonly code = "ADMIN_UNAUTHORIZED";
@@ -46,6 +51,18 @@ export async function resolveAdminSessionToken(
 }
 
 /**
+ * Resolves the authenticated admin principal identity, or null if unauthenticated.
+ */
+export async function getAdminPrincipal(
+  request?: Request,
+): Promise<AdminPrincipal | null> {
+  const token = await resolveAdminSessionToken(request);
+  if (!token) return null;
+  const resolved = await resolveAdminSession(token);
+  return resolved?.identity ?? null;
+}
+
+/**
  * Checks whether the current request or server execution context has a valid admin session.
  * Middleware is defense-in-depth; this is the authoritative server-side trust boundary.
  */
@@ -63,18 +80,19 @@ export async function hasAdminSession(request?: Request): Promise<boolean> {
  */
 export async function requireAdminSession(
   opts?: RequireAdminSessionOptions | Request,
-): Promise<{ authorized: true }> {
+): Promise<{ authorized: true; identity?: AdminPrincipal }> {
   const options: RequireAdminSessionOptions =
     opts && "headers" in opts ? { request: opts } : (opts ?? {});
 
-  const isAuthed = await hasAdminSession(options.request);
+  const token = await resolveAdminSessionToken(options.request);
+  const resolved = token ? await resolveAdminSession(token) : null;
 
-  if (!isAuthed) {
+  if (!resolved) {
     if (options.redirectToLogin) {
       redirect("/admin/login");
     }
     throw new AdminUnauthorizedError();
   }
 
-  return { authorized: true };
+  return { authorized: true, identity: resolved.identity };
 }

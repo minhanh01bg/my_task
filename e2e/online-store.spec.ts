@@ -99,3 +99,21 @@ test("CSP enforcement and reporting: pages include CSP header and emit no violat
 
   expect(violations).toEqual([]);
 });
+
+test("admin session lifecycle: unauthenticated redirect and logout cookie revocation", async ({
+  page,
+  request,
+}) => {
+  // Accessing /admin/orders without auth redirects to /login
+  await page.goto("/admin/orders");
+  await expect(page).toHaveURL(/.*\/login/);
+
+  // Calling logout clears the admin session cookie
+  const logoutRes = await request.post("/api/auth/logout", {
+    headers: { origin: "http://localhost:3000" },
+  });
+  expect(logoutRes.status()).toBe(200);
+  const setCookie = logoutRes.headers()["set-cookie"] || "";
+  expect(setCookie).toContain("pos_session=");
+  expect(setCookie).toContain("Max-Age=0");
+});

@@ -702,19 +702,19 @@ flowchart LR
 
 **Tests first:**
 
-- [ ] Test only token digests are stored; valid, expired, idle-expired, revoked and disabled-principal sessions resolve correctly.
-- [ ] Test login rotates/fixes sessions, logout revokes server-side state, and one session can be revoked without changing a global secret.
-- [ ] Test session records carry principal identity/role and admin order audit records attribute mutations.
-- [ ] Test the legacy HMAC cookie is rejected after cutover and customer cookies remain unusable in admin boundaries.
+- [x] Test only token digests are stored; valid, expired, idle-expired, revoked and disabled-principal sessions resolve correctly.
+- [x] Test login rotates/fixes sessions, logout revokes server-side state, and one session can be revoked without changing a global secret.
+- [x] Test session records carry principal identity/role and admin order audit records attribute mutations.
+- [x] Test the legacy HMAC cookie is rejected after cutover and customer cookies remain unusable in admin boundaries.
 
 **Implementation steps:**
 
-- [ ] Add `AdminIdentity`, role/version/disabled state, `AdminSession` with opaque digest, absolute expiry, idle expiry, last-seen and revoke metadata, plus an admin action audit model if no suitable audit model exists.
-- [ ] Seed/migrate one initial owner identity from deployment-controlled credentials without storing plaintext passwords or exposing it in migration SQL.
-- [ ] Replace 30-day stateless HMAC verification with DB-backed resolution, shorter absolute lifetime, bounded idle timeout and throttled last-seen writes.
-- [ ] Rotate the opaque token after authentication; revoke on logout, password/role/version change and incident response.
-- [ ] Make all Online Store admin mutations write minimal attributable audit events without customer PII snapshots.
-- [ ] Provide a documented emergency procedure to revoke all sessions and rotate relevant secrets.
+- [x] Add `AdminIdentity`, role/version/disabled state, `AdminSession` with opaque digest, absolute expiry, idle expiry, last-seen and revoke metadata, plus an admin action audit model if no suitable audit model exists.
+- [x] Seed/migrate one initial owner identity from deployment-controlled credentials without storing plaintext passwords or exposing it in migration SQL.
+- [x] Replace 30-day stateless HMAC verification with DB-backed resolution, shorter absolute lifetime, bounded idle timeout and throttled last-seen writes.
+- [x] Rotate the opaque token after authentication; revoke on logout, password/role/version change and incident response.
+- [x] Make all Online Store admin mutations write minimal attributable audit events without customer PII snapshots.
+- [x] Provide a documented emergency procedure to revoke all sessions and rotate relevant secrets.
 
 **Focused quality commands:**
 

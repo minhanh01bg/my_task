@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { POST } from "@/app/api/auth/login/route";
 import { setAdminLoginLimiter } from "@/server/auth/rate-limit";
-import { SESSION_COOKIE, signSession } from "@/server/auth/session";
+import { createAdminSession, SESSION_COOKIE } from "@/server/auth/session";
 import {
   createRateLimiter,
   type RateLimitStore,
@@ -104,7 +104,7 @@ describe("POST /api/auth/login", () => {
   });
 
   it("rotates and sets new session cookie on successful login", async () => {
-    const oldSession = await signSession({ issuedAt: Date.now() - 10_000 });
+    const { token: oldSession } = await createAdminSession();
     const req = makeRequest(
       { password: "matkhau-cua-hang" },
       { cookie: `${SESSION_COOKIE}=${oldSession}` },
