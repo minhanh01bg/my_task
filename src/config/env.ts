@@ -108,6 +108,17 @@ export const envSchema = z
           path: ["CANONICAL_ORIGIN"],
         });
       }
+      if (
+        !data.STORE_PASSWORD_HASH ||
+        !/^[0-9a-fA-F]{32}:[0-9a-fA-F]{64}$/.test(data.STORE_PASSWORD_HASH)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "STORE_PASSWORD_HASH must be a valid salt:derived PBKDF2 hash in production",
+          path: ["STORE_PASSWORD_HASH"],
+        });
+      }
     }
   });
 
@@ -128,6 +139,9 @@ const envToParse =
         RATE_LIMIT_KEY_SECRET: "build-time-dummy-rate-limit-secret-32-chars",
         TRUSTED_PROXY_MODE: "vercel",
         CANONICAL_ORIGIN: "http://localhost:3000",
+        STORE_PASSWORD_HASH:
+          process.env.STORE_PASSWORD_HASH ||
+          "00000000000000000000000000000000:0000000000000000000000000000000000000000000000000000000000000000",
       }
     : process.env;
 

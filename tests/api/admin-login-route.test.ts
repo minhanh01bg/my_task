@@ -1,8 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { env } from "@/config/env";
 import { POST } from "@/app/api/auth/login/route";
 import { setAdminLoginLimiter } from "@/server/auth/rate-limit";
-import { createAdminSession, SESSION_COOKIE } from "@/server/auth/session";
+import {
+  createAdminSession,
+  hashPassword,
+  SESSION_COOKIE,
+} from "@/server/auth/session";
 import {
   createRateLimiter,
   type RateLimitStore,
@@ -33,15 +38,20 @@ class MockStore implements RateLimitStore {
 }
 
 let store: MockStore;
+let originalPasswordHash: string;
 
-beforeEach(() => {
+beforeEach(async () => {
   store = new MockStore();
   const limiter = createRateLimiter({ store, secret: "s".repeat(32) });
   setAdminLoginLimiter(limiter);
+  originalPasswordHash = env.STORE_PASSWORD_HASH;
+  (env as Record<string, unknown>).STORE_PASSWORD_HASH =
+    await hashPassword("matkhau-cua-hang");
 });
 
 afterEach(() => {
   setAdminLoginLimiter(null);
+  (env as Record<string, unknown>).STORE_PASSWORD_HASH = originalPasswordHash;
 });
 
 function makeRequest(
@@ -101,6 +111,22 @@ describe("POST /api/auth/login", () => {
     expect(res.status).toBe(503);
     const json = await res.json();
     expect(json.message).toBe("Dịch vụ tạm thời không khả dụng");
+  });
+
+  it("fails closed with 503 when STORE_PASSWORD_HASH is not configured", async () => {
+    const { env } = await import("@/config/env");
+    const originalHash = env.STORE_PASSWORD_HASH;
+    try {
+      (env as Record<string, unknown>).STORE_PASSWORD_HASH = "";
+      const req = makeRequest({ password: "some-password" });
+      const res = await POST(req);
+      expect(res.status).toBe(503);
+      expect(res.headers.get("cache-control")).toContain("no-store");
+      const json = await res.json();
+      expect(json.message).toBe("Chưa cấu hình mật khẩu cửa hàng");
+    } finally {
+      (env as Record<string, unknown>).STORE_PASSWORD_HASH = originalHash;
+    }
   });
 
   it("rotates and sets new session cookie on successful login", async () => {

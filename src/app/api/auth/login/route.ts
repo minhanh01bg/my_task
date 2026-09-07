@@ -60,9 +60,16 @@ export async function POST(request: Request) {
   }
 
   // Layer 4: Verify password
-  const storeHash =
-    env.STORE_PASSWORD_HASH ||
-    "714989c4f592fda0ff69a63ef217e4b0:98dcc3f54f21aa15273f4836302084e830fa296f505bc7187ca79c022470fc0b";
+  const storeHash = env.STORE_PASSWORD_HASH;
+  if (!storeHash) {
+    return NextResponse.json(
+      { message: "Chưa cấu hình mật khẩu cửa hàng" },
+      {
+        status: 503,
+        headers: { "Cache-Control": "private, no-store" },
+      },
+    );
+  }
   const ok = await verifyPassword(parsed.data.password, storeHash);
 
   if (!ok) {

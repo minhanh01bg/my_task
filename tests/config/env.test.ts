@@ -11,6 +11,8 @@ describe("envSchema", () => {
 
   const validProd = {
     ...validBase,
+    STORE_PASSWORD_HASH:
+      "714989c4f592fda0ff69a63ef217e4b0:98dcc3f54f21aa15273f4836302084e830fa296f505bc7187ca79c022470fc0b",
     NODE_ENV: "production",
     UPSTASH_REDIS_REST_URL: "https://redis.example.com",
     UPSTASH_REDIS_REST_TOKEN: "secret-token",
@@ -152,6 +154,48 @@ describe("envSchema", () => {
         CANONICAL_ORIGIN: "invalid-url",
       });
       expect(resultMalformed.success).toBe(false);
+    });
+
+    it("rejects absent or empty STORE_PASSWORD_HASH in production", () => {
+      const envAbsent = { ...validProd };
+      delete (envAbsent as Record<string, unknown>).STORE_PASSWORD_HASH;
+      const resultAbsent = envSchema.safeParse(envAbsent);
+      expect(resultAbsent.success).toBe(false);
+      if (!resultAbsent.success) {
+        expect(
+          resultAbsent.error.issues.some((i) =>
+            i.path.includes("STORE_PASSWORD_HASH"),
+          ),
+        ).toBe(true);
+      }
+
+      const resultEmpty = envSchema.safeParse({
+        ...validProd,
+        STORE_PASSWORD_HASH: "",
+      });
+      expect(resultEmpty.success).toBe(false);
+      if (!resultEmpty.success) {
+        expect(
+          resultEmpty.error.issues.some((i) =>
+            i.path.includes("STORE_PASSWORD_HASH"),
+          ),
+        ).toBe(true);
+      }
+    });
+
+    it("rejects malformed STORE_PASSWORD_HASH in production", () => {
+      const result = envSchema.safeParse({
+        ...validProd,
+        STORE_PASSWORD_HASH: "not-a-valid-salt-derived-hash",
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(
+          result.error.issues.some((i) =>
+            i.path.includes("STORE_PASSWORD_HASH"),
+          ),
+        ).toBe(true);
+      }
     });
   });
 
