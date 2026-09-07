@@ -29,7 +29,9 @@ interface PaymentDialogProps {
   onConfirm: (result: PaymentResult) => void;
 }
 
-const QUICK_AMOUNTS = [50000, 100000, 200000, 500000];
+const CASH_DENOMINATIONS = [
+  1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000,
+] as const;
 
 const TABS: Array<{ value: Method; label: string }> = [
   { value: "cash", label: "Tiền mặt" },
@@ -54,6 +56,10 @@ export function PaymentDialog({
   const receivedValue = Math.round(Number(received) || 0);
   const change = Math.max(0, receivedValue - total);
   const cashEnough = receivedValue >= total;
+
+  function addDenomination(amount: number) {
+    setReceived(String(receivedValue + amount));
+  }
 
   function confirmCash() {
     onConfirm({
@@ -87,19 +93,36 @@ export function PaymentDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-background ring-foreground/10 w-full max-w-lg space-y-4 rounded-xl p-6 shadow-lg ring-1">
-        <div className="flex items-baseline justify-between">
-          <span className="text-lg">Khách phải trả</span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="payment-dialog-title"
+        className="bg-background ring-foreground/10 max-h-[calc(100dvh-1.5rem)] w-full max-w-xl space-y-5 overflow-y-auto rounded-3xl p-4 shadow-2xl ring-1 sm:max-h-[calc(100dvh-2rem)] sm:p-6"
+      >
+        <div className="border-border bg-muted/40 flex items-baseline justify-between gap-4 rounded-2xl border p-4">
+          <div>
+            <p
+              id="payment-dialog-title"
+              className="text-muted-foreground text-sm font-semibold"
+            >
+              Thanh toán đơn hàng
+            </p>
+            <span className="text-lg font-bold">Khách phải trả</span>
+          </div>
           <span
             data-testid="payment-total"
-            className="text-3xl font-bold tabular-nums"
+            className="text-primary text-right text-3xl font-black tabular-nums"
           >
             <Money amount={total} className="text-3xl" />
           </span>
         </div>
 
-        <div role="tablist" className="flex gap-2">
+        <div
+          role="tablist"
+          aria-label="Phương thức thanh toán"
+          className="bg-muted grid grid-cols-3 gap-1 rounded-2xl p-1"
+        >
           {TABS.map((tab) => (
             <button
               key={tab.value}
@@ -108,10 +131,10 @@ export function PaymentDialog({
               aria-selected={method === tab.value}
               onClick={() => setMethod(tab.value)}
               className={cn(
-                "flex-1 rounded-lg px-4 py-3 text-base",
+                "min-h-12 rounded-xl px-2 py-3 text-sm font-bold transition-colors sm:px-4 sm:text-base",
                 method === tab.value
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-accent",
+                  ? "bg-background text-primary shadow-sm ring-1 ring-black/5"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               {tab.label}
@@ -120,9 +143,22 @@ export function PaymentDialog({
         </div>
 
         {method === "cash" ? (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div className="space-y-1.5">
-              <Label htmlFor="cash-received">Tiền khách đưa</Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="cash-received" className="font-bold">
+                  Tiền khách đưa
+                </Label>
+                {receivedValue > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setReceived("")}
+                    className="text-muted-foreground hover:text-foreground focus-visible:ring-ring min-h-8 rounded-lg px-2 text-xs font-bold focus-visible:ring-2 focus-visible:outline-none"
+                  >
+                    Nhập lại từ đầu
+                  </button>
+                ) : null}
+              </div>
               <Input
                 id="cash-received"
                 aria-label="Tiền khách đưa"
@@ -131,36 +167,66 @@ export function PaymentDialog({
                 autoFocus
                 value={received}
                 onChange={(event) => setReceived(event.target.value)}
-                className="h-14 text-right text-2xl tabular-nums"
+                inputMode="numeric"
+                className="border-primary/30 bg-primary/5 h-16 rounded-2xl text-right text-3xl font-black tabular-nums"
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              {QUICK_AMOUNTS.map((amount) => (
+            <fieldset className="space-y-2.5">
+              <legend className="text-muted-foreground text-sm font-semibold">
+                Bấm để cộng thêm mệnh giá
+              </legend>
+              <div className="grid grid-cols-3 gap-2">
+                {CASH_DENOMINATIONS.map((amount) => (
+                  <TouchButton
+                    key={amount}
+                    type="button"
+                    variant="outline"
+                    aria-label={`Cộng ${amount.toLocaleString("vi-VN")} ₫`}
+                    onClick={() => addDenomination(amount)}
+                    className="hover:border-primary hover:bg-primary/10 active:bg-primary/20 min-h-12 rounded-xl px-1 font-black tabular-nums"
+                  >
+                    <span aria-hidden="true">
+                      +<Money amount={amount} />
+                    </span>
+                  </TouchButton>
+                ))}
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <TouchButton
-                  key={amount}
                   type="button"
                   variant="outline"
-                  onClick={() => setReceived(String(amount))}
+                  className="min-h-12 rounded-xl font-bold"
+                  onClick={() => setReceived(String(total))}
                 >
-                  <Money amount={amount} />
+                  Đúng số tiền
                 </TouchButton>
-              ))}
-              <TouchButton
-                type="button"
-                variant="outline"
-                className="col-span-2"
-                onClick={() => setReceived(String(total))}
-              >
-                Đúng số tiền
-              </TouchButton>
-            </div>
+                <p className="bg-muted text-muted-foreground flex min-h-12 items-center justify-center rounded-xl px-3 text-center text-xs font-semibold">
+                  Có thể bấm nhiều tờ cùng mệnh giá
+                </p>
+              </div>
+            </fieldset>
 
-            <div className="bg-accent flex items-baseline justify-between rounded-lg p-4">
-              <span className="text-lg">Tiền thối lại</span>
+            <div
+              aria-live="polite"
+              className={cn(
+                "flex items-baseline justify-between gap-4 rounded-2xl border p-4",
+                cashEnough
+                  ? "border-emerald-500/30 bg-emerald-500/10"
+                  : "border-amber-500/30 bg-amber-500/10",
+              )}
+            >
+              <div>
+                <span className="text-lg font-bold">Tiền thối lại</span>
+                {!cashEnough ? (
+                  <p className="text-muted-foreground text-xs font-semibold">
+                    Còn thiếu <Money amount={total - receivedValue} />
+                  </p>
+                ) : null}
+              </div>
               <span
                 data-testid="payment-change"
-                className="text-5xl font-bold tabular-nums"
+                className="text-right text-4xl font-black tabular-nums sm:text-5xl"
               >
                 <Money amount={change} size="display" />
               </span>
