@@ -116,6 +116,8 @@ model Order {
   deliveryDistrict  String?
   deliveryProvince  String?
   shippingFee       Int              @default(0)
+  /// Nonce SHA-256 digest for non-enumerable public receipt lookup
+  receiptNonceHash  String?          @unique
 
   items       OrderItem[]
   payments    Payment[]

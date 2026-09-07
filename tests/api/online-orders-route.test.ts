@@ -297,5 +297,38 @@ describe("POST /api/online/orders (Task 4 & Task 5: Hard limits and Anti-Abuse)"
       const body = await response.json();
       expect(body.code).toBe("IDEMPOTENCY_CONFLICT");
     });
+
+    it("returns non-enumerable receiptUrl with 256-bit nonce and not sequential code", async () => {
+      const mockNonce =
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+      vi.spyOn(
+        createOnlineOrderModule,
+        "createOnlineOrder",
+      ).mockResolvedValueOnce({
+        order: {
+          id: "order-1",
+          code: "DH0001",
+          subtotal: 100_000,
+          discount: 0,
+          total: 100_000,
+          status: "pending",
+          hasStockWarning: false,
+        },
+        duplicated: false,
+        receiptNonce: mockNonce,
+      });
+
+      const req = new Request("https://example.com/api/online/orders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(samplePayload),
+      });
+
+      const response = await POST(req);
+      expect(response.status).toBe(201);
+      const body = await response.json();
+      expect(body.data.order.receiptUrl).toBe(`/order-success/${mockNonce}`);
+      expect(body.data.order.receiptUrl).not.toContain("DH0001");
+    });
   });
 });

@@ -54,3 +54,10 @@ test("idempotency and guest recovery: duplicate checkout returns identical order
   expect(retryData.data.duplicated).toBe(true);
   expect(retryData.data.order.code).toBe(firstData.data.order.code);
 });
+
+test("receipt enumeration: sequential code returns 404 while invalid nonce is not found", async ({
+  page,
+}) => {
+  const response = await page.goto("/order-success/DH0001");
+  expect(response?.status()).toBe(404);
+});

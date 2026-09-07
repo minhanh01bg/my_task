@@ -124,6 +124,10 @@ export async function POST(request: Request) {
         ? `/orders/guest/${effectiveGuestToken}`
         : undefined;
 
+    const receiptUrl = result.receiptNonce
+      ? `/order-success/${result.receiptNonce}`
+      : undefined;
+
     const response = NextResponse.json(
       {
         data: {
@@ -133,6 +137,7 @@ export async function POST(request: Request) {
             status: result.order.status,
             fulfillmentStatus: "new",
             accessUrl,
+            receiptUrl,
           },
           duplicated: result.duplicated,
         },

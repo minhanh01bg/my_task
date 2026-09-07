@@ -7,6 +7,7 @@ import {
   RECOVERY_TTL_MS,
   verifyRecoverySecret,
 } from "@/server/orders/checkout-idempotency";
+import { createReceiptNonce } from "@/server/orders/public-receipt";
 import {
   OnlineOrderError,
   type OnlineCheckoutInput,
@@ -25,6 +26,7 @@ export interface OnlineOrderAccessContext {
 
 export interface CreateOnlineOrderResult extends CreateOrderResult {
   recoveredGuestToken?: string;
+  receiptNonce?: string;
 }
 
 async function replayIdempotentOrder(
@@ -33,6 +35,7 @@ async function replayIdempotentOrder(
     requestFingerprint: string;
     recoveryDigest: string | null;
     encryptedGuestToken: string | null;
+    responsePayload: string;
     expiresAt: Date;
     order: {
       id: string;
@@ -83,10 +86,21 @@ async function replayIdempotentOrder(
     }
   }
 
+  let receiptNonce: string | undefined;
+  try {
+    const payload = JSON.parse(idempotency.responsePayload) as {
+      receiptNonce?: string;
+    };
+    if (typeof payload?.receiptNonce === "string") {
+      receiptNonce = payload.receiptNonce;
+    }
+  } catch {}
+
   return {
     order: idempotency.order,
     duplicated: true,
     recoveredGuestToken,
+    receiptNonce,
   };
 }
 
@@ -201,10 +215,14 @@ export async function createOnlineOrder(
     );
   }
 
+  const { nonce: receiptNonce, nonceHash: receiptNonceHash } =
+    createReceiptNonce();
+
   const expiresAt = new Date(Date.now() + RECOVERY_TTL_MS);
   const responsePayload = JSON.stringify({
     fulfillmentStatus: "new",
     fulfillmentType: input.fulfillmentType,
+    receiptNonce,
   });
 
   try {
@@ -220,6 +238,7 @@ export async function createOnlineOrder(
       ],
       customerAccountId: access.customerAccountId,
       guestAccess: access.customerAccountId ? undefined : access.guestAccess,
+      receiptNonceHash,
       idempotency: {
         requestFingerprint: currentFingerprint,
         recoveryDigest,
@@ -254,7 +273,11 @@ export async function createOnlineOrder(
       }
     }
 
-    return result;
+    return {
+      order: result.order,
+      duplicated: result.duplicated,
+      receiptNonce,
+    };
   } catch (error: unknown) {
     const committed = await prisma.checkoutIdempotency.findUnique({
       where: { clientId: input.clientId },

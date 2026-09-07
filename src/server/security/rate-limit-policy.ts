@@ -58,4 +58,13 @@ export const POLICIES = {
       { name: "global-attempts", limit: 30, windowSeconds: 900 },
     ],
   },
+  receiptLookup: {
+    name: "receipt-lookup",
+    failClosed: false,
+    timeoutMs: 1000,
+    buckets: [
+      { name: "ip-misses", limit: 30, windowSeconds: 300 },
+      { name: "subnet-misses", limit: 150, windowSeconds: 300 },
+    ],
+  },
 } as const satisfies Record<string, RateLimitPolicy>;

@@ -42,6 +42,19 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: securityHeaders,
       },
+      {
+        source: "/order-success/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "private, no-store",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "no-referrer",
+          },
+        ],
+      },
     ];
   },
 };

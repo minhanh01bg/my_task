@@ -66,8 +66,7 @@ function FormContent() {
       clear();
       setClientId(crypto.randomUUID());
       router.push(
-        parsed.data.order.accessUrl ??
-          `/order-success/${encodeURIComponent(parsed.data.order.code)}`,
+        parsed.data.order.accessUrl ?? parsed.data.order.receiptUrl ?? "/shop",
       );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Không thể đặt hàng");

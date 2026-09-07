@@ -37,6 +37,7 @@ export interface CreateOrderInput {
   customerId?: string | null;
   customerAccountId?: string | null;
   guestAccess?: { tokenHash: string; expiresAt: Date };
+  receiptNonceHash?: string | null;
   idempotency?: {
     requestFingerprint: string;
     recoveryDigest?: string | null;
@@ -189,6 +190,7 @@ export async function createOrder(
           deliveryDistrict: input.online?.deliveryDistrict ?? null,
           deliveryProvince: input.online?.deliveryProvince ?? null,
           shippingFee: input.online?.shippingFee ?? 0,
+          receiptNonceHash: input.receiptNonceHash ?? null,
           items: {
             create: totals.lines.map((line) => ({
               productId: line.productId,

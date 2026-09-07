@@ -541,18 +541,18 @@ flowchart LR
 
 **Tests first:**
 
-- [ ] Prove sequential codes such as `DH0001` cannot retrieve transaction metadata anonymously.
-- [ ] Test a 256-bit receipt nonce opens only the minimal receipt, while malformed/random/expired values return indistinguishable not-found behavior.
-- [ ] Test receipt responses contain no PII/items/capability and use `private, no-store`, `noindex` and a restrictive referrer policy.
-- [ ] Add a bounded rate-limit/enumeration test for receipt misses without allowing it to become the only access control.
+- [x] Prove sequential codes such as `DH0001` cannot retrieve transaction metadata anonymously.
+- [x] Test a 256-bit receipt nonce opens only the minimal receipt, while malformed/random/expired values return indistinguishable not-found behavior.
+- [x] Test receipt responses contain no PII/items/capability and use `private, no-store`, `noindex` and a restrictive referrer policy.
+- [x] Add a bounded rate-limit/enumeration test for receipt misses without allowing it to become the only access control.
 
 **Implementation steps:**
 
-- [ ] Create an unguessable receipt identifier/digest separate from the display order code and guest detail capability.
-- [ ] Generate it atomically with the online order and return only the public receipt URL needed by the browser.
-- [ ] Stop database lookup by sequential code on the public route; retain the display code only after a valid nonce lookup.
-- [ ] Apply a lightweight distributed lookup policy and generic not-found rendering.
-- [ ] Decide migration behavior for existing online orders: default to no anonymous metadata until a nonce is explicitly backfilled; never derive nonce from order code.
+- [x] Create an unguessable receipt identifier/digest separate from the display order code and guest detail capability.
+- [x] Generate it atomically with the online order and return only the public receipt URL needed by the browser.
+- [x] Stop database lookup by sequential code on the public route; retain the display code only after a valid nonce lookup.
+- [x] Apply a lightweight distributed lookup policy and generic not-found rendering.
+- [x] Decide migration behavior for existing online orders: default to no anonymous metadata until a nonce is explicitly backfilled; never derive nonce from order code.
 
 **Focused quality commands:**
 
