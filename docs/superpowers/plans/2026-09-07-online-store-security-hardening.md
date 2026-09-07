@@ -231,17 +231,17 @@ flowchart LR
 
 **Tests first:**
 
-- [ ] Test an oversized declared `Content-Length` is rejected before reading.
-- [ ] Test chunked/no-`Content-Length` streams crossing 64 KB are cancelled and return `413` before JSON or order logic runs.
-- [ ] Test exact-boundary, multibyte UTF-8, malformed JSON, wrong content type and early stream error behavior.
-- [ ] Assert rejected requests do not call `createOnlineOrder`, Redis-independent business code or logging with the body.
+- [x] Test an oversized declared `Content-Length` is rejected before reading.
+- [x] Test chunked/no-`Content-Length` streams crossing 64 KB are cancelled and return `413` before JSON or order logic runs.
+- [x] Test exact-boundary, multibyte UTF-8, malformed JSON, wrong content type and early stream error behavior.
+- [x] Assert rejected requests do not call `createOnlineOrder`, Redis-independent business code or logging with the body.
 
 **Implementation steps:**
 
-- [ ] Implement a reusable stream reader that counts bytes, aborts/cancels on overflow, decodes once and parses JSON after the hard cap succeeds.
-- [ ] Require `application/json`; return stable generic `400`, `413` and `415` envelopes with `no-store`.
-- [ ] Replace `request.json()` and the current header-only check in checkout.
-- [ ] Configure the platform/reverse-proxy request limit at or below the application cap when supported, while retaining the application cap as defense-in-depth.
+- [x] Implement a reusable stream reader that counts bytes, aborts/cancels on overflow, decodes once and parses JSON after the hard cap succeeds.
+- [x] Require `application/json`; return stable generic `400`, `413` and `415` envelopes with `no-store`.
+- [x] Replace `request.json()` and the current header-only check in checkout.
+- [x] Configure the platform/reverse-proxy request limit at or below the application cap when supported, while retaining the application cap as defense-in-depth.
 
 **Focused quality commands:**
 

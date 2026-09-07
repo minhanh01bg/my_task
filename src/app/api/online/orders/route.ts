@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { logger } from "@/lib/logger";
+import { readJsonBody } from "@/server/http/read-json-body";
 import {
   createOpaqueToken,
   digestOpaqueToken,
@@ -10,20 +11,28 @@ import { createOnlineOrder } from "@/server/orders/create-online-order";
 import { OnlineOrderError, onlineCheckoutSchema } from "@/types/online-order";
 
 export async function POST(request: Request) {
-  const contentLength = Number(request.headers.get("content-length") ?? 0);
-  if (contentLength > 64_000) {
-    return NextResponse.json({ message: "Dữ liệu quá lớn" }, { status: 413 });
+  const bodyResult = await readJsonBody(request, { maxBytes: 64_000 });
+  if (!bodyResult.ok) {
+    return NextResponse.json(
+      { message: bodyResult.message },
+      {
+        status: bodyResult.status,
+        headers: { "Cache-Control": "private, no-store" },
+      },
+    );
   }
-  const parsed = onlineCheckoutSchema.safeParse(
-    await request.json().catch(() => null),
-  );
+
+  const parsed = onlineCheckoutSchema.safeParse(bodyResult.data);
   if (!parsed.success) {
     return NextResponse.json(
       {
         message: "Thông tin đặt hàng không hợp lệ",
         issues: parsed.error.issues,
       },
-      { status: 400 },
+      {
+        status: 400,
+        headers: { "Cache-Control": "private, no-store" },
+      },
     );
   }
 
