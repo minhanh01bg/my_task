@@ -185,4 +185,29 @@ describe("Revocable Identity-Bearing Admin Sessions (Task 16)", () => {
     const identity2 = await ensureDefaultAdminIdentity();
     expect(identity2.id).toBe(identity1.id);
   });
+
+  it("handles concurrent bootstrap of default admin identity without unique constraint race", async () => {
+    await prisma.adminIdentity.deleteMany({ where: { username: "admin" } });
+
+    const results = await Promise.all([
+      ensureDefaultAdminIdentity(),
+      ensureDefaultAdminIdentity(),
+      ensureDefaultAdminIdentity(),
+      ensureDefaultAdminIdentity(),
+      ensureDefaultAdminIdentity(),
+    ]);
+
+    expect(results).toHaveLength(5);
+    const firstId = results[0].id;
+    for (const res of results) {
+      expect(res.id).toBe(firstId);
+      expect(res.username).toBe("admin");
+      expect(res.role).toBe("owner");
+    }
+
+    const inDb = await prisma.adminIdentity.findMany({
+      where: { username: "admin" },
+    });
+    expect(inDb).toHaveLength(1);
+  });
 });

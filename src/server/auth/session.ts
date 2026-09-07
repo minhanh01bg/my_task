@@ -116,14 +116,25 @@ export async function ensureDefaultAdminIdentity(): Promise<AdminPrincipal> {
   });
   if (existing) return existing;
 
-  return prisma.adminIdentity.create({
-    data: {
-      username: "admin",
-      role: "owner",
-      version: 1,
-    },
-    select: { id: true, username: true, role: true, version: true },
-  });
+  try {
+    return await prisma.adminIdentity.upsert({
+      where: { username: "admin" },
+      create: {
+        username: "admin",
+        role: "owner",
+        version: 1,
+      },
+      update: {},
+      select: { id: true, username: true, role: true, version: true },
+    });
+  } catch {
+    const fallback = await prisma.adminIdentity.findUnique({
+      where: { username: "admin" },
+      select: { id: true, username: true, role: true, version: true },
+    });
+    if (fallback) return fallback;
+    throw new Error("Failed to initialize admin identity");
+  }
 }
 
 /**

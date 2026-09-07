@@ -1,6 +1,10 @@
+import { loadEnvConfig } from "@next/env";
 import { PrismaClient } from "@prisma/client";
 
 import { buildSearchText } from "../src/lib/search/search-text";
+
+loadEnvConfig(process.cwd());
+process.env.DATABASE_URL = process.env.DATABASE_URL || "file:./dev.db";
 
 const prisma = new PrismaClient();
 
@@ -161,8 +165,18 @@ async function main() {
     });
   }
 
+  await prisma.adminIdentity.upsert({
+    where: { username: "admin" },
+    create: {
+      username: "admin",
+      role: "owner",
+      version: 1,
+    },
+    update: {},
+  });
+
   console.log(
-    `Seeded ${CATEGORIES.length} categories, ${PRODUCTS.length} products`,
+    `Seeded ${CATEGORIES.length} categories, ${PRODUCTS.length} products, 1 admin identity`,
   );
 }
 
