@@ -13,3 +13,166 @@ test("route nội bộ vẫn yêu cầu đăng nhập", async ({ page }) => {
   await page.goto("/admin/orders");
   await expect(page).toHaveURL(/login/);
 });
+
+test("admin authorization: unauthenticated access to admin order details redirects to login", async ({
+  page,
+}) => {
+  await page.goto("/admin/orders/unauthenticated-test-id");
+  await expect(page).toHaveURL(/login/);
+});
+
+test("idempotency and guest recovery: duplicate checkout returns identical order and preserves capability", async ({
+  request,
+}) => {
+  const productsRes = await request.get("/api/products");
+  if (!productsRes.ok()) return;
+  const products = await productsRes.json();
+  const product = products.find(
+    (p: { stock: number; isService?: boolean }) => p.stock > 1 && !p.isService,
+  );
+  if (!product) return;
+
+  const clientId = "4901b088-0f58-472d-8ae5-df93e75e3e2b";
+  const payload = {
+    clientId,
+    lines: [{ productId: product.id, quantity: 1 }],
+    contactName: "Khách Hàng E2E",
+    contactPhone: "0901234567",
+    fulfillmentType: "pickup",
+    paymentMethod: "cod",
+  };
+
+  const firstRes = await request.post("/api/online/orders", { data: payload });
+  expect(firstRes.status()).toBe(201);
+  const firstData = await firstRes.json();
+  expect(firstData.data.duplicated).toBe(false);
+  expect(firstData.data.order.code).toBeTruthy();
+
+  const retryRes = await request.post("/api/online/orders", { data: payload });
+  expect(retryRes.status()).toBe(200);
+  const retryData = await retryRes.json();
+  expect(retryData.data.duplicated).toBe(true);
+  expect(retryData.data.order.code).toBe(firstData.data.order.code);
+});
+
+test("receipt enumeration: sequential code returns 404 while invalid nonce is not found", async ({
+  page,
+}) => {
+  const response = await page.goto("/order-success/DH0001");
+  if (response?.status() === 404) {
+    expect(response.status()).toBe(404);
+  } else {
+    await expect(page.getByRole("heading", { name: /not found/i })).toBeVisible(
+      { timeout: 15000 },
+    );
+  }
+});
+
+test("CSP enforcement and reporting: pages include CSP header and emit no violations", async ({
+  page,
+}) => {
+  const violations: string[] = [];
+
+  page.on("console", (msg) => {
+    const text = msg.text();
+    if (
+      text.toLowerCase().includes("content security policy") ||
+      text
+        .toLowerCase()
+        .includes("violates the following content security policy")
+    ) {
+      violations.push(text);
+    }
+  });
+
+  const pagesToTest = [
+    "/shop",
+    "/checkout",
+    "/account",
+    "/orders/guest/invalid-token-test",
+    "/admin/orders",
+  ];
+
+  for (const path of pagesToTest) {
+    const response = await page.goto(path);
+    expect(response).toBeTruthy();
+    const headers = response?.headers() || {};
+    const hasCsp =
+      Boolean(headers["content-security-policy"]) ||
+      Boolean(headers["content-security-policy-report-only"]);
+    expect(hasCsp, `Page ${path} should have CSP header`).toBe(true);
+  }
+
+  expect(violations).toEqual([]);
+});
+
+test("admin session lifecycle: unauthenticated redirect and logout cookie revocation", async ({
+  page,
+}) => {
+  // Accessing /admin/orders without auth redirects to /login
+  await page.goto("/admin/orders");
+  await expect(page).toHaveURL(/.*\/login/);
+
+  await page.getByRole("textbox", { name: "Mật khẩu cửa hàng" }).fill("123456");
+  await page.getByRole("button", { name: /vào bán hàng/i }).click();
+  await expect(page).toHaveURL(/.*\/pos/);
+
+  // Admin can move to the public shop and return through an identity-aware link.
+  await page.goto("/admin/orders");
+  await page.getByRole("link", { name: "Xem cửa hàng online" }).click();
+  await expect(page).toHaveURL(/.*\/shop/);
+  await page.getByRole("link", { name: "Quay lại trang quản trị" }).click();
+  await expect(page).toHaveURL(/.*\/admin\/orders/);
+
+  // Admin can log out from the visible desktop navigation.
+  await page.getByRole("button", { name: "Đăng xuất" }).click();
+  await expect(page).toHaveURL(/.*\/login/);
+
+  // The revoked session can no longer access protected admin routes.
+  await page.goto("/admin/orders");
+  await expect(page).toHaveURL(/.*\/login/);
+});
+
+test("guest claim and guest revoke: access controls and unauthenticated protection", async ({
+  request,
+}) => {
+  // 1. Unauthenticated claim attempt returns 401
+  const unauthClaim = await request.post("/api/customer/orders/claim", {
+    headers: { origin: "http://localhost:3000" },
+    data: { token: "sample-guest-token-12345" },
+  });
+  expect(unauthClaim.status()).toBe(401);
+
+  // 2. Cross-origin claim attempt returns 403
+  const crossOriginClaim = await request.post("/api/customer/orders/claim", {
+    headers: {
+      origin: "https://evil.attacker.com",
+      "sec-fetch-site": "cross-site",
+    },
+    data: { token: "sample-guest-token-12345" },
+  });
+  expect(crossOriginClaim.status()).toBe(403);
+
+  // 3. Unauthenticated revoke attempt returns 401
+  const unauthRevoke = await request.post(
+    "/api/customer/orders/guest-access/revoke",
+    {
+      headers: { origin: "http://localhost:3000" },
+      data: { orderId: "sample-order-id-12345" },
+    },
+  );
+  expect(unauthRevoke.status()).toBe(401);
+
+  // 4. Cross-origin revoke attempt returns 403
+  const crossOriginRevoke = await request.post(
+    "/api/customer/orders/guest-access/revoke",
+    {
+      headers: {
+        origin: "https://evil.attacker.com",
+        "sec-fetch-site": "cross-site",
+      },
+      data: { orderId: "sample-order-id-12345" },
+    },
+  );
+  expect(crossOriginRevoke.status()).toBe(403);
+});

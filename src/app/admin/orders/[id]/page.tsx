@@ -15,6 +15,7 @@ import {
   markOnlineOrderPaidAction,
   transitionOnlineOrderAction,
 } from "../actions";
+import { requireAdminSession } from "@/server/auth/require-admin-session";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +31,8 @@ export default async function OrderDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAdminSession({ redirectToLogin: true });
+
   const { id } = await params;
   const order = await prisma.order.findUnique({
     where: { id },

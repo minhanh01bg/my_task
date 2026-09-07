@@ -9,8 +9,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import { AdminNav } from "@/features/admin-navigation/admin-nav";
 
+const replace = vi.fn();
+const refresh = vi.fn();
+
 vi.mock("next/navigation", () => ({
   usePathname: () => "/admin/orders",
+  useRouter: () => ({ replace, refresh }),
 }));
 
 vi.mock("@/features/admin-notifications/notification-button", () => ({
@@ -55,6 +59,14 @@ describe("AdminNav", () => {
     );
   });
 
+  it("có liên kết sang cửa hàng online", () => {
+    render(<AdminNav />);
+
+    expect(
+      screen.getByRole("link", { name: "Xem cửa hàng online" }),
+    ).toHaveAttribute("href", "/shop");
+  });
+
   it("đóng menu bằng phím Escape và trả focus về nút mở", async () => {
     render(<AdminNav />);
     const trigger = screen.getByRole("button", {
@@ -69,5 +81,29 @@ describe("AdminNav", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(trigger).toHaveFocus();
     });
+  });
+
+  it("đăng xuất admin, đóng menu và chuyển về trang đăng nhập", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(JSON.stringify({ ok: true })));
+    render(<AdminNav />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Mở toàn bộ menu quản lý" }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Menu quản lý" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Đăng xuất" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith("/api/auth/logout", {
+        method: "POST",
+      });
+      expect(replace).toHaveBeenCalledWith("/login");
+      expect(refresh).toHaveBeenCalled();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    fetchMock.mockRestore();
   });
 });

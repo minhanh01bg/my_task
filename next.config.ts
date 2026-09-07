@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 
+import { buildCspHeader } from "./src/server/security/csp";
+
+const cspResult = buildCspHeader();
+const cspHeaders =
+  cspResult.headerName && cspResult.headerValue
+    ? [{ key: cspResult.headerName, value: cspResult.headerValue }]
+    : [];
+
 const securityHeaders = [
+  ...cspHeaders,
   {
     key: "X-Frame-Options",
     value: "DENY",
@@ -41,6 +50,19 @@ const nextConfig: NextConfig = {
       {
         source: "/(.*)",
         headers: securityHeaders,
+      },
+      {
+        source: "/order-success/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "private, no-store",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "no-referrer",
+          },
+        ],
       },
     ];
   },

@@ -1,35 +1,151 @@
 import { z } from "zod";
 
-const serverSchema = z.object({
-  NODE_ENV: z
-    .enum(["development", "test", "production"])
-    .default("development"),
-  NEXT_PUBLIC_APP_NAME: z.string().min(1).default("Next.js with Agent"),
-  NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
-  NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
-  SENTRY_AUTH_TOKEN: z.string().optional(),
-  SENTRY_ORG: z.string().optional(),
-  SENTRY_PROJECT: z.string().optional(),
-  DATABASE_URL: z.string().min(1).default("file:./dev.db"),
-  SESSION_SECRET: z
-    .string()
-    .min(32)
-    .default("dev-only-secret-please-change-me!!"),
-  STORE_PASSWORD_HASH: z.string().default(""),
-});
+/**
+ * Server-only environment configuration schema.
+ *
+ * CRITICAL SECURITY INVARIANT:
+ * Production startup MUST fail immediately before serving any traffic
+ * if mandatory security configurations (Upstash Redis REST URL & token,
+ * rate limit HMAC secret, trusted proxy configuration, or canonical origin)
+ * are absent or malformed.
+ */
+export const envSchema = z
+  .object({
+    NODE_ENV: z
+      .enum(["development", "test", "production"])
+      .default("development"),
+    NEXT_PUBLIC_APP_NAME: z.string().min(1).default("Next.js with Agent"),
+    NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
+    NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
+    SENTRY_AUTH_TOKEN: z.string().optional(),
+    SENTRY_ORG: z.string().optional(),
+    SENTRY_PROJECT: z.string().optional(),
+    DATABASE_URL: z.string().min(1).default("file:./dev.db"),
+    SESSION_SECRET: z
+      .string()
+      .min(32)
+      .default("dev-only-secret-please-change-me!!"),
+    STORE_PASSWORD_HASH: z.string().default(""),
 
-const parsed = serverSchema.safeParse({
-  NODE_ENV: process.env.NODE_ENV,
-  NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
-  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-  NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
-  SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN,
-  SENTRY_ORG: process.env.SENTRY_ORG,
-  SENTRY_PROJECT: process.env.SENTRY_PROJECT,
-  DATABASE_URL: process.env.DATABASE_URL,
-  SESSION_SECRET: process.env.SESSION_SECRET,
-  STORE_PASSWORD_HASH: process.env.STORE_PASSWORD_HASH,
-});
+    // Distributed rate-limiting via Upstash Redis REST
+    UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+    UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
+
+    // Keyed HMAC secret for pseudonymizing client identifiers (IP, phone, session)
+    RATE_LIMIT_KEY_SECRET: z.string().min(32).optional(),
+
+    // Trusted proxy resolution mode
+    TRUSTED_PROXY_MODE: z
+      .enum(["none", "vercel", "cloudflare", "custom"])
+      .default("none"),
+    TRUSTED_CLIENT_IP_HEADER: z.string().min(1).optional(),
+
+    // Canonical application origin for CSRF and Origin header validation
+    CANONICAL_ORIGIN: z.string().url().optional(),
+
+    // Content Security Policy rollout mode
+    CSP_MODE: z
+      .enum(["report-only", "enforce", "disabled"])
+      .default("report-only"),
+
+    // Data retention window in days for customer PII & audit logs
+    DATA_RETENTION_DAYS: z.coerce.number().int().positive().default(90),
+  })
+  .superRefine((data, ctx) => {
+    // In production, security controls fail closed: required variables must be strictly enforced.
+    if (data.NODE_ENV === "production") {
+      if (!data.UPSTASH_REDIS_REST_URL) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "UPSTASH_REDIS_REST_URL is required in production for distributed rate limiting",
+          path: ["UPSTASH_REDIS_REST_URL"],
+        });
+      }
+      if (!data.UPSTASH_REDIS_REST_TOKEN) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "UPSTASH_REDIS_REST_TOKEN is required in production for distributed rate limiting",
+          path: ["UPSTASH_REDIS_REST_TOKEN"],
+        });
+      }
+      if (
+        !data.RATE_LIMIT_KEY_SECRET ||
+        data.RATE_LIMIT_KEY_SECRET.length < 32
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "RATE_LIMIT_KEY_SECRET must be configured with at least 32 characters in production",
+          path: ["RATE_LIMIT_KEY_SECRET"],
+        });
+      }
+      if (data.TRUSTED_PROXY_MODE === "none") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "TRUSTED_PROXY_MODE must be configured in production (cannot be 'none')",
+          path: ["TRUSTED_PROXY_MODE"],
+        });
+      }
+      if (
+        data.TRUSTED_PROXY_MODE === "custom" &&
+        !data.TRUSTED_CLIENT_IP_HEADER
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "TRUSTED_CLIENT_IP_HEADER is required when TRUSTED_PROXY_MODE is 'custom'",
+          path: ["TRUSTED_CLIENT_IP_HEADER"],
+        });
+      }
+      if (!data.CANONICAL_ORIGIN) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "CANONICAL_ORIGIN is required in production for origin and CSRF validation",
+          path: ["CANONICAL_ORIGIN"],
+        });
+      }
+      if (
+        !data.STORE_PASSWORD_HASH ||
+        !/^[0-9a-fA-F]{32}:[0-9a-fA-F]{64}$/.test(data.STORE_PASSWORD_HASH)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "STORE_PASSWORD_HASH must be a valid salt:derived PBKDF2 hash in production",
+          path: ["STORE_PASSWORD_HASH"],
+        });
+      }
+    }
+  });
+
+export function validateEnv(rawEnv: Record<string, unknown> = process.env) {
+  return envSchema.safeParse(rawEnv);
+}
+
+const isBuildPhase =
+  process.env.NEXT_PHASE === "phase-production-build" ||
+  process.env.npm_lifecycle_event === "build";
+
+const envToParse =
+  isBuildPhase && !process.env.UPSTASH_REDIS_REST_URL
+    ? {
+        ...process.env,
+        UPSTASH_REDIS_REST_URL: "https://build-time-dummy.upstash.io",
+        UPSTASH_REDIS_REST_TOKEN: "build-time-dummy-token",
+        RATE_LIMIT_KEY_SECRET: "build-time-dummy-rate-limit-secret-32-chars",
+        TRUSTED_PROXY_MODE: "vercel",
+        CANONICAL_ORIGIN: "http://localhost:3000",
+        STORE_PASSWORD_HASH:
+          process.env.STORE_PASSWORD_HASH ||
+          "00000000000000000000000000000000:0000000000000000000000000000000000000000000000000000000000000000",
+      }
+    : process.env;
+
+const parsed = envSchema.safeParse(envToParse);
 
 if (!parsed.success) {
   console.error(

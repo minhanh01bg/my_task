@@ -1,21 +1,35 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
-import { prisma } from "@/server/db/prisma";
+
 import { formatVnd } from "@/lib/money";
+import { getPublicReceipt } from "@/server/orders/public-receipt";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Biên nhận đơn hàng",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
 export default async function OrderSuccessPage({
   params,
 }: {
-  params: Promise<{ code: string }>;
+  params: Promise<{ receipt: string }>;
 }) {
-  const { code } = await params;
-  const order = await prisma.order.findFirst({
-    where: { code, channel: "online" },
-    select: { code: true, total: true, paymentMethod: true },
-  });
+  const { receipt } = await params;
+  let order;
+  try {
+    order = await getPublicReceipt(receipt);
+  } catch {
+    notFound();
+  }
   if (!order) notFound();
+
   return (
     <main className="mx-auto max-w-xl px-4 py-24 text-center">
       <CheckCircle2

@@ -8,10 +8,13 @@ export function CustomerAuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
     setError("");
+    setSuccess("");
     const form = new FormData(event.currentTarget);
     const body = {
       phone: form.get("phone"),
@@ -33,6 +36,17 @@ export function CustomerAuthForm({ mode }: { mode: "login" | "register" }) {
       setPending(false);
       return;
     }
+
+    if (mode === "register") {
+      setSuccess(
+        typeof result.message === "string"
+          ? result.message
+          : "Tài khoản đã được xử lý. Vui lòng đăng nhập để tiếp tục.",
+      );
+      setPending(false);
+      return;
+    }
+
     router.replace("/account/orders");
     router.refresh();
   }
@@ -83,6 +97,22 @@ export function CustomerAuthForm({ mode }: { mode: "login" | "register" }) {
           {error}
         </p>
       ) : null}
+      {success ? (
+        <div
+          role="status"
+          className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-800 dark:text-emerald-300"
+        >
+          <p className="font-semibold">{success}</p>
+          <div className="mt-3">
+            <Link
+              href="/account/login"
+              className="bg-primary text-primary-foreground inline-flex min-h-10 items-center justify-center rounded-lg px-4 text-sm font-bold"
+            >
+              Đăng nhập ngay
+            </Link>
+          </div>
+        </div>
+      ) : null}
       <button
         disabled={pending}
         className="bg-primary text-primary-foreground min-h-12 w-full rounded-xl font-bold disabled:opacity-60"
@@ -103,13 +133,18 @@ export function CustomerAuthForm({ mode }: { mode: "login" | "register" }) {
           </>
         ) : (
           <>
-            Đã có tài khoản?{" "}
+            Đã có tài khoản hoặc cần khôi phục?{" "}
             <Link className="text-primary font-bold" href="/account/login">
               Đăng nhập
             </Link>
           </>
         )}
       </p>
+      {mode === "login" ? (
+        <p className="text-muted-foreground text-center text-xs">
+          Quên mật khẩu? Liên hệ hotline cửa hàng để được hỗ trợ khôi phục.
+        </p>
+      ) : null}
     </form>
   );
 }

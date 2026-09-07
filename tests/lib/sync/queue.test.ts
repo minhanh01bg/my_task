@@ -103,9 +103,8 @@ describe("hang doi don", () => {
 
 describe("cache danh muc", () => {
   it("luu roi doc lai duoc", async () => {
-    const { saveCatalog, loadCatalog } = await import(
-      "@/lib/sync/catalog-cache"
-    );
+    const { saveCatalog, loadCatalog } =
+      await import("@/lib/sync/catalog-cache");
 
     await saveCatalog({
       categories: [{ id: "c1", name: "Tạp hoá", sortOrder: 1 }],
@@ -132,9 +131,7 @@ describe("cache danh muc", () => {
   it("danh muc qua 24 gio bi coi la cu", async () => {
     const { isCatalogStale } = await import("@/lib/sync/catalog-cache");
 
-    const yesterday = new Date(
-      Date.now() - 25 * 60 * 60 * 1000,
-    ).toISOString();
+    const yesterday = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
     expect(
       isCatalogStale({ categories: [], products: [], fetchedAt: yesterday }),
     ).toBe(true);

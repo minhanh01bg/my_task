@@ -56,6 +56,7 @@ consistency. Before trusting this branch:
 ## File Structure
 
 **Create — tầng đồng bộ (thuần, testable, không dính React):**
+
 - `src/lib/sync/types.ts` — `QueuedOrder`, `SubmitResult`
 - `src/lib/sync/queue.ts` — đọc/ghi hàng đợi trong IndexedDB
 - `src/lib/sync/submit.ts` — `submitOrder()`: gửi, thất bại thì xếp hàng
@@ -63,11 +64,13 @@ consistency. Before trusting this branch:
 - `src/lib/sync/catalog-cache.ts` — cache danh mục vào IndexedDB
 
 **Create — VietQR:**
+
 - `src/lib/vietqr/crc.ts` — CRC-16/CCITT-FALSE
 - `src/lib/vietqr/build.ts` — dựng payload EMVCo
 - `src/lib/vietqr/types.ts` — `BankAccount`, `VietQrInput`
 
 **Create — POS bổ sung:**
+
 - `src/stores/held-orders-store.ts` — giữ đơn
 - `src/components/pos/payment-dialog.tsx` — thay `CashPaymentDialog`, gồm cả 3 phương thức
 - `src/components/pos/transfer-panel.tsx` — QR + nút "Đã nhận tiền"
@@ -78,10 +81,12 @@ consistency. Before trusting this branch:
 - `src/app/api/customers/route.ts` — tìm/tạo khách
 
 **Create — PWA:**
+
 - `public/manifest.webmanifest`
 - `public/sw.js` — service worker
 
 **Create — admin:**
+
 - `src/app/admin/layout.tsx` — sidebar
 - `src/app/admin/products/page.tsx` + `product-form.tsx` + `actions.ts`
 - `src/app/admin/categories/page.tsx` + `actions.ts`
@@ -95,6 +100,7 @@ consistency. Before trusting this branch:
 - `src/server/reports/daily-revenue.ts` — báo cáo
 
 **Modify:**
+
 - `package.json` — thêm `idb`, `qrcode`, `fake-indexeddb`
 - `src/app/layout.tsx` — link manifest, đăng ký service worker
 - `src/components/pos/pos-screen.tsx` — dùng `submitOrder`, thêm giữ đơn / phím tắt / chỉ báo đồng bộ
@@ -102,6 +108,7 @@ consistency. Before trusting this branch:
 - `src/types/catalog.ts` — thêm `CustomerOption`
 
 **Test:**
+
 - `tests/lib/vietqr/crc.test.ts`, `tests/lib/vietqr/build.test.ts`
 - `tests/lib/sync/queue.test.ts`, `tests/lib/sync/submit.test.ts`, `tests/lib/sync/flush.test.ts`
 - `tests/stores/held-orders-store.test.ts`
@@ -118,9 +125,11 @@ Thứ tự: thư viện thuần (VietQR, sync) → store → UI POS → PWA → 
 ## Task 1: Cài phụ thuộc và cấu hình test IndexedDB
 
 **Files:**
+
 - Modify: `package.json`, `vitest.setup.ts`
 
 **Interfaces:**
+
 - Produces: `idb` (bọc IndexedDB có Promise), `qrcode` (vẽ QR ra canvas/dataURL), `fake-indexeddb` (IndexedDB giả cho jsdom)
 
 - [ ] **Step 1: Cài deps**
@@ -175,10 +184,12 @@ git commit -m "chore: add idb, qrcode and fake-indexeddb"
 ## Task 2: CRC-16 cho VietQR
 
 **Files:**
+
 - Create: `src/lib/vietqr/crc.ts`
 - Test: `tests/lib/vietqr/crc.test.ts`
 
 **Interfaces:**
+
 - Produces: `crc16CcittFalse(input: string): string` — trả về 4 ký tự hex hoa
 
 - [ ] **Step 1: Viết test thất bại**
@@ -258,10 +269,12 @@ git commit -m "feat(vietqr): add CRC-16/CCITT-FALSE"
 ## Task 3: Dựng payload VietQR
 
 **Files:**
+
 - Create: `src/lib/vietqr/types.ts`, `src/lib/vietqr/build.ts`
 - Test: `tests/lib/vietqr/build.test.ts`
 
 **Interfaces:**
+
 - Consumes: `crc16CcittFalse` (Task 2)
 - Produces:
   - type `BankAccount = { bankBin: string; accountNumber: string; accountName: string }`
@@ -311,42 +324,74 @@ describe("buildVietQrPayload", () => {
   });
 
   it("mo dau bang payload format 000201 va QR dong 010212", () => {
-    const payload = buildVietQrPayload({ account, amount: 1000, description: "DH1" });
+    const payload = buildVietQrPayload({
+      account,
+      amount: 1000,
+      description: "DH1",
+    });
     expect(payload.startsWith("000201")).toBe(true);
     expect(payload).toContain("010212");
   });
 
   it("chua ma ngan hang va so tai khoan", () => {
-    const payload = buildVietQrPayload({ account, amount: 1000, description: "DH1" });
+    const payload = buildVietQrPayload({
+      account,
+      amount: 1000,
+      description: "DH1",
+    });
     expect(payload).toContain("970423");
     expect(payload).toContain("0011012345678");
   });
 
   it("gan so tien vao truong 54 khong co so thap phan", () => {
-    const payload = buildVietQrPayload({ account, amount: 400000, description: "DH1" });
+    const payload = buildVietQrPayload({
+      account,
+      amount: 400000,
+      description: "DH1",
+    });
     expect(payload).toContain("5406400000");
   });
 
   it("gan noi dung chuyen khoan la ma don", () => {
-    const payload = buildVietQrPayload({ account, amount: 1000, description: "DH1042" });
+    const payload = buildVietQrPayload({
+      account,
+      amount: 1000,
+      description: "DH1042",
+    });
     expect(payload).toContain("0806DH1042");
   });
 
   it("bo qua truong so tien khi amount bang 0 (QR tinh)", () => {
-    const payload = buildVietQrPayload({ account, amount: 0, description: "DH1" });
+    const payload = buildVietQrPayload({
+      account,
+      amount: 0,
+      description: "DH1",
+    });
     expect(payload).not.toContain("5400");
     expect(payload).toContain("5802VN");
   });
 
   it("luon ket thuc bang 6304 + 4 ky tu CRC", () => {
-    const payload = buildVietQrPayload({ account, amount: 1000, description: "DH1" });
+    const payload = buildVietQrPayload({
+      account,
+      amount: 1000,
+      description: "DH1",
+    });
     expect(payload.slice(-8, -4)).toBe("6304");
     expect(payload.slice(-4)).toMatch(/^[0-9A-F]{4}$/);
   });
 
   it("do dai truong tu tinh dung khi noi dung dai ngan khac nhau", () => {
-    const short = buildVietQrPayload({ account, amount: 1000, description: "DH1" });
-    const long = buildVietQrPayload({ account, amount: 1000, description: "DH123456" });
+    const short = buildVietQrPayload({
+      account,
+      amount: 1000,
+      description: "DH1",
+    });
+    const long = buildVietQrPayload({
+      account,
+      amount: 1000,
+      description: "DH123456",
+    });
     expect(short).toContain("0803DH1");
     expect(long).toContain("0808DH123456");
   });
@@ -459,10 +504,12 @@ git commit -m "feat(vietqr): build EMVCo payload offline"
 ## Task 4: Hàng đợi đơn trong IndexedDB
 
 **Files:**
+
 - Create: `src/lib/sync/types.ts`, `src/lib/sync/queue.ts`
 - Test: `tests/lib/sync/queue.test.ts`
 
 **Interfaces:**
+
 - Produces:
   - type `OrderPayload` — đúng shape mà `POST /api/orders` nhận (Plan 1 Task 9)
   - type `QueuedOrder = { clientId: string; payload: OrderPayload; queuedAt: number; attempts: number; lastError: string | null }`
@@ -750,10 +797,12 @@ git commit -m "feat(sync): add IndexedDB order queue"
 Đây là ranh giới then chốt của spec: UI gọi `submitOrder()` và **không biết** mình đang online hay offline.
 
 **Files:**
+
 - Create: `src/lib/sync/submit.ts`
 - Test: `tests/lib/sync/submit.test.ts`
 
 **Interfaces:**
+
 - Consumes: `enqueueOrder`, `countQueuedOrders`, `clearQueue` (Task 4), type `OrderPayload`, `SubmitResult` (Task 4)
 - Produces: `submitOrder(payload: OrderPayload): Promise<SubmitResult>`
 
@@ -764,7 +813,11 @@ Tạo `tests/lib/sync/submit.test.ts`:
 ```ts
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { clearQueue, countQueuedOrders, listQueuedOrders } from "@/lib/sync/queue";
+import {
+  clearQueue,
+  countQueuedOrders,
+  listQueuedOrders,
+} from "@/lib/sync/queue";
 import { submitOrder } from "@/lib/sync/submit";
 import type { OrderPayload } from "@/lib/sync/types";
 
@@ -803,7 +856,10 @@ describe("submitOrder", () => {
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ order: { code: "DH0001", total: 30000 }, duplicated: false }),
+        json: async () => ({
+          order: { code: "DH0001", total: 30000 },
+          duplicated: false,
+        }),
       }),
     );
 
@@ -815,7 +871,10 @@ describe("submitOrder", () => {
   });
 
   it("mat mang thi xep hang doi va KHONG nem loi", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new TypeError("Failed to fetch")),
+    );
 
     const result = await submitOrder(payload());
 
@@ -827,7 +886,9 @@ describe("submitOrder", () => {
   it("server loi 500 thi cung xep hang doi", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) }),
+      vi
+        .fn()
+        .mockResolvedValue({ ok: false, status: 500, json: async () => ({}) }),
     );
 
     const result = await submitOrder(payload());
@@ -856,7 +917,10 @@ describe("submitOrder", () => {
   it("gui dung endpoint va dung payload", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ order: { code: "DH0001", total: 30000 }, duplicated: false }),
+      json: async () => ({
+        order: { code: "DH0001", total: 30000 },
+        duplicated: false,
+      }),
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -874,7 +938,10 @@ describe("submitOrder", () => {
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ order: { code: "DH0001", total: 30000 }, duplicated: true }),
+        json: async () => ({
+          order: { code: "DH0001", total: 30000 },
+          duplicated: true,
+        }),
       }),
     );
 
@@ -963,10 +1030,12 @@ git commit -m "feat(sync): add submitOrder with offline fallback"
 ## Task 6: Đẩy hàng đợi lên server
 
 **Files:**
+
 - Create: `src/lib/sync/flush.ts`
 - Test: `tests/lib/sync/flush.test.ts`
 
 **Interfaces:**
+
 - Consumes: `listQueuedOrders`, `removeQueuedOrder`, `markQueuedFailure` (Task 4)
 - Produces: `flushQueue(): Promise<{ sent: number; failed: number }>`
 
@@ -1010,7 +1079,10 @@ function payload(clientId: string): OrderPayload {
 function okFetch() {
   return vi.fn().mockResolvedValue({
     ok: true,
-    json: async () => ({ order: { code: "DH0001", total: 15000 }, duplicated: false }),
+    json: async () => ({
+      order: { code: "DH0001", total: 15000 },
+      duplicated: false,
+    }),
   });
 }
 
@@ -1060,7 +1132,10 @@ describe("flushQueue", () => {
 
   it("van con mat mang thi giu nguyen don trong hang doi", async () => {
     await enqueueOrder(payload("c1"));
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new TypeError("Failed to fetch")),
+    );
 
     const result = await flushQueue();
 
@@ -1095,7 +1170,10 @@ describe("flushQueue", () => {
       .mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ order: { code: "DH0002", total: 15000 }, duplicated: false }),
+        json: async () => ({
+          order: { code: "DH0002", total: 15000 },
+          duplicated: false,
+        }),
       });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -1112,7 +1190,10 @@ describe("flushQueue", () => {
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ order: { code: "DH0001", total: 15000 }, duplicated: true }),
+        json: async () => ({
+          order: { code: "DH0001", total: 15000 },
+          duplicated: true,
+        }),
       }),
     );
 
@@ -1207,10 +1288,12 @@ git commit -m "feat(sync): add queue flush with per-order isolation"
 ## Task 7: Cache danh mục và giữ đơn
 
 **Files:**
+
 - Create: `src/lib/sync/catalog-cache.ts`, `src/stores/held-orders-store.ts`
 - Test: `tests/stores/held-orders-store.test.ts`
 
 **Interfaces:**
+
 - Consumes: `getSyncDb` (Task 4), type `CatalogResponse` (Plan 1), type `CartLine` (Plan 1)
 - Produces:
   - `saveCatalog(catalog: CatalogResponse): Promise<void>`
@@ -1425,7 +1508,8 @@ Thêm vào cuối `tests/lib/sync/queue.test.ts`:
 ```ts
 describe("cache danh muc", () => {
   it("luu roi doc lai duoc", async () => {
-    const { saveCatalog, loadCatalog } = await import("@/lib/sync/catalog-cache");
+    const { saveCatalog, loadCatalog } =
+      await import("@/lib/sync/catalog-cache");
 
     await saveCatalog({
       categories: [{ id: "c1", name: "Tạp hoá", sortOrder: 1 }],
@@ -1477,10 +1561,12 @@ git commit -m "feat(sync): add catalog cache and held orders"
 ## Task 8: API khách hàng
 
 **Files:**
+
 - Create: `src/app/api/customers/route.ts`
 - Modify: `src/types/catalog.ts`
 
 **Interfaces:**
+
 - Consumes: `prisma` (Plan 1)
 - Produces:
   - type `CustomerOption = { id: string; name: string; phone: string | null }`
@@ -1571,11 +1657,13 @@ git commit -m "feat(api): add customer lookup and create"
 Thay `CashPaymentDialog` của Plan 1 bằng hộp thoại ba tab: tiền mặt, chuyển khoản, ghi nợ — cộng trả kết hợp.
 
 **Files:**
+
 - Create: `src/components/pos/transfer-panel.tsx`, `src/components/pos/debt-panel.tsx`, `src/components/pos/payment-dialog.tsx`
 - Test: `tests/components/pos/payment-dialog.test.tsx`
 - Delete: `src/components/pos/cash-payment-dialog.tsx`, `tests/components/pos/cash-payment-dialog.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `formatVnd` (Plan 1), `buildVietQrPayload` + type `BankAccount` (Task 3), type `CustomerOption` (Task 8), type `OrderPayloadPayment` (Task 4)
 - Produces:
   - `<PaymentDialog open total bankAccount onCancel onConfirm />`
@@ -1601,7 +1689,9 @@ const account: BankAccount = {
   accountName: "NGUYEN VAN A",
 };
 
-function renderDialog(props: Partial<React.ComponentProps<typeof PaymentDialog>> = {}) {
+function renderDialog(
+  props: Partial<React.ComponentProps<typeof PaymentDialog>> = {},
+) {
   return render(
     <PaymentDialog
       open
@@ -1696,7 +1786,9 @@ describe("PaymentDialog", () => {
     renderDialog({ onConfirm });
 
     await user.click(screen.getByRole("tab", { name: /chuyển khoản/i }));
-    await user.click(screen.getByRole("button", { name: /chưa nhận được tiền/i }));
+    await user.click(
+      screen.getByRole("button", { name: /chưa nhận được tiền/i }),
+    );
 
     const result = onConfirm.mock.calls[0]![0];
     expect(result.payments[0]?.method).toBe("transfer");
@@ -1766,7 +1858,7 @@ export function TransferPanel({
 
   if (!bankAccount) {
     return (
-      <p className="py-10 text-center text-muted-foreground">
+      <p className="text-muted-foreground py-10 text-center">
         Chưa cấu hình tài khoản ngân hàng. Vào Quản lý → Cài đặt để khai báo.
       </p>
     );
@@ -1777,10 +1869,10 @@ export function TransferPanel({
       <canvas ref={canvasRef} data-testid="vietqr-canvas" />
       <div className="text-center">
         <p className="text-2xl font-bold tabular-nums">{formatVnd(amount)}</p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Nội dung: <span className="font-medium">{description}</span>
         </p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           {bankAccount.accountName} — {bankAccount.accountNumber}
         </p>
       </div>
@@ -1878,11 +1970,11 @@ export function DebtPanel({ selected, onSelect }: DebtPanelProps) {
             <button
               type="button"
               onClick={() => onSelect(customer)}
-              className="w-full rounded px-4 py-3 text-left hover:bg-accent"
+              className="hover:bg-accent w-full rounded px-4 py-3 text-left"
             >
               {customer.name}
               {customer.phone ? (
-                <span className="ml-2 text-sm text-muted-foreground">
+                <span className="text-muted-foreground ml-2 text-sm">
                   {customer.phone}
                 </span>
               ) : null}
@@ -1993,10 +2085,13 @@ export function PaymentDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg space-y-4 rounded-lg bg-background p-6">
+      <div className="bg-background w-full max-w-lg space-y-4 rounded-lg p-6">
         <div className="flex items-baseline justify-between">
           <span className="text-lg">Khách phải trả</span>
-          <span data-testid="payment-total" className="text-3xl font-bold tabular-nums">
+          <span
+            data-testid="payment-total"
+            className="text-3xl font-bold tabular-nums"
+          >
             {formatVnd(total)}
           </span>
         </div>
@@ -2024,7 +2119,9 @@ export function PaymentDialog({
         {method === "cash" ? (
           <div className="space-y-4">
             <label className="block">
-              <span className="text-sm text-muted-foreground">Tiền khách đưa</span>
+              <span className="text-muted-foreground text-sm">
+                Tiền khách đưa
+              </span>
               <input
                 aria-label="Tiền khách đưa"
                 type="number"
@@ -2057,9 +2154,12 @@ export function PaymentDialog({
               </Button>
             </div>
 
-            <div className="flex items-baseline justify-between rounded-lg bg-accent p-4">
+            <div className="bg-accent flex items-baseline justify-between rounded-lg p-4">
               <span className="text-lg">Tiền thối lại</span>
-              <span data-testid="payment-change" className="text-5xl font-bold tabular-nums">
+              <span
+                data-testid="payment-change"
+                className="text-5xl font-bold tabular-nums"
+              >
                 {formatVnd(change)}
               </span>
             </div>
@@ -2079,7 +2179,12 @@ export function PaymentDialog({
         ) : null}
 
         <div className="flex gap-2">
-          <Button type="button" variant="outline" className="h-14 flex-1" onClick={onCancel}>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-14 flex-1"
+            onClick={onCancel}
+          >
             Huỷ
           </Button>
 
@@ -2153,10 +2258,12 @@ git commit -m "feat(pos): add full payment dialog with VietQR and debt"
 ## Task 10: Chỉ báo đồng bộ, thanh giữ đơn, phím tắt
 
 **Files:**
+
 - Create: `src/components/pos/sync-indicator.tsx`, `src/components/pos/held-orders-bar.tsx`, `src/components/pos/use-pos-shortcuts.ts`
 - Modify: `src/components/pos/pos-screen.tsx`, `src/app/pos/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `countQueuedOrders`, `flushQueue` (Task 4, 6), `submitOrder` (Task 5), `useHeldOrdersStore` (Task 7), `PaymentDialog` (Task 9), `saveCatalog`/`loadCatalog` (Task 7), `getStoreBankAccount` (Task 14 — tạm truyền `null` cho tới khi Task 14 xong)
 - Produces:
   - `<SyncIndicator />` — tự đếm hàng đợi và tự đẩy khi có mạng
@@ -2238,7 +2345,7 @@ export function HeldOrdersBar({ onResume }: HeldOrdersBarProps) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-sm text-muted-foreground">Đơn đang giữ:</span>
+      <span className="text-muted-foreground text-sm">Đơn đang giữ:</span>
       {held.map((order, index) => (
         <button
           key={order.id}
@@ -2247,7 +2354,7 @@ export function HeldOrdersBar({ onResume }: HeldOrdersBarProps) {
             const resumed = resume(order.id);
             if (resumed) onResume(resumed);
           }}
-          className="rounded-full bg-accent px-4 py-2 text-sm"
+          className="bg-accent rounded-full px-4 py-2 text-sm"
         >
           #{index + 1} — {formatVnd(order.total)}
         </button>
@@ -2311,7 +2418,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CartPanel } from "@/components/pos/cart-panel";
 import { CategoryGrid } from "@/components/pos/category-grid";
 import { HeldOrdersBar } from "@/components/pos/held-orders-bar";
-import { PaymentDialog, type PaymentResult } from "@/components/pos/payment-dialog";
+import {
+  PaymentDialog,
+  type PaymentResult,
+} from "@/components/pos/payment-dialog";
 import { ProductSearch } from "@/components/pos/product-search";
 import { ServiceLineDialog } from "@/components/pos/service-line-dialog";
 import { SyncIndicator } from "@/components/pos/sync-indicator";
@@ -2319,7 +2429,11 @@ import { usePosShortcuts } from "@/components/pos/use-pos-shortcuts";
 import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/lib/money";
 import { calculateCart } from "@/lib/pricing/calculate";
-import { isCatalogStale, loadCatalog, saveCatalog } from "@/lib/sync/catalog-cache";
+import {
+  isCatalogStale,
+  loadCatalog,
+  saveCatalog,
+} from "@/lib/sync/catalog-cache";
 import { submitOrder } from "@/lib/sync/submit";
 import type { BankAccount } from "@/lib/vietqr/types";
 import { useCartStore } from "@/stores/cart-store";
@@ -2339,7 +2453,10 @@ interface LastSale {
   synced: boolean;
 }
 
-export function PosScreen({ catalog: initialCatalog, bankAccount }: PosScreenProps) {
+export function PosScreen({
+  catalog: initialCatalog,
+  bankAccount,
+}: PosScreenProps) {
   const lines = useCartStore((state) => state.lines);
   const orderDiscount = useCartStore((state) => state.orderDiscount);
   const addProduct = useCartStore((state) => state.addProduct);
@@ -2464,7 +2581,11 @@ export function PosScreen({ catalog: initialCatalog, bankAccount }: PosScreenPro
 
       <section className="flex min-h-0 flex-col gap-2 rounded-lg border p-4">
         <div className="flex gap-2">
-          <Button variant="outline" className="flex-1" onClick={() => setServiceOpen(true)}>
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => setServiceOpen(true)}
+          >
             + Tiền công
           </Button>
           <Button
@@ -2492,18 +2613,25 @@ export function PosScreen({ catalog: initialCatalog, bankAccount }: PosScreenPro
 
       {lastSale ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md space-y-4 rounded-lg bg-background p-8 text-center">
+          <div className="bg-background w-full max-w-md space-y-4 rounded-lg p-8 text-center">
             <p className="text-muted-foreground">
               {lastSale.synced
                 ? `Đã lưu đơn ${lastSale.code}`
                 : "Đã lưu tạm — sẽ đồng bộ khi có mạng"}
             </p>
             <p className="text-lg">Khách đưa {formatVnd(lastSale.received)}</p>
-            <p className="text-sm text-muted-foreground">Tiền thối lại</p>
-            <p data-testid="last-sale-change" className="text-7xl font-bold tabular-nums">
+            <p className="text-muted-foreground text-sm">Tiền thối lại</p>
+            <p
+              data-testid="last-sale-change"
+              className="text-7xl font-bold tabular-nums"
+            >
               {formatVnd(lastSale.change)}
             </p>
-            <Button autoFocus className="h-16 w-full text-xl" onClick={() => setLastSale(null)}>
+            <Button
+              autoFocus
+              className="h-16 w-full text-xl"
+              onClick={() => setLastSale(null)}
+            >
               Đơn mới
             </Button>
           </div>
@@ -2527,9 +2655,9 @@ import { getStoreBankAccount } from "@/server/settings/store-settings";
 Trong hàm, sau khi có `catalog`:
 
 ```tsx
-  const bankAccount = await getStoreBankAccount();
+const bankAccount = await getStoreBankAccount();
 
-  return <PosScreen catalog={catalog} bankAccount={bankAccount} />;
+return <PosScreen catalog={catalog} bankAccount={bankAccount} />;
 ```
 
 Hàm `getStoreBankAccount` được viết ở Task 14. Để plan chạy tuần tự được, tạm thêm file `src/server/settings/store-settings.ts` với nội dung tối thiểu ngay bây giờ:
@@ -2578,10 +2706,12 @@ git commit -m "feat(pos): wire sync layer, held orders and shortcuts"
 ## Task 11: PWA — manifest và service worker
 
 **Files:**
+
 - Create: `public/manifest.webmanifest`, `public/sw.js`
 - Modify: `src/app/layout.tsx`
 
 **Interfaces:**
+
 - Produces: `/pos` mở được khi mất mạng
 
 - [ ] **Step 1: Viết manifest**
@@ -2627,7 +2757,9 @@ self.addEventListener("activate", (event) => {
       .keys()
       .then((keys) =>
         Promise.all(
-          keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)),
+          keys
+            .filter((key) => key !== CACHE_NAME)
+            .map((key) => caches.delete(key)),
         ),
       ),
   );
@@ -2651,10 +2783,16 @@ self.addEventListener("fetch", (event) => {
     fetch(event.request)
       .then((response) => {
         const copy = response.clone();
-        void caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        void caches
+          .open(CACHE_NAME)
+          .then((cache) => cache.put(event.request, copy));
         return response;
       })
-      .catch(() => caches.match(event.request).then((cached) => cached ?? Response.error())),
+      .catch(() =>
+        caches
+          .match(event.request)
+          .then((cached) => cached ?? Response.error()),
+      ),
   );
 });
 ```
@@ -2722,10 +2860,12 @@ git commit -m "feat(pwa): add manifest and network-first service worker"
 ## Task 12: Nghiệp vụ lưu sản phẩm và huỷ đơn
 
 **Files:**
+
 - Create: `src/server/products/save-product.ts`, `src/server/orders/cancel-order.ts`
 - Test: `tests/server/products/save-product.test.ts`, `tests/server/orders/cancel-order.test.ts`
 
 **Interfaces:**
+
 - Consumes: `prisma` (Plan 1), `buildSearchText` (Plan 1)
 - Produces:
   - `saveProduct(input: SaveProductInput): Promise<{ id: string }>`
@@ -2843,7 +2983,9 @@ describe("saveProduct", () => {
       isActive: true,
     });
 
-    const saved = await prisma.product.findUniqueOrThrow({ where: { id: created.id } });
+    const saved = await prisma.product.findUniqueOrThrow({
+      where: { id: created.id },
+    });
     expect(saved.name).toBe("Đường vàng");
     expect(saved.searchText).toContain("duong vang");
     expect(saved.searchText).not.toContain("duong trang");
@@ -3039,7 +3181,9 @@ describe("cancelOrder", () => {
 
     await cancelOrder(order.id);
 
-    const after = await prisma.order.findUniqueOrThrow({ where: { id: order.id } });
+    const after = await prisma.order.findUniqueOrThrow({
+      where: { id: order.id },
+    });
     expect(after.status).toBe("cancelled");
   });
 
@@ -3062,11 +3206,17 @@ describe("cancelOrder", () => {
       payments: [{ method: "cash", amount: 40000 }],
     });
 
-    expect((await prisma.product.findUniqueOrThrow({ where: { id: product.id } })).stock).toBe(7.5);
+    expect(
+      (await prisma.product.findUniqueOrThrow({ where: { id: product.id } }))
+        .stock,
+    ).toBe(7.5);
 
     await cancelOrder(order.id);
 
-    expect((await prisma.product.findUniqueOrThrow({ where: { id: product.id } })).stock).toBe(10);
+    expect(
+      (await prisma.product.findUniqueOrThrow({ where: { id: product.id } }))
+        .stock,
+    ).toBe(10);
   });
 
   it("ghi StockMovement voi reason cancel", async () => {
@@ -3090,7 +3240,9 @@ describe("cancelOrder", () => {
 
     await cancelOrder(order.id);
 
-    const movements = await prisma.stockMovement.findMany({ where: { reason: "cancel" } });
+    const movements = await prisma.stockMovement.findMany({
+      where: { reason: "cancel" },
+    });
     expect(movements).toHaveLength(1);
     expect(movements[0]?.delta).toBe(2);
   });
@@ -3115,7 +3267,9 @@ describe("cancelOrder", () => {
 
     await cancelOrder(order.id);
 
-    expect(await prisma.stockMovement.count({ where: { reason: "cancel" } })).toBe(0);
+    expect(
+      await prisma.stockMovement.count({ where: { reason: "cancel" } }),
+    ).toBe(0);
   });
 
   it("huy hai lan khong hoan ton kho hai lan", async () => {
@@ -3140,7 +3294,10 @@ describe("cancelOrder", () => {
     await cancelOrder(order.id);
     await cancelOrder(order.id);
 
-    expect((await prisma.product.findUniqueOrThrow({ where: { id: product.id } })).stock).toBe(10);
+    expect(
+      (await prisma.product.findUniqueOrThrow({ where: { id: product.id } }))
+        .stock,
+    ).toBe(10);
   });
 });
 ```
@@ -3208,10 +3365,12 @@ git commit -m "feat(admin): add product save and order cancel logic"
 ## Task 13: Báo cáo doanh thu
 
 **Files:**
+
 - Create: `src/server/reports/daily-revenue.ts`
 - Test: `tests/server/reports/daily-revenue.test.ts`
 
 **Interfaces:**
+
 - Consumes: `prisma` (Plan 1)
 - Produces:
   - `getDailyRevenue(days: number): Promise<DailyRevenueRow[]>`
@@ -3311,7 +3470,12 @@ describe("getTopProducts", () => {
     await prisma.product.createMany({
       data: [
         { name: "Ít bán", price: 1000, searchText: "it ban", soldCount: 2 },
-        { name: "Bán chạy", price: 1000, searchText: "ban chay", soldCount: 50 },
+        {
+          name: "Bán chạy",
+          price: 1000,
+          searchText: "ban chay",
+          soldCount: 50,
+        },
       ],
     });
 
@@ -3337,8 +3501,20 @@ describe("getLowStockProducts", () => {
   it("chi lay hang duoi nguong", async () => {
     await prisma.product.createMany({
       data: [
-        { name: "Sắp hết", price: 1000, searchText: "sap het", stock: 2, unit: "cái" },
-        { name: "Còn nhiều", price: 1000, searchText: "con nhieu", stock: 50, unit: "cái" },
+        {
+          name: "Sắp hết",
+          price: 1000,
+          searchText: "sap het",
+          stock: 2,
+          unit: "cái",
+        },
+        {
+          name: "Còn nhiều",
+          price: 1000,
+          searchText: "con nhieu",
+          stock: 50,
+          unit: "cái",
+        },
       ],
     });
 
@@ -3348,7 +3524,13 @@ describe("getLowStockProducts", () => {
 
   it("bao gom ca hang bi ton am", async () => {
     await prisma.product.create({
-      data: { name: "Âm kho", price: 1000, searchText: "am kho", stock: -3, unit: "cái" },
+      data: {
+        name: "Âm kho",
+        price: 1000,
+        searchText: "am kho",
+        stock: -3,
+        unit: "cái",
+      },
     });
 
     const rows = await getLowStockProducts(5);
@@ -3412,7 +3594,9 @@ function toDateKey(value: Date): string {
  * Doanh thu theo ngay. Don da huy KHONG duoc tinh — neu tinh thi con so
  * bao cao se cao hon tien that trong ket.
  */
-export async function getDailyRevenue(days: number): Promise<DailyRevenueRow[]> {
+export async function getDailyRevenue(
+  days: number,
+): Promise<DailyRevenueRow[]> {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
   const orders = await prisma.order.findMany({
@@ -3478,9 +3662,11 @@ git commit -m "feat(admin): add revenue and stock reports"
 ## Task 14: Cài đặt cửa hàng
 
 **Files:**
+
 - Create: `src/server/settings/store-settings.ts` (thay bản tạm ở Task 10), `src/app/admin/settings/page.tsx`, `src/app/admin/settings/actions.ts`
 
 **Interfaces:**
+
 - Consumes: `prisma` (Plan 1), type `BankAccount` (Task 3)
 - Produces:
   - `getStoreBankAccount(): Promise<BankAccount | null>`
@@ -3530,7 +3716,9 @@ export async function getStoreBankAccount(): Promise<BankAccount | null> {
   return { bankBin, accountNumber, accountName };
 }
 
-export async function saveStoreBankAccount(account: BankAccount): Promise<void> {
+export async function saveStoreBankAccount(
+  account: BankAccount,
+): Promise<void> {
   await Promise.all([
     writeSetting(KEY_BANK_BIN, account.bankBin),
     writeSetting(KEY_BANK_ACCOUNT, account.accountNumber),
@@ -3578,7 +3766,10 @@ export async function saveSettingsAction(formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { ok: false as const, message: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ" };
+    return {
+      ok: false as const,
+      message: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
   }
 
   await saveStoreName(parsed.data.storeName);
@@ -3622,7 +3813,7 @@ export default async function SettingsPage() {
 
       <form action={saveSettingsAction} className="space-y-4">
         <label className="block">
-          <span className="text-sm text-muted-foreground">Tên cửa hàng</span>
+          <span className="text-muted-foreground text-sm">Tên cửa hàng</span>
           <input
             name="storeName"
             defaultValue={storeName}
@@ -3636,7 +3827,7 @@ export default async function SettingsPage() {
           </legend>
 
           <label className="block">
-            <span className="text-sm text-muted-foreground">
+            <span className="text-muted-foreground text-sm">
               Mã ngân hàng (BIN, 6 chữ số)
             </span>
             <input
@@ -3648,7 +3839,7 @@ export default async function SettingsPage() {
           </label>
 
           <label className="block">
-            <span className="text-sm text-muted-foreground">Số tài khoản</span>
+            <span className="text-muted-foreground text-sm">Số tài khoản</span>
             <input
               name="accountNumber"
               defaultValue={account?.accountNumber ?? ""}
@@ -3657,7 +3848,7 @@ export default async function SettingsPage() {
           </label>
 
           <label className="block">
-            <span className="text-sm text-muted-foreground">
+            <span className="text-muted-foreground text-sm">
               Tên chủ tài khoản (không dấu)
             </span>
             <input
@@ -3695,10 +3886,12 @@ git commit -m "feat(admin): add store settings with bank account"
 Vấn đề còn tồn từ Task 10: QR hiện lúc thanh toán nhưng mã đơn do server sinh sau, nên nội dung chuyển khoản chỉ là `"DH"`. Sửa bằng cách để máy bán tự đặt trước mã.
 
 **Files:**
+
 - Modify: `src/server/orders/create-order.ts`, `src/app/api/orders/route.ts`, `src/lib/sync/types.ts`, `src/components/pos/pos-screen.tsx`
 - Test: `tests/server/orders/create-order.test.ts` (thêm test)
 
 **Interfaces:**
+
 - Sửa `CreateOrderInput` — thêm `preferredCode?: string | null`
 - Sửa `OrderPayload` — thêm `preferredCode?: string | null`
 
@@ -3707,51 +3900,51 @@ Vấn đề còn tồn từ Task 10: QR hiện lúc thanh toán nhưng mã đơn
 Thêm vào `describe("createOrder", ...)` trong `tests/server/orders/create-order.test.ts`:
 
 ```ts
-  it("dung ma don do may ban dat truoc", async () => {
-    const product = await seedProduct();
+it("dung ma don do may ban dat truoc", async () => {
+  const product = await seedProduct();
 
-    const result = await createOrder({
-      clientId: "pref1",
-      preferredCode: "DH7777",
-      lines: [cashLine(product.id)],
-      payments: [{ method: "cash", amount: 30000 }],
-    });
-
-    expect(result.order.code).toBe("DH7777");
+  const result = await createOrder({
+    clientId: "pref1",
+    preferredCode: "DH7777",
+    lines: [cashLine(product.id)],
+    payments: [{ method: "cash", amount: 30000 }],
   });
 
-  it("ma dat truoc bi trung thi tu sinh ma khac", async () => {
-    const product = await seedProduct();
+  expect(result.order.code).toBe("DH7777");
+});
 
-    await createOrder({
-      clientId: "pref2",
-      preferredCode: "DH8888",
-      lines: [cashLine(product.id)],
-      payments: [{ method: "cash", amount: 30000 }],
-    });
+it("ma dat truoc bi trung thi tu sinh ma khac", async () => {
+  const product = await seedProduct();
 
-    const second = await createOrder({
-      clientId: "pref3",
-      preferredCode: "DH8888",
-      lines: [cashLine(product.id)],
-      payments: [{ method: "cash", amount: 30000 }],
-    });
-
-    expect(second.order.code).not.toBe("DH8888");
-    expect(second.order.code).toMatch(/^DH\d+$/);
+  await createOrder({
+    clientId: "pref2",
+    preferredCode: "DH8888",
+    lines: [cashLine(product.id)],
+    payments: [{ method: "cash", amount: 30000 }],
   });
 
-  it("khong dat truoc thi van sinh ma tu dong", async () => {
-    const product = await seedProduct();
-
-    const result = await createOrder({
-      clientId: "pref4",
-      lines: [cashLine(product.id)],
-      payments: [{ method: "cash", amount: 30000 }],
-    });
-
-    expect(result.order.code).toMatch(/^DH\d+$/);
+  const second = await createOrder({
+    clientId: "pref3",
+    preferredCode: "DH8888",
+    lines: [cashLine(product.id)],
+    payments: [{ method: "cash", amount: 30000 }],
   });
+
+  expect(second.order.code).not.toBe("DH8888");
+  expect(second.order.code).toMatch(/^DH\d+$/);
+});
+
+it("khong dat truoc thi van sinh ma tu dong", async () => {
+  const product = await seedProduct();
+
+  const result = await createOrder({
+    clientId: "pref4",
+    lines: [cashLine(product.id)],
+    payments: [{ method: "cash", amount: 30000 }],
+  });
+
+  expect(result.order.code).toMatch(/^DH\d+$/);
+});
 ```
 
 - [ ] **Step 2: Chạy test, xác nhận FAIL**
@@ -3780,17 +3973,17 @@ export interface CreateOrderInput {
 Trong `prisma.$transaction`, thay dòng tính `code`:
 
 ```ts
-    const sequence = (await tx.order.count()) + 1;
+const sequence = (await tx.order.count()) + 1;
 
-    // Ma dat truoc chi duoc dung neu chua ai chiem — tranh vi pham unique.
-    let code = generateOrderCode(sequence);
-    if (input.preferredCode) {
-      const taken = await tx.order.findUnique({
-        where: { code: input.preferredCode },
-        select: { id: true },
-      });
-      if (!taken) code = input.preferredCode;
-    }
+// Ma dat truoc chi duoc dung neu chua ai chiem — tranh vi pham unique.
+let code = generateOrderCode(sequence);
+if (input.preferredCode) {
+  const taken = await tx.order.findUnique({
+    where: { code: input.preferredCode },
+    select: { id: true },
+  });
+  if (!taken) code = input.preferredCode;
+}
 ```
 
 Rồi dùng `code` thay cho `generateOrderCode(sequence)` trong `data`:
@@ -3827,16 +4020,16 @@ Thêm vào `src/lib/sync/types.ts`, interface `OrderPayload`:
 Trong `src/components/pos/pos-screen.tsx`, thêm state ngay dưới các state khác:
 
 ```tsx
-  // Ma dat truoc de QR mang dung ma don. Sinh lai sau moi lan ban xong.
-  const [pendingCode, setPendingCode] = useState(
-    () => `DH${Date.now().toString().slice(-6)}`,
-  );
+// Ma dat truoc de QR mang dung ma don. Sinh lai sau moi lan ban xong.
+const [pendingCode, setPendingCode] = useState(
+  () => `DH${Date.now().toString().slice(-6)}`,
+);
 ```
 
 Đổi prop của `PaymentDialog`:
 
 ```tsx
-        orderCode={pendingCode}
+orderCode = { pendingCode };
 ```
 
 Trong `handleConfirm`, thêm `preferredCode` vào payload và sinh mã mới sau khi bán xong:
@@ -3851,7 +4044,7 @@ Trong `handleConfirm`, thêm `preferredCode` vào payload và sinh mã mới sau
 và ngay trước `clear()`:
 
 ```tsx
-    setPendingCode(`DH${Date.now().toString().slice(-6)}`);
+setPendingCode(`DH${Date.now().toString().slice(-6)}`);
 ```
 
 - [ ] **Step 8: Kiểm tra bằng tay**
@@ -3874,9 +4067,11 @@ git commit -m "feat(orders): let POS reserve order code for QR"
 ## Task 16: Khung `/admin` và trang sản phẩm
 
 **Files:**
+
 - Create: `src/app/admin/layout.tsx`, `src/app/admin/products/page.tsx`, `src/app/admin/products/product-form.tsx`, `src/app/admin/products/actions.ts`
 
 **Interfaces:**
+
 - Consumes: `saveProduct`, `softDeleteProduct` (Task 12), `prisma` (Plan 1), `formatVnd` (Plan 1)
 - Produces: `saveProductAction(formData: FormData)`, `deleteProductAction(id: string)`
 
@@ -3910,7 +4105,7 @@ export default function AdminLayout({
             <li key={item.href}>
               <Link
                 href={item.href}
-                className="block rounded px-3 py-2 hover:bg-accent"
+                className="hover:bg-accent block rounded px-3 py-2"
               >
                 {item.label}
               </Link>
@@ -4012,14 +4207,21 @@ export function ProductForm({ categories }: ProductFormProps) {
   }
 
   return (
-    <form action={handleAction} className="grid grid-cols-2 gap-3 rounded-lg border p-4">
+    <form
+      action={handleAction}
+      className="grid grid-cols-2 gap-3 rounded-lg border p-4"
+    >
       <label className="col-span-2 block">
-        <span className="text-sm text-muted-foreground">Tên sản phẩm</span>
-        <input name="name" required className="mt-1 w-full rounded border px-3 py-2" />
+        <span className="text-muted-foreground text-sm">Tên sản phẩm</span>
+        <input
+          name="name"
+          required
+          className="mt-1 w-full rounded border px-3 py-2"
+        />
       </label>
 
       <label className="col-span-2 block">
-        <span className="text-sm text-muted-foreground">
+        <span className="text-muted-foreground text-sm">
           Tên gọi khác (ngăn cách bằng dấu phẩy) — giúp tìm nhanh hàng phụ tùng
         </span>
         <input
@@ -4030,13 +4232,20 @@ export function ProductForm({ categories }: ProductFormProps) {
       </label>
 
       <label className="block">
-        <span className="text-sm text-muted-foreground">Mã nội bộ</span>
-        <input name="sku" placeholder="PT-102" className="mt-1 w-full rounded border px-3 py-2" />
+        <span className="text-muted-foreground text-sm">Mã nội bộ</span>
+        <input
+          name="sku"
+          placeholder="PT-102"
+          className="mt-1 w-full rounded border px-3 py-2"
+        />
       </label>
 
       <label className="block">
-        <span className="text-sm text-muted-foreground">Danh mục</span>
-        <select name="categoryId" className="mt-1 w-full rounded border px-3 py-2">
+        <span className="text-muted-foreground text-sm">Danh mục</span>
+        <select
+          name="categoryId"
+          className="mt-1 w-full rounded border px-3 py-2"
+        >
           <option value="">— Không —</option>
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
@@ -4047,28 +4256,51 @@ export function ProductForm({ categories }: ProductFormProps) {
       </label>
 
       <label className="block">
-        <span className="text-sm text-muted-foreground">Đơn vị</span>
-        <input name="unit" defaultValue="cái" required className="mt-1 w-full rounded border px-3 py-2" />
+        <span className="text-muted-foreground text-sm">Đơn vị</span>
+        <input
+          name="unit"
+          defaultValue="cái"
+          required
+          className="mt-1 w-full rounded border px-3 py-2"
+        />
       </label>
 
       <label className="block">
-        <span className="text-sm text-muted-foreground">Tồn kho</span>
-        <input name="stock" type="number" step="any" defaultValue="0" className="mt-1 w-full rounded border px-3 py-2" />
+        <span className="text-muted-foreground text-sm">Tồn kho</span>
+        <input
+          name="stock"
+          type="number"
+          step="any"
+          defaultValue="0"
+          className="mt-1 w-full rounded border px-3 py-2"
+        />
       </label>
 
       <label className="block">
-        <span className="text-sm text-muted-foreground">Giá bán (VND)</span>
-        <input name="price" type="number" defaultValue="0" className="mt-1 w-full rounded border px-3 py-2" />
+        <span className="text-muted-foreground text-sm">Giá bán (VND)</span>
+        <input
+          name="price"
+          type="number"
+          defaultValue="0"
+          className="mt-1 w-full rounded border px-3 py-2"
+        />
       </label>
 
       <label className="block">
-        <span className="text-sm text-muted-foreground">Giá vốn (VND)</span>
-        <input name="costPrice" type="number" defaultValue="0" className="mt-1 w-full rounded border px-3 py-2" />
+        <span className="text-muted-foreground text-sm">Giá vốn (VND)</span>
+        <input
+          name="costPrice"
+          type="number"
+          defaultValue="0"
+          className="mt-1 w-full rounded border px-3 py-2"
+        />
       </label>
 
       <div className="col-span-2 flex items-center gap-3">
         <Button type="submit">Thêm sản phẩm</Button>
-        {message ? <span className="text-sm text-muted-foreground">{message}</span> : null}
+        {message ? (
+          <span className="text-muted-foreground text-sm">{message}</span>
+        ) : null}
       </div>
     </form>
   );
@@ -4107,7 +4339,7 @@ export default async function ProductsPage() {
       <ProductForm categories={categories} />
 
       <table className="w-full text-left">
-        <thead className="border-b text-sm text-muted-foreground">
+        <thead className="text-muted-foreground border-b text-sm">
           <tr>
             <th className="py-2">Tên</th>
             <th>Danh mục</th>
@@ -4121,17 +4353,21 @@ export default async function ProductsPage() {
               <td className="py-2">
                 <span className="font-medium">{product.name}</span>
                 {product.aliases ? (
-                  <span className="ml-2 text-sm text-muted-foreground">
+                  <span className="text-muted-foreground ml-2 text-sm">
                     ({product.aliases})
                   </span>
                 ) : null}
               </td>
-              <td className="text-sm text-muted-foreground">
+              <td className="text-muted-foreground text-sm">
                 {product.category?.name ?? "—"}
               </td>
-              <td className="text-right tabular-nums">{formatVnd(product.price)}</td>
               <td className="text-right tabular-nums">
-                <span className={product.stock < 0 ? "text-red-600" : undefined}>
+                {formatVnd(product.price)}
+              </td>
+              <td className="text-right tabular-nums">
+                <span
+                  className={product.stock < 0 ? "text-red-600" : undefined}
+                >
                   {product.stock} {product.unit}
                 </span>
               </td>
@@ -4164,9 +4400,11 @@ git commit -m "feat(admin): add product management page"
 ## Task 17: Danh mục, đơn hàng, công nợ, báo cáo
 
 **Files:**
+
 - Create: `src/app/admin/categories/page.tsx` + `actions.ts`, `src/app/admin/orders/page.tsx` + `actions.ts`, `src/app/admin/debts/page.tsx` + `actions.ts`, `src/app/admin/reports/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `prisma` (Plan 1), `cancelOrder` (Task 12), `getDailyRevenue`/`getTopProducts`/`getLowStockProducts` (Task 13), `formatVnd` (Plan 1)
 - Produces: `saveCategoryAction`, `cancelOrderAction`, `settleDebtAction`
 
@@ -4228,12 +4466,21 @@ export default async function CategoriesPage() {
 
       <form action={saveCategoryAction} className="flex items-end gap-2">
         <label className="flex-1">
-          <span className="text-sm text-muted-foreground">Tên danh mục</span>
-          <input name="name" required className="mt-1 w-full rounded border px-3 py-2" />
+          <span className="text-muted-foreground text-sm">Tên danh mục</span>
+          <input
+            name="name"
+            required
+            className="mt-1 w-full rounded border px-3 py-2"
+          />
         </label>
         <label className="w-24">
-          <span className="text-sm text-muted-foreground">Thứ tự</span>
-          <input name="sortOrder" type="number" defaultValue="0" className="mt-1 w-full rounded border px-3 py-2" />
+          <span className="text-muted-foreground text-sm">Thứ tự</span>
+          <input
+            name="sortOrder"
+            type="number"
+            defaultValue="0"
+            className="mt-1 w-full rounded border px-3 py-2"
+          />
         </label>
         <Button type="submit">Thêm</Button>
       </form>
@@ -4242,7 +4489,7 @@ export default async function CategoriesPage() {
         {categories.map((category) => (
           <li key={category.id} className="flex justify-between py-3">
             <span>{category.name}</span>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-muted-foreground text-sm">
               {category._count.products} sản phẩm
             </span>
           </li>
@@ -4314,10 +4561,12 @@ export default async function OrdersPage() {
                   </span>
                 ) : null}
               </p>
-              <p className="text-sm text-muted-foreground">
-                {order.items.map((item) => `${item.nameSnapshot} ×${item.quantity}`).join(", ")}
+              <p className="text-muted-foreground text-sm">
+                {order.items
+                  .map((item) => `${item.nameSnapshot} ×${item.quantity}`)
+                  .join(", ")}
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 {STATUS_LABEL[order.status] ?? order.status}
                 {order.customer ? ` — ${order.customer.name}` : ""}
               </p>
@@ -4329,7 +4578,10 @@ export default async function OrdersPage() {
               </span>
               {order.status !== "cancelled" ? (
                 <form action={cancelOrderAction.bind(null, order.id)}>
-                  <button type="submit" className="text-sm text-red-600 hover:underline">
+                  <button
+                    type="submit"
+                    className="text-sm text-red-600 hover:underline"
+                  >
                     Huỷ đơn
                   </button>
                 </form>
@@ -4404,7 +4656,10 @@ export default async function DebtsPage() {
       name: order.customer?.name ?? "Khách lẻ",
       total: 0,
     };
-    byCustomer.set(key, { name: current.name, total: current.total + order.total });
+    byCustomer.set(key, {
+      name: current.name,
+      total: current.total + order.total,
+    });
   }
 
   return (
@@ -4420,7 +4675,9 @@ export default async function DebtsPage() {
             {[...byCustomer.values()].map((row) => (
               <li key={row.name} className="flex justify-between py-2">
                 <span>{row.name}</span>
-                <span className="font-semibold tabular-nums">{formatVnd(row.total)}</span>
+                <span className="font-semibold tabular-nums">
+                  {formatVnd(row.total)}
+                </span>
               </li>
             ))}
           </ul>
@@ -4431,10 +4688,13 @@ export default async function DebtsPage() {
         <h2 className="mb-2 font-medium">Từng đơn nợ</h2>
         <ul className="divide-y">
           {debts.map((order) => (
-            <li key={order.id} className="flex items-center justify-between py-3">
+            <li
+              key={order.id}
+              className="flex items-center justify-between py-3"
+            >
               <div>
                 <p className="font-medium">{order.code}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   {order.customer?.name ?? "Khách lẻ"}
                   {order.customer?.phone ? ` — ${order.customer.phone}` : ""}
                 </p>
@@ -4444,7 +4704,10 @@ export default async function DebtsPage() {
                   {formatVnd(order.total)}
                 </span>
                 <form action={settleDebtAction.bind(null, order.id)}>
-                  <button type="submit" className="text-sm text-green-700 hover:underline">
+                  <button
+                    type="submit"
+                    className="text-sm text-green-700 hover:underline"
+                  >
                     Khách trả tiền
                   </button>
                 </form>
@@ -4493,7 +4756,7 @@ export default async function ReportsPage() {
               <li key={row.date} className="flex justify-between py-2">
                 <span>
                   {row.date}
-                  <span className="ml-2 text-sm text-muted-foreground">
+                  <span className="text-muted-foreground ml-2 text-sm">
                     {row.orderCount} đơn
                   </span>
                 </span>
@@ -4512,7 +4775,9 @@ export default async function ReportsPage() {
           {topProducts.map((row) => (
             <li key={row.id} className="flex justify-between py-2">
               <span>{row.name}</span>
-              <span className="text-muted-foreground">{row.soldCount} lượt</span>
+              <span className="text-muted-foreground">
+                {row.soldCount} lượt
+              </span>
             </li>
           ))}
         </ul>
@@ -4565,9 +4830,11 @@ git commit -m "feat(admin): add categories, orders, debts and reports pages"
 ## Task 18: E2E offline và quản lý sản phẩm
 
 **Files:**
+
 - Create: `e2e/pos-offline-sale.spec.ts`, `e2e/admin-products.spec.ts`
 
 **Interfaces:**
+
 - Consumes: toàn bộ Task 1–17
 
 - [ ] **Step 1: Viết E2E offline**
@@ -4585,7 +4852,10 @@ test.describe("Bán khi mất mạng", () => {
     await page.waitForURL("**/pos");
   });
 
-  test("mat mang van ban duoc, co mang lai thi tu dong bo", async ({ page, context }) => {
+  test("mat mang van ban duoc, co mang lai thi tu dong bo", async ({
+    page,
+    context,
+  }) => {
     const search = page.getByRole("combobox");
 
     // Ban binh thuong truoc de chac chan luong online van chay
@@ -4615,7 +4885,9 @@ test.describe("Bán khi mất mạng", () => {
     await context.setOffline(false);
     await page.getByText(/1 đơn chờ đồng bộ/).click();
 
-    await expect(page.getByText(/đơn chờ đồng bộ/)).toBeHidden({ timeout: 10_000 });
+    await expect(page.getByText(/đơn chờ đồng bộ/)).toBeHidden({
+      timeout: 10_000,
+    });
   });
 
   test("giu don roi mo lai", async ({ page }) => {
@@ -4650,13 +4922,13 @@ test.describe("Quản lý sản phẩm", () => {
     await page.waitForURL("**/pos");
   });
 
-  test("them san pham roi tim duoc ngay o POS qua ten goi khac", async ({ page }) => {
+  test("them san pham roi tim duoc ngay o POS qua ten goi khac", async ({
+    page,
+  }) => {
     await page.goto("/admin/products");
 
     await page.getByLabel("Tên sản phẩm").fill("Ruột xe Dream");
-    await page
-      .getByLabel(/tên gọi khác/i)
-      .fill("sam dream, ruot dream");
+    await page.getByLabel(/tên gọi khác/i).fill("sam dream, ruot dream");
     await page.getByLabel("Đơn vị").fill("cái");
     await page.getByLabel("Giá bán (VND)").fill("55000");
     await page.getByLabel("Tồn kho").fill("10");

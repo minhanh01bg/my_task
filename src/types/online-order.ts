@@ -74,6 +74,7 @@ export const onlineOrderResponseSchema = z.object({
       status: z.string(),
       fulfillmentStatus: z.string(),
       accessUrl: z.string().startsWith("/").optional(),
+      receiptUrl: z.string().startsWith("/").optional(),
     }),
     duplicated: z.boolean(),
   }),
@@ -83,7 +84,10 @@ export type OnlineOrderResponse = z.infer<typeof onlineOrderResponseSchema>;
 
 export class OnlineOrderError extends Error {
   constructor(
-    public readonly code: "OUT_OF_STOCK" | "PRODUCT_UNAVAILABLE",
+    public readonly code:
+      | "OUT_OF_STOCK"
+      | "PRODUCT_UNAVAILABLE"
+      | "IDEMPOTENCY_CONFLICT",
     message: string,
     public readonly productIds: string[] = [],
   ) {

@@ -51,6 +51,42 @@ describe("PaymentDialog", () => {
     expect(screen.getByTestId("payment-change")).toHaveTextContent("100.000");
   });
 
+  it("cong don cac menh gia tien mat khi bam lien tiep", async () => {
+    const user = userEvent.setup();
+    renderDialog({ total: 120000 });
+
+    await user.click(screen.getByRole("button", { name: "Cộng 100.000 ₫" }));
+    await user.click(screen.getByRole("button", { name: "Cộng 50.000 ₫" }));
+
+    expect(screen.getByLabelText(/tiền khách đưa/i)).toHaveValue(150000);
+    expect(screen.getByTestId("payment-change")).toHaveTextContent("30.000");
+  });
+
+  it("co du menh gia can thiet va cho phep lam lai so tien", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    for (const amount of [
+      "1.000",
+      "2.000",
+      "5.000",
+      "10.000",
+      "20.000",
+      "50.000",
+      "100.000",
+      "200.000",
+      "500.000",
+    ]) {
+      expect(
+        screen.getByRole("button", { name: `Cộng ${amount} ₫` }),
+      ).toBeInTheDocument();
+    }
+
+    await user.click(screen.getByRole("button", { name: "Cộng 500.000 ₫" }));
+    await user.click(screen.getByRole("button", { name: "Nhập lại từ đầu" }));
+    expect(screen.getByLabelText(/tiền khách đưa/i)).toHaveValue(null);
+  });
+
   it("xac nhan tien mat tra ve mot khoan thanh toan cash", async () => {
     const user = userEvent.setup();
     const onConfirm = vi.fn();

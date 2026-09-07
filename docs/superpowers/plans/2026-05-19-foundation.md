@@ -17,6 +17,7 @@
 ## File Structure
 
 **Create:**
+
 - `.env.example` — required env vars template
 - `src/server/db/mongoose.ts` — HMR-safe Mongoose singleton
 - `src/server/db/models/User.ts` — Mongoose User model
@@ -41,6 +42,7 @@
 - `tests/config/env.test.ts`
 
 **Modify:**
+
 - `package.json` — add dependencies
 - `src/config/env.ts` — extend Zod schema for Mongo + NextAuth + GitHub
 - `src/providers/index.tsx` — compose `SessionProvider` outermost
@@ -55,30 +57,37 @@
 ## Task 1: Add dependencies
 
 **Files:**
+
 - Modify: `package.json`
 
 - [ ] **Step 1: Install runtime deps**
 
 Run:
+
 ```bash
 pnpm add mongoose@^8 next-auth@beta @auth/mongodb-adapter mongodb
 ```
+
 Expected: lockfile updated; no peer warnings beyond Next 16.
 
 - [ ] **Step 2: Install dev deps**
 
 Run:
+
 ```bash
 pnpm add -D mongodb-memory-server@^10
 ```
+
 Expected: lockfile updated.
 
 - [ ] **Step 3: Sanity check installs**
 
 Run:
+
 ```bash
 pnpm typecheck
 ```
+
 Expected: PASS (no new files yet; baseline still green).
 
 - [ ] **Step 4: Commit**
@@ -93,6 +102,7 @@ git commit -m "chore(deps): add mongoose, next-auth v5, mongodb adapter, mongodb
 ## Task 2: Create `.env.example`
 
 **Files:**
+
 - Create: `.env.example`
 
 - [ ] **Step 1: Write `.env.example`**
@@ -136,6 +146,7 @@ git commit -m "chore: add .env.example for foundation env vars"
 ## Task 3: Extend env schema with failing test first
 
 **Files:**
+
 - Modify: `src/config/env.ts`
 - Create: `tests/config/env.test.ts`
 
@@ -184,6 +195,7 @@ describe("env schema", () => {
 ```bash
 pnpm test tests/config/env.test.ts
 ```
+
 Expected: FAIL (`MONGODB_URI` not in schema).
 
 - [ ] **Step 3: Update `src/config/env.ts`**
@@ -231,6 +243,7 @@ export const env = parsed.data;
 ```bash
 pnpm test tests/config/env.test.ts
 ```
+
 Expected: 2 passed.
 
 - [ ] **Step 5: Commit**
@@ -245,6 +258,7 @@ git commit -m "feat(config): extend env schema with auth + mongodb vars"
 ## Task 4: Mongoose singleton (HMR-safe)
 
 **Files:**
+
 - Create: `src/server/db/mongoose.ts`
 - Create: `tests/server/db/mongoose.test.ts`
 - Modify: `vitest.setup.ts`
@@ -296,6 +310,7 @@ describe("mongoose singleton", () => {
 ```bash
 pnpm test tests/server/db/mongoose.test.ts
 ```
+
 Expected: FAIL (module not found).
 
 - [ ] **Step 4: Create singleton**
@@ -308,11 +323,14 @@ import mongoose, { type Mongoose } from "mongoose";
 import { env } from "@/config/env";
 
 declare global {
-  var __mongoose__: { conn: Mongoose | null; promise: Promise<Mongoose> | null } | undefined;
+  var __mongoose__:
+    | { conn: Mongoose | null; promise: Promise<Mongoose> | null }
+    | undefined;
 }
 
 const cache =
-  globalThis.__mongoose__ ?? (globalThis.__mongoose__ = { conn: null, promise: null });
+  globalThis.__mongoose__ ??
+  (globalThis.__mongoose__ = { conn: null, promise: null });
 
 export async function connectMongoose(): Promise<Mongoose> {
   if (cache.conn) return cache.conn;
@@ -340,6 +358,7 @@ export async function disconnect(): Promise<void> {
 ```bash
 pnpm test tests/server/db/mongoose.test.ts
 ```
+
 Expected: 1 passed.
 
 - [ ] **Step 6: Commit**
@@ -354,6 +373,7 @@ git commit -m "feat(db): add HMR-safe mongoose singleton"
 ## Task 5: MongoDB driver client for Auth.js adapter
 
 **Files:**
+
 - Create: `src/server/db/mongo-client.ts`
 
 - [ ] **Step 1: Create client**
@@ -380,6 +400,7 @@ export const mongoClientPromise: Promise<MongoClient> =
 ```bash
 pnpm typecheck
 ```
+
 Expected: PASS.
 
 - [ ] **Step 3: Commit**
@@ -394,13 +415,22 @@ git commit -m "feat(db): add mongodb driver client for auth adapter"
 ## Task 6: User Mongoose model
 
 **Files:**
+
 - Create: `src/server/db/models/User.ts`
 - Create: `tests/server/db/models/user.test.ts`
 
 - [ ] **Step 1: Write failing test**
 
 ```ts
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  vi,
+} from "vitest";
 import { MongoMemoryServer } from "mongodb-memory-server";
 
 vi.mock("@/config/env", () => ({ env: { MONGODB_URI: "" } }));
@@ -445,6 +475,7 @@ describe("User model", () => {
 ```bash
 pnpm test tests/server/db/models/user.test.ts
 ```
+
 Expected: FAIL (module not found).
 
 - [ ] **Step 3: Create model**
@@ -452,7 +483,13 @@ Expected: FAIL (module not found).
 `src/server/db/models/User.ts`:
 
 ```ts
-import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import {
+  Schema,
+  model,
+  models,
+  type InferSchemaType,
+  type Model,
+} from "mongoose";
 
 const PushSubscriptionSchema = new Schema(
   {
@@ -476,7 +513,11 @@ const SettingsSchema = new Schema(
     },
     defaultRemindBeforeMin: { type: Number, default: 30 },
     weekStartsOn: { type: Number, enum: [0, 1], default: 1 },
-    theme: { type: String, enum: ["system", "light", "dark"], default: "system" },
+    theme: {
+      type: String,
+      enum: ["system", "light", "dark"],
+      default: "system",
+    },
   },
   { _id: false },
 );
@@ -507,6 +548,7 @@ export const UserModel: Model<UserDoc> =
 ```bash
 pnpm test tests/server/db/models/user.test.ts
 ```
+
 Expected: 2 passed.
 
 - [ ] **Step 5: Commit**
@@ -521,6 +563,7 @@ git commit -m "feat(db): add User mongoose model with settings + push subs"
 ## Task 7: Auth.js v5 adapter wiring
 
 **Files:**
+
 - Create: `src/server/auth/adapter.ts`
 
 - [ ] **Step 1: Write adapter wrapper**
@@ -546,6 +589,7 @@ export const authAdapter = MongoDBAdapter(mongoClientPromise, {
 ```bash
 pnpm typecheck
 ```
+
 Expected: PASS.
 
 - [ ] **Step 3: Commit**
@@ -560,6 +604,7 @@ git commit -m "feat(auth): add mongodb adapter for next-auth"
 ## Task 8: NextAuth v5 config with failing test
 
 **Files:**
+
 - Create: `src/server/auth/auth.ts`
 - Create: `tests/server/auth/auth.test.ts`
 
@@ -585,6 +630,7 @@ describe("auth config", () => {
 ```bash
 pnpm test tests/server/auth/auth.test.ts
 ```
+
 Expected: FAIL (module not found).
 
 - [ ] **Step 3: Create auth config**
@@ -637,6 +683,7 @@ declare module "next-auth" {
 ```bash
 pnpm test tests/server/auth/auth.test.ts
 ```
+
 Expected: 1 passed.
 
 - [ ] **Step 5: Commit**
@@ -651,6 +698,7 @@ git commit -m "feat(auth): wire next-auth v5 github provider with mongo adapter"
 ## Task 9: Auth.js route handler
 
 **Files:**
+
 - Create: `src/app/api/auth/[...nextauth]/route.ts`
 
 - [ ] **Step 1: Create route**
@@ -672,6 +720,7 @@ export const { GET, POST } = handlers;
 ```bash
 pnpm typecheck
 ```
+
 Expected: PASS.
 
 - [ ] **Step 3: Commit**
@@ -686,6 +735,7 @@ git commit -m "feat(auth): expose next-auth route handlers"
 ## Task 10: `requireSession()` helper
 
 **Files:**
+
 - Create: `src/lib/session.ts`
 
 - [ ] **Step 1: Create helper**
@@ -709,6 +759,7 @@ export async function requireSession() {
 ```bash
 pnpm typecheck
 ```
+
 Expected: PASS.
 
 - [ ] **Step 3: Commit**
@@ -723,6 +774,7 @@ git commit -m "feat(auth): add requireSession helper for rsc + actions"
 ## Task 11: Middleware auth gate with failing test
 
 **Files:**
+
 - Create: `src/middleware.ts`
 - Create: `tests/middleware.test.ts`
 
@@ -745,7 +797,9 @@ function req(pathname: string) {
 
 describe("middleware", () => {
   it("redirects unauthenticated user from /today to /signin", async () => {
-    (mockedAuth as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+    (mockedAuth as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      null,
+    );
     const res = await middleware(req("/today"));
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/signin");
@@ -760,7 +814,9 @@ describe("middleware", () => {
   });
 
   it("lets /api/auth/* through unauthenticated", async () => {
-    (mockedAuth as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+    (mockedAuth as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      null,
+    );
     const res = await middleware(req("/api/auth/signin"));
     expect(res.status).toBe(200);
   });
@@ -772,6 +828,7 @@ describe("middleware", () => {
 ```bash
 pnpm test tests/middleware.test.ts
 ```
+
 Expected: FAIL.
 
 - [ ] **Step 3: Create middleware**
@@ -817,6 +874,7 @@ export const config = {
 ```bash
 pnpm test tests/middleware.test.ts
 ```
+
 Expected: 3 passed.
 
 - [ ] **Step 5: Commit**
@@ -831,6 +889,7 @@ git commit -m "feat(auth): add middleware gate for app + api routes"
 ## Task 12: SessionProvider in client tree
 
 **Files:**
+
 - Create: `src/providers/session-provider.tsx`
 - Modify: `src/providers/index.tsx`
 
@@ -878,6 +937,7 @@ export function Providers({ children }: PropsWithChildren) {
 ```bash
 pnpm typecheck
 ```
+
 Expected: PASS.
 
 - [ ] **Step 4: Commit**
@@ -892,6 +952,7 @@ git commit -m "feat(providers): wire next-auth session provider"
 ## Task 13: Signin page
 
 **Files:**
+
 - Create: `src/app/(auth)/signin/page.tsx`
 
 - [ ] **Step 1: Create page**
@@ -943,6 +1004,7 @@ export default async function SignInPage({
 ```bash
 pnpm typecheck
 ```
+
 Expected: PASS.
 
 - [ ] **Step 3: Commit**
@@ -957,6 +1019,7 @@ git commit -m "feat(auth): add signin page with github action"
 ## Task 14: App shell — sidebar + topbar + (app) layout
 
 **Files:**
+
 - Create: `src/components/shared/sidebar.tsx`
 - Create: `src/components/shared/topbar.tsx`
 - Create: `src/app/(app)/layout.tsx`
@@ -976,8 +1039,8 @@ const NAV = [
 
 export function Sidebar() {
   return (
-    <aside className="hidden w-56 shrink-0 border-r border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 md:block">
-      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+    <aside className="hidden w-56 shrink-0 border-r border-zinc-200 bg-white p-4 md:block dark:border-zinc-800 dark:bg-zinc-900">
+      <h2 className="mb-4 text-sm font-semibold tracking-wide text-zinc-500 uppercase">
         Navigate
       </h2>
       <nav className="flex flex-col gap-1">
@@ -1003,7 +1066,11 @@ export function Sidebar() {
 ```tsx
 import { signOut } from "@/server/auth/auth";
 
-export function Topbar({ user }: { user: { name?: string | null; email?: string | null } }) {
+export function Topbar({
+  user,
+}: {
+  user: { name?: string | null; email?: string | null };
+}) {
   return (
     <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="text-sm font-medium">Personal Tasks</div>
@@ -1036,7 +1103,11 @@ import { Sidebar } from "@/components/shared/sidebar";
 import { Topbar } from "@/components/shared/topbar";
 import { requireSession } from "@/lib/session";
 
-export default async function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const session = await requireSession();
   return (
     <div className="flex min-h-screen">
@@ -1055,6 +1126,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 ```bash
 pnpm typecheck
 ```
+
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -1069,6 +1141,7 @@ git commit -m "feat(app): add session-gated shell with sidebar + topbar"
 ## Task 15: Placeholder Today / Inbox / Settings pages
 
 **Files:**
+
 - Create: `src/app/(app)/today/page.tsx`
 - Create: `src/app/(app)/inbox/page.tsx`
 - Create: `src/app/(app)/settings/page.tsx`
@@ -1131,6 +1204,7 @@ export default async function SettingsPage() {
 ```bash
 pnpm typecheck
 ```
+
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -1145,6 +1219,7 @@ git commit -m "feat(app): add today/inbox/settings placeholder routes"
 ## Task 16: Redirect `/` → `/today`
 
 **Files:**
+
 - Modify: `src/app/page.tsx`
 
 - [ ] **Step 1: Replace landing with redirect**
@@ -1164,6 +1239,7 @@ export default function Home() {
 ```bash
 pnpm typecheck
 ```
+
 Expected: PASS.
 
 - [ ] **Step 3: Commit**
@@ -1182,6 +1258,7 @@ git commit -m "feat(app): redirect root to /today"
 ```bash
 pnpm lint
 ```
+
 Expected: 0 errors.
 
 - [ ] **Step 2: Typecheck**
@@ -1189,6 +1266,7 @@ Expected: 0 errors.
 ```bash
 pnpm typecheck
 ```
+
 Expected: PASS.
 
 - [ ] **Step 3: Unit tests**
@@ -1196,6 +1274,7 @@ Expected: PASS.
 ```bash
 pnpm test
 ```
+
 Expected: all suites green (env, mongoose, user model, auth config, middleware).
 
 - [ ] **Step 4: Manual smoke (operator)**

@@ -25,6 +25,7 @@
 *.pem
 __pycache__/
 *.py[cod]
+.vscode/
 
 # Product images uploaded at runtime
 public/uploads/products/*

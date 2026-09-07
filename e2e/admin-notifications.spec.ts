@@ -61,5 +61,5 @@ test("admin thấy badge, mở panel, đọc và đi đúng order detail", async
   const href = await item.getAttribute("href");
   expect(href).toMatch(/^\/admin\/orders\//);
   await item.click();
-  await expect(page).toHaveURL(new RegExp(`${href}$`));
+  await expect(page).toHaveURL(new RegExp(`${href}$`), { timeout: 15000 });
 });

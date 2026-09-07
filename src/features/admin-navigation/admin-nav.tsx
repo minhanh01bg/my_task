@@ -26,6 +26,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { AdminLogoutButton } from "@/features/admin-navigation/admin-logout-button";
 import { NotificationButton } from "@/features/admin-notifications/notification-button";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +36,12 @@ const NAV = [
     label: "Quầy bán hàng",
     shortLabel: "Bán hàng",
     icon: ShoppingCart,
+  },
+  {
+    href: "/shop",
+    label: "Xem cửa hàng online",
+    shortLabel: "Cửa hàng",
+    icon: Storefront,
   },
   {
     href: "/admin/products",
@@ -173,6 +180,7 @@ export function AdminNav() {
             ))}
           </ul>
         </nav>
+        <AdminLogoutButton className="border-border mt-5 border-t pt-3" />
       </aside>
 
       <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
@@ -252,6 +260,10 @@ export function AdminNav() {
               ))}
             </ul>
           </nav>
+          <AdminLogoutButton
+            className="border-border mt-3 border-t pt-3"
+            onLogout={() => setMenuOpen(false)}
+          />
         </DialogContent>
       </Dialog>
     </>

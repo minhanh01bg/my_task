@@ -36,18 +36,18 @@ Web bán hàng tại quầy cho một cửa hàng tạp hoá tổng hợp: hàng
 
 ## 2. Quyết định đã chốt
 
-| Chủ đề | Quyết định | Lý do |
-|---|---|---|
-| Vị trí trong repo | POS **thay thế** spec personal task app | User không làm task app nữa |
-| Database | **SQLite + Prisma** | Một cửa hàng, dữ liệu nhỏ, vận hành đơn giản |
-| Chuyển khoản | **VietQR động, đối soát thủ công** | Không cần hợp đồng ngân hàng / API bên thứ ba |
-| Offline | **Server cloud + hàng đợi offline (PWA)** | Bán được khi rớt mạng, xem doanh thu từ xa, sẵn đường cho đơn online |
-| Kiến trúc | **Hướng 1 — Server-first, offline là lớp phòng thủ** | Nhiều máy là ngoại lệ (user: "ít khi 2 máy"), không đáng trả giá cho merge hai chiều |
-| Xung đột tồn kho | **Luôn nhận đơn, cho tồn âm, gắn cảnh báo** | Không bao giờ từ chối đơn đã thu tiền khách |
-| Giá | Giá niêm yết + **sửa được trên đơn** + **dòng dịch vụ** | Tạp hoá có mặc cả; tiền công sửa xe ghi chung hoá đơn |
-| Tìm kiếm | Bỏ dấu + nhiều từ rời + **từ khoá phụ** + mã nội bộ | Phụ tùng xe máy gọi theo tên lóng |
-| Ngôn ngữ | Route/code **tiếng Anh**, giao diện **tiếng Việt** | Nhất quán code, người dùng là người Việt |
-| Đơn vị tính | Số lượng **số thực** (kg, mét), tiền **số nguyên VND** | Có bán cân lẻ và dây theo mét |
+| Chủ đề            | Quyết định                                              | Lý do                                                                                |
+| ----------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Vị trí trong repo | POS **thay thế** spec personal task app                 | User không làm task app nữa                                                          |
+| Database          | **SQLite + Prisma**                                     | Một cửa hàng, dữ liệu nhỏ, vận hành đơn giản                                         |
+| Chuyển khoản      | **VietQR động, đối soát thủ công**                      | Không cần hợp đồng ngân hàng / API bên thứ ba                                        |
+| Offline           | **Server cloud + hàng đợi offline (PWA)**               | Bán được khi rớt mạng, xem doanh thu từ xa, sẵn đường cho đơn online                 |
+| Kiến trúc         | **Hướng 1 — Server-first, offline là lớp phòng thủ**    | Nhiều máy là ngoại lệ (user: "ít khi 2 máy"), không đáng trả giá cho merge hai chiều |
+| Xung đột tồn kho  | **Luôn nhận đơn, cho tồn âm, gắn cảnh báo**             | Không bao giờ từ chối đơn đã thu tiền khách                                          |
+| Giá               | Giá niêm yết + **sửa được trên đơn** + **dòng dịch vụ** | Tạp hoá có mặc cả; tiền công sửa xe ghi chung hoá đơn                                |
+| Tìm kiếm          | Bỏ dấu + nhiều từ rời + **từ khoá phụ** + mã nội bộ     | Phụ tùng xe máy gọi theo tên lóng                                                    |
+| Ngôn ngữ          | Route/code **tiếng Anh**, giao diện **tiếng Việt**      | Nhất quán code, người dùng là người Việt                                             |
+| Đơn vị tính       | Số lượng **số thực** (kg, mét), tiền **số nguyên VND**  | Có bán cân lẻ và dây theo mét                                                        |
 
 ## 3. Kiến trúc tổng thể
 
@@ -63,16 +63,16 @@ Ba tầng với ranh giới rõ ràng:
 
 ### Routing
 
-| Route | Mô tả | Offline |
-|---|---|---|
-| `/pos` | Màn hình bán hàng, toàn màn hình, không sidebar | Có (service worker cache) |
-| `/admin/products` | Quản lý sản phẩm | Không |
-| `/admin/categories` | Danh mục | Không |
-| `/admin/orders` | Đơn hàng | Không |
-| `/admin/debts` | Công nợ | Không |
-| `/admin/reports` | Báo cáo | Không |
-| `/admin/settings` | Cài đặt (ngân hàng, tên cửa hàng) | Không |
-| `/api/*` | Route handlers, payload validate bằng Zod | — |
+| Route               | Mô tả                                           | Offline                   |
+| ------------------- | ----------------------------------------------- | ------------------------- |
+| `/pos`              | Màn hình bán hàng, toàn màn hình, không sidebar | Có (service worker cache) |
+| `/admin/products`   | Quản lý sản phẩm                                | Không                     |
+| `/admin/categories` | Danh mục                                        | Không                     |
+| `/admin/orders`     | Đơn hàng                                        | Không                     |
+| `/admin/debts`      | Công nợ                                         | Không                     |
+| `/admin/reports`    | Báo cáo                                         | Không                     |
+| `/admin/settings`   | Cài đặt (ngân hàng, tên cửa hàng)               | Không                     |
+| `/api/*`            | Route handlers, payload validate bằng Zod       | —                         |
 
 `/pos` tách riêng vì là ứng dụng khác hẳn về giao diện: không menu, không gì thừa, tối ưu thao tác nhanh. `/admin` là trang quản trị bình thường.
 
@@ -255,7 +255,7 @@ Setting       key, value           // thông tin ngân hàng, tên cửa hàng
 
 ### Bốn quyết định đáng nói
 
-**`nameSnapshot` + `originalPrice` trên từng dòng đơn.** Đơn lưu tên và giá *tại thời điểm bán*. Đổi tên hàng hay tăng giá sau này, đơn cũ vẫn hiện đúng cái đã bán với giá đã bán. Không có thì báo cáo cũ sai hết.
+**`nameSnapshot` + `originalPrice` trên từng dòng đơn.** Đơn lưu tên và giá _tại thời điểm bán_. Đổi tên hàng hay tăng giá sau này, đơn cũ vẫn hiện đúng cái đã bán với giá đã bán. Không có thì báo cáo cũ sai hết.
 
 **`StockMovement` ghi mọi biến động ngay từ Spec 1.** `Product.stock` chỉ là số tổng cho nhanh; sự thật nằm ở chuỗi biến động. Đây là chỗ Spec 2 cắm vào — thêm `reason` mới là xong.
 
@@ -272,14 +272,14 @@ Setting       key, value           // thông tin ngân hàng, tên cửa hàng
 
 Server Components thuần, không offline.
 
-| Trang | Nội dung |
-|---|---|
+| Trang        | Nội dung                                                                                                        |
+| ------------ | --------------------------------------------------------------------------------------------------------------- |
 | **Sản phẩm** | Bảng có tìm kiếm; thêm/sửa/xoá mềm; sửa nhanh giá và tồn ngay trên dòng. Form gồm cả "tên gọi khác" và giá vốn. |
-| **Danh mục** | CRUD + sắp thứ tự — thứ tự này chính là thứ tự lưới bấm chọn ở `/pos`. |
-| **Đơn hàng** | Danh sách, lọc theo ngày và trạng thái, xem chi tiết, huỷ đơn (huỷ thì hoàn tồn kho). |
-| **Công nợ** | Ai nợ bao nhiêu, từ đơn nào, ghi nhận trả tiền. |
-| **Báo cáo** | Doanh thu theo ngày, hàng bán chạy, cảnh báo sắp hết hàng. Cố ý gọn — **báo cáo lãi để Spec 2**. |
-| **Cài đặt** | Tên cửa hàng, thông tin ngân hàng cho VietQR. |
+| **Danh mục** | CRUD + sắp thứ tự — thứ tự này chính là thứ tự lưới bấm chọn ở `/pos`.                                          |
+| **Đơn hàng** | Danh sách, lọc theo ngày và trạng thái, xem chi tiết, huỷ đơn (huỷ thì hoàn tồn kho).                           |
+| **Công nợ**  | Ai nợ bao nhiêu, từ đơn nào, ghi nhận trả tiền.                                                                 |
+| **Báo cáo**  | Doanh thu theo ngày, hàng bán chạy, cảnh báo sắp hết hàng. Cố ý gọn — **báo cáo lãi để Spec 2**.                |
+| **Cài đặt**  | Tên cửa hàng, thông tin ngân hàng cho VietQR.                                                                   |
 
 ## 9. Đăng nhập & bảo mật
 
@@ -297,14 +297,14 @@ Mức tối giản đủ dùng cho một cửa hàng: **một mật khẩu chung
 
 > **Nguyên tắc: không bao giờ chặn việc bán.**
 
-| Tình huống | Xử lý |
-|---|---|
-| Gửi đơn thất bại | Vào hàng đợi, bán tiếp, hiện "N đơn chờ đồng bộ". **Không** hiện lỗi đỏ doạ người dùng. |
-| Có mạng lại | Hàng đợi thử lại với giãn cách tăng dần; thử ngay khi trình duyệt báo online. |
-| Đơn lỗi nghiệp vụ (sản phẩm đã xoá) | Giữ lại, đánh dấu, hiện trong `/admin` để xử lý tay. **Không tự ý bỏ đơn.** |
-| Tồn âm | Nhận đơn bình thường, gắn cảnh báo. |
-| Danh mục cache cũ (>24h) | Nhắc làm mới, nhưng **vẫn cho bán**. |
-| Chưa cấu hình ngân hàng | Nút chuyển khoản báo "chưa cấu hình tài khoản". |
+| Tình huống                          | Xử lý                                                                                   |
+| ----------------------------------- | --------------------------------------------------------------------------------------- |
+| Gửi đơn thất bại                    | Vào hàng đợi, bán tiếp, hiện "N đơn chờ đồng bộ". **Không** hiện lỗi đỏ doạ người dùng. |
+| Có mạng lại                         | Hàng đợi thử lại với giãn cách tăng dần; thử ngay khi trình duyệt báo online.           |
+| Đơn lỗi nghiệp vụ (sản phẩm đã xoá) | Giữ lại, đánh dấu, hiện trong `/admin` để xử lý tay. **Không tự ý bỏ đơn.**             |
+| Tồn âm                              | Nhận đơn bình thường, gắn cảnh báo.                                                     |
+| Danh mục cache cũ (>24h)            | Nhắc làm mới, nhưng **vẫn cho bán**.                                                    |
+| Chưa cấu hình ngân hàng             | Nút chuyển khoản báo "chưa cấu hình tài khoản".                                         |
 
 ## 11. Kiểm thử
 
@@ -317,7 +317,7 @@ Mức tối giản đủ dùng cho một cửa hàng: **một mật khẩu chung
 
 ## 12. Chuẩn bị cho đơn online (chưa xây)
 
-Spec 1 chỉ làm phần *không làm bây giờ sẽ phải đập đi*:
+Spec 1 chỉ làm phần _không làm bây giờ sẽ phải đập đi_:
 
 - `Order.channel` (`pos` | `online`) có sẵn → thêm sau không phải sửa dữ liệu cũ
 - Nghiệp vụ tạo đơn (`src/server/orders/create-order.ts`) **tách khỏi UI POS** → đơn online dùng lại đúng hàm đó
@@ -327,8 +327,8 @@ Spec 1 chỉ làm phần *không làm bây giờ sẽ phải đập đi*:
 
 ## 13. Lộ trình
 
-| Spec | Nội dung | Thứ tự |
-|---|---|---|
-| **Spec 1** (tài liệu này) | POS + tìm kiếm + thanh toán + offline + quản lý sản phẩm | Làm trước |
-| **Spec 2** | Kho & mua hàng: nhà cung cấp, phiếu nhập, giá vốn bình quân, báo cáo lãi, kiểm kê | Ngay sau |
-| **Spec 3** | Đơn hàng online cho khách | Sau nữa |
+| Spec                      | Nội dung                                                                          | Thứ tự    |
+| ------------------------- | --------------------------------------------------------------------------------- | --------- |
+| **Spec 1** (tài liệu này) | POS + tìm kiếm + thanh toán + offline + quản lý sản phẩm                          | Làm trước |
+| **Spec 2**                | Kho & mua hàng: nhà cung cấp, phiếu nhập, giá vốn bình quân, báo cáo lãi, kiểm kê | Ngay sau  |
+| **Spec 3**                | Đơn hàng online cho khách                                                         | Sau nữa   |

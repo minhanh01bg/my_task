@@ -1,6 +1,14 @@
+import { existsSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 
 import { buildSearchText } from "../src/lib/search/search-text";
+
+if (existsSync(".env.local")) {
+  process.loadEnvFile(".env.local");
+} else if (existsSync(".env")) {
+  process.loadEnvFile(".env");
+}
+process.env.DATABASE_URL = process.env.DATABASE_URL || "file:./dev.db";
 
 const prisma = new PrismaClient();
 
@@ -161,8 +169,18 @@ async function main() {
     });
   }
 
+  await prisma.adminIdentity.upsert({
+    where: { username: "admin" },
+    create: {
+      username: "admin",
+      role: "owner",
+      version: 1,
+    },
+    update: {},
+  });
+
   console.log(
-    `Seeded ${CATEGORIES.length} categories, ${PRODUCTS.length} products`,
+    `Seeded ${CATEGORIES.length} categories, ${PRODUCTS.length} products, 1 admin identity`,
   );
 }
 
