@@ -457,17 +457,17 @@ flowchart LR
 
 **Tests first:**
 
-- [ ] Test same-origin canonical production Origin succeeds; cross-site, missing, malformed, opaque/null and mismatched scheme/host/port fail.
-- [ ] Test `Sec-Fetch-Site: cross-site` always fails and same-origin/same-site handling matches the explicit policy.
-- [ ] Test non-browser exceptions, if any, require a route-specific CSRF token or separate non-cookie authentication; missing Origin alone must never silently pass a cookie mutation in production.
-- [ ] Exercise logout, notification read, order mutation and guest claim/revoke boundaries with failing requests causing no writes.
+- [x] Test same-origin canonical production Origin succeeds; cross-site, missing, malformed, opaque/null and mismatched scheme/host/port fail.
+- [x] Test `Sec-Fetch-Site: cross-site` always fails and same-origin/same-site handling matches the explicit policy.
+- [x] Test non-browser exceptions, if any, require a route-specific CSRF token or separate non-cookie authentication; missing Origin alone must never silently pass a cookie mutation in production.
+- [x] Exercise logout, notification read, order mutation and guest claim/revoke boundaries with failing requests causing no writes.
 
 **Implementation steps:**
 
-- [ ] Replace request-URL comparison with canonical configured origins and a fail-closed result carrying only safe reason codes.
-- [ ] Apply one helper consistently to all cookie-authenticated Online Store mutations, including route handlers and action entry points not already protected by framework-origin enforcement.
-- [ ] Keep `SameSite`, secure cookies and framework Server Action allowed-origins configuration as additional layers.
-- [ ] Return generic `403` and `no-store`; never echo attacker-controlled Origin.
+- [x] Replace request-URL comparison with canonical configured origins and a fail-closed result carrying only safe reason codes.
+- [x] Apply one helper consistently to all cookie-authenticated Online Store mutations, including route handlers and action entry points not already protected by framework-origin enforcement.
+- [x] Keep `SameSite`, secure cookies and framework Server Action allowed-origins configuration as additional layers.
+- [x] Return generic `403` and `no-store`; never echo attacker-controlled Origin.
 
 **Focused quality commands:**
 
