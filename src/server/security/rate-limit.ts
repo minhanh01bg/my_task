@@ -66,6 +66,38 @@ return { current, ttl }
   }
 }
 
+class MemoryRateLimitStore implements RateLimitStore {
+  private map = new Map<string, { count: number; expiresAt: number }>();
+
+  async incrementAndGetTtl(
+    key: string,
+    windowSeconds: number,
+    now = Date.now(),
+  ): Promise<{ count: number; ttlSeconds: number }> {
+    const entry = this.map.get(key);
+    if (!entry || entry.expiresAt <= now) {
+      const expiresAt = now + windowSeconds * 1000;
+      this.map.set(key, { count: 1, expiresAt });
+      return { count: 1, ttlSeconds: windowSeconds };
+    }
+    entry.count += 1;
+    const ttlSeconds = Math.max(1, Math.ceil((entry.expiresAt - now) / 1000));
+    return { count: entry.count, ttlSeconds };
+  }
+
+  async delete(key: string): Promise<void> {
+    this.map.delete(key);
+  }
+}
+
+let devMemoryStore: MemoryRateLimitStore | null = null;
+function getGlobalDevMemoryStore(): RateLimitStore {
+  if (!devMemoryStore) {
+    devMemoryStore = new MemoryRateLimitStore();
+  }
+  return devMemoryStore;
+}
+
 export interface RateLimitTarget {
   bucketName: string;
   dimension: string;
@@ -149,9 +181,27 @@ export function createRateLimiter(
       // Lazy instantiate production store if not provided
       let store = options.store;
       if (!store) {
-        try {
-          store = new UpstashRedisStore();
-        } catch {
+        if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
+          try {
+            store = new UpstashRedisStore();
+          } catch {
+            if (policy.failClosed) {
+              return {
+                allowed: false,
+                reason: "limiter_unavailable",
+                retryAfterSeconds: 60,
+                limit: 0,
+                remaining: 0,
+              };
+            }
+            return {
+              allowed: true,
+              remaining: 1,
+              limit: 1,
+              resetInSeconds: 60,
+            };
+          }
+        } else if (process.env.NODE_ENV === "production") {
           if (policy.failClosed) {
             return {
               allowed: false,
@@ -167,6 +217,8 @@ export function createRateLimiter(
             limit: 1,
             resetInSeconds: 60,
           };
+        } else {
+          store = getGlobalDevMemoryStore();
         }
       }
 
@@ -274,9 +326,15 @@ export function createRateLimiter(
     ): Promise<void> {
       let store = options.store;
       if (!store) {
-        try {
-          store = new UpstashRedisStore();
-        } catch {
+        if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
+          try {
+            store = new UpstashRedisStore();
+          } catch {
+            return;
+          }
+        } else if (process.env.NODE_ENV !== "production") {
+          store = getGlobalDevMemoryStore();
+        } else {
           return;
         }
       }

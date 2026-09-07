@@ -40,7 +40,7 @@ export default defineConfig({
         process.env.SESSION_SECRET ??
         "playwright-only-session-secret-at-least-32-chars",
       STORE_PASSWORD_HASH:
-        process.env.STORE_PASSWORD_HASH ?? E2E_STORE_PASSWORD_HASH,
+        process.env.STORE_PASSWORD_HASH || E2E_STORE_PASSWORD_HASH,
     },
   },
 });

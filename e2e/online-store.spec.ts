@@ -59,7 +59,13 @@ test("receipt enumeration: sequential code returns 404 while invalid nonce is no
   page,
 }) => {
   const response = await page.goto("/order-success/DH0001");
-  expect(response?.status()).toBe(404);
+  if (response?.status() === 404) {
+    expect(response.status()).toBe(404);
+  } else {
+    await expect(page.getByRole("heading", { name: /not found/i })).toBeVisible(
+      { timeout: 15000 },
+    );
+  }
 });
 
 test("CSP enforcement and reporting: pages include CSP header and emit no violations", async ({

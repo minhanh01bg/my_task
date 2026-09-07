@@ -77,6 +77,7 @@ describe("Public Receipt Lookup Security (Task 12)", () => {
 
   it("proves sequential codes cannot retrieve order metadata", async () => {
     // Seed an online order with sequential code DH0001
+    await prisma.order.deleteMany({ where: { code: "DH0001" } });
     await prisma.order.create({
       data: {
         code: "DH0001",

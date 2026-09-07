@@ -49,10 +49,12 @@ export async function checkAdminLoginRateLimit(
   const options: AdminLoginGuardOptions =
     opts && "check" in opts ? { limiter: opts } : (opts ?? {});
 
+  const isProd = options.isProduction ?? process.env.NODE_ENV === "production";
+
   const ipResult = resolveTrustedClientIp(request, {
     mode: options.proxyMode,
     customHeader: options.customHeader,
-    isProduction: options.isProduction,
+    isProduction: isProd,
   });
 
   if (!ipResult.ok) {
@@ -97,4 +99,29 @@ export async function checkAdminLoginRateLimit(
     ip: ipResult.ip,
     subnet: ipResult.subnet,
   };
+}
+
+export async function resetAdminLoginRateLimit(
+  request: Request,
+  opts?: AdminLoginGuardOptions | RateLimiter,
+): Promise<void> {
+  const options: AdminLoginGuardOptions =
+    opts && "check" in opts ? { limiter: opts } : (opts ?? {});
+
+  const ipResult = resolveTrustedClientIp(request, {
+    mode: options.proxyMode,
+    customHeader: options.customHeader,
+    isProduction: options.isProduction,
+  });
+
+  if (!ipResult.ok) return;
+
+  const limiter = getLimiter(options.limiter);
+  if (typeof limiter.reset === "function") {
+    await limiter.reset(POLICIES.adminLogin, {
+      bucketName: "ip-attempts",
+      dimension: "ip",
+      identifier: ipResult.ip,
+    });
+  }
 }
