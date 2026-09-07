@@ -346,17 +346,17 @@ flowchart LR
 
 **Tests first:**
 
-- [ ] Test one IP spraying many phones, many IPs targeting one phone, subnet velocity and a bounded global bucket across shared limiter instances.
-- [ ] Test spoofed forwarding headers cannot rotate identities and Redis failure returns `503` before password hashing/verification.
-- [ ] Test success and failure counters are pseudonymized, credentials stay generic, and `429` includes `Retry-After`.
-- [ ] Test successful login resets/relaxes only the appropriate account bucket without erasing IP/global abuse history.
+- [x] Test one IP spraying many phones, many IPs targeting one phone, subnet velocity and a bounded global bucket across shared limiter instances.
+- [x] Test spoofed forwarding headers cannot rotate identities and Redis failure returns `503` before password hashing/verification.
+- [x] Test success and failure counters are pseudonymized, credentials stay generic, and `429` includes `Retry-After`.
+- [x] Test successful login resets/relaxes only the appropriate account bucket without erasing IP/global abuse history.
 
 **Implementation steps:**
 
-- [ ] Replace the process-local `Map` with named distributed policies combining trusted IP, subnet, normalized phone/account pseudonym and global velocity.
-- [ ] Perform cheap IP limits before expensive password work and account-specific checks after safe normalization.
-- [ ] Add bounded response jitter/backoff without holding scarce resources; keep response semantics close enough to avoid account discovery.
-- [ ] Emit alerts for credential stuffing and spraying using pseudonymous dimensions and aggregate counts.
+- [x] Replace the process-local `Map` with named distributed policies combining trusted IP, subnet, normalized phone/account pseudonym and global velocity.
+- [x] Perform cheap IP limits before expensive password work and account-specific checks after safe normalization.
+- [x] Add bounded response jitter/backoff without holding scarce resources; keep response semantics close enough to avoid account discovery.
+- [x] Emit alerts for credential stuffing and spraying using pseudonymous dimensions and aggregate counts.
 
 **Focused quality commands:**
 

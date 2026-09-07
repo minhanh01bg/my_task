@@ -10,6 +10,7 @@ export interface RateLimitStore {
     windowSeconds: number,
     now?: number,
   ): Promise<{ count: number; ttlSeconds: number }>;
+  delete?(key: string): Promise<void>;
 }
 
 export class UpstashRedisStore implements RateLimitStore {
@@ -58,6 +59,10 @@ return { current, ttl }
     const count = res[0];
     const ttlSeconds = res[1] > 0 ? res[1] : windowSeconds;
     return { count, ttlSeconds };
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.redis.del(key);
   }
 }
 
@@ -123,6 +128,7 @@ export interface RateLimiter {
     policy: RateLimitPolicy,
     targets: RateLimitTarget[],
   ): Promise<RateLimitDecision>;
+  reset?(policy: RateLimitPolicy, target: RateLimitTarget): Promise<void>;
 }
 
 export function createRateLimiter(
@@ -259,6 +265,30 @@ export function createRateLimiter(
           limit: 1,
           resetInSeconds: 60,
         };
+      }
+    },
+
+    async reset(
+      policy: RateLimitPolicy,
+      target: RateLimitTarget,
+    ): Promise<void> {
+      let store = options.store;
+      if (!store) {
+        try {
+          store = new UpstashRedisStore();
+        } catch {
+          return;
+        }
+      }
+      if (typeof store.delete === "function") {
+        const key = deriveRateLimitKey(
+          "v1",
+          `${policy.name}:${target.bucketName}`,
+          target.dimension,
+          target.identifier,
+          secret,
+        );
+        await store.delete(key);
       }
     },
   };

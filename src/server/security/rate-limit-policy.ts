@@ -43,7 +43,9 @@ export const POLICIES = {
     timeoutMs: 1500,
     buckets: [
       { name: "ip-attempts", limit: 20, windowSeconds: 900 },
+      { name: "subnet-attempts", limit: 100, windowSeconds: 900 },
       { name: "phone-attempts", limit: 5, windowSeconds: 900 },
+      { name: "global-attempts", limit: 1000, windowSeconds: 900 },
     ],
   },
   adminLogin: {
