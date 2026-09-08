@@ -26,6 +26,7 @@
 __pycache__/
 *.py[cod]
 .vscode/
+.roo/
 
 # Product images uploaded at runtime
 public/uploads/products/*
