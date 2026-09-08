@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { prisma } from "@/server/db/prisma";
 import { createCustomerSession } from "@/server/customer-auth/session";
@@ -18,7 +18,7 @@ describe("Customer Notifications API Routes", () => {
 
     const accountA = await prisma.customerAccount.create({
       data: {
-        phoneNormalized: "+84900000001",
+        phoneNormalized: "+84900000881",
         displayName: "Khách A",
         passwordHash: "dummy",
         phoneVerifiedAt: new Date(),
@@ -30,7 +30,7 @@ describe("Customer Notifications API Routes", () => {
 
     const accountB = await prisma.customerAccount.create({
       data: {
-        phoneNormalized: "+84900000002",
+        phoneNormalized: "+84900000882",
         displayName: "Khách B",
         passwordHash: "dummy",
         phoneVerifiedAt: new Date(),
@@ -247,5 +247,11 @@ describe("Customer Notifications API Routes", () => {
       where: { accountId: accountBId, readAt: null },
     });
     expect(unreadCountB).toBe(1);
+  });
+
+  afterAll(async () => {
+    await prisma.customerNotification.deleteMany();
+    await prisma.customerSession.deleteMany();
+    await prisma.customerAccount.deleteMany();
   });
 });

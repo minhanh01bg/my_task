@@ -17,6 +17,22 @@ const ids = {
   ob: "order-access-b",
 };
 beforeAll(async () => {
+  await prisma.guestOrderAccess.deleteMany({
+    where: { orderId: { in: [ids.oa, ids.ob] } },
+  });
+  await prisma.order.deleteMany({ where: { id: { in: [ids.oa, ids.ob] } } });
+  await prisma.customerAccount.deleteMany({
+    where: {
+      OR: [
+        { id: { in: [ids.a, ids.b, ids.unverified] } },
+        {
+          phoneNormalized: {
+            in: ["+84900000001", "+84900000002", "+84900000099"],
+          },
+        },
+      ],
+    },
+  });
   await prisma.customerAccount.createMany({
     data: [
       {

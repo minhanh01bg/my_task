@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
@@ -46,8 +46,13 @@ describe("DropdownField", () => {
     const trigger = screen.getByRole("combobox", { name: "Hình thức nhận" });
     expect(trigger).toHaveTextContent("Tiền mặt");
 
-    await user.click(trigger);
-    expect(screen.getByRole("option", { name: "Chuyển khoản" })).toBeVisible();
+    fireEvent.pointerDown(trigger);
+    fireEvent.click(trigger);
+    await waitFor(() => {
+      expect(
+        screen.getByRole("option", { name: "Chuyển khoản" }),
+      ).toBeVisible();
+    });
   });
 
   it("tham gia submit form qua name", () => {
