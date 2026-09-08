@@ -210,3 +210,29 @@ test("cart persistence: thêm sản phẩm và giữ nguyên sau khi reload", as
     await expect(drawer.getByTestId("cart-subtotal")).toBeVisible();
   }
 });
+
+test("catalog filter: lọc theo danh mục và tìm kiếm đồng bộ URL", async ({
+  page,
+}) => {
+  await page.goto("/shop");
+  const searchInput = page.getByPlaceholder("Tìm tên sản phẩm…");
+  await expect(searchInput).toBeVisible();
+
+  await searchInput.fill("cà phê");
+  await expect(page).toHaveURL(/q=/);
+
+  const categoryGroup = page.getByRole("group", { name: "Danh mục sản phẩm" });
+  const categoryBtn = categoryGroup.getByRole("button").nth(1);
+  if (await categoryBtn.isVisible()) {
+    await categoryBtn.click();
+    await expect(categoryBtn).toHaveAttribute("aria-pressed", "true");
+  }
+});
+
+test("catalog sort: thay đổi thứ tự sắp xếp cập nhật URL", async ({ page }) => {
+  await page.goto("/shop");
+  const sortSelect = page.getByLabel("Sắp xếp theo");
+  await expect(sortSelect).toBeVisible();
+  await sortSelect.selectOption("price-asc");
+  await expect(page).toHaveURL(/sort=price-asc/);
+});

@@ -1,9 +1,18 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { OnlineCartProvider } from "@/features/online-store/cart-context";
 import { CatalogBrowser } from "@/features/online-store/catalog-browser";
+
+const replace = vi.fn();
+const mockSearchParams = new URLSearchParams();
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/shop",
+  useRouter: () => ({ replace }),
+  useSearchParams: () => mockSearchParams,
+}));
 
 const catalog = {
   categories: [{ id: "c1", name: "Nước uống" }],
@@ -59,5 +68,45 @@ describe("CatalogBrowser", () => {
 
     expect(screen.getByRole("status")).toHaveTextContent("Cà phê sữa");
     expect(screen.getByRole("status")).toHaveTextContent("1");
+  });
+
+  it("lọc theo trạng thái chỉ hiện còn hàng loại bỏ sản phẩm hết hàng", async () => {
+    const user = userEvent.setup();
+    render(
+      <OnlineCartProvider>
+        <CatalogBrowser catalog={catalog} />
+      </OnlineCartProvider>,
+    );
+
+    expect(screen.getByText("Bánh mì")).toBeInTheDocument();
+
+    const inStockCheckbox = screen.getByLabelText(/chỉ hiện còn hàng/i);
+    await user.click(inStockCheckbox);
+
+    expect(screen.getByText("Cà phê sữa")).toBeInTheDocument();
+    expect(screen.queryByText("Bánh mì")).not.toBeInTheDocument();
+  });
+
+  it("hiển thị empty state khi không khớp và nút xóa tất cả bộ lọc khôi phục danh sách", async () => {
+    const user = userEvent.setup();
+    render(
+      <OnlineCartProvider>
+        <CatalogBrowser catalog={catalog} />
+      </OnlineCartProvider>,
+    );
+
+    await user.type(
+      screen.getByPlaceholderText("Tìm tên sản phẩm…"),
+      "từ khóa không tồn tại xyz",
+    );
+    expect(screen.getByText(/không tìm thấy sản phẩm/i)).toBeInTheDocument();
+
+    const clearButton = screen.getByRole("button", {
+      name: /xóa tất cả bộ lọc/i,
+    });
+    await user.click(clearButton);
+
+    expect(screen.getByText("Cà phê sữa")).toBeInTheDocument();
+    expect(screen.getByText("Bánh mì")).toBeInTheDocument();
   });
 });
