@@ -7,11 +7,13 @@ export interface OnlineProduct {
   imageUrl: string | null;
   categoryId: string | null;
   searchText: string;
+  soldCount?: number;
 }
 
 export interface OnlineCategory {
   id: string;
   name: string;
+  productCount?: number;
 }
 
 export interface OnlineCatalog {

@@ -5,7 +5,10 @@ import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { ShoppingCart } from "lucide-react";
 
-import { formatVnd } from "@/lib/money";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/kit/empty-state";
+import { Money } from "@/components/kit/money";
 import { catalogFilterSchema, type CatalogFilter } from "@/types/storefront";
 
 import { useOnlineCart } from "./cart-context";
@@ -102,9 +105,19 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
           {products.map((product) => (
             <article
               key={product.id}
-              className="border-border bg-card overflow-hidden rounded-2xl border shadow-xs"
+              className="border-border bg-card overflow-hidden rounded-2xl border shadow-xs transition-all hover:shadow-md"
             >
               <div className="bg-muted relative aspect-square">
+                {product.stock <= 0 ? (
+                  <div className="absolute top-2.5 right-2.5 z-10">
+                    <Badge
+                      variant="destructive"
+                      className="font-bold shadow-xs"
+                    >
+                      Hết hàng
+                    </Badge>
+                  </div>
+                ) : null}
                 {product.imageUrl ? (
                   <Image
                     src={product.imageUrl}
@@ -126,10 +139,10 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
                 <p className="text-muted-foreground mt-1 text-sm">
                   /{product.unit}
                 </p>
-                <p className="text-primary mt-2 text-lg font-bold">
-                  {formatVnd(product.price)} ₫
-                </p>
-                <button
+                <div className="text-primary mt-2 text-lg font-bold">
+                  <Money amount={product.price} />
+                </div>
+                <Button
                   type="button"
                   disabled={product.stock <= 0}
                   onClick={() => add(product)}
@@ -138,29 +151,31 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
                       ? `Thêm ${product.name} vào giỏ`
                       : `${product.name} đã hết hàng`
                   }
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-3 font-bold transition-all duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-4 min-h-11 w-full font-bold"
                 >
                   <ShoppingCart aria-hidden="true" className="size-4" />
                   {product.stock > 0 ? "Thêm vào giỏ" : "Hết hàng"}
-                </button>
+                </Button>
               </div>
             </article>
           ))}
         </div>
       ) : (
-        <div className="bg-muted/40 border-border mt-8 rounded-2xl border p-12 text-center">
-          <p className="text-base font-bold">Không tìm thấy sản phẩm phù hợp</p>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Thử thay đổi từ khóa, khoảng giá hoặc bỏ bớt các bộ lọc đang áp
-            dụng.
-          </p>
-          <button
-            type="button"
-            onClick={() => setFilter(defaultFilter)}
-            className="text-primary hover:text-primary/80 mt-4 inline-flex min-h-11 items-center font-bold underline"
-          >
-            Xóa tất cả bộ lọc
-          </button>
+        <div className="mt-8">
+          <EmptyState
+            title="Không tìm thấy sản phẩm phù hợp"
+            description="Thử thay đổi từ khóa, khoảng giá hoặc bỏ bớt các bộ lọc đang áp dụng."
+            action={
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setFilter(defaultFilter)}
+                className="font-bold"
+              >
+                Xóa tất cả bộ lọc
+              </Button>
+            }
+          />
         </div>
       )}
 

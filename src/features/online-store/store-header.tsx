@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { LayoutDashboard, ShoppingBag, UserRound } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { CustomerNotificationButton } from "@/features/customer-notifications/notification-button";
 
 import { useOnlineCart } from "./cart-context";
@@ -29,39 +31,46 @@ export function StoreHeader({
           </Link>
           <div className="flex items-center gap-2">
             {isAdmin ? (
-              <Link
-                href="/admin/orders"
+              <Button
+                variant="outline"
+                className="min-h-11 font-bold"
+                nativeButton={false}
                 aria-label="Quay lại trang quản trị"
-                className="border-border inline-flex min-h-11 items-center rounded-xl border px-3 font-bold"
+                render={<Link href="/admin/orders" />}
               >
                 <LayoutDashboard aria-hidden="true" className="size-5" />
-                <span className="ml-2 hidden sm:inline">Quản trị</span>
-              </Link>
-            ) : null}
-            {isCustomer ? <CustomerNotificationButton /> : null}
-            <Link
-              href="/account/orders"
-              aria-label="Tài khoản khách hàng"
-              className="border-border inline-flex min-h-11 items-center rounded-xl border px-3 font-bold"
-            >
-              <UserRound aria-hidden="true" className="size-5" />
-              <span className="ml-2 hidden sm:inline">Tài khoản</span>
-            </Link>
-            <button
+                <span className="ml-1.5 hidden sm:inline">Quản trị</span>
+              </Button>
+            ) : (
+              <>
+                {isCustomer ? <CustomerNotificationButton /> : null}
+                <Button
+                  variant="outline"
+                  className="min-h-11 font-bold"
+                  nativeButton={false}
+                  aria-label="Tài khoản khách hàng"
+                  render={<Link href="/account/orders" />}
+                >
+                  <UserRound aria-hidden="true" className="size-5" />
+                  <span className="ml-1.5 hidden sm:inline">Tài khoản</span>
+                </Button>
+              </>
+            )}
+            <Button
               type="button"
               onClick={openDrawer}
               aria-label={`Mở giỏ hàng, hiện có ${hydrated ? count : 0} sản phẩm`}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex min-h-11 items-center gap-2 rounded-xl px-4 font-bold transition-colors outline-none focus-visible:ring-2"
+              className="min-h-11 font-bold"
             >
               <ShoppingBag aria-hidden="true" className="size-5" />
               <span>Giỏ hàng</span>
-              <span
-                aria-hidden="true"
-                className="bg-background text-foreground rounded-full px-2 py-0.5 text-xs font-semibold"
+              <Badge
+                variant="secondary"
+                className="ml-1 px-1.5 py-0 text-xs font-bold"
               >
                 {hydrated ? count : 0}
-              </span>
-            </button>
+              </Badge>
+            </Button>
           </div>
         </div>
       </header>

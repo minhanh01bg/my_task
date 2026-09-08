@@ -15,6 +15,7 @@ import {
   SquaresFour,
   Storefront,
   TextAlignLeft,
+  Users,
   X,
 } from "@phosphor-icons/react";
 
@@ -67,6 +68,12 @@ const NAV = [
     label: "Đơn hàng",
     shortLabel: "Đơn hàng",
     icon: TextAlignLeft,
+  },
+  {
+    href: "/admin/customers",
+    label: "Khách hàng",
+    shortLabel: "Khách hàng",
+    icon: Users,
   },
   {
     href: "/admin/debts",

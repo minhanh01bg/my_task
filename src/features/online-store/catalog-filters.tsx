@@ -4,6 +4,9 @@ import { useId, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowUpDown, RotateCcw, Search, X } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { formatVnd } from "@/lib/money";
 import type { CatalogFilter, CatalogSort } from "@/types/storefront";
 
@@ -62,7 +65,7 @@ export function CatalogFilters({
   };
 
   const handleClearAll = () => {
-    const cleared: CatalogFilter = {
+    const reset: CatalogFilter = {
       q: "",
       category: null,
       inStock: false,
@@ -70,22 +73,22 @@ export function CatalogFilters({
       maxPrice: null,
       sort: "relevance",
     };
-    onFilterChange(cleared);
-    syncToUrl(cleared);
+    onFilterChange(reset);
+    syncToUrl(reset);
   };
 
-  const activeCategory = categories.find((c) => c.id === filter.category);
   const hasActiveFilters =
     Boolean(filter.q) ||
     Boolean(filter.category) ||
     filter.inStock ||
     filter.minPrice !== null ||
-    filter.maxPrice !== null ||
-    filter.sort !== "relevance";
+    filter.maxPrice !== null;
+
+  const activeCategory = categories.find((c) => c.id === filter.category);
 
   return (
-    <div className="space-y-4">
-      {/* Search and Sort row */}
+    <div className="flex flex-col gap-4">
+      {/* Primary search & sort bar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <label htmlFor={searchInputId} className="relative flex-1">
           <span className="sr-only">Tìm sản phẩm</span>
@@ -93,12 +96,12 @@ export function CatalogFilters({
             aria-hidden="true"
             className="text-muted-foreground pointer-events-none absolute top-3.5 left-4 size-5"
           />
-          <input
+          <Input
             id={searchInputId}
             value={filter.q}
             onChange={(e) => handleUpdate({ q: e.target.value })}
             placeholder="Tìm tên sản phẩm…"
-            className="border-input bg-background focus-visible:ring-primary h-12 w-full rounded-2xl border pr-4 pl-12 text-sm transition-all outline-none focus-visible:ring-2"
+            className="h-12 w-full rounded-2xl pr-4 pl-12 text-sm shadow-xs"
           />
         </label>
 
@@ -118,9 +121,11 @@ export function CatalogFilters({
               onChange={(e) =>
                 handleUpdate({ sort: e.target.value as CatalogSort })
               }
-              className="border-input bg-background focus-visible:ring-primary h-12 rounded-2xl border pr-8 pl-9 text-sm font-medium transition-all outline-none focus-visible:ring-2 disabled:opacity-70"
+              aria-label="Sắp xếp theo"
+              className="border-input bg-background hover:border-primary/45 hover:bg-accent/35 focus-visible:border-primary focus-visible:ring-primary/15 h-12 cursor-pointer rounded-2xl border pr-8 pl-9 text-sm font-semibold shadow-xs transition-all outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-70"
             >
               <option value="relevance">Phù hợp nhất</option>
+              <option value="best-selling">Bán chạy nhất</option>
               <option value="price-asc">Giá tăng dần</option>
               <option value="price-desc">Giá giảm dần</option>
               <option value="name-asc">Tên A - Z</option>
@@ -139,11 +144,11 @@ export function CatalogFilters({
           type="button"
           onClick={() => handleUpdate({ category: null })}
           aria-pressed={!filter.category}
-          className={`min-h-10 shrink-0 rounded-full px-4 text-sm font-bold transition-colors ${
-            !filter.category
-              ? "bg-primary text-primary-foreground shadow-xs"
-              : "bg-muted text-muted-foreground hover:text-foreground"
-          }`}
+          className={buttonVariants({
+            variant: !filter.category ? "default" : "secondary",
+            size: "sm",
+            className: "min-h-10 shrink-0 rounded-full px-4 text-sm font-bold",
+          })}
         >
           Tất cả
         </button>
@@ -155,11 +160,12 @@ export function CatalogFilters({
               type="button"
               onClick={() => handleUpdate({ category: cat.id })}
               aria-pressed={isSelected}
-              className={`min-h-10 shrink-0 rounded-full px-4 text-sm font-bold transition-colors ${
-                isSelected
-                  ? "bg-primary text-primary-foreground shadow-xs"
-                  : "bg-muted text-muted-foreground hover:text-foreground"
-              }`}
+              className={buttonVariants({
+                variant: isSelected ? "default" : "secondary",
+                size: "sm",
+                className:
+                  "min-h-10 shrink-0 rounded-full px-4 text-sm font-bold",
+              })}
             >
               {cat.name}
             </button>
@@ -168,7 +174,7 @@ export function CatalogFilters({
       </div>
 
       {/* Secondary filter controls (Stock & Price Range) */}
-      <div className="border-border bg-card/60 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4 text-sm">
+      <div className="border-border bg-card/60 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4 text-sm shadow-2xs">
         <div className="flex flex-wrap items-center gap-4">
           {/* In Stock toggle */}
           <label
@@ -190,7 +196,7 @@ export function CatalogFilters({
             <span className="text-muted-foreground text-xs font-semibold uppercase">
               Giá:
             </span>
-            <input
+            <Input
               type="number"
               aria-label="Giá tối thiểu"
               placeholder="Từ ₫"
@@ -204,10 +210,10 @@ export function CatalogFilters({
                     : null,
                 })
               }
-              className="border-input bg-background focus-visible:ring-primary h-9 w-24 rounded-lg border px-2 text-xs outline-none focus-visible:ring-2"
+              className="h-9 w-24 rounded-lg px-2 text-xs"
             />
             <span className="text-muted-foreground">-</span>
-            <input
+            <Input
               type="number"
               aria-label="Giá tối đa"
               placeholder="Đến ₫"
@@ -221,7 +227,7 @@ export function CatalogFilters({
                     : null,
                 })
               }
-              className="border-input bg-background focus-visible:ring-primary h-9 w-24 rounded-lg border px-2 text-xs outline-none focus-visible:ring-2"
+              className="h-9 w-24 rounded-lg px-2 text-xs"
             />
           </div>
         </div>
@@ -233,14 +239,16 @@ export function CatalogFilters({
             sản phẩm
           </span>
           {hasActiveFilters && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={handleClearAll}
-              className="text-primary hover:text-primary/80 inline-flex items-center gap-1 text-xs font-bold underline"
+              className="text-primary hover:text-primary/80 h-auto p-0 text-xs font-bold underline hover:bg-transparent"
             >
               <RotateCcw aria-hidden="true" className="size-3" />
               Xóa bộ lọc
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -252,46 +260,58 @@ export function CatalogFilters({
           aria-label="Bộ lọc đang chọn"
         >
           {filter.q && (
-            <span className="bg-muted text-muted-foreground inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium">
+            <Badge
+              variant="secondary"
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium"
+            >
               Từ khóa: {filter.q}
               <button
                 type="button"
                 onClick={() => handleUpdate({ q: "" })}
                 aria-label="Xóa từ khóa tìm kiếm"
-                className="hover:text-foreground"
+                className="hover:text-foreground cursor-pointer"
               >
                 <X aria-hidden="true" className="size-3" />
               </button>
-            </span>
+            </Badge>
           )}
           {activeCategory && (
-            <span className="bg-muted text-muted-foreground inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium">
+            <Badge
+              variant="secondary"
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium"
+            >
               Danh mục: {activeCategory.name}
               <button
                 type="button"
                 onClick={() => handleUpdate({ category: null })}
                 aria-label="Xóa bộ lọc danh mục"
-                className="hover:text-foreground"
+                className="hover:text-foreground cursor-pointer"
               >
                 <X aria-hidden="true" className="size-3" />
               </button>
-            </span>
+            </Badge>
           )}
           {filter.inStock && (
-            <span className="bg-muted text-muted-foreground inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium">
+            <Badge
+              variant="secondary"
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium"
+            >
               Còn hàng
               <button
                 type="button"
                 onClick={() => handleUpdate({ inStock: false })}
                 aria-label="Bỏ lọc còn hàng"
-                className="hover:text-foreground"
+                className="hover:text-foreground cursor-pointer"
               >
                 <X aria-hidden="true" className="size-3" />
               </button>
-            </span>
+            </Badge>
           )}
           {(filter.minPrice !== null || filter.maxPrice !== null) && (
-            <span className="bg-muted text-muted-foreground inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium">
+            <Badge
+              variant="secondary"
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium"
+            >
               Giá:{" "}
               {filter.minPrice !== null
                 ? `${formatVnd(filter.minPrice)} ₫`
@@ -304,11 +324,11 @@ export function CatalogFilters({
                 type="button"
                 onClick={() => handleUpdate({ minPrice: null, maxPrice: null })}
                 aria-label="Xóa khoảng giá"
-                className="hover:text-foreground"
+                className="hover:text-foreground cursor-pointer"
               >
                 <X aria-hidden="true" className="size-3" />
               </button>
-            </span>
+            </Badge>
           )}
         </div>
       )}
