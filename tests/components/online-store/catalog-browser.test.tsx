@@ -43,4 +43,21 @@ describe("CatalogBrowser", () => {
     expect(screen.getByText("Cà phê sữa")).toBeInTheDocument();
     expect(screen.queryByText("Bánh mì")).not.toBeInTheDocument();
   });
+
+  it("thêm vào giỏ phát sinh feedback trực quan cho người dùng", async () => {
+    const user = userEvent.setup();
+    render(
+      <OnlineCartProvider>
+        <CatalogBrowser catalog={catalog} />
+      </OnlineCartProvider>,
+    );
+
+    const addButtons = screen.getAllByRole("button", {
+      name: /thêm .* vào giỏ/i,
+    });
+    await user.click(addButtons[0]);
+
+    expect(screen.getByRole("status")).toHaveTextContent("Cà phê sữa");
+    expect(screen.getByRole("status")).toHaveTextContent("1");
+  });
 });

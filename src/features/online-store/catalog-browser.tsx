@@ -8,6 +8,7 @@ import { formatVnd } from "@/lib/money";
 import { normalize } from "@/lib/search/normalize";
 
 import { useOnlineCart } from "./cart-context";
+import { CartFeedback } from "./cart-feedback";
 import type { OnlineCatalog } from "./types";
 
 export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
@@ -112,7 +113,12 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
                 <button
                   disabled={product.stock <= 0}
                   onClick={() => add(product)}
-                  className="bg-primary text-primary-foreground mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-3 font-bold disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label={
+                    product.stock > 0
+                      ? `Thêm ${product.name} vào giỏ`
+                      : `${product.name} đã hết hàng`
+                  }
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-3 font-bold transition-all duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <ShoppingCart aria-hidden="true" className="size-4" />
                   {product.stock > 0 ? "Thêm vào giỏ" : "Hết hàng"}
@@ -135,6 +141,7 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
           </button>
         </div>
       )}
+      <CartFeedback />
     </section>
   );
 }
