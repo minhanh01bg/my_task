@@ -1,10 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { OnlineCartProvider } from "@/features/online-store/cart-context";
 import { CategorySection } from "@/features/online-store/landing/category-section";
 import { HeroSection } from "@/features/online-store/landing/hero-section";
 import { ProductRail } from "@/features/online-store/landing/product-rail";
 import { TrustSection } from "@/features/online-store/landing/trust-section";
+import { StoreHeader } from "@/features/online-store/store-header";
 import type {
   OnlineCategory,
   OnlineProduct,
@@ -39,6 +41,46 @@ const mockProducts: OnlineProduct[] = [
 ];
 
 describe("Storefront Landing Page Components", () => {
+  describe("StoreHeader", () => {
+    it("hiển thị nút Quản trị và ẩn nút Tài khoản khách lẻ khi isAdmin là true", () => {
+      render(
+        <OnlineCartProvider>
+          <StoreHeader
+            storeName="Cửa Hàng Xanh"
+            isAdmin={true}
+            isCustomer={false}
+          />
+        </OnlineCartProvider>,
+      );
+
+      expect(
+        screen.getByRole("button", { name: /quản trị/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /tài khoản/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("hiển thị nút Tài khoản khách hàng khi không phải là admin", () => {
+      render(
+        <OnlineCartProvider>
+          <StoreHeader
+            storeName="Cửa Hàng Xanh"
+            isAdmin={false}
+            isCustomer={true}
+          />
+        </OnlineCartProvider>,
+      );
+
+      expect(
+        screen.queryByRole("button", { name: /quản trị/i }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /tài khoản/i }),
+      ).toBeInTheDocument();
+    });
+  });
+
   describe("HeroSection", () => {
     it("có đúng một thẻ H1 và CTA liên kết tới #catalog", () => {
       render(
