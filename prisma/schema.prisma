@@ -277,3 +277,22 @@ model AdminAuditEvent {
   @@index([entityType, entityId])
   @@index([identityId, createdAt])
 }
+
+model StorefrontPromotion {
+  id        String    @id @default(cuid())
+  title     String
+  body      String?
+  imageUrl  String?
+  ctaLabel  String?
+  ctaHref   String?
+  placement String    @default("announcement")
+  startsAt  DateTime?
+  endsAt    DateTime?
+  priority  Int       @default(0)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([placement, isActive, priority])
+  @@index([isActive, startsAt, endsAt])
+}
