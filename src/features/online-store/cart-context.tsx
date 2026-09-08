@@ -23,6 +23,9 @@ interface CartContextValue {
   hydrated: boolean;
   feedback: CartMutationResult | null;
   dismissFeedback: () => void;
+  isDrawerOpen: boolean;
+  openDrawer: () => void;
+  closeDrawer: () => void;
   add: (product: OnlineProduct) => CartMutationResult;
   setQuantity: (id: string, quantity: number) => void;
   remove: (id: string) => void;
@@ -47,6 +50,7 @@ export function OnlineCartProvider({
     }
   });
   const [feedback, setFeedback] = useState<CartMutationResult | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const hydrated = typeof window !== "undefined";
 
   const linesRef = useRef(lines);
@@ -61,6 +65,14 @@ export function OnlineCartProvider({
 
   const dismissFeedback = useCallback(() => {
     setFeedback(null);
+  }, []);
+
+  const openDrawer = useCallback(() => {
+    setIsDrawerOpen(true);
+  }, []);
+
+  const closeDrawer = useCallback(() => {
+    setIsDrawerOpen(false);
   }, []);
 
   const add = useCallback((product: OnlineProduct): CartMutationResult => {
@@ -147,6 +159,9 @@ export function OnlineCartProvider({
       hydrated,
       feedback,
       dismissFeedback,
+      isDrawerOpen,
+      openDrawer,
+      closeDrawer,
       add,
       setQuantity,
       remove,
@@ -157,6 +172,9 @@ export function OnlineCartProvider({
       hydrated,
       feedback,
       dismissFeedback,
+      isDrawerOpen,
+      openDrawer,
+      closeDrawer,
       add,
       setQuantity,
       remove,

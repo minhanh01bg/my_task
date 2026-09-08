@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import Link from "next/link";
 import { AlertCircle, AlertTriangle, CheckCircle2, X } from "lucide-react";
 
 import { useOnlineCart } from "./cart-context";
@@ -9,7 +8,8 @@ import { useOnlineCart } from "./cart-context";
 const AUTO_DISMISS_MS = 4000;
 
 export function CartFeedback({ onViewCart }: { onViewCart?: () => void }) {
-  const { feedback, dismissFeedback } = useOnlineCart();
+  const { feedback, dismissFeedback, openDrawer } = useOnlineCart();
+  const handleViewCart = onViewCart || openDrawer;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -77,22 +77,13 @@ export function CartFeedback({ onViewCart }: { onViewCart?: () => void }) {
           <p className="line-clamp-2">{messageText}</p>
           {isSuccess && (
             <div className="mt-1">
-              {onViewCart ? (
-                <button
-                  type="button"
-                  onClick={onViewCart}
-                  className="text-primary hover:text-primary/80 font-bold underline outline-none focus-visible:ring-2"
-                >
-                  Xem giỏ
-                </button>
-              ) : (
-                <Link
-                  href="/checkout"
-                  className="text-primary hover:text-primary/80 font-bold underline outline-none focus-visible:ring-2"
-                >
-                  Xem giỏ
-                </Link>
-              )}
+              <button
+                type="button"
+                onClick={handleViewCart}
+                className="text-primary hover:text-primary/80 font-bold underline outline-none focus-visible:ring-2"
+              >
+                Xem giỏ
+              </button>
             </div>
           )}
         </div>

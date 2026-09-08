@@ -176,3 +176,37 @@ test("guest claim and guest revoke: access controls and unauthenticated protecti
   );
   expect(crossOriginRevoke.status()).toBe(403);
 });
+
+test("cart drawer: mở drawer, xem danh sách sản phẩm và đóng drawer", async ({
+  page,
+}) => {
+  await page.goto("/shop");
+  const cartBtn = page.getByRole("button", { name: /mở giỏ hàng/i });
+  await expect(cartBtn).toBeVisible();
+  await cartBtn.click();
+
+  const drawer = page.getByRole("dialog");
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByText(/giỏ hàng.*trống/i)).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(drawer).not.toBeVisible();
+});
+
+test("cart persistence: thêm sản phẩm và giữ nguyên sau khi reload", async ({
+  page,
+}) => {
+  await page.goto("/shop");
+  const addBtn = page.getByRole("button", { name: /thêm .* vào giỏ/i }).first();
+  if (await addBtn.isVisible()) {
+    await addBtn.click();
+    await expect(page.getByRole("status")).toBeVisible();
+
+    await page.reload();
+    const cartBtn = page.getByRole("button", { name: /mở giỏ hàng/i });
+    await cartBtn.click();
+    const drawer = page.getByRole("dialog");
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByTestId("cart-subtotal")).toBeVisible();
+  }
+});
