@@ -7,11 +7,12 @@ import { useState } from "react";
 import { formatFullAddress } from "@/lib/address/vietnam-address";
 import { formatVnd } from "@/lib/money";
 import { onlineOrderResponseSchema } from "@/types/online-order";
+import type { PublicStoreProfile } from "@/types/storefront";
 
 import { AddressFields, type AddressState } from "./address-fields";
 import { OnlineCartProvider, useOnlineCart } from "./cart-context";
 
-function FormContent() {
+function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
   const { lines, clear, setQuantity, remove } = useOnlineCart();
   const router = useRouter();
   const [fulfillment, setFulfillment] = useState<"delivery" | "pickup">(
@@ -205,6 +206,77 @@ function FormContent() {
                 ) : null}
               </div>
             ) : null}
+            {fulfillment === "pickup" ? (
+              <div
+                data-testid="pickup-store-info"
+                className="border-border bg-card/60 mt-4 rounded-2xl border p-4 text-sm"
+              >
+                <h3 className="text-foreground mb-2 text-base font-bold">
+                  Thông tin nhận hàng tại cửa hàng
+                </h3>
+                {storeProfile?.address ? (
+                  <div className="space-y-2">
+                    <p className="text-muted-foreground">
+                      <strong className="text-foreground">
+                        Địa chỉ nhận hàng:{" "}
+                      </strong>
+                      {storeProfile.address}
+                    </p>
+                    {storeProfile.openingHours ? (
+                      <p className="text-muted-foreground">
+                        <strong className="text-foreground">
+                          Giờ nhận hàng:{" "}
+                        </strong>
+                        {storeProfile.openingHours}
+                      </p>
+                    ) : null}
+                    <div className="flex flex-wrap items-center gap-4 pt-1">
+                      {storeProfile.hotline ? (
+                        <a
+                          href={`tel:${storeProfile.hotline.replace(/\s+/g, "")}`}
+                          className="text-primary font-semibold hover:underline"
+                        >
+                          Hotline: {storeProfile.hotline}
+                        </a>
+                      ) : null}
+                      {storeProfile.mapUrl &&
+                      storeProfile.mapUrl.startsWith("https://") ? (
+                        <a
+                          href={storeProfile.mapUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary inline-flex items-center gap-1 font-medium hover:underline"
+                        >
+                          <span>Xem trên bản đồ & chỉ đường</span>
+                          <span aria-hidden="true">↗</span>
+                        </a>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground space-y-1 text-sm">
+                    <p>
+                      Cửa hàng chưa cập nhật địa chỉ nhận hàng cụ thể trên hệ
+                      thống.
+                    </p>
+                    <p>
+                      Quý khách vui lòng liên hệ hotline{" "}
+                      {storeProfile?.hotline ? (
+                        <a
+                          href={`tel:${storeProfile.hotline.replace(/\s+/g, "")}`}
+                          className="text-primary font-bold hover:underline"
+                        >
+                          {storeProfile.hotline}
+                        </a>
+                      ) : (
+                        "cửa hàng"
+                      )}{" "}
+                      để được hỗ trợ hướng dẫn nhận hàng trực tiếp.
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : null}
           </section>
           <section className="border-border rounded-2xl border p-5">
             <h2 className="text-xl font-bold">Thanh toán</h2>
@@ -287,10 +359,14 @@ function FormContent() {
   );
 }
 
-export function CheckoutForm() {
+export function CheckoutForm({
+  storeProfile,
+}: {
+  storeProfile?: PublicStoreProfile;
+} = {}) {
   return (
     <OnlineCartProvider>
-      <FormContent />
+      <FormContent storeProfile={storeProfile} />
     </OnlineCartProvider>
   );
 }

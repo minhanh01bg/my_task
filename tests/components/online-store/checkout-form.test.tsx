@@ -201,4 +201,40 @@ describe("CheckoutForm - Structured Address & Experience", () => {
     expect(summary.textContent).toContain("Thôn 1");
     expect(summary.textContent).toContain("Tỉnh Mới");
   });
+
+  it("chọn nhận tại cửa hàng hiển thị thông tin địa chỉ và giờ mở cửa của cửa hàng", () => {
+    const storeProfile = {
+      name: "Tạp Hóa Xanh",
+      hotline: "0901234567",
+      address: "123 Lê Lợi, Quận 1, TP. Hồ Chí Minh",
+      openingHours: "07:30 - 21:30 hàng ngày",
+      mapUrl: "https://maps.google.com/?q=test",
+    };
+
+    render(<CheckoutForm storeProfile={storeProfile} />);
+
+    fireEvent.click(screen.getByLabelText(/nhận tại cửa hàng/i));
+
+    const pickupCard = screen.getByTestId("pickup-store-info");
+    expect(pickupCard).toBeInTheDocument();
+    expect(pickupCard.textContent).toContain("123 Lê Lợi, Quận 1");
+    expect(pickupCard.textContent).toContain("07:30 - 21:30");
+    expect(
+      screen.getByRole("link", { name: /bản đồ|chỉ đường/i }),
+    ).toHaveAttribute("href", "https://maps.google.com/?q=test");
+  });
+
+  it("chọn nhận tại cửa hàng khi chưa cấu hình địa chỉ hiển thị thông báo trung thực", () => {
+    const storeProfile = {
+      name: "Cửa Hàng Mới",
+    };
+
+    render(<CheckoutForm storeProfile={storeProfile} />);
+
+    fireEvent.click(screen.getByLabelText(/nhận tại cửa hàng/i));
+
+    const pickupCard = screen.getByTestId("pickup-store-info");
+    expect(pickupCard).toBeInTheDocument();
+    expect(pickupCard.textContent).toContain("chưa cập nhật địa chỉ");
+  });
 });

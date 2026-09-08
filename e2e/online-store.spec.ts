@@ -236,3 +236,38 @@ test("catalog sort: thay đổi thứ tự sắp xếp cập nhật URL", async 
   await sortSelect.selectOption("price-asc");
   await expect(page).toHaveURL(/sort=price-asc/);
 });
+
+test("store information: footer hiển thị thông tin cửa hàng và liên kết chính sách", async ({
+  page,
+}) => {
+  await page.goto("/shop");
+  const footer = page.locator("footer");
+  await expect(footer).toBeVisible();
+  await expect(
+    footer.getByRole("link", { name: "Chính sách giao hàng" }),
+  ).toBeVisible();
+  await expect(
+    footer.getByRole("link", { name: "Chính sách đổi trả" }),
+  ).toBeVisible();
+  await expect(
+    footer.getByRole("link", { name: "Chính sách bảo mật" }),
+  ).toBeVisible();
+});
+
+test("pickup address: chọn nhận tại cửa hàng hiển thị thông tin nhận hàng", async ({
+  page,
+}) => {
+  await page.goto("/shop");
+  const addBtn = page.getByRole("button", { name: /thêm .* vào giỏ/i }).first();
+  if (await addBtn.isVisible()) {
+    await addBtn.click();
+    await page.goto("/checkout");
+
+    const pickupRadio = page.getByLabel("Nhận tại cửa hàng");
+    await expect(pickupRadio).toBeVisible();
+    await pickupRadio.click();
+
+    await expect(page.getByTestId("pickup-store-info")).toBeVisible();
+    await expect(page.getByLabel(/tỉnh\/thành phố/i)).not.toBeVisible();
+  }
+});
