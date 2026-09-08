@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 
 import { calculateCart } from "@/lib/pricing/calculate";
 import type { CartLine } from "@/lib/pricing/types";
+import { createCustomerOrderCreatedNotification } from "@/server/customer-notifications/create-customer-notification";
 import { prisma } from "@/server/db/prisma";
 import { createOnlineOrderNotification } from "@/server/notifications/create-admin-notification";
 import { OnlineOrderError } from "@/types/online-order";
@@ -271,6 +272,7 @@ export async function createOrder(
 
       if (input.channel === "online") {
         await createOnlineOrderNotification(tx, order);
+        await createCustomerOrderCreatedNotification(tx, order);
       }
 
       return {

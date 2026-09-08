@@ -1,41 +1,57 @@
+import {
+  createCustomerOrderPaymentNotification,
+  createCustomerOrderStatusNotification,
+} from "@/server/customer-notifications/create-customer-notification";
 import { prisma } from "@/server/db/prisma";
 
+import { cancelOrder } from "./cancel-order";
 import {
   canTransitionOnlineOrder,
   isOnlineOrderStatus,
   type OnlineOrderStatus,
 } from "./online-order-status";
-import { cancelOrder } from "./cancel-order";
 
 export async function transitionOnlineOrder(
   orderId: string,
   next: OnlineOrderStatus,
 ) {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    select: { channel: true, fulfillmentStatus: true },
-  });
-  if (
-    !order ||
-    order.channel !== "online" ||
-    !order.fulfillmentStatus ||
-    !isOnlineOrderStatus(order.fulfillmentStatus)
-  ) {
-    throw new Error("Không tìm thấy đơn online");
-  }
-  if (!canTransitionOnlineOrder(order.fulfillmentStatus, next)) {
-    throw new Error("Chuyển trạng thái không hợp lệ");
-  }
-  if (next === "cancelled") {
-    await cancelOrder(orderId);
-    return prisma.order.update({
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({
       where: { id: orderId },
-      data: { fulfillmentStatus: "cancelled" },
+      select: {
+        id: true,
+        code: true,
+        channel: true,
+        fulfillmentStatus: true,
+        customerAccountId: true,
+      },
     });
-  }
-  return prisma.order.update({
-    where: { id: orderId, fulfillmentStatus: order.fulfillmentStatus },
-    data: { fulfillmentStatus: next },
+    if (
+      !order ||
+      order.channel !== "online" ||
+      !order.fulfillmentStatus ||
+      !isOnlineOrderStatus(order.fulfillmentStatus)
+    ) {
+      throw new Error("Không tìm thấy đơn online");
+    }
+    if (!canTransitionOnlineOrder(order.fulfillmentStatus, next)) {
+      throw new Error("Chuyển trạng thái không hợp lệ");
+    }
+    if (next === "cancelled") {
+      await cancelOrder(orderId, tx);
+      const updated = await tx.order.update({
+        where: { id: orderId },
+        data: { fulfillmentStatus: "cancelled" },
+      });
+      await createCustomerOrderStatusNotification(tx, order, next);
+      return updated;
+    }
+    const updated = await tx.order.update({
+      where: { id: orderId, fulfillmentStatus: order.fulfillmentStatus },
+      data: { fulfillmentStatus: next },
+    });
+    await createCustomerOrderStatusNotification(tx, order, next);
+    return updated;
   });
 }
 
@@ -43,7 +59,13 @@ export async function markOnlineOrderPaid(orderId: string) {
   return prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
       where: { id: orderId },
-      select: { channel: true, status: true },
+      select: {
+        id: true,
+        code: true,
+        channel: true,
+        status: true,
+        customerAccountId: true,
+      },
     });
     if (!order || order.channel !== "online")
       throw new Error("Không tìm thấy đơn online");
@@ -52,9 +74,11 @@ export async function markOnlineOrderPaid(orderId: string) {
       where: { orderId, receivedAt: null },
       data: { receivedAt: new Date() },
     });
-    return tx.order.update({
+    const updated = await tx.order.update({
       where: { id: orderId },
       data: { status: "paid" },
     });
+    await createCustomerOrderPaymentNotification(tx, order);
+    return updated;
   });
 }

@@ -3,18 +3,32 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { CheckCircle2, ShieldCheck } from "lucide-react";
 
+import { formatFullAddress } from "@/lib/address/vietnam-address";
 import { formatVnd } from "@/lib/money";
 import { onlineOrderResponseSchema } from "@/types/online-order";
+import type { PublicStoreProfile } from "@/types/storefront";
 
+import { AddressFields, type AddressState } from "./address-fields";
 import { OnlineCartProvider, useOnlineCart } from "./cart-context";
 
-function FormContent() {
-  const { lines, clear, setQuantity, remove } = useOnlineCart();
+function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
+  const { lines, hydrated, clear, setQuantity, remove } = useOnlineCart();
   const router = useRouter();
   const [fulfillment, setFulfillment] = useState<"delivery" | "pickup">(
     "delivery",
   );
+  const [address, setAddress] = useState<AddressState>({
+    provinceCode: "",
+    districtCode: "",
+    wardCode: "",
+    provinceName: "",
+    districtName: "",
+    wardName: "",
+    street: "",
+    isManual: false,
+  });
   const [clientId, setClientId] = useState(() => crypto.randomUUID());
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -22,6 +36,13 @@ function FormContent() {
     (sum, line) => sum + Math.round(line.price * line.quantity),
     0,
   );
+
+  const formattedAddress = formatFullAddress({
+    street: address.street,
+    ward: address.wardName,
+    district: address.districtName,
+    province: address.provinceName,
+  });
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -40,12 +61,33 @@ function FormContent() {
       fulfillmentType: fulfillment,
       paymentMethod: data.get("paymentMethod"),
       deliveryAddress:
-        fulfillment === "delivery" ? data.get("deliveryAddress") : "",
-      deliveryWard: fulfillment === "delivery" ? data.get("deliveryWard") : "",
+        fulfillment === "delivery"
+          ? (data.get("deliveryAddress") as string) || address.street
+          : "",
+      deliveryWard:
+        fulfillment === "delivery"
+          ? (data.get("deliveryWard") as string) || address.wardName
+          : "",
       deliveryDistrict:
-        fulfillment === "delivery" ? data.get("deliveryDistrict") : "",
+        fulfillment === "delivery"
+          ? (data.get("deliveryDistrict") as string) || address.districtName
+          : "",
       deliveryProvince:
-        fulfillment === "delivery" ? data.get("deliveryProvince") : "",
+        fulfillment === "delivery"
+          ? (data.get("deliveryProvince") as string) || address.provinceName
+          : "",
+      provinceCode:
+        fulfillment === "delivery" && !address.isManual && address.provinceCode
+          ? address.provinceCode
+          : undefined,
+      districtCode:
+        fulfillment === "delivery" && !address.isManual && address.districtCode
+          ? address.districtCode
+          : undefined,
+      wardCode:
+        fulfillment === "delivery" && !address.isManual && address.wardCode
+          ? address.wardCode
+          : undefined,
       note: data.get("note"),
     };
     try {
@@ -74,7 +116,7 @@ function FormContent() {
     }
   }
 
-  if (!lines.length)
+  if (!hydrated || !lines.length)
     return (
       <main className="mx-auto max-w-xl px-4 py-24 text-center">
         <h1 className="text-3xl font-bold">Giỏ hàng đang trống</h1>
@@ -146,37 +188,94 @@ function FormContent() {
               </label>
             </div>
             {fulfillment === "delivery" ? (
-              <div className="mt-4 grid gap-4">
-                <label className="font-bold">
-                  Địa chỉ
-                  <input
-                    required
-                    name="deliveryAddress"
-                    className={`${inputClass} mt-2`}
-                  />
-                </label>
-                <label className="font-bold">
-                  Phường/xã
-                  <input name="deliveryWard" className={`${inputClass} mt-2`} />
-                </label>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="font-bold">
-                    Quận/huyện
-                    <input
-                      required
-                      name="deliveryDistrict"
-                      className={`${inputClass} mt-2`}
-                    />
-                  </label>
-                  <label className="font-bold">
-                    Tỉnh/thành phố
-                    <input
-                      required
-                      name="deliveryProvince"
-                      className={`${inputClass} mt-2`}
-                    />
-                  </label>
-                </div>
+              <div className="mt-4">
+                <AddressFields
+                  value={address}
+                  onChange={setAddress}
+                  inputClass={inputClass}
+                />
+                {formattedAddress ? (
+                  <div
+                    data-testid="address-summary"
+                    className="border-border bg-muted/40 mt-4 rounded-xl border p-3.5 text-sm"
+                  >
+                    <span className="text-muted-foreground font-semibold">
+                      Địa chỉ nhận hàng:
+                    </span>
+                    <p className="mt-1 font-medium">{formattedAddress}</p>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            {fulfillment === "pickup" ? (
+              <div
+                data-testid="pickup-store-info"
+                className="border-border bg-card/60 mt-4 rounded-2xl border p-4 text-sm"
+              >
+                <h3 className="text-foreground mb-2 text-base font-bold">
+                  Thông tin nhận hàng tại cửa hàng
+                </h3>
+                {storeProfile?.address ? (
+                  <div className="space-y-2">
+                    <p className="text-muted-foreground">
+                      <strong className="text-foreground">
+                        Địa chỉ nhận hàng:{" "}
+                      </strong>
+                      {storeProfile.address}
+                    </p>
+                    {storeProfile.openingHours ? (
+                      <p className="text-muted-foreground">
+                        <strong className="text-foreground">
+                          Giờ nhận hàng:{" "}
+                        </strong>
+                        {storeProfile.openingHours}
+                      </p>
+                    ) : null}
+                    <div className="flex flex-wrap items-center gap-4 pt-1">
+                      {storeProfile.hotline ? (
+                        <a
+                          href={`tel:${storeProfile.hotline.replace(/\s+/g, "")}`}
+                          className="text-primary font-semibold hover:underline"
+                        >
+                          Hotline: {storeProfile.hotline}
+                        </a>
+                      ) : null}
+                      {storeProfile.mapUrl &&
+                      storeProfile.mapUrl.startsWith("https://") ? (
+                        <a
+                          href={storeProfile.mapUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary inline-flex items-center gap-1 font-medium hover:underline"
+                        >
+                          <span>Xem trên bản đồ & chỉ đường</span>
+                          <span aria-hidden="true">↗</span>
+                        </a>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground space-y-1 text-sm">
+                    <p>
+                      Cửa hàng chưa cập nhật địa chỉ nhận hàng cụ thể trên hệ
+                      thống.
+                    </p>
+                    <p>
+                      Quý khách vui lòng liên hệ hotline{" "}
+                      {storeProfile?.hotline ? (
+                        <a
+                          href={`tel:${storeProfile.hotline.replace(/\s+/g, "")}`}
+                          className="text-primary font-bold hover:underline"
+                        >
+                          {storeProfile.hotline}
+                        </a>
+                      ) : (
+                        "cửa hàng"
+                      )}{" "}
+                      để được hỗ trợ hướng dẫn nhận hàng trực tiếp.
+                    </p>
+                  </div>
+                )}
               </div>
             ) : null}
           </section>
@@ -255,16 +354,68 @@ function FormContent() {
           >
             {pending ? "Đang đặt hàng…" : "Xác nhận đặt hàng"}
           </button>
+
+          <div
+            data-testid="checkout-reassurance"
+            className="border-border/60 bg-muted/30 text-muted-foreground mt-6 space-y-2.5 rounded-xl border p-4 text-xs"
+          >
+            <div className="flex items-start gap-2">
+              <ShieldCheck
+                className="text-primary mt-0.5 size-4 shrink-0"
+                aria-hidden="true"
+              />
+              <p>
+                <strong className="text-foreground">
+                  Đồng kiểm trước khi nhận:{" "}
+                </strong>
+                Quý khách có quyền kiểm tra hàng trước khi thanh toán.
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <CheckCircle2
+                className="text-primary mt-0.5 size-4 shrink-0"
+                aria-hidden="true"
+              />
+              <p>
+                <strong className="text-foreground">
+                  Thanh toán linh hoạt COD hoặc VietQR:{" "}
+                </strong>
+                Giá minh bạch từ hệ thống, không phụ phí ẩn.
+              </p>
+            </div>
+            <div className="border-border/60 flex flex-wrap items-center gap-x-3 gap-y-1 border-t pt-2 text-[0.7rem]">
+              <span>Chính sách:</span>
+              <Link
+                href="/shop/delivery-policy"
+                target="_blank"
+                className="text-primary hover:underline"
+              >
+                Chính sách giao hàng
+              </Link>
+              <span>•</span>
+              <Link
+                href="/shop/return-policy"
+                target="_blank"
+                className="text-primary hover:underline"
+              >
+                Chính sách đổi trả
+              </Link>
+            </div>
+          </div>
         </aside>
       </form>
     </main>
   );
 }
 
-export function CheckoutForm() {
+export function CheckoutForm({
+  storeProfile,
+}: {
+  storeProfile?: PublicStoreProfile;
+} = {}) {
   return (
     <OnlineCartProvider>
-      <FormContent />
+      <FormContent storeProfile={storeProfile} />
     </OnlineCartProvider>
   );
 }

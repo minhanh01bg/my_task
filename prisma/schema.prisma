@@ -67,8 +67,9 @@ model CustomerAccount {
   updatedAt       DateTime  @updatedAt
   disabledAt      DateTime?
 
-  sessions CustomerSession[]
-  orders   Order[]
+  sessions      CustomerSession[]
+  orders        Order[]
+  notifications CustomerNotification[]
 }
 
 model CustomerSession {
@@ -176,6 +177,23 @@ model AdminNotification {
   @@index([createdAt, id])
 }
 
+model CustomerNotification {
+  id        String          @id @default(cuid())
+  accountId String
+  account   CustomerAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  eventKey  String          @unique
+  kind      String
+  title     String
+  body      String
+  orderId   String?
+  href      String
+  createdAt DateTime        @default(now())
+  readAt    DateTime?
+
+  @@index([accountId, readAt, createdAt])
+  @@index([accountId, createdAt, id])
+}
+
 model OrderItem {
   id            String   @id @default(cuid())
   orderId       String
@@ -276,4 +294,23 @@ model AdminAuditEvent {
   @@index([createdAt])
   @@index([entityType, entityId])
   @@index([identityId, createdAt])
+}
+
+model StorefrontPromotion {
+  id        String    @id @default(cuid())
+  title     String
+  body      String?
+  imageUrl  String?
+  ctaLabel  String?
+  ctaHref   String?
+  placement String    @default("announcement")
+  startsAt  DateTime?
+  endsAt    DateTime?
+  priority  Int       @default(0)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([placement, isActive, priority])
+  @@index([isActive, startsAt, endsAt])
 }

@@ -1,18 +1,23 @@
+import type { Prisma } from "@prisma/client";
+
 import { prisma } from "@/server/db/prisma";
 
 /**
  * Huy don va hoan lai ton kho. Idempotent — huy don da huy khong lam gi them,
  * neu khong se cong ton kho nhieu lan.
  */
-export async function cancelOrder(orderId: string): Promise<void> {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: { items: true },
-  });
+export async function cancelOrder(
+  orderId: string,
+  txClient?: Prisma.TransactionClient,
+): Promise<void> {
+  const runner = async (tx: Prisma.TransactionClient) => {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: { items: true },
+    });
 
-  if (!order || order.status === "cancelled") return;
+    if (!order || order.status === "cancelled") return;
 
-  await prisma.$transaction(async (tx) => {
     await tx.order.update({
       where: { id: orderId },
       data: { status: "cancelled" },
@@ -35,5 +40,11 @@ export async function cancelOrder(orderId: string): Promise<void> {
         },
       });
     }
-  });
+  };
+
+  if (txClient) {
+    await runner(txClient);
+  } else {
+    await prisma.$transaction(runner);
+  }
 }

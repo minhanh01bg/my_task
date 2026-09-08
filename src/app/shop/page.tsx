@@ -1,22 +1,107 @@
+import type { Metadata } from "next";
+
+import { siteConfig } from "@/config/site";
 import { OnlineCartProvider } from "@/features/online-store/cart-context";
 import { CatalogBrowser } from "@/features/online-store/catalog-browser";
+import { CategorySection } from "@/features/online-store/landing/category-section";
+import { HeroSection } from "@/features/online-store/landing/hero-section";
+import { ProductRail } from "@/features/online-store/landing/product-rail";
+import { TrustSection } from "@/features/online-store/landing/trust-section";
+import { PromotionBanner } from "@/features/online-store/promotion-banner";
+import { StoreFooter } from "@/features/online-store/store-footer";
 import { StoreHeader } from "@/features/online-store/store-header";
 import { hasAdminSession } from "@/server/auth/require-admin-session";
 import { getOnlineCatalog } from "@/server/catalog/get-online-catalog";
-import { getStoreName } from "@/server/settings/store-settings";
+import { getOptionalCustomerSession } from "@/server/customer-auth/session";
+import { getPublicStoreProfile } from "@/server/settings/store-settings";
+import { getActivePromotions } from "@/server/storefront/promotions";
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata(): Promise<Metadata> {
+  const storeProfile = await getPublicStoreProfile();
+  const title = `Cửa hàng trực tuyến | ${storeProfile.name}`;
+  const description = `Mua sắm nhu yếu phẩm, thực phẩm và đồ tiêu dùng chính hãng tại ${storeProfile.name}. Đặt nhanh trực tuyến, giao hàng tận nơi.`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: "/shop",
+    },
+    openGraph: {
+      title,
+      description,
+      url: `${siteConfig.url}/shop`,
+      siteName: storeProfile.name,
+      locale: "vi_VN",
+      type: "website",
+    },
+  };
+}
+
 export default async function ShopPage() {
-  const [catalog, storeName, isAdmin] = await Promise.all([
+  const [
+    catalog,
+    storeProfile,
+    isAdmin,
+    announcements,
+    heroPromotions,
+    customerSession,
+  ] = await Promise.all([
     getOnlineCatalog(),
-    getStoreName(),
+    getPublicStoreProfile(),
     hasAdminSession(),
+    getActivePromotions({ placement: "announcement", limit: 3 }),
+    getActivePromotions({ placement: "hero", limit: 1 }),
+    getOptionalCustomerSession(),
   ]);
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Store",
+    name: storeProfile.name,
+    description: "Cửa hàng bán lẻ trực tuyến chính hãng",
+    url: `${siteConfig.url}/shop`,
+    ...(storeProfile.hotline ? { telephone: storeProfile.hotline } : {}),
+    ...(storeProfile.address ? { address: storeProfile.address } : {}),
+    ...(storeProfile.openingHours
+      ? { openingHours: storeProfile.openingHours }
+      : {}),
+  };
+
   return (
     <OnlineCartProvider>
-      <StoreHeader storeName={storeName} isAdmin={isAdmin} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <PromotionBanner promotions={announcements} placement="announcement" />
+      <StoreHeader
+        storeName={storeProfile.name}
+        isAdmin={isAdmin}
+        isCustomer={Boolean(customerSession)}
+      />
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <PromotionBanner promotions={heroPromotions} placement="hero" />
+      </div>
+      <HeroSection
+        storeName={storeProfile.name}
+        tagline="Hàng thiết yếu, đặt nhanh tại nhà"
+        hotline={storeProfile.hotline}
+      />
+      <CategorySection categories={catalog.categories} />
+      <ProductRail
+        title="Sản phẩm nổi bật"
+        subtitle="Lựa chọn được khách hàng quan tâm nhiều nhất"
+        products={catalog.products}
+      />
+      <TrustSection
+        storeName={storeProfile.name}
+        hotline={storeProfile.hotline}
+      />
       <CatalogBrowser catalog={catalog} />
+      <StoreFooter profile={storeProfile} />
     </OnlineCartProvider>
   );
 }

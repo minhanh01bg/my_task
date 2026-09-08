@@ -1,88 +1,108 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Search, ShoppingCart } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 
 import { formatVnd } from "@/lib/money";
-import { normalize } from "@/lib/search/normalize";
+import { catalogFilterSchema, type CatalogFilter } from "@/types/storefront";
 
 import { useOnlineCart } from "./cart-context";
+import { CartFeedback } from "./cart-feedback";
+import { CatalogFilters } from "./catalog-filters";
+import { filterAndSortProducts } from "./filter-products";
 import type { OnlineCatalog } from "./types";
 
+const defaultFilter: CatalogFilter = {
+  q: "",
+  category: null,
+  inStock: false,
+  minPrice: null,
+  maxPrice: null,
+  sort: "relevance",
+};
+
+function parseFilterFromParams(
+  searchParams: URLSearchParams | null,
+): CatalogFilter {
+  if (!searchParams) return defaultFilter;
+  const raw: Record<string, unknown> = {};
+
+  if (searchParams.has("q")) raw.q = searchParams.get("q");
+  if (searchParams.has("category")) raw.category = searchParams.get("category");
+  if (searchParams.has("inStock"))
+    raw.inStock = searchParams.get("inStock") === "true";
+  if (searchParams.has("minPrice")) {
+    const num = Number(searchParams.get("minPrice"));
+    if (!Number.isNaN(num)) raw.minPrice = num;
+  }
+  if (searchParams.has("maxPrice")) {
+    const num = Number(searchParams.get("maxPrice"));
+    if (!Number.isNaN(num)) raw.maxPrice = num;
+  }
+  if (searchParams.has("sort")) raw.sort = searchParams.get("sort");
+
+  const parsed = catalogFilterSchema.safeParse(raw);
+  return parsed.success ? parsed.data : defaultFilter;
+}
+
 export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("");
+  const searchParams = useSearchParams();
   const { add } = useOnlineCart();
-  const products = useMemo(() => {
-    const tokens = normalize(query).split(/\s+/).filter(Boolean);
-    return catalog.products.filter(
-      (product) =>
-        (!category || product.categoryId === category) &&
-        tokens.every((token) =>
-          normalize(`${product.name} ${product.searchText}`).includes(token),
-        ),
-    );
-  }, [catalog.products, category, query]);
+
+  const [prevParams, setPrevParams] = useState(searchParams);
+  const [filter, setFilter] = useState<CatalogFilter>(() =>
+    parseFilterFromParams(searchParams),
+  );
+
+  // Adjust state on searchParams change during render (React-recommended pattern)
+  if (searchParams !== prevParams) {
+    setPrevParams(searchParams);
+    setFilter(parseFilterFromParams(searchParams));
+  }
+
+  const products = useMemo(
+    () => filterAndSortProducts(catalog.products, filter),
+    [catalog.products, filter],
+  );
 
   return (
     <section
+      id="catalog"
       aria-labelledby="catalog-title"
-      className="mx-auto max-w-7xl px-4 py-10 sm:px-6"
+      className="mx-auto max-w-7xl scroll-mt-24 px-4 py-10 sm:px-6"
     >
       <div className="max-w-2xl">
         <p className="text-primary text-sm font-bold tracking-widest uppercase">
           Mua sắm thuận tiện
         </p>
-        <h1
+        <h2
           id="catalog-title"
-          className="font-heading mt-2 text-4xl font-bold sm:text-5xl"
+          className="font-heading mt-2 text-3xl font-bold sm:text-4xl"
         >
-          Hàng thiết yếu, đặt nhanh tại nhà
-        </h1>
-        <p className="text-muted-foreground mt-4 text-lg">
+          Toàn bộ sản phẩm
+        </h2>
+        <p className="text-muted-foreground mt-3 text-base">
           Giá và tồn kho được cập nhật trực tiếp từ cửa hàng.
         </p>
       </div>
-      <label className="relative mt-8 block max-w-2xl">
-        <span className="sr-only">Tìm sản phẩm</span>
-        <Search
-          aria-hidden="true"
-          className="text-muted-foreground absolute top-3.5 left-4 size-5"
+
+      <div className="mt-8">
+        <CatalogFilters
+          categories={catalog.categories}
+          filter={filter}
+          onFilterChange={setFilter}
+          resultCount={products.length}
         />
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Tìm tên sản phẩm…"
-          className="border-input bg-background h-12 w-full rounded-2xl border pr-4 pl-12 outline-none focus-visible:ring-3"
-        />
-      </label>
-      <div
-        className="mt-5 flex gap-2 overflow-x-auto pb-2"
-        aria-label="Danh mục"
-      >
-        <button
-          onClick={() => setCategory("")}
-          className={`min-h-11 shrink-0 rounded-full px-4 font-bold ${!category ? "bg-primary text-primary-foreground" : "bg-muted"}`}
-        >
-          Tất cả
-        </button>
-        {catalog.categories.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setCategory(item.id)}
-            className={`min-h-11 shrink-0 rounded-full px-4 font-bold ${category === item.id ? "bg-primary text-primary-foreground" : "bg-muted"}`}
-          >
-            {item.name}
-          </button>
-        ))}
       </div>
-      {products.length ? (
+
+      {products.length > 0 ? (
         <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
           {products.map((product) => (
             <article
               key={product.id}
-              className="border-border bg-card overflow-hidden rounded-2xl border shadow-sm"
+              className="border-border bg-card overflow-hidden rounded-2xl border shadow-xs"
             >
               <div className="bg-muted relative aspect-square">
                 {product.imageUrl ? (
@@ -110,9 +130,15 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
                   {formatVnd(product.price)} ₫
                 </p>
                 <button
+                  type="button"
                   disabled={product.stock <= 0}
                   onClick={() => add(product)}
-                  className="bg-primary text-primary-foreground mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-3 font-bold disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label={
+                    product.stock > 0
+                      ? `Thêm ${product.name} vào giỏ`
+                      : `${product.name} đã hết hàng`
+                  }
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-3 font-bold transition-all duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <ShoppingCart aria-hidden="true" className="size-4" />
                   {product.stock > 0 ? "Thêm vào giỏ" : "Hết hàng"}
@@ -122,19 +148,23 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
           ))}
         </div>
       ) : (
-        <div className="bg-muted mt-8 rounded-2xl p-10 text-center">
-          <p className="font-bold">Không tìm thấy sản phẩm</p>
+        <div className="bg-muted/40 border-border mt-8 rounded-2xl border p-12 text-center">
+          <p className="text-base font-bold">Không tìm thấy sản phẩm phù hợp</p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Thử thay đổi từ khóa, khoảng giá hoặc bỏ bớt các bộ lọc đang áp
+            dụng.
+          </p>
           <button
-            onClick={() => {
-              setQuery("");
-              setCategory("");
-            }}
-            className="text-primary mt-3 min-h-11 font-bold underline"
+            type="button"
+            onClick={() => setFilter(defaultFilter)}
+            className="text-primary hover:text-primary/80 mt-4 inline-flex min-h-11 items-center font-bold underline"
           >
-            Xóa bộ lọc
+            Xóa tất cả bộ lọc
           </button>
         </div>
       )}
+
+      <CartFeedback />
     </section>
   );
 }

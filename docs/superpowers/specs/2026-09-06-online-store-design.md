@@ -234,3 +234,8 @@ Notification “đơn online mới” phải được insert trong **cùng Prism
 7. Admin badge tồn tại qua restart/browser khác, poll không chạy khi tab hidden và mark-read lặp lại vẫn an toàn.
 8. Mark-all dùng cutoff, không đánh dấu notification mới đến sau thao tác; API notification không public và không trả PII đầy đủ.
 9. Migration giữ nguyên dữ liệu/semantics của `Customer`, `Order.customerId`, admin `pos_session` và đơn POS cũ.
+
+## 18. Storefront Experience Completion Amendments (2026-09-07)
+
+- **Phạm vi bổ sung đã duyệt**: Landing page, first-party storefront promotions (do admin quản trị), catalog filters (sort, khoảng giá, còn hàng, category chips đồng bộ URL state), add-to-cart visual & aria-live feedback, cart drawer, và structured delivery address selectors.
+- **Ranh giới công nghệ & bảo mật**: Tiếp tục loại trừ third-party ad networks/tracking SDKs, dynamic shipping fee tính từ nhà vận chuyển bên ngoài, và SMS/Zalo/email providers bên ngoài. Mọi promotion CTA chỉ nhận internal path hoặc URL HTTPS đã kiểm duyệt.

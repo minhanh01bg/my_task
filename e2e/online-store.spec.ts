@@ -176,3 +176,127 @@ test("guest claim and guest revoke: access controls and unauthenticated protecti
   );
   expect(crossOriginRevoke.status()).toBe(403);
 });
+
+test("cart drawer: mở drawer, xem danh sách sản phẩm và đóng drawer", async ({
+  page,
+}) => {
+  await page.goto("/shop");
+  const cartBtn = page.getByRole("button", { name: /mở giỏ hàng/i });
+  await expect(cartBtn).toBeVisible();
+  await cartBtn.click();
+
+  const drawer = page.getByRole("dialog");
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByText(/giỏ hàng.*trống/i)).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(drawer).not.toBeVisible();
+});
+
+test("cart persistence: thêm sản phẩm và giữ nguyên sau khi reload", async ({
+  page,
+}) => {
+  await page.goto("/shop");
+  const addBtn = page.getByRole("button", { name: /thêm .* vào giỏ/i }).first();
+  if (await addBtn.isVisible()) {
+    await addBtn.click();
+    await expect(page.getByRole("status")).toBeVisible();
+
+    await page.reload();
+    const cartBtn = page.getByRole("button", { name: /mở giỏ hàng/i });
+    await cartBtn.click();
+    const drawer = page.getByRole("dialog");
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByTestId("cart-subtotal")).toBeVisible();
+  }
+});
+
+test("catalog filter: lọc theo danh mục và tìm kiếm đồng bộ URL", async ({
+  page,
+}) => {
+  await page.goto("/shop");
+  const searchInput = page.getByPlaceholder("Tìm tên sản phẩm…");
+  await expect(searchInput).toBeVisible();
+
+  await searchInput.fill("cà phê");
+  await expect(page).toHaveURL(/q=/);
+
+  const categoryGroup = page.getByRole("group", { name: "Danh mục sản phẩm" });
+  const categoryBtn = categoryGroup.getByRole("button").nth(1);
+  if (await categoryBtn.isVisible()) {
+    await categoryBtn.click();
+    await expect(categoryBtn).toHaveAttribute("aria-pressed", "true");
+  }
+});
+
+test("catalog sort: thay đổi thứ tự sắp xếp cập nhật URL", async ({ page }) => {
+  await page.goto("/shop");
+  const sortSelect = page.getByLabel("Sắp xếp theo");
+  await expect(sortSelect).toBeVisible();
+  await sortSelect.selectOption("price-asc");
+  await expect(page).toHaveURL(/sort=price-asc/);
+});
+
+test("store information: footer hiển thị thông tin cửa hàng và liên kết chính sách", async ({
+  page,
+}) => {
+  await page.goto("/shop");
+  const footer = page.locator("footer");
+  await expect(footer).toBeVisible();
+  await expect(
+    footer.getByRole("link", { name: "Chính sách giao hàng" }),
+  ).toBeVisible();
+  await expect(
+    footer.getByRole("link", { name: "Chính sách đổi trả" }),
+  ).toBeVisible();
+  await expect(
+    footer.getByRole("link", { name: "Chính sách bảo mật" }),
+  ).toBeVisible();
+});
+
+test("pickup address: chọn nhận tại cửa hàng hiển thị thông tin nhận hàng", async ({
+  page,
+}) => {
+  await page.goto("/shop");
+  const addBtn = page.getByRole("button", { name: /thêm .* vào giỏ/i }).first();
+  if (await addBtn.isVisible()) {
+    await addBtn.click();
+    await page.goto("/checkout");
+
+    const pickupRadio = page.getByLabel("Nhận tại cửa hàng");
+    await expect(pickupRadio).toBeVisible();
+    await pickupRadio.click();
+
+    await expect(page.getByTestId("pickup-store-info")).toBeVisible();
+    await expect(page.getByLabel(/tỉnh\/thành phố/i)).not.toBeVisible();
+  }
+});
+
+test("landing: bố cục trang chủ có hero, danh mục và cuộn tới catalog khi nhấn Mua ngay", async ({
+  page,
+}) => {
+  await page.goto("/shop");
+  const h1 = page.getByRole("heading", { level: 1 });
+  await expect(h1).toBeVisible();
+  await expect(h1).toHaveText(/Hàng thiết yếu, đặt nhanh tại nhà/i);
+
+  // Danh mục sản phẩm
+  await expect(
+    page.getByRole("heading", { name: "Danh mục sản phẩm" }),
+  ).toBeVisible();
+
+  // CTA Mua ngay
+  const cta = page.getByRole("link", { name: "Mua ngay" });
+  await expect(cta).toBeVisible();
+  await cta.click();
+  await expect(page).toHaveURL(/#catalog/);
+  await expect(page.locator("#catalog")).toBeVisible();
+});
+
+test("featured: hiển thị danh sách sản phẩm nổi bật trên landing page", async ({
+  page,
+}) => {
+  await page.goto("/shop");
+  const railHeading = page.getByRole("heading", { name: "Sản phẩm nổi bật" });
+  await expect(railHeading).toBeVisible();
+});
