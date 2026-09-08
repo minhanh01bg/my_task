@@ -558,16 +558,16 @@ Ngoài giới hạn chủ đích đó, implementation hiện tại còn chưa ho
 
 **Tests first:**
 
-- [ ] Footer links tồn tại và routes render semantic headings.
-- [ ] Checkout chỉ hiển thị claim đúng với policy đã publish.
-- [ ] Privacy page mô tả guest/account data, retention và contact channel phù hợp tài liệu security.
-- [ ] Không copy boilerplate pháp lý sai hoặc hứa tự động hoàn tiền/chuyển phát chưa hỗ trợ.
+- [x] Footer links tồn tại và routes render semantic headings.
+- [x] Checkout chỉ hiển thị claim đúng với policy đã publish.
+- [x] Privacy page mô tả guest/account data, retention và contact channel phù hợp tài liệu security.
+- [x] Không copy boilerplate pháp lý sai hoặc hứa tự động hoàn tiền/chuyển phát chưa hỗ trợ.
 
 **Implementation:**
 
-- [ ] Viết copy tiếng Việt ngắn, trung thực, có owner phê duyệt.
-- [ ] Thêm reassurance cạnh CTA checkout: giá được xác nhận, phương thức payment, contact support.
-- [ ] Nếu policy cần admin-editable content, tạo model/versioning trong task riêng thay vì raw HTML setting.
+- [x] Viết copy tiếng Việt ngắn, trung thực, có owner phê duyệt.
+- [x] Thêm reassurance cạnh CTA checkout: giá được xác nhận, phương thức payment, contact support.
+- [x] Nếu policy cần admin-editable content, tạo model/versioning trong task riêng thay vì raw HTML setting.
 
 **Verification:**
 
@@ -595,17 +595,17 @@ Ngoài giới hạn chủ đích đó, implementation hiện tại còn chưa ho
 
 **Tests first:**
 
-- [ ] Metadata có title/description/canonical/OG fallback, không chứa query/token/PII.
-- [ ] Structured data chỉ dùng public store/product fields và valid absolute URLs.
-- [ ] Analytics event schema allowlist chỉ nhận event name, category/product pseudonymous id, quantity bucket và UI placement cần thiết.
-- [ ] Checkout form values, phone, address, note, guest URL, receipt nonce không bao giờ vào analytics.
+- [x] Metadata có title/description/canonical/OG fallback, không chứa query/token/PII.
+- [x] Structured data chỉ dùng public store/product fields và valid absolute URLs.
+- [x] Analytics event schema allowlist chỉ nhận event name, category/product pseudonymous id, quantity bucket và UI placement cần thiết.
+- [x] Checkout form values, phone, address, note, guest URL, receipt nonce không bao giờ vào analytics.
 
 **Implementation:**
 
-- [ ] Thêm metadata server-side và public sitemap/robots policy phù hợp.
-- [ ] Event tối thiểu: view catalog, apply filter, add result, open cart, begin checkout, checkout success/failure category.
-- [ ] Không gửi raw search query nếu chưa có privacy review; ưu tiên length/result-count bucket.
-- [ ] Không thêm cookie marketing hoặc third-party pixel trong task này.
+- [x] Thêm metadata server-side và public sitemap/robots policy phù hợp.
+- [x] Event tối thiểu: view catalog, apply filter, add result, open cart, begin checkout, checkout success/failure category.
+- [x] Không gửi raw search query nếu chưa có privacy review; ưu tiên length/result-count bucket.
+- [x] Không thêm cookie marketing hoặc third-party pixel trong task này.
 
 **Verification:**
 
@@ -624,42 +624,42 @@ Ngoài giới hạn chủ đích đó, implementation hiện tại còn chưa ho
 
 **Automated verification:**
 
-- [ ] `pnpm exec prettier --check .`
-- [ ] `pnpm lint`
-- [ ] `pnpm typecheck`
-- [ ] `pnpm test`
-- [ ] `pnpm build`
-- [ ] `pnpm test:e2e -- e2e/online-store.spec.ts`
-- [ ] `pnpm test:e2e -- e2e/customer-account.spec.ts`
-- [ ] `pnpm test:e2e -- e2e/admin-promotions.spec.ts`
-- [ ] `pnpm test:e2e -- e2e/pos-cash-sale.spec.ts e2e/pos-offline-sale.spec.ts`
-- [ ] `pnpm test:e2e`
-- [ ] `git diff --check`
+- [x] `pnpm exec prettier --check .`
+- [x] `pnpm lint`
+- [x] `pnpm typecheck`
+- [x] `pnpm test`
+- [x] `pnpm build`
+- [x] `pnpm test:e2e -- e2e/online-store.spec.ts`
+- [x] `pnpm test:e2e -- e2e/customer-account.spec.ts`
+- [x] `pnpm test:e2e -- e2e/admin-promotions.spec.ts`
+- [x] `pnpm test:e2e -- e2e/pos-cash-sale.spec.ts e2e/pos-offline-sale.spec.ts`
+- [x] `pnpm test:e2e`
+- [x] `git diff --check`
 
 **Manual visual/accessibility matrix:**
 
-- [ ] 375×667, 390×844, 768×1024, 1024×768, 1440×900.
-- [ ] Light/dark mode; 200% zoom; keyboard-only; reduced motion.
-- [ ] Landing no campaign, one campaign, long Vietnamese copy, missing image.
-- [ ] Catalog 0/1/many categories, 0/1/many products, long names, out-of-stock mix.
-- [ ] Add success, increment, stock cap, drawer empty/full, persisted reload.
-- [ ] Address provider/dataset success và fallback; pickup configuration missing/present.
-- [ ] Customer inbox empty/unread/error, cross-account access blocked.
+- [x] 375×667, 390×844, 768×1024, 1024×768, 1440×900.
+- [x] Light/dark mode; 200% zoom; keyboard-only; reduced motion.
+- [x] Landing no campaign, one campaign, long Vietnamese copy, missing image.
+- [x] Catalog 0/1/many categories, 0/1/many products, long names, out-of-stock mix.
+- [x] Add success, increment, stock cap, drawer empty/full, persisted reload.
+- [x] Address provider/dataset success và fallback; pickup configuration missing/present.
+- [x] Customer inbox empty/unread/error, cross-account access blocked.
 
 **Security/privacy review:**
 
-- [ ] Search logs, analytics payload, Sentry, URLs và HTML cho phone/address/note/session/guest/receipt tokens.
-- [ ] Confirm promotion CTA cannot execute `javascript:` or escape internal allowlist policy.
-- [ ] Confirm admin promotion actions authorize directly and customer notifications scope by account predicate.
-- [ ] Confirm no third-party ad/tracking script and CSP remains restrictive.
-- [ ] Confirm migrations apply to a copy of legacy database and POS semantics remain unchanged.
+- [x] Search logs, analytics payload, Sentry, URLs và HTML cho phone/address/note/session/guest/receipt tokens.
+- [x] Confirm promotion CTA cannot execute `javascript:` or escape internal allowlist policy.
+- [x] Confirm admin promotion actions authorize directly and customer notifications scope by account predicate.
+- [x] Confirm no third-party ad/tracking script and CSP remains restrictive.
+- [x] Confirm migrations apply to a copy of legacy database and POS semantics remain unchanged.
 
 **Delivery:**
 
-- [ ] Mỗi task có commit riêng đúng message đã định.
-- [ ] Fix phát sinh có commit concern-specific riêng, không amend/squash concern khác.
-- [ ] Working tree sạch, không secret/PII/database artifact.
-- [ ] Branch chính xác `feat/pos-core`.
+- [x] Mỗi task có commit riêng đúng message đã định.
+- [x] Fix phát sinh có commit concern-specific riêng, không amend/squash concern khác.
+- [x] Working tree sạch, không secret/PII/database artifact.
+- [x] Branch chính xác `feat/pos-core`.
 - [ ] Push không force: `git push origin feat/pos-core`.
 
 ---
