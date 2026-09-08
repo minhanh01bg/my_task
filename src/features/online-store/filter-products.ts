@@ -50,6 +50,12 @@ export function filterAndSortProducts(
   // Sắp xếp
   const sorted = [...filtered].sort((a, b) => {
     switch (filter.sort) {
+      case "best-selling": {
+        const salesA = a.soldCount ?? 0;
+        const salesB = b.soldCount ?? 0;
+        const diff = salesB - salesA;
+        return diff !== 0 ? diff : a.id.localeCompare(b.id);
+      }
       case "price-asc": {
         const diff = a.price - b.price;
         return diff !== 0 ? diff : a.id.localeCompare(b.id);

@@ -138,4 +138,18 @@ describe("filterAndSortProducts", () => {
     // Bạc xỉu, Bánh mì pate, Bánh ngọt phô mai, Cà phê sữa đá
     expect(result.map((p) => p.id)).toEqual(["p2", "p3", "p4", "p1"]);
   });
+
+  it("sắp xếp theo bán chạy nhất (best-selling) theo soldCount giảm dần", () => {
+    const productsWithSales: OnlineProduct[] = [
+      { ...mockProducts[0], id: "p1", soldCount: 5 },
+      { ...mockProducts[1], id: "p2", soldCount: 50 },
+      { ...mockProducts[2], id: "p3", soldCount: 12 },
+      { ...mockProducts[3], id: "p4", soldCount: 0 },
+    ];
+    const result = filterAndSortProducts(productsWithSales, {
+      ...defaultFilter,
+      sort: "best-selling",
+    });
+    expect(result.map((p) => p.id)).toEqual(["p2", "p3", "p1", "p4"]);
+  });
 });

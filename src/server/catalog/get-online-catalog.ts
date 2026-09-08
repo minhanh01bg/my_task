@@ -29,6 +29,7 @@ export async function getOnlineCatalog(): Promise<OnlineCatalog> {
         imageUrl: true,
         categoryId: true,
         searchText: true,
+        soldCount: true,
       },
     }),
   ]);

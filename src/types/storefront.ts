@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const catalogSortEnum = z.enum([
   "relevance",
+  "best-selling",
   "price-asc",
   "price-desc",
   "name-asc",
