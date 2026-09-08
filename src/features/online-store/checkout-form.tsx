@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { CheckCircle2, ShieldCheck } from "lucide-react";
 
 import { formatFullAddress } from "@/lib/address/vietnam-address";
 import { formatVnd } from "@/lib/money";
@@ -353,6 +354,54 @@ function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
           >
             {pending ? "Đang đặt hàng…" : "Xác nhận đặt hàng"}
           </button>
+
+          <div
+            data-testid="checkout-reassurance"
+            className="border-border/60 bg-muted/30 text-muted-foreground mt-6 space-y-2.5 rounded-xl border p-4 text-xs"
+          >
+            <div className="flex items-start gap-2">
+              <ShieldCheck
+                className="text-primary mt-0.5 size-4 shrink-0"
+                aria-hidden="true"
+              />
+              <p>
+                <strong className="text-foreground">
+                  Đồng kiểm trước khi nhận:{" "}
+                </strong>
+                Quý khách có quyền kiểm tra hàng trước khi thanh toán.
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <CheckCircle2
+                className="text-primary mt-0.5 size-4 shrink-0"
+                aria-hidden="true"
+              />
+              <p>
+                <strong className="text-foreground">
+                  Thanh toán linh hoạt COD hoặc VietQR:{" "}
+                </strong>
+                Giá minh bạch từ hệ thống, không phụ phí ẩn.
+              </p>
+            </div>
+            <div className="border-border/60 flex flex-wrap items-center gap-x-3 gap-y-1 border-t pt-2 text-[0.7rem]">
+              <span>Chính sách:</span>
+              <Link
+                href="/shop/delivery-policy"
+                target="_blank"
+                className="text-primary hover:underline"
+              >
+                Chính sách giao hàng
+              </Link>
+              <span>•</span>
+              <Link
+                href="/shop/return-policy"
+                target="_blank"
+                className="text-primary hover:underline"
+              >
+                Chính sách đổi trả
+              </Link>
+            </div>
+          </div>
         </aside>
       </form>
     </main>

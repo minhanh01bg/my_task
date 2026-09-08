@@ -72,7 +72,7 @@ export function StoreFooter({ profile }: StoreFooterProps) {
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
-                  href="/shop#policies-shipping"
+                  href="/shop/delivery-policy"
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Chính sách giao hàng
@@ -80,7 +80,15 @@ export function StoreFooter({ profile }: StoreFooterProps) {
               </li>
               <li>
                 <Link
-                  href="/shop#policies-returns"
+                  href="/shop/payment-policy"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Chính sách thanh toán
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/shop/return-policy"
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Chính sách đổi trả
@@ -88,7 +96,7 @@ export function StoreFooter({ profile }: StoreFooterProps) {
               </li>
               <li>
                 <Link
-                  href="/shop#policies-privacy"
+                  href="/shop/privacy"
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Chính sách bảo mật
