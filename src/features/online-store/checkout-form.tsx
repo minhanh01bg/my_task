@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { formatFullAddress } from "@/lib/address/vietnam-address";
 import { formatVnd } from "@/lib/money";
 import { onlineOrderResponseSchema } from "@/types/online-order";
 
+import { AddressFields, type AddressState } from "./address-fields";
 import { OnlineCartProvider, useOnlineCart } from "./cart-context";
 
 function FormContent() {
@@ -15,6 +17,16 @@ function FormContent() {
   const [fulfillment, setFulfillment] = useState<"delivery" | "pickup">(
     "delivery",
   );
+  const [address, setAddress] = useState<AddressState>({
+    provinceCode: "",
+    districtCode: "",
+    wardCode: "",
+    provinceName: "",
+    districtName: "",
+    wardName: "",
+    street: "",
+    isManual: false,
+  });
   const [clientId, setClientId] = useState(() => crypto.randomUUID());
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -22,6 +34,13 @@ function FormContent() {
     (sum, line) => sum + Math.round(line.price * line.quantity),
     0,
   );
+
+  const formattedAddress = formatFullAddress({
+    street: address.street,
+    ward: address.wardName,
+    district: address.districtName,
+    province: address.provinceName,
+  });
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -40,12 +59,33 @@ function FormContent() {
       fulfillmentType: fulfillment,
       paymentMethod: data.get("paymentMethod"),
       deliveryAddress:
-        fulfillment === "delivery" ? data.get("deliveryAddress") : "",
-      deliveryWard: fulfillment === "delivery" ? data.get("deliveryWard") : "",
+        fulfillment === "delivery"
+          ? (data.get("deliveryAddress") as string) || address.street
+          : "",
+      deliveryWard:
+        fulfillment === "delivery"
+          ? (data.get("deliveryWard") as string) || address.wardName
+          : "",
       deliveryDistrict:
-        fulfillment === "delivery" ? data.get("deliveryDistrict") : "",
+        fulfillment === "delivery"
+          ? (data.get("deliveryDistrict") as string) || address.districtName
+          : "",
       deliveryProvince:
-        fulfillment === "delivery" ? data.get("deliveryProvince") : "",
+        fulfillment === "delivery"
+          ? (data.get("deliveryProvince") as string) || address.provinceName
+          : "",
+      provinceCode:
+        fulfillment === "delivery" && !address.isManual && address.provinceCode
+          ? address.provinceCode
+          : undefined,
+      districtCode:
+        fulfillment === "delivery" && !address.isManual && address.districtCode
+          ? address.districtCode
+          : undefined,
+      wardCode:
+        fulfillment === "delivery" && !address.isManual && address.wardCode
+          ? address.wardCode
+          : undefined,
       note: data.get("note"),
     };
     try {
@@ -146,37 +186,23 @@ function FormContent() {
               </label>
             </div>
             {fulfillment === "delivery" ? (
-              <div className="mt-4 grid gap-4">
-                <label className="font-bold">
-                  Địa chỉ
-                  <input
-                    required
-                    name="deliveryAddress"
-                    className={`${inputClass} mt-2`}
-                  />
-                </label>
-                <label className="font-bold">
-                  Phường/xã
-                  <input name="deliveryWard" className={`${inputClass} mt-2`} />
-                </label>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="font-bold">
-                    Quận/huyện
-                    <input
-                      required
-                      name="deliveryDistrict"
-                      className={`${inputClass} mt-2`}
-                    />
-                  </label>
-                  <label className="font-bold">
-                    Tỉnh/thành phố
-                    <input
-                      required
-                      name="deliveryProvince"
-                      className={`${inputClass} mt-2`}
-                    />
-                  </label>
-                </div>
+              <div className="mt-4">
+                <AddressFields
+                  value={address}
+                  onChange={setAddress}
+                  inputClass={inputClass}
+                />
+                {formattedAddress ? (
+                  <div
+                    data-testid="address-summary"
+                    className="border-border bg-muted/40 mt-4 rounded-xl border p-3.5 text-sm"
+                  >
+                    <span className="text-muted-foreground font-semibold">
+                      Địa chỉ nhận hàng:
+                    </span>
+                    <p className="mt-1 font-medium">{formattedAddress}</p>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </section>

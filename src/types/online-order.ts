@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { validateAddressHierarchy } from "@/lib/address/vietnam-address";
+
 export const fulfillmentTypeSchema = z.enum(["delivery", "pickup"]);
 export const onlinePaymentMethodSchema = z.enum(["cod", "bank_transfer"]);
 
@@ -31,6 +33,9 @@ export const onlineCheckoutSchema = z
     deliveryWard: z.string().trim().max(100).optional().default(""),
     deliveryDistrict: z.string().trim().max(100).optional().default(""),
     deliveryProvince: z.string().trim().max(100).optional().default(""),
+    provinceCode: z.string().trim().max(20).optional(),
+    districtCode: z.string().trim().max(20).optional(),
+    wardCode: z.string().trim().max(20).optional(),
     note: z.string().trim().max(500).optional().default(""),
   })
   .strict()
@@ -48,14 +53,39 @@ export const onlineCheckoutSchema = z
     if (value.fulfillmentType === "delivery") {
       for (const field of [
         "deliveryAddress",
+        "deliveryWard",
         "deliveryDistrict",
         "deliveryProvince",
       ] as const) {
-        if (!value[field]) {
+        if (!value[field]?.trim()) {
           context.addIssue({
             code: "custom",
             path: [field],
-            message: "Vui lòng nhập địa chỉ giao hàng",
+            message: "Vui lòng nhập địa chỉ giao hàng đầy đủ",
+          });
+        }
+      }
+
+      if (value.provinceCode || value.districtCode || value.wardCode) {
+        const validation = validateAddressHierarchy({
+          provinceCode: value.provinceCode,
+          districtCode: value.districtCode,
+          wardCode: value.wardCode,
+          provinceName: value.deliveryProvince,
+          districtName: value.deliveryDistrict,
+          wardName: value.deliveryWard,
+        });
+        if (!validation.valid) {
+          context.addIssue({
+            code: "custom",
+            path: [
+              value.wardCode && !validation.valid
+                ? "wardCode"
+                : value.districtCode
+                  ? "districtCode"
+                  : "provinceCode",
+            ],
+            message: validation.error ?? "Thông tin địa chỉ không hợp lệ",
           });
         }
       }
