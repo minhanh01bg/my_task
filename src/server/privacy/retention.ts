@@ -42,6 +42,14 @@ export const DATA_INVENTORY: DataInventoryItem[] = [
     actionOnExpiry: "delete",
   },
   {
+    field: "CustomerNotification.*",
+    category: "transient_session",
+    owner: "Customer Communication & Inbox",
+    purpose: "Customer order event notifications and status updates",
+    retentionDays: 90,
+    actionOnExpiry: "delete",
+  },
+  {
     field: "GuestOrderAccess.tokenHash, CheckoutIdempotency.recoveryDigest",
     category: "transient_capability",
     owner: "Online Checkout & Fulfillment",
@@ -205,6 +213,9 @@ export async function applyOnlineStoreRetention(
       }),
       prisma.adminSession.deleteMany({
         where: { expiresAt: { lt: cutoffDate } },
+      }),
+      prisma.customerNotification.deleteMany({
+        where: { createdAt: { lt: cutoffDate } },
       }),
     ]);
 

@@ -1,3 +1,4 @@
+import { createCustomerOrderClaimedNotification } from "@/server/customer-notifications/create-customer-notification";
 import { digestOpaqueToken } from "@/server/customer-auth/session";
 import { prisma } from "@/server/db/prisma";
 import { canonicalizeVietnamesePhone } from "@/types/customer-auth";
@@ -107,7 +108,12 @@ export async function claimGuestOrder(
     // 3. Ensure order is unowned
     const order = await tx.order.findUnique({
       where: { id: guestAccess.orderId },
-      select: { id: true, customerAccountId: true, contactPhone: true },
+      select: {
+        id: true,
+        code: true,
+        customerAccountId: true,
+        contactPhone: true,
+      },
     });
 
     if (!order || order.customerAccountId !== null) {
@@ -150,6 +156,9 @@ export async function claimGuestOrder(
       where: { orderId: order.id },
       data: { encryptedGuestToken: null },
     });
+
+    // 8. Create ownership customer notification
+    await createCustomerOrderClaimedNotification(tx, order, account.id);
 
     return { ok: true, orderId: order.id };
   });
