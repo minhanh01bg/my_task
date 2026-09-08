@@ -73,6 +73,19 @@ describe("Storefront Landing Page Components", () => {
       );
     });
 
+    it("hiển thị số lượng sản phẩm khi có productCount và nút xem toàn bộ danh mục", () => {
+      const categoriesWithCount: OnlineCategory[] = [
+        { id: "c1", name: "Đồ uống & Cà phê", productCount: 15 },
+        { id: "c2", name: "Bánh kẹo & Snack", productCount: 8 },
+      ];
+      render(<CategorySection categories={categoriesWithCount} />);
+
+      expect(screen.getByText("15 sản phẩm")).toBeInTheDocument();
+      expect(screen.getByText("8 sản phẩm")).toBeInTheDocument();
+      const viewAllLink = screen.getByRole("link", { name: /xem tất cả/i });
+      expect(viewAllLink).toHaveAttribute("href", "#catalog");
+    });
+
     it("hiển thị fallback có ích khi chưa có danh mục", () => {
       render(<CategorySection categories={[]} />);
 

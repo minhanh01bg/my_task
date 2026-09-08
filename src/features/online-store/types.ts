@@ -12,6 +12,7 @@ export interface OnlineProduct {
 export interface OnlineCategory {
   id: string;
   name: string;
+  productCount?: number;
 }
 
 export interface OnlineCatalog {
