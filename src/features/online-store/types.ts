@@ -22,3 +22,13 @@ export interface OnlineCatalog {
 export interface OnlineCartLine extends OnlineProduct {
   quantity: number;
 }
+
+export type {
+  CartMutationResult,
+  CartMutationStatus,
+  CatalogFilter,
+  CatalogSort,
+  PromotionPlacement,
+  PublicPromotion,
+  PublicStoreProfile,
+} from "@/types/storefront";
