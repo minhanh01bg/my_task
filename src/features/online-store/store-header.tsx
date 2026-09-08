@@ -3,15 +3,19 @@
 import Link from "next/link";
 import { LayoutDashboard, ShoppingBag, UserRound } from "lucide-react";
 
+import { CustomerNotificationButton } from "@/features/customer-notifications/notification-button";
+
 import { useOnlineCart } from "./cart-context";
 import { CartDrawer } from "./cart-drawer";
 
 export function StoreHeader({
   storeName,
   isAdmin = false,
+  isCustomer = false,
 }: {
   storeName: string;
   isAdmin?: boolean;
+  isCustomer?: boolean;
 }) {
   const { lines, hydrated, openDrawer } = useOnlineCart();
   const count = lines.reduce((sum, line) => sum + line.quantity, 0);
@@ -34,6 +38,7 @@ export function StoreHeader({
                 <span className="ml-2 hidden sm:inline">Quản trị</span>
               </Link>
             ) : null}
+            {isCustomer ? <CustomerNotificationButton /> : null}
             <Link
               href="/account/orders"
               aria-label="Tài khoản khách hàng"

@@ -1,12 +1,17 @@
 import Link from "next/link";
+
 import { CustomerLogoutButton } from "@/features/customer-account/logout-button";
 import { CustomerOrderCard } from "@/features/customer-account/order-card";
+import { CustomerNotificationButton } from "@/features/customer-notifications/notification-button";
 import { requireCustomerSession } from "@/server/customer-auth/session";
 import { listCustomerOrders } from "@/server/orders/order-access";
+
 export const dynamic = "force-dynamic";
+
 export default async function CustomerOrdersPage() {
   const session = await requireCustomerSession();
   const orders = await listCustomerOrders(session.accountId);
+
   return (
     <main className="mx-auto max-w-4xl px-4 py-12">
       <div className="flex items-center justify-between">
@@ -16,7 +21,10 @@ export default async function CustomerOrdersPage() {
           </p>
           <h1 className="text-4xl font-bold">Đơn hàng của tôi</h1>
         </div>
-        <CustomerLogoutButton />
+        <div className="flex items-center gap-3">
+          <CustomerNotificationButton placement="page" />
+          <CustomerLogoutButton />
+        </div>
       </div>
       {orders.length ? (
         <ul className="mt-8 grid gap-4">
