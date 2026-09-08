@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 
 import type {
@@ -49,9 +50,13 @@ export function OnlineCartProvider({
       return [];
     }
   });
+  const hydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
   const [feedback, setFeedback] = useState<CartMutationResult | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const hydrated = typeof window !== "undefined";
 
   const linesRef = useRef(lines);
 

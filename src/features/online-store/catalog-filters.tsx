@@ -7,6 +7,7 @@ import { ArrowUpDown, RotateCcw, Search, X } from "lucide-react";
 import { formatVnd } from "@/lib/money";
 import type { CatalogFilter, CatalogSort } from "@/types/storefront";
 
+import { useOnlineCart } from "./cart-context";
 import type { OnlineCategory } from "./types";
 
 interface CatalogFiltersProps {
@@ -22,6 +23,7 @@ export function CatalogFilters({
   onFilterChange,
   resultCount,
 }: CatalogFiltersProps) {
+  const { hydrated } = useOnlineCart();
   const router = useRouter();
   const pathname = usePathname();
   const [, startTransition] = useTransition();
@@ -45,6 +47,9 @@ export function CatalogFilters({
 
     const queryString = params.toString();
     const targetUrl = queryString ? `${pathname}?${queryString}` : pathname;
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", targetUrl);
+    }
     startTransition(() => {
       router.replace(targetUrl, { scroll: false });
     });
@@ -108,11 +113,12 @@ export function CatalogFilters({
             />
             <select
               id={sortSelectId}
+              disabled={!hydrated}
               value={filter.sort}
               onChange={(e) =>
                 handleUpdate({ sort: e.target.value as CatalogSort })
               }
-              className="border-input bg-background focus-visible:ring-primary h-12 rounded-2xl border pr-8 pl-9 text-sm font-medium transition-all outline-none focus-visible:ring-2"
+              className="border-input bg-background focus-visible:ring-primary h-12 rounded-2xl border pr-8 pl-9 text-sm font-medium transition-all outline-none focus-visible:ring-2 disabled:opacity-70"
             >
               <option value="relevance">Phù hợp nhất</option>
               <option value="price-asc">Giá tăng dần</option>

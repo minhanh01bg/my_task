@@ -109,4 +109,18 @@ describe("CatalogBrowser", () => {
     expect(screen.getByText("Cà phê sữa")).toBeInTheDocument();
     expect(screen.getByText("Bánh mì")).toBeInTheDocument();
   });
+
+  it("thay đổi thứ tự sắp xếp gọi router.replace", async () => {
+    const user = userEvent.setup();
+    render(
+      <OnlineCartProvider>
+        <CatalogBrowser catalog={catalog} />
+      </OnlineCartProvider>,
+    );
+    const sortSelect = screen.getByLabelText("Sắp xếp theo");
+    await user.selectOptions(sortSelect, "price-asc");
+    expect(replace).toHaveBeenCalledWith("/shop?sort=price-asc", {
+      scroll: false,
+    });
+  });
 });

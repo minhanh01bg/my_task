@@ -14,7 +14,7 @@ import { AddressFields, type AddressState } from "./address-fields";
 import { OnlineCartProvider, useOnlineCart } from "./cart-context";
 
 function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
-  const { lines, clear, setQuantity, remove } = useOnlineCart();
+  const { lines, hydrated, clear, setQuantity, remove } = useOnlineCart();
   const router = useRouter();
   const [fulfillment, setFulfillment] = useState<"delivery" | "pickup">(
     "delivery",
@@ -116,7 +116,7 @@ function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
     }
   }
 
-  if (!lines.length)
+  if (!hydrated || !lines.length)
     return (
       <main className="mx-auto max-w-xl px-4 py-24 text-center">
         <h1 className="text-3xl font-bold">Giỏ hàng đang trống</h1>
