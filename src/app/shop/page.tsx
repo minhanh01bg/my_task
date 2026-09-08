@@ -1,3 +1,6 @@
+import type { Metadata } from "next";
+
+import { siteConfig } from "@/config/site";
 import { OnlineCartProvider } from "@/features/online-store/cart-context";
 import { CatalogBrowser } from "@/features/online-store/catalog-browser";
 import { CategorySection } from "@/features/online-store/landing/category-section";
@@ -14,6 +17,28 @@ import { getPublicStoreProfile } from "@/server/settings/store-settings";
 import { getActivePromotions } from "@/server/storefront/promotions";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const storeProfile = await getPublicStoreProfile();
+  const title = `Cửa hàng trực tuyến | ${storeProfile.name}`;
+  const description = `Mua sắm nhu yếu phẩm, thực phẩm và đồ tiêu dùng chính hãng tại ${storeProfile.name}. Đặt nhanh trực tuyến, giao hàng tận nơi.`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: "/shop",
+    },
+    openGraph: {
+      title,
+      description,
+      url: `${siteConfig.url}/shop`,
+      siteName: storeProfile.name,
+      locale: "vi_VN",
+      type: "website",
+    },
+  };
+}
 
 export default async function ShopPage() {
   const [
@@ -32,8 +57,25 @@ export default async function ShopPage() {
     getOptionalCustomerSession(),
   ]);
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Store",
+    name: storeProfile.name,
+    description: "Cửa hàng bán lẻ trực tuyến chính hãng",
+    url: `${siteConfig.url}/shop`,
+    ...(storeProfile.hotline ? { telephone: storeProfile.hotline } : {}),
+    ...(storeProfile.address ? { address: storeProfile.address } : {}),
+    ...(storeProfile.openingHours
+      ? { openingHours: storeProfile.openingHours }
+      : {}),
+  };
+
   return (
     <OnlineCartProvider>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <PromotionBanner promotions={announcements} placement="announcement" />
       <StoreHeader
         storeName={storeProfile.name}
