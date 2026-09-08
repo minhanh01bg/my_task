@@ -69,20 +69,21 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
 
   return (
     <section
+      id="catalog"
       aria-labelledby="catalog-title"
-      className="mx-auto max-w-7xl px-4 py-10 sm:px-6"
+      className="mx-auto max-w-7xl scroll-mt-24 px-4 py-10 sm:px-6"
     >
       <div className="max-w-2xl">
         <p className="text-primary text-sm font-bold tracking-widest uppercase">
           Mua sắm thuận tiện
         </p>
-        <h1
+        <h2
           id="catalog-title"
-          className="font-heading mt-2 text-4xl font-bold sm:text-5xl"
+          className="font-heading mt-2 text-3xl font-bold sm:text-4xl"
         >
-          Hàng thiết yếu, đặt nhanh tại nhà
-        </h1>
-        <p className="text-muted-foreground mt-4 text-lg">
+          Toàn bộ sản phẩm
+        </h2>
+        <p className="text-muted-foreground mt-3 text-base">
           Giá và tồn kho được cập nhật trực tiếp từ cửa hàng.
         </p>
       </div>

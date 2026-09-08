@@ -271,3 +271,32 @@ test("pickup address: chọn nhận tại cửa hàng hiển thị thông tin nh
     await expect(page.getByLabel(/tỉnh\/thành phố/i)).not.toBeVisible();
   }
 });
+
+test("landing: bố cục trang chủ có hero, danh mục và cuộn tới catalog khi nhấn Mua ngay", async ({
+  page,
+}) => {
+  await page.goto("/shop");
+  const h1 = page.getByRole("heading", { level: 1 });
+  await expect(h1).toBeVisible();
+  await expect(h1).toHaveText(/Hàng thiết yếu, đặt nhanh tại nhà/i);
+
+  // Danh mục sản phẩm
+  await expect(
+    page.getByRole("heading", { name: "Danh mục sản phẩm" }),
+  ).toBeVisible();
+
+  // CTA Mua ngay
+  const cta = page.getByRole("link", { name: "Mua ngay" });
+  await expect(cta).toBeVisible();
+  await cta.click();
+  await expect(page).toHaveURL(/#catalog/);
+  await expect(page.locator("#catalog")).toBeVisible();
+});
+
+test("featured: hiển thị danh sách sản phẩm nổi bật trên landing page", async ({
+  page,
+}) => {
+  await page.goto("/shop");
+  const railHeading = page.getByRole("heading", { name: "Sản phẩm nổi bật" });
+  await expect(railHeading).toBeVisible();
+});
