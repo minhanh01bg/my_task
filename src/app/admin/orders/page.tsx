@@ -110,8 +110,8 @@ export default async function OrdersPage({
         description="Tìm nhanh theo mã đơn, tên hoặc số điện thoại khách hàng."
       />
 
-      <form className="surface-panel grid gap-3 p-4 lg:grid-cols-[minmax(16rem,1.5fr)_repeat(4,minmax(9rem,1fr))_auto] lg:items-end">
-        <label className="flex flex-col gap-1.5 text-sm font-bold">
+      <form className="surface-panel grid gap-3 p-4 sm:grid-cols-2 sm:items-end md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[minmax(14rem,1.5fr)_repeat(4,minmax(8rem,1fr))_auto]">
+        <label className="flex flex-col gap-1.5 text-sm font-bold sm:col-span-2 md:col-span-2 lg:col-span-3 xl:col-span-1">
           Tìm đơn hoặc khách hàng
           <span className="relative">
             <MagnifyingGlass
@@ -172,14 +172,14 @@ export default async function OrdersPage({
             placeholder="Chọn ngày kết thúc"
           />
         </label>
-        <div className="flex gap-2">
-          <Button type="submit" className="min-h-12">
+        <div className="flex flex-wrap gap-2 pt-1 sm:col-span-2 sm:pt-0 md:col-span-2 lg:col-span-3 xl:col-span-1">
+          <Button type="submit" className="min-h-12 flex-1 sm:flex-initial">
             Tìm đơn
           </Button>
           {q || status || channel || from || to ? (
             <Button
               variant="ghost"
-              className="min-h-12"
+              className="min-h-12 flex-1 sm:flex-initial"
               nativeButton={false}
               render={<Link href="/admin/orders" />}
             >
@@ -190,13 +190,13 @@ export default async function OrdersPage({
       </form>
 
       <Card>
-        <CardHeader className="flex-row items-center justify-between gap-4">
+        <CardHeader className="flex-row items-center justify-between gap-2 p-4 sm:gap-4 sm:p-6">
           <CardTitle>{totalCount} đơn hàng</CardTitle>
           <span className="text-muted-foreground text-sm font-semibold">
             Trang {page}/{totalPages}
           </span>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
           {orders.length === 0 ? (
             <p className="text-muted-foreground py-10 text-center">
               Không tìm thấy đơn phù hợp
@@ -206,13 +206,13 @@ export default async function OrdersPage({
               {orders.map((order) => (
                 <li
                   key={order.id}
-                  className="grid gap-4 py-4 lg:grid-cols-[1fr_auto] lg:items-start"
+                  className="grid gap-3 py-4 sm:gap-4 lg:grid-cols-[1fr_auto] lg:items-start"
                 >
                   <div className="min-w-0">
-                    <p className="flex flex-wrap items-center gap-2 font-medium">
+                    <div className="flex flex-wrap items-center gap-1.5 font-medium sm:gap-2">
                       <Link
                         href={`/admin/orders/${order.id}`}
-                        className="hover:text-primary focus-visible:ring-ring rounded font-bold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                        className="hover:text-primary focus-visible:ring-ring rounded font-bold break-all underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
                       >
                         {order.code}
                       </Link>
@@ -232,21 +232,21 @@ export default async function OrdersPage({
                       {order.hasStockWarning ? (
                         <Badge variant="destructive">Tồn âm</Badge>
                       ) : null}
-                    </p>
-                    <p className="text-muted-foreground mt-1 truncate text-sm">
+                    </div>
+                    <p className="text-muted-foreground mt-1.5 truncate text-sm">
                       {order.items
                         .map((item) => `${item.nameSnapshot} ×${item.quantity}`)
                         .join(", ")}
                     </p>
-                    <p className="text-muted-foreground mt-1 text-sm">
+                    <p className="text-muted-foreground mt-1 text-sm break-words">
                       {order.createdAt.toLocaleString("vi-VN")}
                       {order.customer
                         ? ` · ${order.customer.name}${order.customer.phone ? ` · ${order.customer.phone}` : ""}`
                         : " · Khách lẻ"}
                     </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-3 lg:justify-end">
-                    <span className="text-lg font-bold tabular-nums">
+                  <div className="border-border/50 flex items-center justify-between gap-3 border-t pt-2.5 sm:pt-3 lg:justify-end lg:border-t-0 lg:pt-0">
+                    <span className="text-base font-bold tabular-nums sm:text-lg">
                       <Money amount={order.total} />
                     </span>
                     {order.status !== "cancelled" ? (
@@ -256,7 +256,7 @@ export default async function OrdersPage({
                         title={`Hủy đơn ${order.code}?`}
                         description="Tồn kho của các sản phẩm trong đơn sẽ được hoàn lại. Thao tác này không thể hoàn tác."
                         confirmLabel="Xác nhận hủy đơn"
-                        triggerClassName="text-destructive"
+                        triggerClassName="text-destructive text-sm"
                       />
                     ) : null}
                   </div>
@@ -267,12 +267,13 @@ export default async function OrdersPage({
           {totalPages > 1 ? (
             <nav
               aria-label="Phân trang đơn hàng"
-              className="border-border mt-4 flex items-center justify-between border-t pt-4"
+              className="border-border mt-4 flex items-center justify-between gap-2 border-t pt-4"
             >
               <Button
                 variant="outline"
                 disabled={page <= 1}
                 nativeButton={page <= 1}
+                className="px-2.5 text-xs sm:px-4 sm:text-sm"
                 render={
                   page > 1 ? (
                     <Link href={buildPageHref(params, page - 1)} />
@@ -281,7 +282,7 @@ export default async function OrdersPage({
               >
                 Trang trước
               </Button>
-              <span className="text-sm font-bold">
+              <span className="text-center text-xs font-bold sm:text-sm">
                 {(page - 1) * PAGE_SIZE + 1}–
                 {Math.min(page * PAGE_SIZE, totalCount)} / {totalCount}
               </span>
@@ -289,6 +290,7 @@ export default async function OrdersPage({
                 variant="outline"
                 disabled={page >= totalPages}
                 nativeButton={page >= totalPages}
+                className="px-2.5 text-xs sm:px-4 sm:text-sm"
                 render={
                   page < totalPages ? (
                     <Link href={buildPageHref(params, page + 1)} />
