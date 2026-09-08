@@ -9,6 +9,7 @@ import {
   CreditCard,
   Gear,
   List,
+  Megaphone,
   Package,
   ShoppingCart,
   SquaresFour,
@@ -54,6 +55,12 @@ const NAV = [
     label: "Danh mục",
     shortLabel: "Danh mục",
     icon: SquaresFour,
+  },
+  {
+    href: "/admin/promotions",
+    label: "Khuyến mãi",
+    shortLabel: "Khuyến mãi",
+    icon: Megaphone,
   },
   {
     href: "/admin/orders",

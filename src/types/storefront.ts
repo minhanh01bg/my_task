@@ -120,3 +120,74 @@ export const publicPromotionSchema = z
   .strict();
 
 export type PublicPromotion = z.infer<typeof publicPromotionSchema>;
+
+export const promotionActionSchema = z
+  .object({
+    id: z.string().trim().optional(),
+    title: z
+      .string()
+      .trim()
+      .min(1, "Tiêu đề không được để trống")
+      .max(200, "Tiêu đề không vượt quá 200 ký tự"),
+    body: z
+      .string()
+      .trim()
+      .max(1000, "Nội dung không vượt quá 1000 ký tự")
+      .optional()
+      .transform((v) => v || null),
+    imageUrl: z
+      .string()
+      .trim()
+      .max(500)
+      .optional()
+      .transform((v) => v || null),
+    ctaLabel: z
+      .string()
+      .trim()
+      .max(50, "Nhãn nút không vượt quá 50 ký tự")
+      .optional()
+      .transform((v) => v || null),
+    ctaHref: z
+      .string()
+      .trim()
+      .max(500)
+      .optional()
+      .transform((v) => v || null)
+      .refine(
+        (href) => !href || href.startsWith("/") || href.startsWith("https://"),
+        {
+          message:
+            "Liên kết CTA phải là đường dẫn nội bộ (bắt đầu bằng /) hoặc URL HTTPS an toàn",
+        },
+      ),
+    placement: promotionPlacementEnum.default("announcement"),
+    startsAt: z
+      .string()
+      .optional()
+      .transform((v) => (v ? new Date(v) : null)),
+    endsAt: z
+      .string()
+      .optional()
+      .transform((v) => (v ? new Date(v) : null)),
+    priority: z.coerce.number().int().default(0),
+    isActive: z.boolean().default(true),
+  })
+  .strict()
+  .refine(
+    (data) => {
+      if (data.startsAt && data.endsAt) {
+        return data.startsAt <= data.endsAt;
+      }
+      return true;
+    },
+    {
+      message: "Thời gian bắt đầu không được sau thời gian kết thúc",
+      path: ["endsAt"],
+    },
+  );
+
+export type PromotionActionInput = z.infer<typeof promotionActionSchema>;
+
+export type PromotionActionResult =
+  | { ok: true; message: string; promotionId?: string }
+  | { ok: false; error: string };
