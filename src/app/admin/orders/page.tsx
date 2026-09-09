@@ -49,26 +49,16 @@ function buildPageHref(params: OrdersSearchParams, page: number) {
   return `/admin/orders?${query.toString()}`;
 }
 
-export default async function OrdersPage({
-  searchParams,
-}: {
-  searchParams: Promise<OrdersSearchParams>;
-}) {
-  await requireAdminSession({ redirectToLogin: true });
-
-  const params = await searchParams;
+export function buildOrdersWhere(params: OrdersSearchParams) {
   const q = params.q?.trim() ?? "";
   const status = params.status ?? "";
   const channel = params.channel ?? "";
   const from = params.from ?? "";
   const to = params.to ?? "";
-  const requestedPage = Math.max(
-    1,
-    Number.parseInt(params.page ?? "1", 10) || 1,
-  );
   const start = from ? new Date(`${from}T00:00:00`) : null;
   const end = to ? new Date(`${to}T23:59:59.999`) : null;
-  const where = {
+
+  return {
     ...(channel ? { channel } : {}),
     ...(status ? { status } : {}),
     ...(start || end
@@ -83,12 +73,29 @@ export default async function OrdersPage({
       ? {
           OR: [
             { code: { contains: q } },
+            { contactName: { contains: q } },
+            { contactPhone: { contains: q } },
             { customer: { is: { name: { contains: q } } } },
             { customer: { is: { phone: { contains: q } } } },
           ],
         }
       : {}),
   };
+}
+
+export default async function OrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<OrdersSearchParams>;
+}) {
+  await requireAdminSession({ redirectToLogin: true });
+
+  const params = await searchParams;
+  const requestedPage = Math.max(
+    1,
+    Number.parseInt(params.page ?? "1", 10) || 1,
+  );
+  const where = buildOrdersWhere(params);
   const totalCount = await prisma.order.count({ where });
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const page = Math.min(requestedPage, totalPages);
