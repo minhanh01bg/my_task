@@ -91,6 +91,11 @@ export default async function OrdersPage({
   await requireAdminSession({ redirectToLogin: true });
 
   const params = await searchParams;
+  const q = params.q?.trim() ?? "";
+  const status = params.status ?? "";
+  const channel = params.channel ?? "";
+  const from = params.from ?? "";
+  const to = params.to ?? "";
   const requestedPage = Math.max(
     1,
     Number.parseInt(params.page ?? "1", 10) || 1,
