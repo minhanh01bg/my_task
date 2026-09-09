@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ShoppingCart } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -105,9 +106,9 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
           {products.map((product) => (
             <article
               key={product.id}
-              className="border-border bg-card overflow-hidden rounded-2xl border shadow-xs transition-all hover:shadow-md"
+              className="border-border bg-card group overflow-hidden rounded-2xl border shadow-xs transition-all hover:shadow-md"
             >
-              <div className="bg-muted relative aspect-square">
+              <div className="bg-muted relative aspect-square overflow-hidden">
                 {product.stock <= 0 ? (
                   <div className="absolute top-2.5 right-2.5 z-10">
                     <Badge
@@ -118,24 +119,36 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
                     </Badge>
                   </div>
                 ) : null}
-                {product.imageUrl ? (
-                  <Image
-                    src={product.imageUrl}
-                    alt={product.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 50vw, 25vw"
-                  />
-                ) : (
-                  <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-                    Chưa có ảnh
-                  </div>
-                )}
+                <Link
+                  href={`/shop/products/${product.id}`}
+                  className="block h-full w-full"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                >
+                  {product.imageUrl ? (
+                    <Image
+                      src={product.imageUrl}
+                      alt={product.name}
+                      fill
+                      className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      sizes="(max-width: 768px) 50vw, 25vw"
+                    />
+                  ) : (
+                    <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+                      Chưa có ảnh
+                    </div>
+                  )}
+                </Link>
               </div>
               <div className="p-4">
-                <h2 className="line-clamp-2 min-h-12 font-bold">
-                  {product.name}
-                </h2>
+                <Link
+                  href={`/shop/products/${product.id}`}
+                  className="hover:text-primary transition-colors"
+                >
+                  <h3 className="line-clamp-2 min-h-12 font-bold">
+                    {product.name}
+                  </h3>
+                </Link>
                 <p className="text-muted-foreground mt-1 text-sm">
                   /{product.unit}
                 </p>
