@@ -5,6 +5,7 @@ import { LayoutDashboard, ShoppingBag, UserRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { CustomerNotificationButton } from "@/features/customer-notifications/notification-button";
 
 import { useOnlineCart } from "./cart-context";
@@ -56,6 +57,7 @@ export function StoreHeader({
                 </Button>
               </>
             )}
+            <ThemeToggle />
             <Button
               type="button"
               onClick={openDrawer}

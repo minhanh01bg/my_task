@@ -19,7 +19,6 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Money } from "@/components/kit/money";
 import { StockBadge } from "@/components/kit/stock-badge";
 import { formatVnd } from "@/lib/money";
 import type { OnlineProductDetail } from "@/server/catalog/get-product-detail";
@@ -29,7 +28,7 @@ import { CartFeedback } from "./cart-feedback";
 
 export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
   const { product, relatedProducts } = detail;
-  const { add, openDrawer } = useOnlineCart();
+  const { add } = useOnlineCart();
   const router = useRouter();
 
   const [quantity, setQuantity] = useState(1);
