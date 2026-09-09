@@ -5,6 +5,7 @@ import { OnlineCartProvider } from "@/features/online-store/cart-context";
 import { CatalogBrowser } from "@/features/online-store/catalog-browser";
 import { CategorySection } from "@/features/online-store/landing/category-section";
 import { HeroSection } from "@/features/online-store/landing/hero-section";
+import { ProductRail } from "@/features/online-store/landing/product-rail";
 import { TrustSection } from "@/features/online-store/landing/trust-section";
 import { PromotionBanner } from "@/features/online-store/promotion-banner";
 import { StoreFooter } from "@/features/online-store/store-footer";
@@ -90,6 +91,16 @@ export default async function ShopPage() {
         hotline={storeProfile.hotline}
       />
       <CategorySection categories={catalog.categories} />
+      {catalog.products.length > 0 ? (
+        <ProductRail
+          title="Sản phẩm nổi bật"
+          subtitle="Lựa chọn phổ biến được nhiều khách hàng tin tưởng"
+          products={[...catalog.products]
+            .filter((p) => p.stock > 0)
+            .sort((a, b) => (b.soldCount ?? 0) - (a.soldCount ?? 0))
+            .slice(0, 8)}
+        />
+      ) : null}
       <CatalogBrowser catalog={catalog} />
       <TrustSection
         storeName={storeProfile.name}
