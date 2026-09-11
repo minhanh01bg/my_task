@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Money } from "@/components/kit/money";
+import { WishlistButton } from "@/components/kit/wishlist-button";
+import { useWishlist } from "@/lib/storage/wishlist";
 import { catalogFilterSchema, type CatalogFilter } from "@/types/storefront";
 
 import { useOnlineCart } from "./cart-context";
@@ -66,10 +68,14 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
     setFilter(parseFilterFromParams(searchParams));
   }
 
-  const products = useMemo(
-    () => filterAndSortProducts(catalog.products, filter),
-    [catalog.products, filter],
-  );
+  const { has: hasWishlist } = useWishlist();
+  const isWishlistOnly = searchParams?.get("wishlist") === "true";
+
+  const products = useMemo(() => {
+    const base = filterAndSortProducts(catalog.products, filter);
+    if (!isWishlistOnly) return base;
+    return base.filter((p) => hasWishlist(p.id));
+  }, [catalog.products, filter, isWishlistOnly, hasWishlist]);
 
   return (
     <section
@@ -85,12 +91,28 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
           id="catalog-title"
           className="font-heading mt-2 text-3xl font-bold sm:text-4xl"
         >
-          Toàn bộ sản phẩm
+          {isWishlistOnly ? "Sản phẩm yêu thích của bạn" : "Toàn bộ sản phẩm"}
         </h2>
         <p className="text-muted-foreground mt-3 text-base">
-          Giá và tồn kho được cập nhật trực tiếp từ cửa hàng.
+          {isWishlistOnly
+            ? "Danh sách các sản phẩm bạn đã lưu để theo dõi và mua sắm sau."
+            : "Giá và tồn kho được cập nhật trực tiếp từ cửa hàng."}
         </p>
       </div>
+
+      {isWishlistOnly && (
+        <div className="mt-4 flex items-center justify-between rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-700 dark:text-rose-300">
+          <span>
+            Đang lọc theo danh sách yêu thích ({products.length} sản phẩm)
+          </span>
+          <Link
+            href="/shop#catalog"
+            className="text-xs font-bold underline hover:no-underline"
+          >
+            Xem tất cả sản phẩm
+          </Link>
+        </div>
+      )}
 
       <div className="mt-8">
         <CatalogFilters
@@ -109,6 +131,13 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
               className="card-interactive border-border bg-card group overflow-hidden rounded-2xl border shadow-xs"
             >
               <div className="bg-muted relative aspect-square overflow-hidden">
+                <div className="absolute top-2.5 left-2.5 z-10">
+                  <WishlistButton
+                    productId={product.id}
+                    productName={product.name}
+                    size="sm"
+                  />
+                </div>
                 {product.stock <= 0 ? (
                   <div className="absolute top-2.5 right-2.5 z-10">
                     <Badge

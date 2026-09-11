@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Eye, ShoppingCart } from "lucide-react";
 
+import { StarRating } from "@/components/kit/star-rating";
+import { WishlistButton } from "@/components/kit/wishlist-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/lib/money";
@@ -60,6 +62,13 @@ export function ProductRail({
               >
                 <div>
                   <div className="bg-muted relative aspect-square overflow-hidden">
+                    <div className="absolute top-2.5 left-2.5 z-10">
+                      <WishlistButton
+                        productId={product.id}
+                        productName={product.name}
+                        size="sm"
+                      />
+                    </div>
                     {isOutOfStock ? (
                       <div className="absolute top-2.5 right-2.5 z-10">
                         <Badge
@@ -113,6 +122,9 @@ export function ProductRail({
                         {product.name}
                       </h3>
                     </Link>
+                    <div className="mt-1">
+                      <StarRating rating={4.8} size="xs" />
+                    </div>
                     <div className="mt-2 flex items-baseline justify-between">
                       <span className="text-primary text-base font-bold sm:text-lg">
                         {formatVnd(product.price)} ₫

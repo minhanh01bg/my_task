@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 
 import { StockBadge } from "@/components/kit/stock-badge";
+import { StarRating } from "@/components/kit/star-rating";
+import { WishlistButton } from "@/components/kit/wishlist-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/lib/money";
@@ -26,6 +28,7 @@ import type { OnlineProductDetail } from "@/server/catalog/get-product-detail";
 
 import { useOnlineCart } from "./cart-context";
 import { CartFeedback } from "./cart-feedback";
+import { ProductReviews } from "./product-reviews";
 import { RecentlyViewedSection } from "./recently-viewed";
 
 export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
@@ -140,12 +143,15 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
               {product.name}
             </h1>
 
-            {product.sku ? (
-              <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
-                Mã SP:{" "}
-                <span className="font-mono font-medium">{product.sku}</span>
-              </p>
-            ) : null}
+            <div className="mt-2 flex items-center gap-3">
+              <StarRating rating={4.8} reviewCount={28} size="sm" />
+              {product.sku ? (
+                <span className="text-muted-foreground text-xs sm:text-sm">
+                  Mã SP:{" "}
+                  <span className="font-mono font-medium">{product.sku}</span>
+                </span>
+              ) : null}
+            </div>
 
             {/* Price Card */}
             <div className="border-border bg-muted/30 mt-6 rounded-2xl border p-5">
@@ -246,6 +252,14 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
                   <span>Mua ngay</span>
                 </Button>
               ) : null}
+
+              <WishlistButton
+                productId={product.id}
+                productName={product.name}
+                size="lg"
+                showText
+                className="border-input min-h-12"
+              />
             </div>
           </div>
 
@@ -356,6 +370,8 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
           </div>
         </section>
       ) : null}
+
+      <ProductReviews productId={product.id} productName={product.name} />
 
       <RecentlyViewedSection />
     </div>

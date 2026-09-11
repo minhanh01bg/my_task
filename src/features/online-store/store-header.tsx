@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { LayoutDashboard, ShoppingBag, UserRound } from "lucide-react";
+import { Heart, LayoutDashboard, ShoppingBag, UserRound } from "lucide-react";
 
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CustomerNotificationButton } from "@/features/customer-notifications/notification-button";
+import { useWishlist } from "@/lib/storage/wishlist";
 import { cn } from "@/lib/utils";
 
 import { useOnlineCart } from "./cart-context";
@@ -23,6 +24,7 @@ export function StoreHeader({
   isCustomer?: boolean;
 }) {
   const { lines, hydrated, openDrawer } = useOnlineCart();
+  const { count: wishlistCount } = useWishlist();
   const count = lines.reduce((sum, line) => sum + line.quantity, 0);
 
   const [isBouncing, setIsBouncing] = useState(false);
@@ -39,9 +41,12 @@ export function StoreHeader({
 
   return (
     <>
-      <header className="border-border bg-background/95 sticky top-0 z-30 border-b backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
-          <Link href="/shop" className="font-heading text-xl font-bold">
+      <header className="border-border bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-0 z-40 border-b backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+          <Link
+            href="/shop"
+            className="font-heading text-foreground hover:text-primary text-xl font-bold tracking-tight transition-colors"
+          >
             {storeName}
           </Link>
           <div className="flex items-center gap-2">
@@ -50,15 +55,15 @@ export function StoreHeader({
                 variant="outline"
                 className="min-h-11 font-bold"
                 nativeButton={false}
-                aria-label="Quay lại trang quản trị"
-                render={<Link href="/admin/orders" />}
+                aria-label="Về trang quản trị"
+                render={<Link href="/admin/products" />}
               >
                 <LayoutDashboard aria-hidden="true" className="size-5" />
                 <span className="ml-1.5 hidden sm:inline">Quản trị</span>
               </Button>
             ) : (
               <>
-                {isCustomer ? <CustomerNotificationButton /> : null}
+                <CustomerNotificationButton />
                 <Button
                   variant="outline"
                   className="min-h-11 font-bold"
@@ -72,6 +77,24 @@ export function StoreHeader({
               </>
             )}
             <ThemeToggle />
+            <Link
+              href="/shop?wishlist=true"
+              aria-label={`Danh sách yêu thích (${wishlistCount} sản phẩm)`}
+              className="border-input bg-background text-muted-foreground hover:text-foreground hover:bg-muted relative inline-flex h-11 w-11 items-center justify-center rounded-xl border transition-colors"
+            >
+              <Heart
+                aria-hidden="true"
+                className={cn(
+                  "size-5 transition-colors",
+                  wishlistCount > 0 && "fill-rose-500 text-rose-500",
+                )}
+              />
+              {wishlistCount > 0 ? (
+                <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[0.65rem] font-bold text-white shadow-sm">
+                  {wishlistCount}
+                </span>
+              ) : null}
+            </Link>
             <Button
               type="button"
               onClick={openDrawer}
