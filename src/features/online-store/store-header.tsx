@@ -1,12 +1,14 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { LayoutDashboard, ShoppingBag, UserRound } from "lucide-react";
 
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { CustomerNotificationButton } from "@/features/customer-notifications/notification-button";
+import { cn } from "@/lib/utils";
 
 import { useOnlineCart } from "./cart-context";
 import { CartDrawer } from "./cart-drawer";
@@ -22,6 +24,18 @@ export function StoreHeader({
 }) {
   const { lines, hydrated, openDrawer } = useOnlineCart();
   const count = lines.reduce((sum, line) => sum + line.quantity, 0);
+
+  const [isBouncing, setIsBouncing] = useState(false);
+  const prevCountRef = useRef(count);
+
+  useEffect(() => {
+    if (count > prevCountRef.current) {
+      setIsBouncing(true);
+      const timer = setTimeout(() => setIsBouncing(false), 400);
+      return () => clearTimeout(timer);
+    }
+    prevCountRef.current = count;
+  }, [count]);
 
   return (
     <>
@@ -68,7 +82,11 @@ export function StoreHeader({
               <span>Giỏ hàng</span>
               <Badge
                 variant="secondary"
-                className="ml-1 px-1.5 py-0 text-xs font-bold"
+                className={cn(
+                  "ml-1 px-1.5 py-0 text-xs font-bold transition-transform",
+                  isBouncing &&
+                    "animate-badge-bounce bg-primary text-primary-foreground",
+                )}
               >
                 {hydrated ? count : 0}
               </Badge>

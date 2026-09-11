@@ -164,4 +164,40 @@ describe("CartDrawer", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
+
+  it("hiển thị thanh tiến độ Free Shipping khi tổng tiền dưới 200.000đ", () => {
+    render(
+      <OnlineCartProvider>
+        <TestContainer />
+      </OnlineCartProvider>,
+    );
+
+    fireEvent.click(screen.getByText("Thêm A")); // 50,000đ
+    fireEvent.click(screen.getByText("Mở giỏ hàng"));
+
+    expect(
+      screen.getByText(/mua thêm.*để được miễn phí giao hàng/i),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("free-shipping-bar")).toBeInTheDocument();
+  });
+
+  it("hiển thị thông báo đạt điều kiện Freeship khi tổng tiền từ 200.000đ trở lên", () => {
+    render(
+      <OnlineCartProvider>
+        <TestContainer />
+      </OnlineCartProvider>,
+    );
+
+    // Thêm 4 lần A (stock = 3) -> Thêm 3 lần A (150,000) + 2 lần B (80,000) = 230,000đ
+    fireEvent.click(screen.getByText("Thêm A"));
+    fireEvent.click(screen.getByText("Thêm A"));
+    fireEvent.click(screen.getByText("Thêm A"));
+    fireEvent.click(screen.getByText("Thêm B"));
+    fireEvent.click(screen.getByText("Thêm B"));
+    fireEvent.click(screen.getByText("Mở giỏ hàng"));
+
+    expect(
+      screen.getByText(/bạn đã được miễn phí giao hàng/i),
+    ).toBeInTheDocument();
+  });
 });
