@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -17,14 +17,16 @@ import {
   Truck,
 } from "lucide-react";
 
+import { StockBadge } from "@/components/kit/stock-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { StockBadge } from "@/components/kit/stock-badge";
 import { formatVnd } from "@/lib/money";
+import { recordRecentlyViewed } from "@/lib/storage/recently-viewed";
 import type { OnlineProductDetail } from "@/server/catalog/get-product-detail";
 
 import { useOnlineCart } from "./cart-context";
 import { CartFeedback } from "./cart-feedback";
+import { RecentlyViewedSection } from "./recently-viewed";
 
 export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
   const { product, relatedProducts } = detail;
@@ -34,6 +36,10 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
   const [quantity, setQuantity] = useState(1);
   const isOutOfStock = product.stock <= 0;
   const maxAllowed = Math.max(1, Math.floor(product.stock));
+
+  useEffect(() => {
+    recordRecentlyViewed(product);
+  }, [product]);
 
   const handleIncrement = () => {
     setQuantity((prev) => Math.min(maxAllowed, prev + 1));
@@ -350,6 +356,8 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
           </div>
         </section>
       ) : null}
+
+      <RecentlyViewedSection />
     </div>
   );
 }

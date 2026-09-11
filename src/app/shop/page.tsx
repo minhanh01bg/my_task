@@ -7,6 +7,7 @@ import { CategorySection } from "@/features/online-store/landing/category-sectio
 import { FlashSaleSection } from "@/features/online-store/landing/flash-sale-section";
 import { HeroSection } from "@/features/online-store/landing/hero-section";
 import { ProductRail } from "@/features/online-store/landing/product-rail";
+import { RecentlyViewedSection } from "@/features/online-store/recently-viewed";
 import { TrustSection } from "@/features/online-store/landing/trust-section";
 import { PromotionBanner } from "@/features/online-store/promotion-banner";
 import { StoreFooter } from "@/features/online-store/store-footer";
@@ -104,6 +105,7 @@ export default async function ShopPage() {
         />
       ) : null}
       <CatalogBrowser catalog={catalog} />
+      <RecentlyViewedSection />
       <TrustSection
         storeName={storeProfile.name}
         hotline={storeProfile.hotline}
