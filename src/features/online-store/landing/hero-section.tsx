@@ -1,4 +1,5 @@
-import { DEFAULT_HERO_SLIDES, HeroCarousel } from "./hero-carousel";
+import { DEFAULT_HERO_SLIDES } from "./hero-constants";
+import { HeroCarousel } from "./hero-carousel";
 
 export interface HeroSectionProps {
   storeName?: string;
