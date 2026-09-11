@@ -4,6 +4,7 @@ import { siteConfig } from "@/config/site";
 import { OnlineCartProvider } from "@/features/online-store/cart-context";
 import { CatalogBrowser } from "@/features/online-store/catalog-browser";
 import { CategorySection } from "@/features/online-store/landing/category-section";
+import { FlashSaleSection } from "@/features/online-store/landing/flash-sale-section";
 import { HeroSection } from "@/features/online-store/landing/hero-section";
 import { ProductRail } from "@/features/online-store/landing/product-rail";
 import { TrustSection } from "@/features/online-store/landing/trust-section";
@@ -91,6 +92,7 @@ export default async function ShopPage() {
         hotline={storeProfile.hotline}
       />
       <CategorySection categories={catalog.categories} />
+      <FlashSaleSection products={catalog.products} />
       {catalog.products.length > 0 ? (
         <ProductRail
           title="Sản phẩm nổi bật"

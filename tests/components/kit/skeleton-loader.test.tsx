@@ -10,9 +10,7 @@ import {
 
 describe("Skeleton Loader Components", () => {
   it("render component Skeleton cơ bản với class animate-shimmer", () => {
-    const { container } = render(
-      <Skeleton className="h-6 w-32" data-testid="basic-skel" />,
-    );
+    render(<Skeleton className="h-6 w-32" data-testid="basic-skel" />);
     const el = screen.getByTestId("basic-skel");
     expect(el).toBeInTheDocument();
     expect(el.className).toContain("animate-shimmer");

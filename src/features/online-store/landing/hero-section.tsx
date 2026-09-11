@@ -6,11 +6,7 @@ export interface HeroSectionProps {
   hotline?: string;
 }
 
-export function HeroSection({
-  storeName: _storeName = "Cửa hàng",
-  tagline: _tagline = "Hàng thiết yếu, đặt nhanh tại nhà",
-  hotline: _hotline,
-}: HeroSectionProps) {
+export function HeroSection(_props: HeroSectionProps = {}) {
   return (
     <section className="relative overflow-hidden py-4 sm:py-6">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
