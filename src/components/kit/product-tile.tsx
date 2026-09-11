@@ -33,7 +33,7 @@ export function ProductTile({
       type="button"
       onClick={onSelect}
       className={cn(
-        "bg-card border-border hover:border-primary hover:bg-accent flex min-h-36 flex-col items-start gap-2 rounded-xl border p-3 text-left transition-colors",
+        "card-interactive btn-press bg-card border-border hover:border-primary hover:bg-accent flex min-h-36 flex-col items-start gap-2 rounded-xl border p-3 text-left transition-colors",
         "focus-visible:ring-ring focus-visible:ring-[3px] focus-visible:outline-none",
         className,
       )}

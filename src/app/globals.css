@@ -178,6 +178,104 @@
   .eyebrow {
     @apply text-primary text-[0.7rem] font-bold tracking-[0.14em] uppercase;
   }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--muted) 0%,
+      oklch(from var(--muted) calc(l + 0.05) c h) 50%,
+      var(--muted) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.8s infinite ease-in-out;
+  }
+
+  @keyframes badge-bounce {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    40% {
+      transform: scale(1.35);
+    }
+    70% {
+      transform: scale(0.9);
+    }
+  }
+
+  .animate-badge-bounce {
+    animation: badge-bounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  @keyframes pulse-subtle {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.85;
+      transform: scale(1.02);
+    }
+  }
+
+  .animate-pulse-subtle {
+    animation: pulse-subtle 2.5s infinite ease-in-out;
+  }
+
+  .card-interactive {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .card-interactive:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px -10px oklch(0.22 0.02 70 / 0.18);
+  }
+
+  .dark .card-interactive:hover {
+    box-shadow:
+      0 12px 28px -10px oklch(0 0 0 / 0.5),
+      0 0 0 1px oklch(1 1 1 / 0.12);
+  }
+
+  .btn-press {
+    @apply transition-transform duration-100 active:scale-[0.97];
+  }
+
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes fade-in-backdrop {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-fade-in {
+    animation: fade-in-backdrop 0.25s ease-out forwards;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

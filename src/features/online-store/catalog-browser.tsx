@@ -106,7 +106,7 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
           {products.map((product) => (
             <article
               key={product.id}
-              className="border-border bg-card group overflow-hidden rounded-2xl border shadow-xs transition-all hover:shadow-md"
+              className="card-interactive border-border bg-card group overflow-hidden rounded-2xl border shadow-xs"
             >
               <div className="bg-muted relative aspect-square overflow-hidden">
                 {product.stock <= 0 ? (

@@ -52,7 +52,7 @@ export function ProductRail({
             return (
               <article
                 key={product.id}
-                className="border-border bg-card group flex flex-col justify-between overflow-hidden rounded-2xl border transition-all hover:shadow-md"
+                className="card-interactive border-border bg-card group flex flex-col justify-between overflow-hidden rounded-2xl border shadow-xs"
               >
                 <div>
                   <div className="bg-muted relative aspect-square overflow-hidden">
