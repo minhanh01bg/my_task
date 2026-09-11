@@ -181,7 +181,17 @@ export function createRateLimiter(
       // Lazy instantiate production store if not provided
       let store = options.store;
       if (!store) {
-        if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
+        const isPlaceholderRedis =
+          Boolean(env.UPSTASH_REDIS_REST_URL) &&
+          (env.UPSTASH_REDIS_REST_URL?.includes("your-upstash-redis") ||
+            env.UPSTASH_REDIS_REST_URL?.includes("build-time-dummy") ||
+            env.UPSTASH_REDIS_REST_URL?.includes("example.com"));
+
+        if (
+          env.UPSTASH_REDIS_REST_URL &&
+          env.UPSTASH_REDIS_REST_TOKEN &&
+          !isPlaceholderRedis
+        ) {
           try {
             store = new UpstashRedisStore();
           } catch {
@@ -201,7 +211,10 @@ export function createRateLimiter(
               resetInSeconds: 60,
             };
           }
-        } else if (process.env.NODE_ENV === "production") {
+        } else if (
+          process.env.NODE_ENV === "production" &&
+          !isPlaceholderRedis
+        ) {
           if (policy.failClosed) {
             return {
               allowed: false,
@@ -326,13 +339,26 @@ export function createRateLimiter(
     ): Promise<void> {
       let store = options.store;
       if (!store) {
-        if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
+        const isPlaceholderRedis =
+          Boolean(env.UPSTASH_REDIS_REST_URL) &&
+          (env.UPSTASH_REDIS_REST_URL?.includes("your-upstash-redis") ||
+            env.UPSTASH_REDIS_REST_URL?.includes("build-time-dummy") ||
+            env.UPSTASH_REDIS_REST_URL?.includes("example.com"));
+
+        if (
+          env.UPSTASH_REDIS_REST_URL &&
+          env.UPSTASH_REDIS_REST_TOKEN &&
+          !isPlaceholderRedis
+        ) {
           try {
             store = new UpstashRedisStore();
           } catch {
             return;
           }
-        } else if (process.env.NODE_ENV !== "production") {
+        } else if (
+          process.env.NODE_ENV !== "production" ||
+          isPlaceholderRedis
+        ) {
           store = getGlobalDevMemoryStore();
         } else {
           return;

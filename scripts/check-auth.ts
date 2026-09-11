@@ -35,6 +35,28 @@ async function main() {
     }
   }
 
+  // 1b. Kiểm tra Upstash Redis
+  const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+  if (redisUrl) {
+    if (
+      redisUrl.includes("your-upstash-redis") ||
+      redisUrl.includes("example.com")
+    ) {
+      console.log(
+        "   ⚠️ UPSTASH_REDIS_REST_URL: ĐANG DÙNG URL MẪU ('your-upstash-redis')!",
+      );
+      console.log(
+        "      👉 Khuyên dùng: Hãy xóa hoặc comment lại dòng UPSTASH_REDIS_REST_URL trong .env để dùng bộ nhớ RAM.",
+      );
+    } else {
+      console.log(`   ✅ UPSTASH_REDIS_REST_URL: Đã cấu hình (${redisUrl})`);
+    }
+  } else {
+    console.log(
+      "   ℹ️ UPSTASH_REDIS: Không dùng (sử dụng In-Memory Store an toàn cho dev)",
+    );
+  }
+
   // 2. Kiểm tra Database & Admin Identity
   console.log("\n2️⃣ Kiểm tra Database SQLite:");
   try {
