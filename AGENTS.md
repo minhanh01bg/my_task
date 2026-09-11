@@ -15,7 +15,7 @@ This file provides guidance to agents when working with code in this repository.
 - `src/server/orders/create-order.ts` is the sole order-write path: it recalculates money server-side and uses `clientId` idempotency. POS stock may become negative; online stock must be atomically guarded.
 - Write products through `saveProduct()` in `src/server/products/save-product.ts`; bypassing it leaves denormalized `searchText` stale. Category renames must rebuild affected product search text.
 - Preserve offline queue failures in IndexedDB for manual recovery; never discard a paid order merely because syncing failed.
-- Public/protected routing is centralized in `src/lib/auth/public-paths.ts` plus `src/middleware.ts`; customer APIs are intentionally exempt from admin-session middleware.
+- Public/protected routing is centralized in `src/lib/auth/public-paths.ts` plus `src/proxy.ts` (Next.js proxy convention); customer APIs are intentionally exempt from admin-session middleware.
 - Security-sensitive JSON endpoints should use `readJsonBody()` for streamed byte limits, then Zod `safeParse`; return discriminated `{ ok: true/false }` results from server actions.
 - Use `logger` from `src/lib/logger.ts`, not direct console calls: it redacts secrets/PII and normalizes paths. Unexpected API errors expose a correlation ID, not raw error details.
 - Production env validation fails closed for Redis rate limiting, HMAC secret, proxy mode, canonical origin, and password hash; build-only dummy values in `src/config/env.ts` must never become runtime defaults.
