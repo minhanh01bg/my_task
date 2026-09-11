@@ -29,7 +29,10 @@ export default function LoginPage() {
     setPending(false);
 
     if (!response.ok) {
-      setError("Mật khẩu không đúng");
+      const data = (await response.json().catch(() => null)) as {
+        message?: string;
+      } | null;
+      setError(data?.message || "Mật khẩu không đúng");
       return;
     }
 
