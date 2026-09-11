@@ -181,17 +181,9 @@ export function createRateLimiter(
       // Lazy instantiate production store if not provided
       let store = options.store;
       if (!store) {
-        const isPlaceholderRedis =
-          Boolean(env.UPSTASH_REDIS_REST_URL) &&
-          (env.UPSTASH_REDIS_REST_URL?.includes("your-upstash-redis") ||
-            env.UPSTASH_REDIS_REST_URL?.includes("build-time-dummy") ||
-            env.UPSTASH_REDIS_REST_URL?.includes("example.com"));
-
-        if (
-          env.UPSTASH_REDIS_REST_URL &&
-          env.UPSTASH_REDIS_REST_TOKEN &&
-          !isPlaceholderRedis
-        ) {
+        if (process.env.NODE_ENV !== "production") {
+          store = getGlobalDevMemoryStore();
+        } else if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
           try {
             store = new UpstashRedisStore();
           } catch {
@@ -211,10 +203,7 @@ export function createRateLimiter(
               resetInSeconds: 60,
             };
           }
-        } else if (
-          process.env.NODE_ENV === "production" &&
-          !isPlaceholderRedis
-        ) {
+        } else {
           if (policy.failClosed) {
             return {
               allowed: false,
@@ -230,8 +219,6 @@ export function createRateLimiter(
             limit: 1,
             resetInSeconds: 60,
           };
-        } else {
-          store = getGlobalDevMemoryStore();
         }
       }
 
@@ -339,27 +326,14 @@ export function createRateLimiter(
     ): Promise<void> {
       let store = options.store;
       if (!store) {
-        const isPlaceholderRedis =
-          Boolean(env.UPSTASH_REDIS_REST_URL) &&
-          (env.UPSTASH_REDIS_REST_URL?.includes("your-upstash-redis") ||
-            env.UPSTASH_REDIS_REST_URL?.includes("build-time-dummy") ||
-            env.UPSTASH_REDIS_REST_URL?.includes("example.com"));
-
-        if (
-          env.UPSTASH_REDIS_REST_URL &&
-          env.UPSTASH_REDIS_REST_TOKEN &&
-          !isPlaceholderRedis
-        ) {
+        if (process.env.NODE_ENV !== "production") {
+          store = getGlobalDevMemoryStore();
+        } else if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
           try {
             store = new UpstashRedisStore();
           } catch {
             return;
           }
-        } else if (
-          process.env.NODE_ENV !== "production" ||
-          isPlaceholderRedis
-        ) {
-          store = getGlobalDevMemoryStore();
         } else {
           return;
         }
