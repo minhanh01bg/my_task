@@ -32,7 +32,10 @@ export default function LoginPage() {
       const data = (await response.json().catch(() => null)) as {
         message?: string;
       } | null;
-      setError(data?.message || "Mật khẩu không đúng");
+      setError(
+        data?.message ||
+          "Đăng nhập thất bại. Vui lòng kiểm tra kết nối máy chủ.",
+      );
       return;
     }
 
@@ -134,7 +137,7 @@ export default function LoginPage() {
                   role="alert"
                   className="bg-destructive/10 text-destructive rounded-xl px-3 py-2 text-sm font-semibold"
                 >
-                  {error}. Vui lòng thử lại.
+                  {error.endsWith(".") ? error : `${error}.`} Vui lòng thử lại.
                 </p>
               ) : null}
               <Button
@@ -144,6 +147,12 @@ export default function LoginPage() {
               >
                 {pending ? "Đang kiểm tra..." : "Vào bán hàng"}
               </Button>
+              <div className="border-border/80 bg-muted/30 text-muted-foreground rounded-xl border border-dashed p-2.5 text-center text-xs">
+                Mật khẩu mặc định hệ thống:{" "}
+                <code className="bg-muted text-foreground rounded px-1.5 py-0.5 font-mono font-bold">
+                  123456
+                </code>
+              </div>
             </form>
           </CardContent>
         </Card>
