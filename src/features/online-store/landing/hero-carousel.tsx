@@ -23,10 +23,10 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
   {
     id: "slide-fresh",
     badge: "Tươi ngon & Tiện lợi",
-    title: "Thực phẩm thiết yếu giao nhanh 2 giờ",
+    title: "Hàng thiết yếu, đặt nhanh tại nhà",
     description:
       "Rau củ tươi, đồ tiêu dùng và nhu yếu phẩm chính hãng. Giá niêm yết minh bạch, tồn kho thời gian thực.",
-    ctaText: "Mua sắm ngay",
+    ctaText: "Mua ngay",
     ctaHref: "#catalog",
     secondaryText: "Xem khuyến mãi",
     secondaryHref: "#catalog",

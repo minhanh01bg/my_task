@@ -1,14 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ShoppingCart } from "lucide-react";
+import { ArrowRight, Eye, ShoppingCart } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/lib/money";
 
 import { useOnlineCart } from "../cart-context";
+import { QuickViewModal } from "../quick-view-modal";
 import type { OnlineProduct } from "../types";
 
 export interface ProductRailProps {
@@ -23,6 +25,8 @@ export function ProductRail({
   products,
 }: ProductRailProps) {
   const { add } = useOnlineCart();
+  const [quickViewProduct, setQuickViewProduct] =
+    useState<OnlineProduct | null>(null);
   const displayProducts = products.slice(0, 8);
 
   return (
@@ -86,6 +90,18 @@ export function ProductRail({
                         </div>
                       )}
                     </Link>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setQuickViewProduct(product);
+                      }}
+                      aria-label={`Xem nhanh ${product.name}`}
+                      className="bg-background/90 text-foreground hover:bg-background absolute bottom-2.5 left-1/2 z-10 hidden -translate-x-1/2 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold shadow-md backdrop-blur-sm transition-all group-hover:flex hover:scale-105"
+                    >
+                      <Eye className="size-3.5" />
+                      <span>Xem nhanh</span>
+                    </button>
                   </div>
 
                   <div className="p-4 pb-2">
@@ -138,6 +154,11 @@ export function ProductRail({
           Chưa có sản phẩm nổi bật, sản phẩm sẽ sớm được cập nhật.
         </div>
       )}
+
+      <QuickViewModal
+        product={quickViewProduct}
+        onClose={() => setQuickViewProduct(null)}
+      />
     </section>
   );
 }
