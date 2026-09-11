@@ -96,8 +96,15 @@ export async function POST(request: Request) {
   const adminIdentity = await ensureDefaultAdminIdentity();
   const { token } = await createAdminSession(adminIdentity.id);
 
+  const isHttps =
+    request.headers.get("x-forwarded-proto") === "https" ||
+    request.url.startsWith("https:");
+
   // Rotate/replace any presented admin session cookie with new DB-backed session
-  response.cookies.set(SESSION_COOKIE, token, adminCookieOptions);
+  response.cookies.set(SESSION_COOKIE, token, {
+    ...adminCookieOptions,
+    secure: isHttps,
+  });
 
   return response;
 }

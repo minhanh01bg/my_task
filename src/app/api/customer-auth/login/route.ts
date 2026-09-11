@@ -102,10 +102,13 @@ export async function POST(request: Request) {
       headers: { "Cache-Control": "private, no-store" },
     },
   );
-  response.cookies.set(
-    CUSTOMER_SESSION_COOKIE,
-    session.token,
-    customerCookieOptions,
-  );
+  const isHttps =
+    request.headers.get("x-forwarded-proto") === "https" ||
+    request.url.startsWith("https:");
+
+  response.cookies.set(CUSTOMER_SESSION_COOKIE, session.token, {
+    ...customerCookieOptions,
+    secure: isHttps,
+  });
   return response;
 }
