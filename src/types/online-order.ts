@@ -36,6 +36,8 @@ export const onlineCheckoutSchema = z
     provinceCode: z.string().trim().max(20).optional(),
     districtCode: z.string().trim().max(20).optional(),
     wardCode: z.string().trim().max(20).optional(),
+    deliverySlot: z.string().trim().max(100).optional(),
+    voucherCode: z.string().trim().max(50).optional(),
     note: z.string().trim().max(500).optional().default(""),
   })
   .strict()

@@ -12,6 +12,7 @@ import {
   OnlineOrderError,
   type OnlineCheckoutInput,
 } from "@/types/online-order";
+import { validateVoucher } from "@/server/vouchers/validate-voucher";
 
 import { createOrder, type CreateOrderResult } from "./create-order";
 
@@ -211,6 +212,23 @@ export async function createOnlineOrder(
     0,
   );
 
+  let voucherDiscount = 0;
+  if (input.voucherCode) {
+    const voucherRes = validateVoucher(input.voucherCode, total);
+    if (voucherRes.valid) {
+      voucherDiscount = voucherRes.discount;
+    }
+  }
+  const finalTotal = Math.max(0, total - voucherDiscount);
+
+  const noteParts = [
+    input.deliverySlot ? `[Khung giờ: ${input.deliverySlot}]` : null,
+    input.voucherCode ? `[Voucher: ${input.voucherCode.toUpperCase()}]` : null,
+    input.note,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   let recoveryDigest: string | null = null;
   let encryptedGuestToken: string | null = null;
 
@@ -241,12 +259,14 @@ export async function createOnlineOrder(
       clientId: input.clientId,
       channel: "online",
       lines,
+      orderDiscount: voucherDiscount,
       payments: [
         {
           method: input.paymentMethod === "cod" ? "cash" : "transfer",
-          amount: total,
+          amount: finalTotal,
         },
       ],
+      note: noteParts || undefined,
       customerAccountId: access.customerAccountId,
       guestAccess: access.customerAccountId ? undefined : access.guestAccess,
       receiptNonceHash,
@@ -259,7 +279,6 @@ export async function createOnlineOrder(
       },
       initialStatus: "pending",
       autoReceiveCash: false,
-      note: input.note || null,
       online: {
         fulfillmentStatus: "new",
         fulfillmentType: input.fulfillmentType,

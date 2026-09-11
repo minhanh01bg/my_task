@@ -7,6 +7,7 @@ import { CheckCircle2, ShieldCheck } from "lucide-react";
 
 import { formatFullAddress } from "@/lib/address/vietnam-address";
 import { formatVnd } from "@/lib/money";
+import { validateVoucher } from "@/lib/vouchers/validate-voucher";
 import { onlineOrderResponseSchema } from "@/types/online-order";
 import type { PublicStoreProfile } from "@/types/storefront";
 
@@ -19,6 +20,9 @@ function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
   const [fulfillment, setFulfillment] = useState<"delivery" | "pickup">(
     "delivery",
   );
+  const [deliverySlot, setDeliverySlot] = useState(
+    "Giao sớm nhất có thể (Tiêu chuẩn)",
+  );
   const [address, setAddress] = useState<AddressState>({
     provinceCode: "",
     districtCode: "",
@@ -29,13 +33,42 @@ function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
     street: "",
     isManual: false,
   });
+  const [voucherInput, setVoucherInput] = useState("");
+  const [appliedVoucher, setAppliedVoucher] = useState<{
+    code: string;
+    discount: number;
+  } | null>(null);
+  const [voucherError, setVoucherError] = useState("");
+
   const [clientId, setClientId] = useState(() => crypto.randomUUID());
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-  const total = lines.reduce(
+  const subtotal = lines.reduce(
     (sum, line) => sum + Math.round(line.price * line.quantity),
     0,
   );
+  const discount = appliedVoucher ? appliedVoucher.discount : 0;
+  const finalTotal = Math.max(0, subtotal - discount);
+
+  function handleApplyVoucher() {
+    setVoucherError("");
+    const result = validateVoucher(voucherInput, subtotal);
+    if (!result.valid) {
+      setVoucherError(result.message);
+      setAppliedVoucher(null);
+      return;
+    }
+    setAppliedVoucher({
+      code: result.code!,
+      discount: result.discount,
+    });
+  }
+
+  function handleRemoveVoucher() {
+    setAppliedVoucher(null);
+    setVoucherInput("");
+    setVoucherError("");
+  }
 
   const formattedAddress = formatFullAddress({
     street: address.street,
@@ -88,6 +121,8 @@ function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
         fulfillment === "delivery" && !address.isManual && address.wardCode
           ? address.wardCode
           : undefined,
+      deliverySlot: fulfillment === "delivery" ? deliverySlot : undefined,
+      voucherCode: appliedVoucher ? appliedVoucher.code : undefined,
       note: data.get("note"),
     };
     try {
@@ -188,7 +223,7 @@ function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
               </label>
             </div>
             {fulfillment === "delivery" ? (
-              <div className="mt-4">
+              <div className="mt-4 space-y-4">
                 <AddressFields
                   value={address}
                   onChange={setAddress}
@@ -197,7 +232,7 @@ function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
                 {formattedAddress ? (
                   <div
                     data-testid="address-summary"
-                    className="border-border bg-muted/40 mt-4 rounded-xl border p-3.5 text-sm"
+                    className="border-border bg-muted/40 rounded-xl border p-3.5 text-sm"
                   >
                     <span className="text-muted-foreground font-semibold">
                       Địa chỉ nhận hàng:
@@ -205,6 +240,32 @@ function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
                     <p className="mt-1 font-medium">{formattedAddress}</p>
                   </div>
                 ) : null}
+
+                <div className="border-border/60 border-t pt-4">
+                  <label className="block text-sm font-bold">
+                    Thời gian nhận hàng
+                    <select
+                      aria-label="Khung giờ giao"
+                      name="deliverySlot"
+                      value={deliverySlot}
+                      onChange={(e) => setDeliverySlot(e.target.value)}
+                      className={`${inputClass} mt-1.5`}
+                    >
+                      <option value="Giao sớm nhất có thể (Tiêu chuẩn)">
+                        Giao sớm nhất có thể (Tiêu chuẩn)
+                      </option>
+                      <option value="08:00 - 11:30">
+                        08:00 - 11:30 (Buổi sáng)
+                      </option>
+                      <option value="13:30 - 17:30">
+                        13:30 - 17:30 (Buổi chiều)
+                      </option>
+                      <option value="18:00 - 21:00">
+                        18:00 - 21:00 (Buổi tối)
+                      </option>
+                    </select>
+                  </label>
+                </div>
               </div>
             ) : null}
             {fulfillment === "pickup" ? (
@@ -304,7 +365,7 @@ function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
             </label>
           </section>
         </div>
-        <aside className="border-border h-fit rounded-2xl border p-5 lg:sticky lg:top-6">
+        <aside className="border-border surface-panel h-fit rounded-2xl border p-5 lg:sticky lg:top-24">
           <h2 className="text-xl font-bold">Đơn hàng</h2>
           <ul className="mt-4 divide-y">
             {lines.map((line) => (
@@ -339,9 +400,67 @@ function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
               </li>
             ))}
           </ul>
+
+          <div className="border-border/60 mt-4 space-y-2 border-t pt-4">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Tạm tính:</span>
+              <span className="font-semibold">{formatVnd(subtotal)} ₫</span>
+            </div>
+
+            {appliedVoucher ? (
+              <div className="flex justify-between text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                <span>Giảm giá ({appliedVoucher.code}):</span>
+                <span>- {formatVnd(appliedVoucher.discount)} ₫</span>
+              </div>
+            ) : null}
+
+            <div className="mt-3 border-t border-dashed pt-3">
+              <label className="text-muted-foreground mb-1.5 block text-xs font-semibold tracking-wider uppercase">
+                Mã ưu đãi / Voucher
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Nhập mã voucher (VD: FREESHIP, GIAM20K)"
+                  value={voucherInput}
+                  onChange={(e) => setVoucherInput(e.target.value)}
+                  disabled={!!appliedVoucher}
+                  className="border-input bg-background h-10 flex-1 rounded-xl border px-3 text-xs uppercase outline-none focus-visible:ring-2"
+                />
+                {appliedVoucher ? (
+                  <button
+                    type="button"
+                    onClick={handleRemoveVoucher}
+                    className="text-destructive border-destructive/30 hover:bg-destructive/10 h-10 rounded-xl border px-3 text-xs font-semibold transition-colors"
+                  >
+                    Gỡ
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleApplyVoucher}
+                    className="bg-secondary text-secondary-foreground hover:bg-secondary/85 h-10 rounded-xl px-3.5 text-xs font-bold transition-colors"
+                  >
+                    Áp dụng
+                  </button>
+                )}
+              </div>
+              {voucherError ? (
+                <p className="text-destructive mt-1.5 text-xs">
+                  {voucherError}
+                </p>
+              ) : null}
+              {appliedVoucher ? (
+                <p className="mt-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  Đã áp dụng: Giảm {formatVnd(appliedVoucher.discount)} ₫
+                </p>
+              ) : null}
+            </div>
+          </div>
+
           <div className="mt-4 flex justify-between border-t pt-4 text-xl font-bold">
             <span>Tổng cộng</span>
-            <span>{formatVnd(total)} ₫</span>
+            <span>{formatVnd(finalTotal)} ₫</span>
           </div>
           {error ? (
             <p role="alert" className="text-destructive mt-4">
