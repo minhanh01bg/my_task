@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 
 import { OnlineCartProvider } from "@/features/online-store/cart-context";
 import { CategorySection } from "@/features/online-store/landing/category-section";
@@ -11,6 +12,10 @@ import type {
   OnlineCategory,
   OnlineProduct,
 } from "@/features/online-store/types";
+
+vi.mock("@/features/customer-notifications/notification-button", () => ({
+  CustomerNotificationButton: () => <button type="button">Thông báo</button>,
+}));
 
 const mockCategories: OnlineCategory[] = [
   { id: "c1", name: "Đồ uống & Cà phê" },
@@ -139,7 +144,11 @@ describe("Storefront Landing Page Components", () => {
 
   describe("ProductRail", () => {
     it("hiển thị sản phẩm nổi bật với giá và tên", () => {
-      render(<ProductRail title="Sản phẩm nổi bật" products={mockProducts} />);
+      render(
+        <OnlineCartProvider>
+          <ProductRail title="Sản phẩm nổi bật" products={mockProducts} />
+        </OnlineCartProvider>,
+      );
 
       expect(screen.getByText("Sản phẩm nổi bật")).toBeInTheDocument();
       expect(screen.getByText("Cà phê Đậm Đà")).toBeInTheDocument();
@@ -147,8 +156,27 @@ describe("Storefront Landing Page Components", () => {
       expect(screen.getByText("Trà Oolong Thượng Hạng")).toBeInTheDocument();
     });
 
+    it("cho phép thêm sản phẩm vào giỏ hàng trực tiếp từ ProductRail", async () => {
+      const user = userEvent.setup();
+      render(
+        <OnlineCartProvider>
+          <ProductRail title="Sản phẩm nổi bật" products={mockProducts} />
+        </OnlineCartProvider>,
+      );
+
+      const addButtons = screen.getAllByRole("button", {
+        name: /thêm .* vào giỏ hàng/i,
+      });
+      expect(addButtons.length).toBe(2);
+      await user.click(addButtons[0]);
+    });
+
     it("hiển thị fallback trung thực khi danh sách sản phẩm rỗng", () => {
-      render(<ProductRail title="Sản phẩm nổi bật" products={[]} />);
+      render(
+        <OnlineCartProvider>
+          <ProductRail title="Sản phẩm nổi bật" products={[]} />
+        </OnlineCartProvider>,
+      );
 
       expect(
         screen.getByText(

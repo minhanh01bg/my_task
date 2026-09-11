@@ -1,3 +1,4 @@
+import { ChartSvg } from "@/components/kit/chart-svg";
 import { Money, PageHeader, StatTile } from "@/components/kit";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +21,11 @@ export default async function ReportsPage() {
   const totalRevenue = revenue.reduce((sum, row) => sum + row.revenue, 0);
   const totalOrders = revenue.reduce((sum, row) => sum + row.orderCount, 0);
 
+  const chartData = revenue.map((row) => ({
+    label: row.date.slice(5),
+    value: row.revenue,
+  }));
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -37,6 +43,13 @@ export default async function ReportsPage() {
         <StatTile label="Số đơn" value={totalOrders} hint="14 ngày gần nhất" />
         <StatTile label="Sắp hết hàng" value={lowStock.length} />
       </div>
+
+      <ChartSvg
+        data={chartData}
+        title="Biểu đồ xu hướng doanh thu"
+        subtitle="Biến động doanh số bán lẻ 14 ngày qua"
+        formatValue={(v) => `${(v / 1_000).toLocaleString("vi-VN")}k ₫`}
+      />
 
       <Card>
         <CardHeader>

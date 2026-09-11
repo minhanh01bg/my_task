@@ -1,9 +1,18 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Eye, ShoppingCart } from "lucide-react";
 
+import { StarRating } from "@/components/kit/star-rating";
+import { WishlistButton } from "@/components/kit/wishlist-button";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/lib/money";
 
+import { useOnlineCart } from "../cart-context";
+import { QuickViewModal } from "../quick-view-modal";
 import type { OnlineProduct } from "../types";
 
 export interface ProductRailProps {
@@ -17,6 +26,9 @@ export function ProductRail({
   subtitle = "Lựa chọn được khách hàng quan tâm nhiều nhất",
   products,
 }: ProductRailProps) {
+  const { add } = useOnlineCart();
+  const [quickViewProduct, setQuickViewProduct] =
+    useState<OnlineProduct | null>(null);
   const displayProducts = products.slice(0, 8);
 
   return (
@@ -41,48 +53,124 @@ export function ProductRail({
 
       {displayProducts.length > 0 ? (
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {displayProducts.map((product) => (
-            <article
-              key={product.id}
-              className="border-border bg-card group overflow-hidden rounded-2xl border transition-all hover:shadow-sm"
-            >
-              <div className="bg-muted relative aspect-square overflow-hidden">
-                {product.imageUrl ? (
-                  <Image
-                    src={product.imageUrl}
-                    alt={product.name}
-                    fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                  />
-                ) : (
-                  <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-                    Chưa có ảnh
+          {displayProducts.map((product) => {
+            const isOutOfStock = product.stock <= 0;
+            return (
+              <article
+                key={product.id}
+                className="card-interactive border-border bg-card group flex flex-col justify-between overflow-hidden rounded-2xl border shadow-xs"
+              >
+                <div>
+                  <div className="bg-muted relative aspect-square overflow-hidden">
+                    <div className="absolute top-2.5 left-2.5 z-10">
+                      <WishlistButton
+                        productId={product.id}
+                        productName={product.name}
+                        size="sm"
+                      />
+                    </div>
+                    {isOutOfStock ? (
+                      <div className="absolute top-2.5 right-2.5 z-10">
+                        <Badge
+                          variant="destructive"
+                          className="font-bold shadow-xs"
+                        >
+                          Hết hàng
+                        </Badge>
+                      </div>
+                    ) : null}
+                    <Link
+                      href={`/shop/products/${product.id}`}
+                      className="block h-full w-full"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                    >
+                      {product.imageUrl ? (
+                        <Image
+                          src={product.imageUrl}
+                          alt={product.name}
+                          fill
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                        />
+                      ) : (
+                        <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+                          Chưa có ảnh
+                        </div>
+                      )}
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setQuickViewProduct(product);
+                      }}
+                      aria-label={`Xem nhanh ${product.name}`}
+                      className="bg-background/90 text-foreground hover:bg-background absolute bottom-2.5 left-1/2 z-10 hidden -translate-x-1/2 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold shadow-md backdrop-blur-sm transition-all group-hover:flex hover:scale-105"
+                    >
+                      <Eye className="size-3.5" />
+                      <span>Xem nhanh</span>
+                    </button>
                   </div>
-                )}
-              </div>
 
-              <div className="p-4">
-                <h3 className="text-foreground line-clamp-2 min-h-10 text-sm font-bold">
-                  {product.name}
-                </h3>
-                <div className="mt-2 flex items-baseline justify-between">
-                  <span className="text-primary text-base font-bold sm:text-lg">
-                    {formatVnd(product.price)} ₫
-                  </span>
-                  <span className="text-muted-foreground text-xs">
-                    /{product.unit}
-                  </span>
+                  <div className="p-4 pb-2">
+                    <Link
+                      href={`/shop/products/${product.id}`}
+                      className="hover:text-primary transition-colors"
+                    >
+                      <h3 className="text-foreground line-clamp-2 min-h-10 text-sm font-bold sm:text-base">
+                        {product.name}
+                      </h3>
+                    </Link>
+                    <div className="mt-1">
+                      <StarRating rating={4.8} size="xs" />
+                    </div>
+                    <div className="mt-2 flex items-baseline justify-between">
+                      <span className="text-primary text-base font-bold sm:text-lg">
+                        {formatVnd(product.price)} ₫
+                      </span>
+                      <span className="text-muted-foreground text-xs">
+                        /{product.unit}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </article>
-          ))}
+
+                <div className="p-4 pt-0">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isOutOfStock}
+                    onClick={() => add(product)}
+                    aria-label={
+                      !isOutOfStock
+                        ? `Thêm ${product.name} vào giỏ hàng`
+                        : `${product.name} đã hết hàng`
+                    }
+                    className="hover:bg-primary hover:text-primary-foreground mt-2 w-full font-bold transition-colors"
+                  >
+                    <ShoppingCart
+                      className="mr-1.5 size-4"
+                      aria-hidden="true"
+                    />
+                    <span>{isOutOfStock ? "Tạm hết" : "Thêm vào giỏ"}</span>
+                  </Button>
+                </div>
+              </article>
+            );
+          })}
         </div>
       ) : (
         <div className="border-border bg-muted/20 text-muted-foreground mt-6 rounded-2xl border border-dashed p-8 text-center text-sm">
           Chưa có sản phẩm nổi bật, sản phẩm sẽ sớm được cập nhật.
         </div>
       )}
+
+      <QuickViewModal
+        product={quickViewProduct}
+        onClose={() => setQuickViewProduct(null)}
+      />
     </section>
   );
 }

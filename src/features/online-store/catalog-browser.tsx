@@ -1,14 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ShoppingCart } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Money } from "@/components/kit/money";
+import { WishlistButton } from "@/components/kit/wishlist-button";
+import { useWishlist } from "@/lib/storage/wishlist";
 import { catalogFilterSchema, type CatalogFilter } from "@/types/storefront";
 
 import { useOnlineCart } from "./cart-context";
@@ -65,10 +68,14 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
     setFilter(parseFilterFromParams(searchParams));
   }
 
-  const products = useMemo(
-    () => filterAndSortProducts(catalog.products, filter),
-    [catalog.products, filter],
-  );
+  const { has: hasWishlist } = useWishlist();
+  const isWishlistOnly = searchParams?.get("wishlist") === "true";
+
+  const products = useMemo(() => {
+    const base = filterAndSortProducts(catalog.products, filter);
+    if (!isWishlistOnly) return base;
+    return base.filter((p) => hasWishlist(p.id));
+  }, [catalog.products, filter, isWishlistOnly, hasWishlist]);
 
   return (
     <section
@@ -84,12 +91,28 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
           id="catalog-title"
           className="font-heading mt-2 text-3xl font-bold sm:text-4xl"
         >
-          Toàn bộ sản phẩm
+          {isWishlistOnly ? "Sản phẩm yêu thích của bạn" : "Toàn bộ sản phẩm"}
         </h2>
         <p className="text-muted-foreground mt-3 text-base">
-          Giá và tồn kho được cập nhật trực tiếp từ cửa hàng.
+          {isWishlistOnly
+            ? "Danh sách các sản phẩm bạn đã lưu để theo dõi và mua sắm sau."
+            : "Giá và tồn kho được cập nhật trực tiếp từ cửa hàng."}
         </p>
       </div>
+
+      {isWishlistOnly && (
+        <div className="mt-4 flex items-center justify-between rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-700 dark:text-rose-300">
+          <span>
+            Đang lọc theo danh sách yêu thích ({products.length} sản phẩm)
+          </span>
+          <Link
+            href="/shop#catalog"
+            className="text-xs font-bold underline hover:no-underline"
+          >
+            Xem tất cả sản phẩm
+          </Link>
+        </div>
+      )}
 
       <div className="mt-8">
         <CatalogFilters
@@ -105,9 +128,16 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
           {products.map((product) => (
             <article
               key={product.id}
-              className="border-border bg-card overflow-hidden rounded-2xl border shadow-xs transition-all hover:shadow-md"
+              className="card-interactive border-border bg-card group overflow-hidden rounded-2xl border shadow-xs"
             >
-              <div className="bg-muted relative aspect-square">
+              <div className="bg-muted relative aspect-square overflow-hidden">
+                <div className="absolute top-2.5 left-2.5 z-10">
+                  <WishlistButton
+                    productId={product.id}
+                    productName={product.name}
+                    size="sm"
+                  />
+                </div>
                 {product.stock <= 0 ? (
                   <div className="absolute top-2.5 right-2.5 z-10">
                     <Badge
@@ -118,24 +148,36 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
                     </Badge>
                   </div>
                 ) : null}
-                {product.imageUrl ? (
-                  <Image
-                    src={product.imageUrl}
-                    alt={product.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 50vw, 25vw"
-                  />
-                ) : (
-                  <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-                    Chưa có ảnh
-                  </div>
-                )}
+                <Link
+                  href={`/shop/products/${product.id}`}
+                  className="block h-full w-full"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                >
+                  {product.imageUrl ? (
+                    <Image
+                      src={product.imageUrl}
+                      alt={product.name}
+                      fill
+                      className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      sizes="(max-width: 768px) 50vw, 25vw"
+                    />
+                  ) : (
+                    <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+                      Chưa có ảnh
+                    </div>
+                  )}
+                </Link>
               </div>
               <div className="p-4">
-                <h2 className="line-clamp-2 min-h-12 font-bold">
-                  {product.name}
-                </h2>
+                <Link
+                  href={`/shop/products/${product.id}`}
+                  className="hover:text-primary transition-colors"
+                >
+                  <h3 className="line-clamp-2 min-h-12 font-bold">
+                    {product.name}
+                  </h3>
+                </Link>
                 <p className="text-muted-foreground mt-1 text-sm">
                   /{product.unit}
                 </p>

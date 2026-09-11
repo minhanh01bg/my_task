@@ -43,7 +43,7 @@ const nextConfig: NextConfig = {
    * coi la cross-origin va chan tai nguyen dev — trang khong hydrate duoc va
    * form submit kieu native.
    */
-  allowedDevOrigins: ["127.0.0.1"],
+  allowedDevOrigins: ["127.0.0.1", "160.250.247.137"],
   poweredByHeader: false,
   async headers() {
     return [

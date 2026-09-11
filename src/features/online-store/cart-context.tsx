@@ -27,7 +27,7 @@ interface CartContextValue {
   isDrawerOpen: boolean;
   openDrawer: () => void;
   closeDrawer: () => void;
-  add: (product: OnlineProduct) => CartMutationResult;
+  add: (product: OnlineProduct, quantity?: number) => CartMutationResult;
   setQuantity: (id: string, quantity: number) => void;
   remove: (id: string) => void;
   clear: () => void;
@@ -80,62 +80,76 @@ export function OnlineCartProvider({
     setIsDrawerOpen(false);
   }, []);
 
-  const add = useCallback((product: OnlineProduct): CartMutationResult => {
-    if (product.stock <= 0) {
-      const result: CartMutationResult = {
-        status: "unavailable",
-        productId: product.id,
-        productName: product.name,
-        quantity: 0,
-        message: "Sản phẩm hiện đã hết hàng hoặc không khả dụng",
-      };
-      setFeedback(result);
-      return result;
-    }
-
-    const currentLines = linesRef.current;
-    const found = currentLines.find((line) => line.id === product.id);
-
-    if (found) {
-      if (found.quantity >= product.stock) {
+  const add = useCallback(
+    (product: OnlineProduct, qtyToAdd: number = 1): CartMutationResult => {
+      const qty = Math.max(1, qtyToAdd);
+      if (product.stock <= 0) {
         const result: CartMutationResult = {
-          status: "capped",
+          status: "unavailable",
           productId: product.id,
           productName: product.name,
-          quantity: found.quantity,
-          maxAvailable: product.stock,
-          message: "Đã đạt số lượng tối đa trong kho",
+          quantity: 0,
+          message: "Sản phẩm hiện đã hết hàng hoặc không khả dụng",
         };
         setFeedback(result);
         return result;
       }
 
-      const nextQuantity = found.quantity + 1;
-      setLines((current) =>
-        current.map((line) =>
-          line.id === product.id ? { ...line, quantity: nextQuantity } : line,
-        ),
-      );
+      const currentLines = linesRef.current;
+      const found = currentLines.find((line) => line.id === product.id);
+
+      if (found) {
+        if (found.quantity >= product.stock) {
+          const result: CartMutationResult = {
+            status: "capped",
+            productId: product.id,
+            productName: product.name,
+            quantity: found.quantity,
+            maxAvailable: product.stock,
+            message: "Đã đạt số lượng tối đa trong kho",
+          };
+          setFeedback(result);
+          return result;
+        }
+
+        const nextQuantity = Math.min(product.stock, found.quantity + qty);
+        const isCapped =
+          nextQuantity === product.stock &&
+          found.quantity + qty > product.stock;
+        setLines((current) =>
+          current.map((line) =>
+            line.id === product.id ? { ...line, quantity: nextQuantity } : line,
+          ),
+        );
+        const result: CartMutationResult = {
+          status: isCapped ? "capped" : "incremented",
+          productId: product.id,
+          productName: product.name,
+          quantity: nextQuantity,
+          ...(isCapped
+            ? {
+                maxAvailable: product.stock,
+                message: "Đã đạt số lượng tối đa trong kho",
+              }
+            : {}),
+        };
+        setFeedback(result);
+        return result;
+      }
+
+      const initialQty = Math.min(product.stock, qty);
+      setLines((current) => [...current, { ...product, quantity: initialQty }]);
       const result: CartMutationResult = {
-        status: "incremented",
+        status: "added",
         productId: product.id,
         productName: product.name,
-        quantity: nextQuantity,
+        quantity: initialQty,
       };
       setFeedback(result);
       return result;
-    }
-
-    setLines((current) => [...current, { ...product, quantity: 1 }]);
-    const result: CartMutationResult = {
-      status: "added",
-      productId: product.id,
-      productName: product.name,
-      quantity: 1,
-    };
-    setFeedback(result);
-    return result;
-  }, []);
+    },
+    [],
+  );
 
   const setQuantity = useCallback((id: string, quantity: number) => {
     setLines((current) =>

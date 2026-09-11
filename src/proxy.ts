@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE } from "@/server/auth/constants";
 import { isPublicPath } from "@/lib/auth/public-paths";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname === "/login" || isPublicPath(pathname)) {
@@ -27,6 +27,8 @@ export async function middleware(request: NextRequest) {
 
   return NextResponse.next();
 }
+
+export { proxy as middleware };
 
 export const config = {
   matcher: ["/pos/:path*", "/admin/:path*", "/api/:path*"],

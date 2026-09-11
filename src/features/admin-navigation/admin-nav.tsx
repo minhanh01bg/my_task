@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { AdminLogoutButton } from "@/features/admin-navigation/admin-logout-button";
 import { NotificationButton } from "@/features/admin-notifications/notification-button";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -169,20 +170,26 @@ export function AdminNav() {
             <p className="truncate font-bold">{current?.label ?? "Cửa hàng"}</p>
           </div>
         </div>
-        <NotificationButton placement="mobile" />
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <NotificationButton placement="mobile" />
+        </div>
       </header>
 
       <aside className="bg-card/85 border-r p-5 backdrop-blur-xl max-md:hidden md:sticky md:top-0 md:h-dvh">
-        <div className="mb-5 flex items-center gap-3 px-2">
-          <span className="bg-primary text-primary-foreground flex size-11 items-center justify-center rounded-2xl shadow-md">
-            <Storefront aria-hidden="true" weight="fill" className="size-5" />
-          </span>
-          <div>
-            <p className="font-heading font-bold">Quản lý cửa hàng</p>
-            <p className="text-muted-foreground text-xs">
-              Dễ nhìn · dễ thao tác
-            </p>
+        <div className="mb-5 flex items-center justify-between gap-3 px-2">
+          <div className="flex items-center gap-3">
+            <span className="bg-primary text-primary-foreground flex size-11 items-center justify-center rounded-2xl shadow-md">
+              <Storefront aria-hidden="true" weight="fill" className="size-5" />
+            </span>
+            <div>
+              <p className="font-heading font-bold">Quản lý cửa hàng</p>
+              <p className="text-muted-foreground text-xs">
+                Dễ nhìn · dễ thao tác
+              </p>
+            </div>
           </div>
+          <ThemeToggle />
         </div>
         <NotificationButton placement="desktop" />
         <nav aria-label="Điều hướng quản lý">
@@ -274,8 +281,14 @@ export function AdminNav() {
               ))}
             </ul>
           </nav>
+          <div className="border-border mt-3 flex items-center justify-between border-t px-2 pt-3">
+            <span className="text-muted-foreground text-sm font-semibold">
+              Giao diện sáng / tối
+            </span>
+            <ThemeToggle />
+          </div>
           <AdminLogoutButton
-            className="border-border mt-3 border-t pt-3"
+            className="border-border mt-2 border-t pt-3"
             onLogout={() => setMenuOpen(false)}
           />
         </DialogContent>

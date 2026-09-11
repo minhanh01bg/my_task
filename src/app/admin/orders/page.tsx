@@ -49,6 +49,40 @@ function buildPageHref(params: OrdersSearchParams, page: number) {
   return `/admin/orders?${query.toString()}`;
 }
 
+export function buildOrdersWhere(params: OrdersSearchParams) {
+  const q = params.q?.trim() ?? "";
+  const status = params.status ?? "";
+  const channel = params.channel ?? "";
+  const from = params.from ?? "";
+  const to = params.to ?? "";
+  const start = from ? new Date(`${from}T00:00:00`) : null;
+  const end = to ? new Date(`${to}T23:59:59.999`) : null;
+
+  return {
+    ...(channel ? { channel } : {}),
+    ...(status ? { status } : {}),
+    ...(start || end
+      ? {
+          createdAt: {
+            ...(start ? { gte: start } : {}),
+            ...(end ? { lte: end } : {}),
+          },
+        }
+      : {}),
+    ...(q
+      ? {
+          OR: [
+            { code: { contains: q } },
+            { contactName: { contains: q } },
+            { contactPhone: { contains: q } },
+            { customer: { is: { name: { contains: q } } } },
+            { customer: { is: { phone: { contains: q } } } },
+          ],
+        }
+      : {}),
+  };
+}
+
 export default async function OrdersPage({
   searchParams,
 }: {
@@ -66,29 +100,7 @@ export default async function OrdersPage({
     1,
     Number.parseInt(params.page ?? "1", 10) || 1,
   );
-  const start = from ? new Date(`${from}T00:00:00`) : null;
-  const end = to ? new Date(`${to}T23:59:59.999`) : null;
-  const where = {
-    ...(channel ? { channel } : {}),
-    ...(status ? { status } : {}),
-    ...(start || end
-      ? {
-          createdAt: {
-            ...(start ? { gte: start } : {}),
-            ...(end ? { lte: end } : {}),
-          },
-        }
-      : {}),
-    ...(q
-      ? {
-          OR: [
-            { code: { contains: q } },
-            { customer: { is: { name: { contains: q } } } },
-            { customer: { is: { phone: { contains: q } } } },
-          ],
-        }
-      : {}),
-  };
+  const where = buildOrdersWhere(params);
   const totalCount = await prisma.order.count({ where });
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const page = Math.min(requestedPage, totalPages);

@@ -3,6 +3,7 @@ import {
   MagnifyingGlass,
   NotePencil,
   Trash,
+  Warning,
 } from "@phosphor-icons/react/dist/ssr";
 
 import { ConfirmAction } from "@/components/shared/confirm-action";
@@ -30,10 +31,10 @@ export const dynamic = "force-dynamic";
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; edit?: string }>;
+  searchParams: Promise<{ q?: string; edit?: string; lowStock?: string }>;
 }) {
-  const { q = "", edit } = await searchParams;
-  const [categories, products] = await Promise.all([
+  const { q = "", edit, lowStock } = await searchParams;
+  const [categories, allProducts] = await Promise.all([
     prisma.category.findMany({
       orderBy: { sortOrder: "asc" },
       select: { id: true, name: true, sortOrder: true },
@@ -55,6 +56,16 @@ export default async function ProductsPage({
       include: { category: { select: { name: true } } },
     }),
   ]);
+
+  const lowStockCount = allProducts.filter(
+    (p) => !p.isService && p.stock <= 5,
+  ).length;
+
+  const products =
+    lowStock === "true"
+      ? allProducts.filter((p) => !p.isService && p.stock <= 5)
+      : allProducts;
+
   const editingProduct = edit
     ? await prisma.product.findFirst({ where: { id: edit, deletedAt: null } })
     : null;
@@ -68,6 +79,45 @@ export default async function ProductsPage({
           Thêm ảnh, cập nhật giá, tồn kho và thông tin tìm kiếm.
         </p>
       </div>
+
+      {lowStockCount > 0 ? (
+        <div
+          data-testid="low-stock-alert"
+          className="surface-panel flex flex-col items-start justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-900 sm:flex-row sm:items-center dark:text-amber-200"
+        >
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-amber-500/20 p-2 text-amber-600 dark:text-amber-400">
+              <Warning className="size-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold">
+                Cảnh báo tồn kho thấp ({lowStockCount} mặt hàng)
+              </h4>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                Các sản phẩm còn từ 5 đơn vị trở xuống cần được lên kế hoạch
+                nhập hàng sớm.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {lowStock === "true" ? (
+              <Link
+                href="/admin/products"
+                className="text-primary bg-background rounded-lg border px-3 py-1.5 text-xs font-bold hover:underline"
+              >
+                Hiện tất cả ({allProducts.length})
+              </Link>
+            ) : (
+              <Link
+                href="/admin/products?lowStock=true"
+                className="rounded-lg border border-amber-500/30 bg-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-800 hover:underline dark:text-amber-300"
+              >
+                Lọc hàng sắp hết ({lowStockCount})
+              </Link>
+            )}
+          </div>
+        </div>
+      ) : null}
 
       <ProductForm
         categories={categories}

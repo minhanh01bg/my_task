@@ -3,11 +3,21 @@
 import { useEffect, useMemo, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Minus, PackageX, Plus, ShoppingBag, Trash2, X } from "lucide-react";
+import {
+  Minus,
+  PackageX,
+  Plus,
+  ShoppingBag,
+  Trash2,
+  Truck,
+  X,
+} from "lucide-react";
 
 import { formatVnd } from "@/lib/money";
 
 import { useOnlineCart } from "./cart-context";
+
+const FREE_SHIPPING_THRESHOLD = 200_000;
 
 export function CartDrawer() {
   const { lines, isDrawerOpen, closeDrawer, setQuantity, remove } =
@@ -54,13 +64,13 @@ export function CartDrawer() {
       <div
         onClick={closeDrawer}
         aria-hidden="true"
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+        className="animate-fade-in fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
       />
 
       {/* Slide-over sheet */}
       <div
         ref={drawerRef}
-        className="border-border bg-background relative z-10 flex h-full w-full max-w-md flex-col border-l shadow-2xl transition-transform"
+        className="border-border bg-background animate-slide-in-right relative z-10 flex h-full w-full max-w-md flex-col border-l shadow-2xl transition-transform"
       >
         {/* Header */}
         <div className="border-border flex items-center justify-between border-b px-6 py-4">
@@ -84,6 +94,46 @@ export function CartDrawer() {
             <X aria-hidden="true" className="size-5" />
           </button>
         </div>
+
+        {/* Free Shipping Progress Bar */}
+        {lines.length > 0 && (
+          <div className="border-border bg-muted/30 border-b px-6 py-3.5">
+            <div className="flex items-center justify-between text-xs font-semibold">
+              {subtotal >= FREE_SHIPPING_THRESHOLD ? (
+                <span className="text-success flex items-center gap-1.5 font-bold">
+                  <Truck className="size-4" />
+                  <span>🎉 Chúc mừng! Bạn đã được Miễn phí giao hàng!</span>
+                </span>
+              ) : (
+                <span className="text-muted-foreground flex items-center gap-1.5">
+                  <Truck className="text-primary size-4" />
+                  <span>
+                    Mua thêm{" "}
+                    <strong className="text-foreground font-bold">
+                      {formatVnd(FREE_SHIPPING_THRESHOLD - subtotal)} ₫
+                    </strong>{" "}
+                    để được Miễn phí giao hàng
+                  </span>
+                </span>
+              )}
+            </div>
+            <div
+              data-testid="free-shipping-bar"
+              className="bg-muted mt-2 h-2 w-full overflow-hidden rounded-full"
+            >
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  subtotal >= FREE_SHIPPING_THRESHOLD
+                    ? "bg-success"
+                    : "bg-primary"
+                }`}
+                style={{
+                  width: `${Math.min(100, (subtotal / FREE_SHIPPING_THRESHOLD) * 100)}%`,
+                }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">

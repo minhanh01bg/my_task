@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CustomerLogoutButton } from "@/features/customer-account/logout-button";
 import { CustomerOrderCard } from "@/features/customer-account/order-card";
 import { CustomerNotificationButton } from "@/features/customer-notifications/notification-button";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { requireCustomerSession } from "@/server/customer-auth/session";
 import { listCustomerOrders } from "@/server/orders/order-access";
 
@@ -21,7 +22,8 @@ export default async function CustomerOrdersPage() {
           </p>
           <h1 className="text-4xl font-bold">Đơn hàng của tôi</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <ThemeToggle />
           <CustomerNotificationButton placement="page" />
           <CustomerLogoutButton />
         </div>
