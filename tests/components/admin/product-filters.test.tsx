@@ -117,4 +117,22 @@ describe("ProductFilters (Admin)", () => {
     fireEvent.click(resetBtn);
     expect(push).toHaveBeenCalledWith("/admin/products");
   });
+
+  it("hiển thị tên danh mục đã chọn thay vì ID danh mục trên trigger", () => {
+    mockSearchParams = new URLSearchParams("categoryId=cat-1");
+
+    render(
+      <ProductFilters
+        categories={mockCategories}
+        currentCategoryId="cat-1"
+        counts={mockCounts}
+      />,
+    );
+
+    const categoryTrigger = screen.getByRole("combobox", {
+      name: /lọc theo danh mục/i,
+    });
+    expect(categoryTrigger).toHaveTextContent("Đồ uống");
+    expect(categoryTrigger).not.toHaveTextContent("cat-1");
+  });
 });

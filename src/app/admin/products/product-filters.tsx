@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowCounterClockwise,
@@ -50,6 +50,22 @@ export function ProductFilters({
   const [, startTransition] = useTransition();
 
   const [searchVal, setSearchVal] = useState(currentQuery);
+
+  const categoryItems = useMemo(
+    () => [
+      { value: "all", label: "Tất cả danh mục" },
+      ...categories.map((cat) => ({ value: cat.id, label: cat.name })),
+    ],
+    [categories],
+  );
+
+  const categoryNameMap = useMemo(() => {
+    const map: Record<string, string> = { all: "Tất cả danh mục" };
+    for (const cat of categories) {
+      map[cat.id] = cat.name;
+    }
+    return map;
+  }, [categories]);
 
   const createQueryString = useCallback(
     (updates: Record<string, string | null>) => {
@@ -231,6 +247,7 @@ export function ProductFilters({
         {/* Category Select Dropdown */}
         <div className="w-full sm:w-60">
           <Select
+            items={categoryItems}
             value={currentCategoryId}
             onValueChange={handleCategoryChange}
           >
@@ -238,7 +255,13 @@ export function ProductFilters({
               aria-label="Lọc theo danh mục"
               className="h-11 w-full rounded-xl font-medium"
             >
-              <SelectValue placeholder="Tất cả danh mục" />
+              <SelectValue placeholder="Tất cả danh mục">
+                {(val: string | null) =>
+                  val && val !== "all"
+                    ? (categoryNameMap[val] ?? val)
+                    : "Tất cả danh mục"
+                }
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tất cả danh mục</SelectItem>
