@@ -2,13 +2,22 @@
 
 import { useId, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowUpDown, RotateCcw, Search, X } from "lucide-react";
+import { RotateCcw, Search, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DropdownField } from "@/components/kit/dropdown-field";
 import { formatVnd } from "@/lib/money";
 import type { CatalogFilter, CatalogSort } from "@/types/storefront";
+
+const SORT_OPTIONS = [
+  { value: "relevance", label: "Phù hợp nhất" },
+  { value: "best-selling", label: "Bán chạy nhất" },
+  { value: "price-asc", label: "Giá tăng dần" },
+  { value: "price-desc", label: "Giá giảm dần" },
+  { value: "name-asc", label: "Tên A - Z" },
+] as const;
 
 import { useOnlineCart } from "./cart-context";
 import type { OnlineCategory } from "./types";
@@ -109,27 +118,18 @@ export function CatalogFilters({
           <label htmlFor={sortSelectId} className="sr-only">
             Sắp xếp theo
           </label>
-          <div className="relative">
-            <ArrowUpDown
-              aria-hidden="true"
-              className="text-muted-foreground pointer-events-none absolute top-3.5 left-3 size-4"
-            />
-            <select
+          <div className="min-w-44">
+            <DropdownField
               id={sortSelectId}
+              aria-label="Sắp xếp theo"
               disabled={!hydrated}
               value={filter.sort}
-              onChange={(e) =>
-                handleUpdate({ sort: e.target.value as CatalogSort })
-              }
-              aria-label="Sắp xếp theo"
-              className="border-input bg-background hover:border-primary/45 hover:bg-accent/35 focus-visible:border-primary focus-visible:ring-primary/15 h-12 cursor-pointer rounded-2xl border pr-8 pl-9 text-sm font-semibold shadow-xs transition-all outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              <option value="relevance">Phù hợp nhất</option>
-              <option value="best-selling">Bán chạy nhất</option>
-              <option value="price-asc">Giá tăng dần</option>
-              <option value="price-desc">Giá giảm dần</option>
-              <option value="name-asc">Tên A - Z</option>
-            </select>
+              onValueChange={(val) => {
+                if (val) handleUpdate({ sort: val as CatalogSort });
+              }}
+              options={SORT_OPTIONS}
+              className="h-12 rounded-2xl"
+            />
           </div>
         </div>
       </div>

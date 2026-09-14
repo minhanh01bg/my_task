@@ -55,8 +55,8 @@ export function StoreHeader({
                 variant="outline"
                 className="min-h-11 font-bold"
                 nativeButton={false}
-                aria-label="Về trang quản trị"
-                render={<Link href="/admin/products" />}
+                aria-label="Quay lại trang quản trị"
+                render={<Link href="/admin/orders" />}
               >
                 <LayoutDashboard aria-hidden="true" className="size-5" />
                 <span className="ml-1.5 hidden sm:inline">Quản trị</span>

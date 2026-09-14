@@ -7,6 +7,7 @@ import {
   getProvinces,
   getWards,
 } from "@/lib/address/vietnam-address";
+import { DropdownField } from "@/components/kit/dropdown-field";
 
 export interface AddressState {
   provinceCode: string;
@@ -43,6 +44,19 @@ export function AddressFields({
   const wards = useMemo(
     () => (value.districtCode ? getWards(value.districtCode) : []),
     [value.districtCode],
+  );
+
+  const provinceOptions = useMemo(
+    () => provinces.map((p) => ({ value: p.code, label: p.name })),
+    [provinces],
+  );
+  const districtOptions = useMemo(
+    () => districts.map((d) => ({ value: d.code, label: d.name })),
+    [districts],
+  );
+  const wardOptions = useMemo(
+    () => wards.map((w) => ({ value: w.code, label: w.name })),
+    [wards],
   );
 
   function handleProvinceSelect(code: string) {
@@ -135,21 +149,17 @@ export function AddressFields({
               className={`${inputClass} mt-2`}
             />
           ) : (
-            <select
+            <DropdownField
               id={provinceInputId}
-              required
-              aria-required="true"
+              aria-label="Tỉnh/thành phố"
+              placeholder="-- Chọn Tỉnh/Thành phố --"
               value={value.provinceCode}
-              onChange={(e) => handleProvinceSelect(e.target.value)}
-              className={`${inputClass} mt-2`}
-            >
-              <option value="">-- Chọn Tỉnh/Thành phố --</option>
-              {provinces.map((p) => (
-                <option key={p.code} value={p.code}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+              onValueChange={(code) => {
+                if (code) handleProvinceSelect(code);
+              }}
+              options={provinceOptions}
+              className="mt-2"
+            />
           )}
         </div>
 
@@ -171,26 +181,22 @@ export function AddressFields({
               className={`${inputClass} mt-2`}
             />
           ) : (
-            <select
+            <DropdownField
               id={districtInputId}
-              required
-              aria-required="true"
-              disabled={!value.provinceCode}
-              value={value.districtCode}
-              onChange={(e) => handleDistrictSelect(e.target.value)}
-              className={`${inputClass} mt-2 disabled:cursor-not-allowed disabled:opacity-50`}
-            >
-              <option value="">
-                {value.provinceCode
+              aria-label="Quận/huyện"
+              placeholder={
+                value.provinceCode
                   ? "-- Chọn Quận/Huyện --"
-                  : "-- Vui lòng chọn Tỉnh trước --"}
-              </option>
-              {districts.map((d) => (
-                <option key={d.code} value={d.code}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+                  : "-- Vui lòng chọn Tỉnh trước --"
+              }
+              value={value.districtCode}
+              onValueChange={(code) => {
+                if (code) handleDistrictSelect(code);
+              }}
+              options={districtOptions}
+              disabled={!value.provinceCode || districts.length === 0}
+              className="mt-2"
+            />
           )}
         </div>
       </div>
@@ -211,26 +217,22 @@ export function AddressFields({
             className={`${inputClass} mt-2`}
           />
         ) : (
-          <select
+          <DropdownField
             id={wardInputId}
-            required
-            aria-required="true"
-            disabled={!value.districtCode}
-            value={value.wardCode}
-            onChange={(e) => handleWardSelect(e.target.value)}
-            className={`${inputClass} mt-2 disabled:cursor-not-allowed disabled:opacity-50`}
-          >
-            <option value="">
-              {value.districtCode
+            aria-label="Phường/xã"
+            placeholder={
+              value.districtCode
                 ? "-- Chọn Phường/Xã --"
-                : "-- Vui lòng chọn Quận/Huyện trước --"}
-            </option>
-            {wards.map((w) => (
-              <option key={w.code} value={w.code}>
-                {w.name}
-              </option>
-            ))}
-          </select>
+                : "-- Vui lòng chọn Quận/Huyện trước --"
+            }
+            value={value.wardCode}
+            onValueChange={(code) => {
+              if (code) handleWardSelect(code);
+            }}
+            options={wardOptions}
+            disabled={!value.districtCode || wards.length === 0}
+            className="mt-2"
+          />
         )}
       </div>
 

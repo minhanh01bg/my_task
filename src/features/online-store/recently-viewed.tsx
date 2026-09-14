@@ -37,8 +37,10 @@ function getSnapshot(): RecentlyViewedItem[] {
   return cachedItems;
 }
 
+const EMPTY_ITEMS: RecentlyViewedItem[] = [];
+
 function getServerSnapshot(): RecentlyViewedItem[] {
-  return [];
+  return EMPTY_ITEMS;
 }
 
 export function RecentlyViewedSection() {
