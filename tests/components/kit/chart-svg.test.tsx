@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { ChartSvg } from "@/components/kit/chart-svg";
@@ -34,5 +34,17 @@ describe("ChartSvg component", () => {
 
     expect(screen.getByText("Chưa có dữ liệu")).toBeInTheDocument();
     expect(screen.getByText(/không có dữ liệu/i)).toBeInTheDocument();
+  });
+
+  it("hỗ trợ valueFormat dạng chuỗi serializable tương thích React Server Components", () => {
+    const { container } = render(
+      <ChartSvg data={sampleData} title="Xu hướng" valueFormat="vnd-k" />,
+    );
+
+    const circles = container.querySelectorAll("circle");
+    expect(circles.length).toBe(sampleData.length);
+
+    fireEvent.mouseEnter(circles[0]);
+    expect(screen.getByText(/1\.200k ₫/)).toBeInTheDocument();
   });
 });

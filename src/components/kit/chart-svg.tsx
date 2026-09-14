@@ -11,6 +11,7 @@ export interface ChartSvgProps {
   data: ChartDataPoint[];
   title?: string;
   subtitle?: string;
+  valueFormat?: "vnd" | "vnd-k" | "number";
   formatValue?: (v: number) => string;
   height?: number;
   className?: string;
@@ -20,12 +21,26 @@ export function ChartSvg({
   data,
   title,
   subtitle,
-  formatValue = (v) => v.toLocaleString("vi-VN"),
+  valueFormat,
+  formatValue,
   height = 220,
   className = "",
 }: ChartSvgProps) {
   const gradientId = useId();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+
+  const formatDisplayValue = (val: number): string => {
+    if (formatValue) {
+      return formatValue(val);
+    }
+    if (valueFormat === "vnd-k") {
+      return `${(val / 1_000).toLocaleString("vi-VN")}k ₫`;
+    }
+    if (valueFormat === "vnd") {
+      return `${val.toLocaleString("vi-VN")} ₫`;
+    }
+    return val.toLocaleString("vi-VN");
+  };
 
   if (!data || data.length === 0) {
     return (
@@ -91,7 +106,7 @@ export function ChartSvg({
               {points[hoverIndex].data.label}:{" "}
             </span>
             <span className="text-primary text-sm font-bold">
-              {formatValue(points[hoverIndex].data.value)}
+              {formatDisplayValue(points[hoverIndex].data.value)}
             </span>
           </div>
         )}
