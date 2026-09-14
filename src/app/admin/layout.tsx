@@ -1,11 +1,14 @@
 import { AdminNav } from "@/features/admin-navigation/admin-nav";
 import { NotificationProvider } from "@/features/admin-notifications/notification-provider";
+import { requireAdminSession } from "@/server/auth/require-admin-session";
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  await requireAdminSession({ redirectToLogin: true });
+
   return (
     <NotificationProvider>
       <div className="grid min-h-dvh grid-cols-1 md:grid-cols-[250px_minmax(0,1fr)]">

@@ -7,6 +7,11 @@ import {
   saveStoreBankAccount,
   saveStoreProfile,
 } from "@/server/settings/store-settings";
+import { logAdminAction } from "@/server/auth/admin-audit";
+import {
+  AdminUnauthorizedError,
+  requireAdminSession,
+} from "@/server/auth/require-admin-session";
 
 export const adminSettingsSchema = z.object({
   storeName: z
@@ -69,6 +74,20 @@ export async function saveSettingsAction(
   _prevState: unknown,
   formData: FormData,
 ): Promise<SaveSettingsResult> {
+  let adminIdentity: { id: string } | undefined;
+  try {
+    const session = await requireAdminSession();
+    adminIdentity = session.identity;
+  } catch (error) {
+    if (error instanceof AdminUnauthorizedError) {
+      return {
+        ok: false,
+        error: "Yêu cầu quyền quản trị để thay đổi cài đặt",
+      };
+    }
+    throw error;
+  }
+
   const raw = {
     storeName: formData.get("storeName"),
     hotline: formData.get("hotline") || undefined,
@@ -100,6 +119,18 @@ export async function saveSettingsAction(
     bankBin: parsed.data.bankBin,
     accountNumber: parsed.data.accountNumber,
     accountName: parsed.data.accountName,
+  });
+
+  await logAdminAction({
+    identityId: adminIdentity?.id,
+    action: "settings.update",
+    entityType: "store_settings",
+    entityId: "store",
+    metadata: {
+      storeName: parsed.data.storeName,
+      bankBin: parsed.data.bankBin,
+      accountName: parsed.data.accountName,
+    },
   });
 
   revalidatePath("/admin/settings");

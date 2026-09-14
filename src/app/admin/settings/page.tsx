@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/kit";
+import { requireAdminSession } from "@/server/auth/require-admin-session";
 import {
   getPublicStoreProfile,
   getStoreBankAccount,
@@ -9,6 +10,8 @@ import { SettingsForm } from "./settings-form";
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
+  await requireAdminSession({ redirectToLogin: true });
+
   const [storeProfile, account] = await Promise.all([
     getPublicStoreProfile(),
     getStoreBankAccount(),
