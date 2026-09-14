@@ -1,3 +1,12 @@
+export interface HeroSlideVisual {
+  tag: string;
+  subtitle: string;
+  metricValue: string;
+  metricLabel: string;
+  highlightPill: string;
+  accentBadge: string;
+}
+
 export interface HeroSlide {
   id: string;
   badge: string;
@@ -8,6 +17,8 @@ export interface HeroSlide {
   secondaryText?: string;
   secondaryHref?: string;
   gradient?: string;
+  perks?: string[];
+  visual?: HeroSlideVisual;
 }
 
 export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
@@ -21,7 +32,20 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
     ctaHref: "#catalog",
     secondaryText: "Xem khuyến mãi",
     secondaryHref: "#catalog",
-    gradient: "from-primary/15 via-accent/10 to-transparent",
+    gradient: "from-emerald-500/15 via-primary/10 to-transparent",
+    perks: [
+      "Tồn kho chuẩn xác 100%",
+      "Nhập hàng tươi mỗi sáng",
+      "Bảo quản đúng chuẩn",
+    ],
+    visual: {
+      tag: "Thực phẩm & Tiêu dùng",
+      subtitle: "Nông sản & Bách hóa tuyển chọn",
+      metricValue: "100%",
+      metricLabel: "Độ tươi mới trong ngày",
+      highlightPill: "⚡ GIẢM TỚI 35%",
+      accentBadge: "🥬 Tươi mới",
+    },
   },
   {
     id: "slide-freeship",
@@ -33,7 +57,20 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
     ctaHref: "#catalog",
     secondaryText: "Chính sách giao hàng",
     secondaryHref: "/shop/delivery-policy",
-    gradient: "from-info/15 via-primary/10 to-transparent",
+    gradient: "from-blue-500/15 via-primary/10 to-transparent",
+    perks: [
+      "Freeship đơn từ 200.000₫",
+      "Giao hỏa tốc 30 - 60 phút",
+      "Theo dõi đơn trực tiếp",
+    ],
+    visual: {
+      tag: "Giao hàng hỏa tốc",
+      subtitle: "Phục vụ tận cửa mọi khung giờ",
+      metricValue: "30p",
+      metricLabel: "Giao nhanh nội thành",
+      highlightPill: "🚀 FREESHIP 0Đ",
+      accentBadge: "🚚 Giao tận nơi",
+    },
   },
   {
     id: "slide-quality",
@@ -45,6 +82,19 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
     ctaHref: "#catalog",
     secondaryText: "Chính sách đổi trả",
     secondaryHref: "/shop/return-policy",
-    gradient: "from-warning/15 via-primary/10 to-transparent",
+    gradient: "from-amber-500/15 via-primary/10 to-transparent",
+    perks: [
+      "100% rõ ràng nguồn gốc",
+      "Đổi trả miễn phí 48 giờ",
+      "Kiểm tra trước khi nhận",
+    ],
+    visual: {
+      tag: "Bảo đảm uy tín",
+      subtitle: "Chính hãng & Minh bạch nguồn gốc",
+      metricValue: "4.9★",
+      metricLabel: "2.800+ đánh giá tin cậy",
+      highlightPill: "🛡️ BẢO VỆ 100%",
+      accentBadge: "⭐ Uy tín 5 sao",
+    },
   },
 ];

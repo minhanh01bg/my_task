@@ -58,4 +58,56 @@ describe("HeroCarousel Component", () => {
     });
     expect(screen.getByText(DEFAULT_HERO_SLIDES[1].title)).toBeInTheDocument();
   });
+
+  it("tạm dừng và tiếp tục chuyển slide khi bấm nút Play/Pause", () => {
+    render(
+      <HeroCarousel slides={DEFAULT_HERO_SLIDES} autoPlayInterval={5000} />,
+    );
+
+    const pauseBtn = screen.getByLabelText("Tạm dừng slide");
+    fireEvent.click(pauseBtn);
+
+    // Khi da tam dung thi het 5s slide khong doi
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(screen.getByText("01 / 03")).toBeInTheDocument();
+
+    // Bam tiep tuc
+    const playBtn = screen.getByLabelText("Tiếp tục chạy slide");
+    fireEvent.click(playBtn);
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(screen.getByText("02 / 03")).toBeInTheDocument();
+  });
+
+  it("hỗ trợ chuyển slide bằng phím mũi tên bàn phím", () => {
+    render(<HeroCarousel slides={DEFAULT_HERO_SLIDES} />);
+    const region = screen.getByRole("region", { name: "Khuyến mãi nổi bật" });
+
+    fireEvent.keyDown(region, { key: "ArrowRight" });
+    expect(screen.getByText("02 / 03")).toBeInTheDocument();
+
+    fireEvent.keyDown(region, { key: "ArrowLeft" });
+    expect(screen.getByText("01 / 03")).toBeInTheDocument();
+  });
+
+  it("hỗ trợ vuốt chạm cảm ứng (touch swipe) để chuyển slide", () => {
+    render(<HeroCarousel slides={DEFAULT_HERO_SLIDES} />);
+    const region = screen.getByRole("region", { name: "Khuyến mãi nổi bật" });
+
+    // Vuot sang trai > 50px de sang slide tiep theo
+    fireEvent.touchStart(region, { touches: [{ clientX: 200 }] });
+    fireEvent.touchMove(region, { touches: [{ clientX: 120 }] });
+    fireEvent.touchEnd(region);
+
+    expect(screen.getByText("02 / 03")).toBeInTheDocument();
+  });
+
+  it("hiển thị các cam kết uy tín và thẻ visual showcase", () => {
+    render(<HeroCarousel slides={DEFAULT_HERO_SLIDES} />);
+    expect(screen.getByText("Tồn kho chuẩn xác 100%")).toBeInTheDocument();
+    expect(screen.getByText("Độ tươi mới trong ngày")).toBeInTheDocument();
+  });
 });
