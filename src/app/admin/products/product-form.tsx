@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle, Sparkle } from "@phosphor-icons/react";
 
+import { NumberStepper } from "@/components/kit";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -190,30 +191,37 @@ export function ProductForm({ categories, product }: ProductFormProps) {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="product-price">Giá bán</Label>
-            <Input
+            <Label htmlFor="product-price">Giá bán (VND)</Label>
+            <NumberStepper
               id="product-price"
               name="price"
-              type="number"
-              inputMode="numeric"
-              min="0"
+              min={0}
+              step={1000}
+              quickSteps={[1000, 5000, 10000, 50000, 100000]}
               defaultValue={product?.price ?? 0}
-              className="h-12 text-lg font-bold tabular-nums"
+              isCurrency
+              aria-label="Giá bán"
             />
-            <p className="text-muted-foreground text-xs">Đơn vị: đồng (VND)</p>
+            <p className="text-muted-foreground text-xs">
+              Tăng giảm 1.000 đ/lần bấm. Nhấn Shift + mũi tên để nhảy 10.000 đ.
+            </p>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="product-stock">Số lượng đang có</Label>
-            <Input
+            <Label htmlFor="product-stock">Số lượng đang có ({unit})</Label>
+            <NumberStepper
               id="product-stock"
               name="stock"
-              type="number"
-              inputMode="decimal"
-              step="any"
+              min={0}
+              step={1}
+              quickSteps={[1, 5, 10, 50]}
               defaultValue={product?.stock ?? 0}
-              className="h-12 text-lg font-bold tabular-nums"
+              unit={unit}
+              aria-label="Số lượng tồn kho"
             />
+            <p className="text-muted-foreground text-xs">
+              Đơn vị: {unit}. Có thể gõ trực tiếp số thập phân nếu cần.
+            </p>
           </div>
 
           <details className="border-border bg-muted/35 col-span-full rounded-2xl border p-4 open:pb-5">
@@ -227,13 +235,15 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="product-cost-price">Giá vốn (VND)</Label>
-                <Input
+                <NumberStepper
                   id="product-cost-price"
                   name="costPrice"
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
+                  min={0}
+                  step={1000}
+                  quickSteps={[1000, 5000, 10000, 50000]}
                   defaultValue={product?.costPrice ?? 0}
+                  isCurrency
+                  aria-label="Giá vốn"
                 />
               </div>
               <div className="space-y-1.5">
