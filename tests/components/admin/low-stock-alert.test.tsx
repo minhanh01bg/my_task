@@ -1,8 +1,18 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import ProductsPage from "@/app/admin/products/page";
 import { prisma } from "@/server/db/prisma";
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/admin/products",
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 describe("Admin Products - Low stock inventory alerts", () => {
   it("hiển thị cảnh báo khi có sản phẩm dưới ngưỡng an toàn tồn kho (<= 5)", async () => {
