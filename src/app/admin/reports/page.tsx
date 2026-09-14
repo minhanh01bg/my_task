@@ -48,7 +48,7 @@ export default async function ReportsPage() {
         data={chartData}
         title="Biểu đồ xu hướng doanh thu"
         subtitle="Biến động doanh số bán lẻ 14 ngày qua"
-        formatValue={(v) => `${(v / 1_000).toLocaleString("vi-VN")}k ₫`}
+        valueFormat="vnd-k"
       />
 
       <Card>

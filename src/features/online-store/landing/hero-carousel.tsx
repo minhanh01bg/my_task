@@ -1,13 +1,28 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Pause,
+  Play,
+  ShieldCheck,
+  ShoppingBag,
+  Sparkles,
+  Truck,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 
-import { DEFAULT_HERO_SLIDES, type HeroSlide } from "./hero-constants";
+import {
+  DEFAULT_HERO_SLIDES,
+  type HeroSlide,
+  type HeroSlideVisual,
+} from "./hero-constants";
 
 export { DEFAULT_HERO_SLIDES, type HeroSlide };
 
@@ -22,7 +37,12 @@ export function HeroCarousel({
 }: HeroCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const startXRef = useRef<number | null>(null);
+  const hasMovedRef = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const total = slides.length;
 
@@ -38,6 +58,7 @@ export function HeroCarousel({
     setCurrentIndex(index);
   };
 
+  // Autoplay
   useEffect(() => {
     if (isPaused || autoPlayInterval <= 0) return;
 
@@ -48,99 +69,244 @@ export function HeroCarousel({
     return () => clearInterval(timer);
   }, [isPaused, autoPlayInterval, nextSlide]);
 
-  const currentSlide = slides[currentIndex];
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStartX(e.touches[0].clientX);
+  // Touch and Mouse Drag handlers
+  const handleStart = (clientX: number) => {
+    setIsPaused(true);
+    setIsDragging(true);
+    startXRef.current = clientX;
+    hasMovedRef.current = false;
+    setDragOffset(0);
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX === null) return;
-    const touchEndX = e.changedTouches[0].clientX;
-    const diff = touchStartX - touchEndX;
-
-    if (diff > 50) {
-      nextSlide();
-    } else if (diff < -50) {
-      prevSlide();
+  const handleMove = (clientX: number) => {
+    if (startXRef.current === null) return;
+    const diff = clientX - startXRef.current;
+    if (Math.abs(diff) > 5) {
+      hasMovedRef.current = true;
     }
-    setTouchStartX(null);
+    setDragOffset(diff);
   };
+
+  const handleEnd = () => {
+    if (startXRef.current !== null) {
+      if (dragOffset < -50) {
+        nextSlide();
+      } else if (dragOffset > 50) {
+        prevSlide();
+      }
+    }
+    setIsDragging(false);
+    setDragOffset(0);
+    startXRef.current = null;
+    setIsPaused(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      prevSlide();
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      nextSlide();
+    } else if (e.key === " ") {
+      e.preventDefault();
+      setIsPaused((p) => !p);
+    }
+  };
+
+  const currentSlide = slides[currentIndex] || slides[0];
 
   return (
     <div
+      ref={containerRef}
       role="region"
       aria-roledescription="carousel"
       aria-label="Khuyến mãi nổi bật"
-      className="surface-panel relative overflow-hidden rounded-3xl"
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
       onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
+      onMouseLeave={() => {
+        if (!isDragging) setIsPaused(false);
+      }}
+      onTouchStart={(e) => handleStart(e.touches[0].clientX)}
+      onTouchMove={(e) => handleMove(e.touches[0].clientX)}
+      onTouchEnd={handleEnd}
+      onMouseDown={(e) => handleStart(e.clientX)}
+      onMouseMove={(e) => {
+        if (isDragging) handleMove(e.clientX);
+      }}
+      onMouseUp={handleEnd}
+      onClickCapture={(e) => {
+        if (hasMovedRef.current) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
+      className="border-border/60 shadow-primary/5 focus-visible:ring-primary/40 group from-card to-background relative overflow-hidden rounded-3xl border bg-gradient-to-br shadow-xl transition-shadow duration-500 focus-visible:ring-2 focus-visible:outline-none"
     >
-      {/* Background Gradient */}
+      {/* Background dynamic ambient gradient */}
       <div
-        className={`absolute inset-0 bg-gradient-to-br transition-all duration-700 ${currentSlide.gradient ?? "from-primary/10 to-transparent"}`}
+        className={`pointer-events-none absolute inset-0 bg-gradient-to-br transition-all duration-700 ${
+          currentSlide?.gradient ?? "from-primary/15 to-transparent"
+        }`}
       />
 
-      {/* Decorative ambient lighting */}
-      <div className="bg-primary/10 pointer-events-none absolute -top-24 -right-24 size-96 rounded-full blur-3xl" />
+      {/* Decorative ambient lighting orbs */}
+      <div className="bg-primary/20 pointer-events-none absolute -top-24 -right-24 size-96 rounded-full blur-3xl transition-opacity duration-700" />
+      <div className="bg-accent/15 pointer-events-none absolute -bottom-24 -left-24 size-80 rounded-full blur-3xl transition-opacity duration-700" />
 
-      {/* Slide Content */}
-      <div className="relative z-10 px-6 py-12 sm:px-12 sm:py-16 md:py-20">
-        <div className="max-w-2xl">
-          <Badge
-            variant="outline"
-            className="border-primary/20 bg-primary/10 text-primary animate-pulse-subtle gap-1.5 rounded-full px-3.5 py-1 text-xs font-semibold"
-          >
-            <Sparkles className="size-3.5" />
-            <span>{currentSlide.badge}</span>
-          </Badge>
+      {/* Subtle tech dot overlay */}
+      <div className="from-foreground/5 pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] via-transparent to-transparent opacity-40" />
 
-          <h1 className="font-heading text-foreground mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
-            {currentSlide.title}
-          </h1>
+      {/* Slides Horizontal Track */}
+      <div
+        className="flex w-full select-none"
+        style={{
+          transform: `translate3d(calc(-${currentIndex * 100}% + ${dragOffset}px), 0, 0)`,
+          transition: isDragging
+            ? "none"
+            : "transform 650ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+        }}
+      >
+        {slides.map((slide, index) => {
+          const isActive = index === currentIndex;
 
-          <p className="text-muted-foreground mt-4 text-base leading-relaxed sm:text-lg">
-            {currentSlide.description}
-          </p>
-
-          <div className="mt-8 flex flex-wrap items-center gap-4">
-            <Link
-              href={currentSlide.ctaHref}
-              className={buttonVariants({
-                size: "lg",
-                className:
-                  "btn-press gap-2 rounded-xl px-6 text-base font-bold shadow-md",
-              })}
+          return (
+            <div
+              key={slide.id}
+              aria-hidden={!isActive}
+              className="relative flex min-h-[400px] w-full shrink-0 flex-col justify-between gap-8 px-6 py-10 sm:min-h-[440px] sm:px-12 sm:py-14 lg:flex-row lg:items-center lg:py-16"
             >
-              <span>{currentSlide.ctaText}</span>
-              <ArrowRight className="size-4" />
-            </Link>
+              {/* Left Column: Heading, description, CTA */}
+              <div className="relative z-10 max-w-2xl">
+                {/* Pill Badge with pulse dot */}
+                <div
+                  className={`transition-all duration-500 ${
+                    isActive
+                      ? "translate-y-0 opacity-100"
+                      : "translate-y-2 opacity-40"
+                  }`}
+                >
+                  <Badge
+                    variant="outline"
+                    className="border-primary/25 bg-background/80 text-primary gap-2 rounded-full px-3.5 py-1.5 text-xs font-bold shadow-xs backdrop-blur-md"
+                  >
+                    <span className="relative flex size-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+                    </span>
+                    <Sparkles className="size-3.5 text-amber-500" />
+                    <span>{slide.badge}</span>
+                  </Badge>
+                </div>
 
-            {currentSlide.secondaryText && currentSlide.secondaryHref ? (
-              <Link
-                href={currentSlide.secondaryHref}
-                className={buttonVariants({
-                  variant: "outline",
-                  size: "lg",
-                  className:
-                    "btn-press rounded-xl px-5 text-base font-semibold",
-                })}
-              >
-                {currentSlide.secondaryText}
-              </Link>
-            ) : null}
-          </div>
-        </div>
+                {/* Semantic H1 for active slide, H2 styling for inactive */}
+                <div
+                  className={`transition-all delay-75 duration-500 ${
+                    isActive
+                      ? "translate-y-0 opacity-100"
+                      : "translate-y-3 opacity-40"
+                  }`}
+                >
+                  {isActive ? (
+                    <h1 className="font-heading text-foreground mt-4 text-3xl leading-[1.18] font-black tracking-tight sm:text-4xl md:text-5xl lg:text-[3.25rem]">
+                      {slide.title}
+                    </h1>
+                  ) : (
+                    <div
+                      role="heading"
+                      aria-level={2}
+                      className="font-heading text-foreground mt-4 text-3xl leading-[1.18] font-black tracking-tight sm:text-4xl md:text-5xl lg:text-[3.25rem]"
+                    >
+                      {slide.title}
+                    </div>
+                  )}
+                </div>
+
+                {/* Description */}
+                <p
+                  className={`text-muted-foreground mt-4 max-w-xl text-base leading-relaxed transition-all delay-100 duration-500 sm:text-lg ${
+                    isActive
+                      ? "translate-y-0 opacity-100"
+                      : "translate-y-3 opacity-40"
+                  }`}
+                >
+                  {slide.description}
+                </p>
+
+                {/* Call to action buttons */}
+                <div
+                  className={`mt-8 flex flex-wrap items-center gap-3.5 transition-all delay-150 duration-500 ${
+                    isActive
+                      ? "translate-y-0 opacity-100"
+                      : "translate-y-3 opacity-40"
+                  }`}
+                >
+                  <Link
+                    href={slide.ctaHref}
+                    className={buttonVariants({
+                      size: "lg",
+                      className:
+                        "group/btn btn-press hover:shadow-primary/25 gap-2.5 rounded-2xl px-6 text-base font-bold shadow-lg transition-all hover:scale-[1.02]",
+                    })}
+                  >
+                    <span>{slide.ctaText}</span>
+                    <ArrowRight className="size-4 transition-transform group-hover/btn:translate-x-1" />
+                  </Link>
+
+                  {slide.secondaryText && slide.secondaryHref ? (
+                    <Link
+                      href={slide.secondaryHref}
+                      className={buttonVariants({
+                        variant: "outline",
+                        size: "lg",
+                        className:
+                          "btn-press border-border/80 bg-background/60 hover:bg-background/90 text-foreground rounded-2xl px-5 text-base font-semibold backdrop-blur-md transition-all",
+                      })}
+                    >
+                      {slide.secondaryText}
+                    </Link>
+                  ) : null}
+                </div>
+
+                {/* Trust Perks list */}
+                {slide.perks && slide.perks.length > 0 ? (
+                  <div
+                    className={`text-muted-foreground mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium transition-all delay-200 duration-500 ${
+                      isActive ? "opacity-100" : "opacity-0"
+                    }`}
+                  >
+                    {slide.perks.map((perk) => (
+                      <span
+                        key={perk}
+                        className="inline-flex items-center gap-1.5"
+                      >
+                        <CheckCircle2 className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                        <span>{perk}</span>
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Right Column: Visual Showcase Card */}
+              {slide.visual ? (
+                <SlideVisualShowcase
+                  visual={slide.visual}
+                  isActive={isActive}
+                />
+              ) : null}
+            </div>
+          );
+        })}
       </div>
 
-      {/* Controls: Prev / Next */}
+      {/* Navigation Controls: Prev / Next */}
       <button
         type="button"
         onClick={prevSlide}
         aria-label="Slide trước đó"
-        className="bg-background/80 text-foreground hover:bg-background absolute top-1/2 left-3 z-20 flex size-10 -translate-y-1/2 items-center justify-center rounded-full shadow-md backdrop-blur-sm transition-all hover:scale-105"
+        className="bg-background/80 hover:bg-background border-border/60 text-foreground absolute top-1/2 left-3.5 z-20 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border shadow-lg backdrop-blur-md transition-all hover:scale-110 active:scale-95 sm:left-5"
       >
         <ChevronLeft className="size-5" />
       </button>
@@ -149,30 +315,140 @@ export function HeroCarousel({
         type="button"
         onClick={nextSlide}
         aria-label="Slide tiếp theo"
-        className="bg-background/80 text-foreground hover:bg-background absolute top-1/2 right-3 z-20 flex size-10 -translate-y-1/2 items-center justify-center rounded-full shadow-md backdrop-blur-sm transition-all hover:scale-105"
+        className="bg-background/80 hover:bg-background border-border/60 text-foreground absolute top-1/2 right-3.5 z-20 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border shadow-lg backdrop-blur-md transition-all hover:scale-110 active:scale-95 sm:right-5"
       >
         <ChevronRight className="size-5" />
       </button>
 
-      {/* Pagination Dots */}
-      <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2">
-        {slides.map((slide, index) => {
-          const isActive = index === currentIndex;
-          return (
-            <button
-              key={slide.id}
-              type="button"
-              onClick={() => goToSlide(index)}
-              aria-label={`Chuyển tới slide ${index + 1}`}
-              aria-current={isActive ? "true" : "false"}
-              className={`rounded-full transition-all duration-300 ${
-                isActive
-                  ? "bg-primary h-2.5 w-7"
-                  : "bg-muted-foreground/40 hover:bg-muted-foreground/70 size-2.5"
-              }`}
-            />
-          );
-        })}
+      {/* Bottom Bar: Indicators, Autoplay Progress, Slide Counter, Play/Pause */}
+      <div className="border-border/50 bg-background/70 absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 rounded-full border px-4 py-1.5 shadow-md backdrop-blur-md">
+        {/* Play/Pause Button */}
+        <button
+          type="button"
+          onClick={() => setIsPaused((p) => !p)}
+          aria-label={isPaused ? "Tiếp tục chạy slide" : "Tạm dừng slide"}
+          className="text-muted-foreground hover:text-foreground inline-flex size-6 cursor-pointer items-center justify-center rounded-full transition-colors"
+        >
+          {isPaused ? (
+            <Play className="size-3 fill-current" />
+          ) : (
+            <Pause className="size-3 fill-current" />
+          )}
+        </button>
+
+        <div className="bg-border/60 h-3 w-px" />
+
+        {/* Progress Pills */}
+        <div className="flex items-center gap-1.5">
+          {slides.map((slide, index) => {
+            const isActive = index === currentIndex;
+            return (
+              <button
+                key={slide.id}
+                type="button"
+                onClick={() => goToSlide(index)}
+                aria-label={`Chuyển tới slide ${index + 1}`}
+                aria-current={isActive ? "true" : "false"}
+                className={`relative h-2 cursor-pointer rounded-full transition-all duration-300 ${
+                  isActive
+                    ? "bg-muted w-12 overflow-hidden sm:w-16"
+                    : "bg-muted-foreground/30 hover:bg-muted-foreground/60 w-3 hover:w-5"
+                }`}
+              >
+                {isActive ? (
+                  <span
+                    key={`${index}-${isPaused}`}
+                    className="bg-primary animate-carousel-progress absolute inset-y-0 left-0 rounded-full"
+                    style={
+                      {
+                        "--carousel-duration": `${autoPlayInterval}ms`,
+                        animationPlayState: isPaused ? "paused" : "running",
+                      } as React.CSSProperties
+                    }
+                  />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="bg-border/60 h-3 w-px" />
+
+        {/* Slide Counter */}
+        <span className="text-muted-foreground font-mono text-xs font-bold select-none">
+          0{currentIndex + 1} / 0{total}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function SlideVisualShowcase({
+  visual,
+  isActive,
+}: {
+  visual: HeroSlideVisual;
+  isActive: boolean;
+}) {
+  return (
+    <div
+      className={`relative hidden items-center justify-center p-4 transition-all delay-100 duration-700 lg:flex lg:w-5/12 ${
+        isActive ? "scale-100 opacity-100" : "scale-95 opacity-40"
+      }`}
+    >
+      {/* Frosted Glassmorphism Showcase Card */}
+      <div className="bg-background/80 dark:bg-card/75 shadow-primary/10 relative w-full max-w-sm rounded-3xl border border-white/30 p-6 shadow-2xl backdrop-blur-xl transition-transform duration-500 hover:scale-[1.02] dark:border-white/10">
+        {/* Header */}
+        <div className="border-border/50 flex items-center justify-between border-b pb-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-primary/15 text-primary flex size-11 items-center justify-center rounded-2xl shadow-inner">
+              {visual.accentBadge.includes("🥬") ? (
+                <ShoppingBag className="size-5" />
+              ) : visual.accentBadge.includes("🚚") ? (
+                <Truck className="size-5" />
+              ) : (
+                <ShieldCheck className="size-5" />
+              )}
+            </div>
+            <div>
+              <span className="text-primary text-[11px] font-extrabold tracking-wider uppercase">
+                {visual.tag}
+              </span>
+              <p className="text-foreground text-xs font-bold">
+                {visual.subtitle}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Metric Counter Banner */}
+        <div className="flex items-center justify-between py-5">
+          <div>
+            <p className="text-foreground text-3xl font-black tracking-tight">
+              {visual.metricValue}
+            </p>
+            <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+              {visual.metricLabel}
+            </p>
+          </div>
+
+          <span className="bg-accent/20 text-accent-foreground border-accent/30 inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-bold shadow-xs">
+            {visual.highlightPill}
+          </span>
+        </div>
+
+        {/* Real-time sync footer */}
+        <div className="border-border/50 text-muted-foreground flex items-center justify-between border-t pt-3 text-xs">
+          <span className="flex items-center gap-1.5 font-medium">
+            <span className="inline-block size-2 animate-ping rounded-full bg-emerald-500" />
+            <span className="text-foreground text-[11px] font-semibold">
+              Tồn kho thời gian thực
+            </span>
+          </span>
+          <span className="text-primary text-[11px] font-bold">
+            ✓ Đã xác thực
+          </span>
+        </div>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/server/db/prisma";
 import {
   getPublicStoreProfile,
+  getStoreName,
   saveStoreProfile,
 } from "@/server/settings/store-settings";
 import { adminSettingsSchema } from "@/app/admin/settings/actions";
@@ -32,6 +33,43 @@ describe("Store Settings & Public Profile", () => {
     expect(profile).toEqual({
       name: "Cửa hàng",
     });
+  });
+
+  it("getStoreName và getPublicStoreProfile: ưu tiên giá trị từ biến môi trường khi DB chưa cấu hình", async () => {
+    const originalStoreName = process.env.NEXT_PUBLIC_STORE_NAME;
+    try {
+      process.env.NEXT_PUBLIC_STORE_NAME = "Tiệm Tạp Hóa ABC";
+      const name = await getStoreName();
+      expect(name).toBe("Tiệm Tạp Hóa ABC");
+
+      const profile = await getPublicStoreProfile();
+      expect(profile.name).toBe("Tiệm Tạp Hóa ABC");
+    } finally {
+      if (originalStoreName !== undefined) {
+        process.env.NEXT_PUBLIC_STORE_NAME = originalStoreName;
+      } else {
+        delete process.env.NEXT_PUBLIC_STORE_NAME;
+      }
+    }
+  });
+
+  it("getStoreName: ưu tiên giá trị từ DB hơn biến môi trường khi DB đã cấu hình", async () => {
+    const originalStoreName = process.env.NEXT_PUBLIC_STORE_NAME;
+    try {
+      process.env.NEXT_PUBLIC_STORE_NAME = "Tiệm Tạp Hóa ABC";
+      await prisma.setting.create({
+        data: { key: "store.name", value: "Cửa Hàng Thực Tế" },
+      });
+
+      const name = await getStoreName();
+      expect(name).toBe("Cửa Hàng Thực Tế");
+    } finally {
+      if (originalStoreName !== undefined) {
+        process.env.NEXT_PUBLIC_STORE_NAME = originalStoreName;
+      } else {
+        delete process.env.NEXT_PUBLIC_STORE_NAME;
+      }
+    }
   });
 
   it("getPublicStoreProfile: chỉ trả về các trường allowlist công khai, không lộ bank info hay raw setting rows", async () => {

@@ -121,7 +121,10 @@ test("admin session lifecycle: unauthenticated redirect and logout cookie revoca
   await page.goto("/admin/orders");
   await page.getByRole("link", { name: "Xem cửa hàng online" }).click();
   await expect(page).toHaveURL(/.*\/shop/);
-  await page.getByRole("link", { name: "Quay lại trang quản trị" }).click();
+  await page
+    .getByRole("button", { name: "Quay lại trang quản trị" })
+    .or(page.getByRole("link", { name: "Quay lại trang quản trị" }))
+    .click();
   await expect(page).toHaveURL(/.*\/admin\/orders/);
 
   // Admin can log out from the visible desktop navigation.
@@ -233,7 +236,12 @@ test("catalog sort: thay đổi thứ tự sắp xếp cập nhật URL", async 
   await page.goto("/shop");
   const sortSelect = page.getByLabel("Sắp xếp theo");
   await expect(sortSelect).toBeVisible();
-  await sortSelect.selectOption("price-asc");
+  if (await sortSelect.evaluate((el) => el.tagName === "SELECT")) {
+    await sortSelect.selectOption("price-asc");
+  } else {
+    await sortSelect.click();
+    await page.getByRole("option", { name: "Giá tăng dần" }).click();
+  }
   await expect(page).toHaveURL(/sort=price-asc/);
 });
 

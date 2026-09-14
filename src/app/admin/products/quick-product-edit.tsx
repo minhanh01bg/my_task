@@ -3,6 +3,7 @@
 import { Check, PencilSimple, X } from "@phosphor-icons/react";
 import { useState } from "react";
 
+import { NumberStepper } from "@/components/kit";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,7 +13,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 
 import { quickUpdateProductAction } from "./actions";
 
@@ -68,32 +68,33 @@ export function QuickProductEdit({ product }: QuickProductEditProps) {
           }}
         >
           <input type="hidden" name="id" value={product.id} />
-          <label className="grid gap-1.5 text-sm font-bold">
-            Giá bán
-            <Input
+          <div className="grid gap-1.5">
+            <span className="text-sm font-bold">Giá bán (VND)</span>
+            <NumberStepper
               name="price"
-              type="number"
-              inputMode="numeric"
-              min="0"
-              step="100"
+              min={0}
+              step={1000}
+              quickSteps={[1000, 5000, 10000, 50000]}
               defaultValue={product.price}
-              className="h-12 text-lg font-bold tabular-nums"
+              isCurrency
               autoFocus
               required
+              aria-label="Giá bán"
             />
-          </label>
-          <label className="grid gap-1.5 text-sm font-bold">
-            Tồn kho ({product.unit})
-            <Input
+          </div>
+          <div className="grid gap-1.5">
+            <span className="text-sm font-bold">Tồn kho ({product.unit})</span>
+            <NumberStepper
               name="stock"
-              type="number"
-              inputMode="decimal"
-              step="any"
+              min={0}
+              step={1}
+              quickSteps={[1, 5, 10, 50]}
               defaultValue={product.stock}
-              className="h-12 text-lg font-bold tabular-nums"
+              unit={product.unit}
               required
+              aria-label={`Tồn kho ${product.unit}`}
             />
-          </label>
+          </div>
           {message ? (
             <p role="alert" className="text-destructive text-sm font-semibold">
               {message}

@@ -276,6 +276,20 @@
   .animate-fade-in {
     animation: fade-in-backdrop 0.25s ease-out forwards;
   }
+
+  @keyframes carousel-progress {
+    from {
+      width: 0%;
+    }
+    to {
+      width: 100%;
+    }
+  }
+
+  .animate-carousel-progress {
+    animation: carousel-progress var(--carousel-duration, 5000ms) linear
+      forwards;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

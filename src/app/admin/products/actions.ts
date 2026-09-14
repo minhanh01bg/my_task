@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { prisma } from "@/server/db/prisma";
+import {
+  AdminUnauthorizedError,
+  requireAdminSession,
+} from "@/server/auth/require-admin-session";
 import { saveProductImage } from "@/server/products/save-image";
 import { saveProduct, softDeleteProduct } from "@/server/products/save-product";
 
@@ -40,6 +44,15 @@ const schema = z.object({
 });
 
 export async function saveProductAction(formData: FormData) {
+  try {
+    await requireAdminSession();
+  } catch (error) {
+    if (error instanceof AdminUnauthorizedError) {
+      return { ok: false as const, message: "Yêu cầu quyền quản trị" };
+    }
+    throw error;
+  }
+
   const raw = {
     id: (formData.get("id") as string) || undefined,
     name: formData.get("name"),
@@ -82,6 +95,15 @@ export async function saveProductAction(formData: FormData) {
 }
 
 export async function quickUpdateProductAction(formData: FormData) {
+  try {
+    await requireAdminSession();
+  } catch (error) {
+    if (error instanceof AdminUnauthorizedError) {
+      return { ok: false as const, message: "Yêu cầu quyền quản trị" };
+    }
+    throw error;
+  }
+
   const parsed = quickUpdateSchema.safeParse({
     id: formData.get("id"),
     price: formData.get("price"),
@@ -107,6 +129,7 @@ export async function quickUpdateProductAction(formData: FormData) {
 }
 
 export async function deleteProductAction(id: string) {
+  await requireAdminSession();
   await softDeleteProduct(id);
   revalidatePath("/admin/products");
   revalidatePath("/pos");

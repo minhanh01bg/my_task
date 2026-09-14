@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { prisma } from "@/server/db/prisma";
+import { requireAdminSession } from "@/server/auth/require-admin-session";
 import { buildSearchText } from "@/lib/search/search-text";
 
 const schema = z.object({
@@ -13,6 +14,7 @@ const schema = z.object({
 });
 
 export async function saveCategoryAction(formData: FormData): Promise<void> {
+  await requireAdminSession();
   const parsed = schema.safeParse({
     id: (formData.get("id") as string) || undefined,
     name: formData.get("name"),
@@ -52,6 +54,7 @@ export async function saveCategoryAction(formData: FormData): Promise<void> {
 }
 
 export async function deleteCategoryAction(id: string): Promise<void> {
+  await requireAdminSession();
   const products = await prisma.product.findMany({
     where: { categoryId: id },
     select: { id: true, name: true, aliases: true, sku: true },
@@ -77,6 +80,7 @@ export async function moveCategoryAction(
   id: string,
   direction: "up" | "down",
 ): Promise<void> {
+  await requireAdminSession();
   const categories = await prisma.category.findMany({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     select: { id: true },

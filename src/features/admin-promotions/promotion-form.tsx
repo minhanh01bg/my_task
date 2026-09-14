@@ -10,8 +10,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { StorefrontPromotion } from "@prisma/client";
 
+import { DropdownField } from "@/components/kit/dropdown-field";
 import { savePromotionAction } from "@/app/admin/promotions/actions";
 import type { PromotionActionResult } from "@/types/storefront";
+
+const PLACEMENT_OPTIONS = [
+  {
+    value: "announcement",
+    label: "Thanh thông báo trên cùng (Announcement bar)",
+    description: "Dải chữ thông báo nổi bật trên cùng",
+  },
+  {
+    value: "hero",
+    label: "Banner lớn trang chủ (Hero banner)",
+    description: "Banner nổi bật ngay đầu trang chủ",
+  },
+  {
+    value: "banner",
+    label: "Banner phụ (Banner)",
+    description: "Banner quảng cáo các vị trí phụ",
+  },
+] as const;
 
 interface PromotionFormProps {
   initialData?: StorefrontPromotion | null;
@@ -109,21 +128,17 @@ export function PromotionForm({ initialData, onSuccess }: PromotionFormProps) {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="promo-placement">Vị trí hiển thị</Label>
-                <select
+                <DropdownField
                   id="promo-placement"
                   name="placement"
                   value={placement}
-                  onChange={(e) => setPlacement(e.target.value)}
-                  className="border-input bg-background h-10 w-full rounded-xl border px-3 text-sm outline-none focus-visible:ring-2"
-                >
-                  <option value="announcement">
-                    Thanh thông báo trên cùng (Announcement bar)
-                  </option>
-                  <option value="hero">
-                    Banner lớn trang chủ (Hero banner)
-                  </option>
-                  <option value="banner">Banner phụ (Banner)</option>
-                </select>
+                  onValueChange={(val) => {
+                    if (val) setPlacement(val);
+                  }}
+                  size="sm"
+                  aria-label="Vị trí hiển thị"
+                  options={PLACEMENT_OPTIONS}
+                />
               </div>
 
               <div className="space-y-1.5">

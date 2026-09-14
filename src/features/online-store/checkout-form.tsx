@@ -11,8 +11,32 @@ import { validateVoucher } from "@/lib/vouchers/validate-voucher";
 import { onlineOrderResponseSchema } from "@/types/online-order";
 import type { PublicStoreProfile } from "@/types/storefront";
 
+import { DropdownField } from "@/components/kit/dropdown-field";
 import { AddressFields, type AddressState } from "./address-fields";
 import { OnlineCartProvider, useOnlineCart } from "./cart-context";
+
+const DELIVERY_SLOT_OPTIONS = [
+  {
+    value: "Giao sớm nhất có thể (Tiêu chuẩn)",
+    label: "Giao sớm nhất có thể (Tiêu chuẩn)",
+    description: "Giao ngay khi đơn sẵn sàng",
+  },
+  {
+    value: "08:00 - 11:30",
+    label: "08:00 - 11:30 (Buổi sáng)",
+    description: "Nhận hàng trong buổi sáng",
+  },
+  {
+    value: "13:30 - 17:30",
+    label: "13:30 - 17:30 (Buổi chiều)",
+    description: "Nhận hàng trong buổi chiều",
+  },
+  {
+    value: "18:00 - 21:00",
+    label: "18:00 - 21:00 (Buổi tối)",
+    description: "Nhận hàng sau giờ làm việc",
+  },
+] as const;
 
 function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
   const { lines, hydrated, clear, setQuantity, remove } = useOnlineCart();
@@ -242,29 +266,18 @@ function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
                 ) : null}
 
                 <div className="border-border/60 border-t pt-4">
-                  <label className="block text-sm font-bold">
+                  <span className="mb-1.5 block text-sm font-bold">
                     Thời gian nhận hàng
-                    <select
-                      aria-label="Khung giờ giao"
-                      name="deliverySlot"
-                      value={deliverySlot}
-                      onChange={(e) => setDeliverySlot(e.target.value)}
-                      className={`${inputClass} mt-1.5`}
-                    >
-                      <option value="Giao sớm nhất có thể (Tiêu chuẩn)">
-                        Giao sớm nhất có thể (Tiêu chuẩn)
-                      </option>
-                      <option value="08:00 - 11:30">
-                        08:00 - 11:30 (Buổi sáng)
-                      </option>
-                      <option value="13:30 - 17:30">
-                        13:30 - 17:30 (Buổi chiều)
-                      </option>
-                      <option value="18:00 - 21:00">
-                        18:00 - 21:00 (Buổi tối)
-                      </option>
-                    </select>
-                  </label>
+                  </span>
+                  <DropdownField
+                    aria-label="Khung giờ giao"
+                    name="deliverySlot"
+                    value={deliverySlot}
+                    onValueChange={(val) => {
+                      if (val) setDeliverySlot(val);
+                    }}
+                    options={DELIVERY_SLOT_OPTIONS}
+                  />
                 </div>
               </div>
             ) : null}

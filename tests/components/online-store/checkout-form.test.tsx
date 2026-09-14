@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CheckoutForm } from "@/features/online-store/checkout-form";
@@ -31,90 +32,71 @@ describe("CheckoutForm - Structured Address & Experience", () => {
     vi.restoreAllMocks();
   });
 
+  async function selectDropdown(
+    triggerLabel: RegExp,
+    optionText: RegExp,
+    user: ReturnType<typeof userEvent.setup>,
+  ) {
+    const trigger = screen.getByRole("combobox", { name: triggerLabel });
+    fireEvent.pointerDown(trigger);
+    fireEvent.click(trigger);
+    const option = await screen.findByRole("option", { name: optionText });
+    await user.click(option);
+  }
+
   it("chọn tỉnh reset quận/huyện và phường/xã cũ; chọn quận reset phường/xã cũ", async () => {
+    const user = userEvent.setup();
     render(<CheckoutForm />);
 
-    const provinceSelect = screen.getByLabelText(/tỉnh\/thành phố/i);
-    const districtSelect = screen.getByLabelText(/quận\/huyện/i);
-    const wardSelect = screen.getByLabelText(/phường\/xã/i);
+    const districtTrigger = screen.getByRole("combobox", {
+      name: /quận\/huyện/i,
+    });
+    const wardTrigger = screen.getByRole("combobox", { name: /phường\/xã/i });
 
     // Ban đầu chưa chọn tỉnh thì quận/phường bị disabled
-    expect(districtSelect).toBeDisabled();
-    expect(wardSelect).toBeDisabled();
+    expect(districtTrigger).toBeDisabled();
+    expect(wardTrigger).toBeDisabled();
 
-    // 1. Chọn Hà Nội (01)
-    fireEvent.change(provinceSelect, { target: { value: "01" } });
-    expect(districtSelect).not.toBeDisabled();
-    expect(wardSelect).toBeDisabled();
+    // 1. Chọn Hà Nội
+    await selectDropdown(/tỉnh\/thành phố/i, /Hà Nội/i, user);
+    expect(districtTrigger).not.toBeDisabled();
+    expect(wardTrigger).toBeDisabled();
 
     // 2. Chọn Ba Đình
-    const baDinhOption = Array.from(
-      (districtSelect as HTMLSelectElement).options,
-    ).find((opt) => opt.text.includes("Ba Đình"));
-    expect(baDinhOption).toBeDefined();
-    fireEvent.change(districtSelect, {
-      target: { value: baDinhOption!.value },
-    });
-    expect(wardSelect).not.toBeDisabled();
+    await selectDropdown(/quận\/huyện/i, /Ba Đình/i, user);
+    expect(wardTrigger).not.toBeDisabled();
 
-    // 3. Chọn một phường trong Ba Đình
-    const wardOption = (wardSelect as HTMLSelectElement).options[1];
-    expect(wardOption).toBeDefined();
-    fireEvent.change(wardSelect, { target: { value: wardOption.value } });
-    expect((wardSelect as HTMLSelectElement).value).toBe(wardOption.value);
+    // 3. Chọn một phường trong Ba Đình (Phúc Xá)
+    await selectDropdown(/phường\/xã/i, /Phúc Xá/i, user);
+    expect(wardTrigger).toHaveTextContent("Phúc Xá");
 
-    // 4. Đổi sang TP. Hồ Chí Minh (79) -> quận và phường phải được reset về rỗng
-    fireEvent.change(provinceSelect, { target: { value: "79" } });
-    expect((districtSelect as HTMLSelectElement).value).toBe("");
-    expect((wardSelect as HTMLSelectElement).value).toBe("");
-    expect(wardSelect).toBeDisabled();
+    // 4. Đổi sang TP. Hồ Chí Minh -> quận và phường phải được reset về rỗng
+    await selectDropdown(/tỉnh\/thành phố/i, /TP\. Hồ Chí Minh/i, user);
+    expect(districtTrigger).not.toHaveTextContent("Ba Đình");
+    expect(wardTrigger).toBeDisabled();
 
     // 5. Chọn Quận 1 trong TP.HCM
-    const q1Option = Array.from(
-      (districtSelect as HTMLSelectElement).options,
-    ).find((opt) => opt.text.includes("Quận 1"));
-    expect(q1Option).toBeDefined();
-    fireEvent.change(districtSelect, { target: { value: q1Option!.value } });
-    expect(wardSelect).not.toBeDisabled();
+    await selectDropdown(/quận\/huyện/i, /^Quận 1$/, user);
+    expect(wardTrigger).not.toBeDisabled();
 
     // 6. Chọn phường Bến Nghé trong Quận 1
-    const benNgheOption = Array.from(
-      (wardSelect as HTMLSelectElement).options,
-    ).find((opt) => opt.text.includes("Bến Nghé"));
-    expect(benNgheOption).toBeDefined();
-    fireEvent.change(wardSelect, { target: { value: benNgheOption!.value } });
-    expect((wardSelect as HTMLSelectElement).value).toBe(benNgheOption!.value);
+    await selectDropdown(/phường\/xã/i, /Bến Nghé/i, user);
+    expect(wardTrigger).toHaveTextContent("Bến Nghé");
 
     // 7. Đổi sang quận khác trong TP.HCM -> phường phải reset
-    const binhThanhOption = Array.from(
-      (districtSelect as HTMLSelectElement).options,
-    ).find((opt) => opt.text.includes("Bình Thạnh"));
-    expect(binhThanhOption).toBeDefined();
-    fireEvent.change(districtSelect, {
-      target: { value: binhThanhOption!.value },
-    });
-    expect((wardSelect as HTMLSelectElement).value).toBe("");
+    await selectDropdown(/quận\/huyện/i, /Bình Thạnh/i, user);
+    expect(wardTrigger).not.toHaveTextContent("Bến Nghé");
   });
 
-  it("hiển thị address summary trực quan trước submit", () => {
+  it("hiển thị address summary trực quan trước submit", async () => {
+    const user = userEvent.setup();
     render(<CheckoutForm />);
 
-    const provinceSelect = screen.getByLabelText(/tỉnh\/thành phố/i);
-    const districtSelect = screen.getByLabelText(/quận\/huyện/i);
-    const wardSelect = screen.getByLabelText(/phường\/xã/i);
+    await selectDropdown(/tỉnh\/thành phố/i, /TP\. Hồ Chí Minh/i, user);
+    await selectDropdown(/quận\/huyện/i, /^Quận 1$/, user);
+    await selectDropdown(/phường\/xã/i, /Bến Nghé/i, user);
+
     const streetInput = screen.getByLabelText(/địa chỉ cụ thể|số nhà/i);
-
-    fireEvent.change(provinceSelect, { target: { value: "79" } });
-    const q1Option = Array.from(
-      (districtSelect as HTMLSelectElement).options,
-    ).find((opt) => opt.text.includes("Quận 1"))!;
-    fireEvent.change(districtSelect, { target: { value: q1Option.value } });
-
-    const benNgheOption = Array.from(
-      (wardSelect as HTMLSelectElement).options,
-    ).find((opt) => opt.text.includes("Bến Nghé"))!;
-    fireEvent.change(wardSelect, { target: { value: benNgheOption.value } });
-
     fireEvent.change(streetInput, { target: { value: "123 Lê Lợi" } });
 
     // Summary địa chỉ hiển thị đầy đủ

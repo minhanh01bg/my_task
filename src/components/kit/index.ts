@@ -17,6 +17,8 @@ export { StatTile } from "./stat-tile";
 export { LOW_STOCK_THRESHOLD, StockBadge, stockLevel } from "./stock-badge";
 export type { StockLevel } from "./stock-badge";
 export { TouchButton } from "./touch-button";
+export { NumberStepper } from "./number-stepper";
+export type { NumberStepperProps } from "./number-stepper";
 export {
   CategoryPillSkeleton,
   ProductCardSkeleton,

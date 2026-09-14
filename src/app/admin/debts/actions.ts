@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { prisma } from "@/server/db/prisma";
+import { logAdminAction } from "@/server/auth/admin-audit";
+import {
+  AdminUnauthorizedError,
+  requireAdminSession,
+} from "@/server/auth/require-admin-session";
 
 const paymentSchema = z.object({
   orderId: z.string().min(1),
@@ -12,6 +17,16 @@ const paymentSchema = z.object({
 });
 
 export async function recordDebtPaymentAction(formData: FormData) {
+  let session;
+  try {
+    session = await requireAdminSession();
+  } catch (error) {
+    if (error instanceof AdminUnauthorizedError) {
+      return { ok: false as const, message: "Yêu cầu quyền quản trị" };
+    }
+    throw error;
+  }
+
   const parsed = paymentSchema.safeParse({
     orderId: formData.get("orderId"),
     amount: formData.get("amount"),
@@ -85,6 +100,19 @@ export async function recordDebtPaymentAction(formData: FormData) {
 
     return { ok: true as const };
   });
+
+  if (result.ok) {
+    await logAdminAction({
+      identityId: session.identity?.id,
+      action: "debt.record_payment",
+      entityType: "order",
+      entityId: parsed.data.orderId,
+      metadata: {
+        amount: parsed.data.amount,
+        method: parsed.data.method,
+      },
+    });
+  }
 
   revalidatePath("/admin/debts");
   revalidatePath("/admin/orders");

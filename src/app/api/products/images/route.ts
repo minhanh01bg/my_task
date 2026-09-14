@@ -4,6 +4,9 @@ import path from "node:path";
 
 import { NextResponse } from "next/server";
 
+import { hasAdminSession } from "@/server/auth/require-admin-session";
+import { hasSafeMutationOrigin } from "@/server/http/origin";
+
 const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
 const EXTENSIONS: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -13,6 +16,20 @@ const EXTENSIONS: Record<string, string> = {
 };
 
 export async function POST(request: Request) {
+  if (!(await hasAdminSession(request))) {
+    return NextResponse.json(
+      { ok: false, message: "Yêu cầu quyền quản trị" },
+      { status: 401 },
+    );
+  }
+
+  if (!hasSafeMutationOrigin(request)) {
+    return NextResponse.json(
+      { ok: false, message: "Nguồn gốc yêu cầu không hợp lệ" },
+      { status: 403 },
+    );
+  }
+
   const formData = await request.formData();
   const image = formData.get("image");
 

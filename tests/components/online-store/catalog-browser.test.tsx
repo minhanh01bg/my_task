@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -117,8 +117,11 @@ describe("CatalogBrowser", () => {
         <CatalogBrowser catalog={catalog} />
       </OnlineCartProvider>,
     );
-    const sortSelect = screen.getByLabelText("Sắp xếp theo");
-    await user.selectOptions(sortSelect, "price-asc");
+    const sortTrigger = screen.getByRole("combobox", { name: "Sắp xếp theo" });
+    fireEvent.pointerDown(sortTrigger);
+    fireEvent.click(sortTrigger);
+    const option = await screen.findByRole("option", { name: "Giá tăng dần" });
+    await user.click(option);
     expect(replace).toHaveBeenCalledWith("/shop?sort=price-asc", {
       scroll: false,
     });

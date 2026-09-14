@@ -1,10 +1,5 @@
 import Link from "next/link";
-import {
-  MagnifyingGlass,
-  NotePencil,
-  Trash,
-  Warning,
-} from "@phosphor-icons/react/dist/ssr";
+import { NotePencil, Trash, Warning } from "@phosphor-icons/react/dist/ssr";
 
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { ProductImage } from "@/components/shared/product-image";
@@ -22,7 +17,8 @@ import {
 import { formatVnd } from "@/lib/money";
 import { prisma } from "@/server/db/prisma";
 
-import { ProductForm } from "./product-form";
+import { ProductDialog } from "./product-dialog";
+import { ProductFilters } from "./product-filters";
 import { QuickProductEdit } from "./quick-product-edit";
 import { deleteProductAction } from "./actions";
 
@@ -31,9 +27,16 @@ export const dynamic = "force-dynamic";
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; edit?: string; lowStock?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    edit?: string;
+    lowStock?: string;
+    status?: string;
+    categoryId?: string;
+  }>;
 }) {
-  const { q = "", edit, lowStock } = await searchParams;
+  const { q = "", edit, lowStock, status, categoryId } = await searchParams;
+
   const [categories, allProducts] = await Promise.all([
     prisma.category.findMany({
       orderBy: { sortOrder: "asc" },
@@ -57,14 +60,38 @@ export default async function ProductsPage({
     }),
   ]);
 
-  const lowStockCount = allProducts.filter(
-    (p) => !p.isService && p.stock <= 5,
-  ).length;
+  // Thống kê tồn kho theo các nhóm
+  const counts = {
+    all: allProducts.length,
+    low: allProducts.filter((p) => !p.isService && p.stock <= 5).length,
+    out: allProducts.filter((p) => !p.isService && p.stock === 0).length,
+    negative: allProducts.filter((p) => !p.isService && p.stock < 0).length,
+    available: allProducts.filter((p) => !p.isService && p.stock > 5).length,
+  };
 
-  const products =
-    lowStock === "true"
-      ? allProducts.filter((p) => !p.isService && p.stock <= 5)
-      : allProducts;
+  const lowStockCount = counts.low;
+
+  // Xử lý trạng thái lọc
+  const effectiveStatus =
+    lowStock === "true" ? "low" : status && status !== "all" ? status : "all";
+
+  let products = allProducts;
+
+  // Lọc theo danh mục
+  if (categoryId && categoryId !== "all") {
+    products = products.filter((p) => p.categoryId === categoryId);
+  }
+
+  // Lọc theo trạng thái tồn kho
+  if (effectiveStatus === "low") {
+    products = products.filter((p) => !p.isService && p.stock <= 5);
+  } else if (effectiveStatus === "out") {
+    products = products.filter((p) => !p.isService && p.stock === 0);
+  } else if (effectiveStatus === "negative") {
+    products = products.filter((p) => !p.isService && p.stock < 0);
+  } else if (effectiveStatus === "available") {
+    products = products.filter((p) => !p.isService && p.stock > 5);
+  }
 
   const editingProduct = edit
     ? await prisma.product.findFirst({ where: { id: edit, deletedAt: null } })
@@ -72,14 +99,25 @@ export default async function ProductsPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="eyebrow">Danh mục hàng hóa</p>
-        <h1 className="font-heading mt-1 text-3xl font-bold">Sản phẩm</h1>
-        <p className="text-muted-foreground mt-1">
-          Thêm ảnh, cập nhật giá, tồn kho và thông tin tìm kiếm.
-        </p>
+      {/* Header with Title and Add Product Button */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="eyebrow">Danh mục hàng hóa</p>
+          <h1 className="font-heading mt-1 text-3xl font-bold">Sản phẩm</h1>
+          <p className="text-muted-foreground mt-1">
+            Quản lý giá, tồn kho, phân loại danh mục và cảnh báo nhập hàng.
+          </p>
+        </div>
+
+        {/* Modal Thêm / Sửa sản phẩm */}
+        <ProductDialog
+          categories={categories}
+          product={editingProduct ?? undefined}
+          defaultOpen={Boolean(editingProduct)}
+        />
       </div>
 
+      {/* Low stock alert banner */}
       {lowStockCount > 0 ? (
         <div
           data-testid="low-stock-alert"
@@ -100,16 +138,16 @@ export default async function ProductsPage({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {lowStock === "true" ? (
+            {effectiveStatus === "low" ? (
               <Link
-                href="/admin/products"
+                href={`/admin/products${q ? `?q=${encodeURIComponent(q)}` : ""}`}
                 className="text-primary bg-background rounded-lg border px-3 py-1.5 text-xs font-bold hover:underline"
               >
                 Hiện tất cả ({allProducts.length})
               </Link>
             ) : (
               <Link
-                href="/admin/products?lowStock=true"
+                href={`/admin/products?status=low${q ? `&q=${encodeURIComponent(q)}` : ""}${categoryId ? `&categoryId=${encodeURIComponent(categoryId)}` : ""}`}
                 className="rounded-lg border border-amber-500/30 bg-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-800 hover:underline dark:text-amber-300"
               >
                 Lọc hàng sắp hết ({lowStockCount})
@@ -119,43 +157,30 @@ export default async function ProductsPage({
         </div>
       ) : null}
 
-      <ProductForm
+      {/* Product Filters Toolbar (Stock Status Tabs, Search, Category Dropdown) */}
+      <ProductFilters
         categories={categories}
-        product={editingProduct ?? undefined}
+        currentQuery={q}
+        currentCategoryId={categoryId}
+        currentStatus={effectiveStatus}
+        counts={counts}
       />
 
-      <form
-        className="surface-panel flex flex-col gap-2 p-3 sm:flex-row"
-        role="search"
-      >
-        <div className="relative flex-1">
-          <MagnifyingGlass
-            aria-hidden="true"
-            className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2"
-          />
-          <input
-            name="q"
-            defaultValue={q}
-            aria-label="Tìm sản phẩm"
-            placeholder="Tìm theo tên, mã hoặc tên gọi khác"
-            className="border-input bg-background focus-visible:ring-ring h-11 w-full rounded-xl border pr-3 pl-10 text-sm outline-none focus-visible:ring-3"
-          />
-        </div>
-        <Button type="submit">Tìm sản phẩm</Button>
-        {q ? (
-          <Button
-            variant="ghost"
-            nativeButton={false}
-            render={<Link href="/admin/products" />}
-          >
-            Xóa lọc
-          </Button>
-        ) : null}
-      </form>
-
+      {/* Product List Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>Danh sách ({products.length})</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>
+            Danh sách ({products.length}
+            {products.length !== allProducts.length
+              ? ` / ${allProducts.length}`
+              : ""}
+            )
+          </CardTitle>
+          {products.length !== allProducts.length ? (
+            <span className="text-muted-foreground text-xs font-medium">
+              Đang áp dụng bộ lọc
+            </span>
+          ) : null}
         </CardHeader>
         <CardContent>
           <Table>
@@ -171,74 +196,104 @@ export default async function ProductsPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {products.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <ProductImage
-                        src={product.imageUrl}
-                        alt={`Ảnh ${product.name}`}
-                        className="size-12"
-                      />
-                      <div className="min-w-0">
-                        <p className="font-bold">{product.name}</p>
-                        {product.aliases ? (
-                          <p className="text-muted-foreground truncate text-sm">
-                            {product.aliases}
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {product.category?.name ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right font-bold tabular-nums">
-                    {formatVnd(product.price)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {product.stock < 0 ? (
-                      <Badge variant="destructive">
-                        {product.stock} {product.unit}
-                      </Badge>
-                    ) : (
-                      <span className="font-semibold">
-                        {product.stock} {product.unit}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-2">
-                      <QuickProductEdit product={product} />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        nativeButton={false}
-                        className="size-11"
-                        aria-label={`Sửa ${product.name}`}
-                        render={
-                          <Link
-                            href={`/admin/products?edit=${product.id}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-                          />
-                        }
-                      >
-                        <NotePencil aria-hidden="true" weight="bold" />
-                      </Button>
-                      <ConfirmAction
-                        action={deleteProductAction.bind(null, product.id)}
-                        triggerLabel="Xóa"
-                        triggerIcon={<Trash aria-hidden="true" weight="bold" />}
-                        triggerAriaLabel={`Ngừng bán ${product.name}`}
-                        title={`Ngừng bán “${product.name}”?`}
-                        description="Sản phẩm sẽ không còn xuất hiện tại quầy bán hàng. Các đơn hàng cũ vẫn được giữ nguyên để tra cứu."
-                        confirmLabel="Ngừng bán sản phẩm"
-                        triggerVariant="outline"
-                        triggerClassName="border-destructive/20 text-destructive hover:border-destructive/40 hover:bg-destructive/10"
-                      />
-                    </div>
+              {products.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    className="text-muted-foreground py-8 text-center text-sm"
+                  >
+                    Không tìm thấy sản phẩm nào khớp với điều kiện lọc.
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                products.map((product) => (
+                  <TableRow key={product.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <ProductImage
+                          src={product.imageUrl}
+                          alt={`Ảnh ${product.name}`}
+                          className="size-12"
+                        />
+                        <div className="min-w-0">
+                          <p className="font-bold">{product.name}</p>
+                          {product.aliases ? (
+                            <p className="text-muted-foreground truncate text-sm">
+                              {product.aliases}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {product.category?.name ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-right font-bold tabular-nums">
+                      {formatVnd(product.price)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {product.stock < 0 ? (
+                        <Badge variant="destructive">
+                          {product.stock} {product.unit}
+                        </Badge>
+                      ) : product.stock === 0 ? (
+                        <Badge
+                          variant="destructive"
+                          className="border-red-500/30 bg-red-500/15 text-red-700 dark:text-red-300"
+                        >
+                          Hết hàng ({product.stock} {product.unit})
+                        </Badge>
+                      ) : product.stock <= 5 ? (
+                        <Badge
+                          variant="outline"
+                          className="border-amber-500/30 bg-amber-500/15 text-amber-800 dark:text-amber-200"
+                        >
+                          {product.stock} {product.unit}
+                        </Badge>
+                      ) : (
+                        <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                          {product.stock} {product.unit}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-2">
+                        <QuickProductEdit product={product} />
+
+                        {/* Dialog sửa chi tiết sản phẩm */}
+                        <ProductDialog
+                          categories={categories}
+                          product={product}
+                          trigger={
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="size-11"
+                              aria-label={`Sửa ${product.name}`}
+                            >
+                              <NotePencil aria-hidden="true" weight="bold" />
+                            </Button>
+                          }
+                        />
+
+                        <ConfirmAction
+                          action={deleteProductAction.bind(null, product.id)}
+                          triggerLabel="Xóa"
+                          triggerIcon={
+                            <Trash aria-hidden="true" weight="bold" />
+                          }
+                          triggerAriaLabel={`Ngừng bán ${product.name}`}
+                          title={`Ngừng bán “${product.name}”?`}
+                          description="Sản phẩm sẽ không còn xuất hiện tại quầy bán hàng. Các đơn hàng cũ vẫn được giữ nguyên để tra cứu."
+                          confirmLabel="Ngừng bán sản phẩm"
+                          triggerVariant="outline"
+                          triggerClassName="border-destructive/20 text-destructive hover:border-destructive/40 hover:bg-destructive/10"
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
