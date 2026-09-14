@@ -67,7 +67,7 @@ export function ProductDialog({
           )
         }
       />
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto p-6 sm:p-8">
+      <DialogContent className="max-h-[90vh] w-full max-w-[calc(100vw-2rem)] overflow-y-auto p-6 sm:max-w-3xl sm:p-8 md:p-10 lg:max-w-4xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">
             {product ? `Sửa sản phẩm: ${product.name}` : "Thêm sản phẩm mới"}
