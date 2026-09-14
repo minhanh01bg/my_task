@@ -16,6 +16,8 @@ export const envSchema = z
       .default("development"),
     NEXT_PUBLIC_APP_NAME: z.string().min(1).default("Next.js with Agent"),
     NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
+    NEXT_PUBLIC_STORE_NAME: z.string().trim().min(1).optional(),
+    STORE_NAME: z.string().trim().min(1).optional(),
     NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
     SENTRY_AUTH_TOKEN: z.string().optional(),
     SENTRY_ORG: z.string().optional(),

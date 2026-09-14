@@ -231,6 +231,19 @@ describe("envSchema", () => {
         expect(result.data.DATA_RETENTION_DAYS).toBe(30);
       }
     });
+
+    it("accepts optional NEXT_PUBLIC_STORE_NAME and STORE_NAME", () => {
+      const result = envSchema.safeParse({
+        ...validBase,
+        NEXT_PUBLIC_STORE_NAME: "Cửa hàng An Phát",
+        STORE_NAME: "An Phát POS",
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.NEXT_PUBLIC_STORE_NAME).toBe("Cửa hàng An Phát");
+        expect(result.data.STORE_NAME).toBe("An Phát POS");
+      }
+    });
   });
 
   describe("runtime env export", () => {

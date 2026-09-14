@@ -53,8 +53,21 @@ export async function saveStoreBankAccount(
   ]);
 }
 
+function getDefaultStoreName(): string {
+  return (
+    process.env.NEXT_PUBLIC_STORE_NAME?.trim() ||
+    process.env.STORE_NAME?.trim() ||
+    process.env.NEXT_PUBLIC_APP_NAME?.trim() ||
+    "Cửa hàng"
+  );
+}
+
 export async function getStoreName(): Promise<string> {
-  return (await readSetting(KEY_STORE_NAME)) ?? "Cửa hàng";
+  const name = await readSetting(KEY_STORE_NAME);
+  if (name && name.trim()) {
+    return name.trim();
+  }
+  return getDefaultStoreName();
 }
 
 export async function saveStoreName(name: string): Promise<void> {
@@ -71,7 +84,7 @@ export async function getPublicStoreProfile(): Promise<PublicStoreProfile> {
   ]);
 
   const raw = {
-    name: name?.trim() || "Cửa hàng",
+    name: name?.trim() || getDefaultStoreName(),
     hotline: hotline?.trim() || undefined,
     address: address?.trim() || undefined,
     openingHours: openingHours?.trim() || undefined,
