@@ -279,14 +279,16 @@
 
   @keyframes carousel-progress {
     from {
-      width: 0%;
+      transform: scaleX(0);
     }
     to {
-      width: 100%;
+      transform: scaleX(1);
     }
   }
 
   .animate-carousel-progress {
+    transform-origin: left;
+    will-change: transform;
     animation: carousel-progress var(--carousel-duration, 5000ms) linear
       forwards;
   }
