@@ -38,13 +38,13 @@ describe("ProductForm (Admin)", () => {
     expect(priceInput.value).toBe("12000");
     expect(priceInput.step).toBe("1000");
 
-    // Kiểm tra trường Tồn kho
+    // Kiểm tra trường Tồn kho hỗ trợ số thập phân (step="any")
     const stockInput = container.querySelector<HTMLInputElement>(
       'input[name="stock"]',
     )!;
     expect(stockInput).toBeInTheDocument();
     expect(stockInput.value).toBe("24");
-    expect(stockInput.step).toBe("1");
+    expect(stockInput.step).toBe("any");
 
     // Kiểm tra trường Giá vốn
     const costPriceInput = container.querySelector<HTMLInputElement>(
@@ -136,5 +136,46 @@ describe("ProductForm (Admin)", () => {
     });
     await user.click(chip10k);
     expect(priceInput.value).toBe("22000");
+  });
+
+  it("hỗ trợ nhập số lượng tồn kho thập phân và giá vốn chuẩn xác", async () => {
+    const user = userEvent.setup();
+
+    const { container } = render(
+      <ProductForm
+        categories={mockCategories}
+        product={{
+          id: "prod-4",
+          name: "Thịt ba chỉ heo",
+          aliases: null,
+          sku: "TP-04",
+          categoryId: "cat-1",
+          unit: "kg",
+          stock: 2.5,
+          price: 130000,
+          costPrice: 95000,
+          imageUrl: null,
+        }}
+      />,
+    );
+
+    const stockInput = container.querySelector<HTMLInputElement>(
+      'input[name="stock"]',
+    )!;
+    expect(stockInput.value).toBe("2.5");
+
+    // Người dùng gõ thay đổi số lượng thập phân lẻ
+    await user.clear(stockInput);
+    await user.type(stockInput, "4.75");
+    expect(stockInput.value).toBe("4.75");
+
+    // Người dùng gõ giá vốn
+    const costPriceInput = container.querySelector<HTMLInputElement>(
+      'input[name="costPrice"]',
+    )!;
+    expect(costPriceInput.value).toBe("95000");
+    await user.clear(costPriceInput);
+    await user.type(costPriceInput, "105000");
+    expect(costPriceInput.value).toBe("105000");
   });
 });

@@ -210,16 +210,23 @@ export function ProductForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="product-stock">Số lượng đang có ({unit})</Label>
-        <NumberStepper
-          id="product-stock"
-          name="stock"
-          min={0}
-          step={1}
-          quickSteps={[1, 5, 10, 50]}
-          defaultValue={product?.stock ?? 0}
-          unit={unit}
-          aria-label="Số lượng tồn kho"
-        />
+        <div className="relative">
+          <Input
+            id="product-stock"
+            name="stock"
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step="any"
+            defaultValue={product?.stock ?? 0}
+            placeholder="0"
+            className="h-12 pr-14 text-base font-bold tabular-nums"
+            aria-label="Số lượng tồn kho"
+          />
+          <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm font-semibold select-none">
+            {unit}
+          </span>
+        </div>
         <p className="text-muted-foreground text-xs">
           Đơn vị: {unit}. Có thể gõ trực tiếp số thập phân nếu cần.
         </p>
@@ -236,16 +243,26 @@ export function ProductForm({
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="product-cost-price">Giá vốn (VND)</Label>
-            <NumberStepper
-              id="product-cost-price"
-              name="costPrice"
-              min={0}
-              step={1000}
-              quickSteps={[1000, 5000, 10000, 50000]}
-              defaultValue={product?.costPrice ?? 0}
-              isCurrency
-              aria-label="Giá vốn"
-            />
+            <div className="relative">
+              <Input
+                id="product-cost-price"
+                name="costPrice"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                step={1000}
+                defaultValue={product?.costPrice ?? 0}
+                placeholder="0"
+                className="h-12 pr-10 text-base font-bold tabular-nums"
+                aria-label="Giá vốn"
+              />
+              <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm font-bold select-none">
+                ₫
+              </span>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              Giá nhập ban đầu để theo dõi lợi nhuận.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="product-sku">Mã nội bộ</Label>
