@@ -329,6 +329,42 @@
   .dark .modal-scroll::-webkit-scrollbar-thumb:hover {
     background: oklch(0.8 0 0 / 0.45);
   }
+
+  /* Hiệu ứng Dropdown siêu mượt cho Select / Popover Base UI */
+  [data-slot="select-content"] {
+    transform-origin: var(--transform-origin);
+    transition:
+      transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  [data-slot="select-content"][data-starting-style],
+  [data-slot="select-content"][data-ending-style] {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  /* Hiệu ứng Dialog Modal mượt mà */
+  [data-slot="dialog-overlay"] {
+    transition: opacity 200ms ease-out;
+  }
+
+  [data-slot="dialog-overlay"][data-starting-style],
+  [data-slot="dialog-overlay"][data-ending-style] {
+    opacity: 0;
+  }
+
+  [data-slot="dialog-content"] {
+    transition:
+      transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  [data-slot="dialog-content"][data-starting-style],
+  [data-slot="dialog-content"][data-ending-style] {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.96);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

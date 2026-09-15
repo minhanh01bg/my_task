@@ -34,7 +34,6 @@ describe("DropdownField", () => {
   ];
 
   it("hien gia tri mac dinh va mo danh sach bang nut", async () => {
-    const user = userEvent.setup();
     render(
       <DropdownField
         aria-label="Hình thức nhận"
