@@ -59,6 +59,12 @@ describe("AdminNav", () => {
     );
   });
 
+  it("sidebar desktop có md:z-40 để nằm trên nội dung bảng chính", () => {
+    const { container } = render(<AdminNav />);
+    const aside = container.querySelector("aside");
+    expect(aside).toHaveClass("md:z-40");
+  });
+
   it("có liên kết sang cửa hàng online", () => {
     render(<AdminNav />);
 
