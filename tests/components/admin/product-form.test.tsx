@@ -169,6 +169,19 @@ describe("ProductForm (Admin)", () => {
     await user.type(stockInput, "4.75");
     expect(stockInput.value).toBe("4.75");
 
+    // Hỗ trợ nút tăng/giảm và chip cộng nhanh cho số lượng tồn kho
+    const increaseStockBtn = screen.getByRole("button", {
+      name: /tăng số lượng tồn kho 1/i,
+    });
+    await user.click(increaseStockBtn);
+    expect(stockInput.value).toBe("5.75");
+
+    const chip5Stock = screen.getByRole("button", {
+      name: /cộng \+5 vào số lượng tồn kho/i,
+    });
+    await user.click(chip5Stock);
+    expect(stockInput.value).toBe("10.75");
+
     // Người dùng gõ giá vốn
     const costPriceInput = container.querySelector<HTMLInputElement>(
       'input[name="costPrice"]',

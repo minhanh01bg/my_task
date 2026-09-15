@@ -211,23 +211,17 @@ export function ProductForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="product-stock">Số lượng đang có ({unit})</Label>
-        <div className="relative">
-          <Input
-            id="product-stock"
-            name="stock"
-            type="number"
-            inputMode="decimal"
-            min={0}
-            step="any"
-            defaultValue={product?.stock ?? 0}
-            placeholder="0"
-            className="h-12 pr-14 text-base font-bold tabular-nums"
-            aria-label="Số lượng tồn kho"
-          />
-          <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm font-semibold select-none">
-            {unit}
-          </span>
-        </div>
+        <NumberStepper
+          id="product-stock"
+          name="stock"
+          min={0}
+          step={1}
+          allowDecimal
+          quickSteps={[1, 5, 10, 50]}
+          defaultValue={product?.stock ?? 0}
+          unit={unit}
+          aria-label="Số lượng tồn kho"
+        />
         <p className="text-muted-foreground text-xs">
           Đơn vị: {unit}. Có thể gõ trực tiếp số thập phân nếu cần.
         </p>
