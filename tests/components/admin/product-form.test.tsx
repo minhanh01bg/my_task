@@ -177,5 +177,18 @@ describe("ProductForm (Admin)", () => {
     await user.clear(costPriceInput);
     await user.type(costPriceInput, "105000");
     expect(costPriceInput.value).toBe("105000");
+
+    // Hỗ trợ nút tăng/giảm và chip cộng nhanh cho giá vốn giống như giá bán
+    const increaseCostBtn = screen.getByRole("button", {
+      name: /tăng giá vốn 1\.000 ₫/i,
+    });
+    await user.click(increaseCostBtn);
+    expect(costPriceInput.value).toBe("106000");
+
+    const chip10kCost = screen.getByRole("button", {
+      name: /cộng \+10\.000 vào giá vốn/i,
+    });
+    await user.click(chip10kCost);
+    expect(costPriceInput.value).toBe("116000");
   });
 });

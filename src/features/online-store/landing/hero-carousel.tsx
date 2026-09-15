@@ -271,10 +271,7 @@ export function HeroCarousel({
 
               {/* Right Column: Visual Showcase Card */}
               {slide.visual ? (
-                <SlideVisualShowcase
-                  visual={slide.visual}
-                  isActive={isActive}
-                />
+                <SlideVisualShowcase visual={slide.visual} />
               ) : null}
             </div>
           );
@@ -363,13 +360,7 @@ export function HeroCarousel({
   );
 }
 
-function SlideVisualShowcase({
-  visual,
-  isActive: _isActive,
-}: {
-  visual: HeroSlideVisual;
-  isActive: boolean;
-}) {
+function SlideVisualShowcase({ visual }: { visual: HeroSlideVisual }) {
   return (
     <div className="relative hidden items-center justify-center p-4 lg:flex lg:w-5/12">
       {/* Frosted Glassmorphism Showcase Card with GPU layer */}

@@ -60,6 +60,7 @@ export function ProductForm({
           values[element.name] !== undefined
         ) {
           element.value = values[element.name];
+          element.dispatchEvent(new Event("input", { bubbles: true }));
         }
       }
       const restoreState = window.setTimeout(() => {
@@ -243,25 +244,18 @@ export function ProductForm({
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="product-cost-price">Giá vốn (VND)</Label>
-            <div className="relative">
-              <Input
-                id="product-cost-price"
-                name="costPrice"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                step={1000}
-                defaultValue={product?.costPrice ?? 0}
-                placeholder="0"
-                className="h-12 pr-10 text-base font-bold tabular-nums"
-                aria-label="Giá vốn"
-              />
-              <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm font-bold select-none">
-                ₫
-              </span>
-            </div>
+            <NumberStepper
+              id="product-cost-price"
+              name="costPrice"
+              min={0}
+              step={1000}
+              quickSteps={[1000, 5000, 10000, 50000, 100000]}
+              defaultValue={product?.costPrice ?? 0}
+              isCurrency
+              aria-label="Giá vốn"
+            />
             <p className="text-muted-foreground text-xs">
-              Giá nhập ban đầu để theo dõi lợi nhuận.
+              Giá nhập ban đầu để theo dõi lợi nhuận. Tăng giảm 1.000 đ/lần bấm.
             </p>
           </div>
           <div className="space-y-1.5">

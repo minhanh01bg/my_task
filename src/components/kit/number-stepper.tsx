@@ -60,8 +60,22 @@ export function NumberStepper({
     if (value !== undefined) return value;
     return defaultValue;
   });
+  const [prevDefaultValue, setPrevDefaultValue] = useState(defaultValue);
+
+  // Dong bo internalValue khi defaultValue thay doi (khi chuyen sang sua san pham khac)
+  if (!isControlled && defaultValue !== prevDefaultValue) {
+    setPrevDefaultValue(defaultValue);
+    setInternalValue(defaultValue);
+  }
 
   const displayValue = isControlled ? value : internalValue;
+
+  // Dong bo gia tri DOM input khi defaultValue thay doi
+  useEffect(() => {
+    if (!isControlled && inputRef.current && defaultValue !== undefined) {
+      inputRef.current.value = String(defaultValue);
+    }
+  }, [defaultValue, isControlled]);
 
   // Dong bo internalValue khi DOM input thay doi tu ngoai (vi du khoi phuc localStorage draft)
   useEffect(() => {
@@ -105,9 +119,8 @@ export function NumberStepper({
     )?.set;
     if (nativeSetter) {
       nativeSetter.call(input, String(nextVal));
-    } else {
-      input.value = String(nextVal);
     }
+    input.value = String(nextVal);
 
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.dispatchEvent(new Event("change", { bubbles: true }));
@@ -178,6 +191,11 @@ export function NumberStepper({
           autoFocus={autoFocus}
           placeholder={placeholder}
           aria-label={ariaLabel}
+          onFocus={(e) => {
+            if (e.target.value === "0") {
+              e.target.select();
+            }
+          }}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           className={cn(
