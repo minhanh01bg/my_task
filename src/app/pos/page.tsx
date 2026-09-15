@@ -1,4 +1,5 @@
 import { PosScreen } from "@/components/pos/pos-screen";
+import { requireAdminSession } from "@/server/auth/require-admin-session";
 import { prisma } from "@/server/db/prisma";
 import {
   getStoreBankAccount,
@@ -13,6 +14,8 @@ export const dynamic = "force-dynamic";
  * Tim kiem sau do chay hoan toan trong bo nho trinh duyet.
  */
 export default async function PosPage() {
+  await requireAdminSession({ redirectToLogin: true });
+
   const [categories, products, bankAccount, storeName] = await Promise.all([
     prisma.category.findMany({
       orderBy: { sortOrder: "asc" },

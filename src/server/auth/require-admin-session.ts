@@ -75,7 +75,7 @@ export async function hasAdminSession(request?: Request): Promise<boolean> {
  * Asserts that the caller has a valid admin session.
  * Can be used in Server Components, Server Actions, and route handlers.
  *
- * - If redirectToLogin is true and unauthenticated, redirects browser to /admin/login.
+ * - If redirectToLogin is true and unauthenticated, redirects browser to /login.
  * - If redirectToLogin is false/omitted and unauthenticated, throws AdminUnauthorizedError.
  */
 export async function requireAdminSession(
@@ -89,7 +89,7 @@ export async function requireAdminSession(
 
   if (!resolved) {
     if (options.redirectToLogin) {
-      redirect("/admin/login");
+      redirect("/login");
     }
     throw new AdminUnauthorizedError();
   }
