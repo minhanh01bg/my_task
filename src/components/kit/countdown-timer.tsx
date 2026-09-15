@@ -10,13 +10,32 @@ export interface CountdownTimerProps {
   className?: string;
 }
 
+let currentNow = Date.now();
+let timer: ReturnType<typeof setInterval> | null = null;
+const listeners = new Set<() => void>();
+
+function updateNow() {
+  currentNow = Date.now();
+  listeners.forEach((listener) => listener());
+}
+
 function subscribe(callback: () => void) {
-  const timer = setInterval(callback, 1000);
-  return () => clearInterval(timer);
+  listeners.add(callback);
+  if (listeners.size === 1) {
+    currentNow = Date.now();
+    timer = setInterval(updateNow, 1000);
+  }
+  return () => {
+    listeners.delete(callback);
+    if (listeners.size === 0 && timer !== null) {
+      clearInterval(timer);
+      timer = null;
+    }
+  };
 }
 
 function getNowSnapshot() {
-  return Date.now();
+  return currentNow;
 }
 
 function getServerSnapshot() {

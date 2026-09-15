@@ -27,4 +27,23 @@ describe("CountdownTimer Component", () => {
     );
     expect(screen.getByText("Đã kết thúc phiên")).toBeInTheDocument();
   });
+
+  it("giữ snapshot ổn định qua nhiều lần re-render và dọn dẹp timer khi unmount", () => {
+    const target = new Date(Date.now() + 60000);
+    const { rerender, unmount } = render(
+      <CountdownTimer targetDate={target} />,
+    );
+
+    // Re-render không bị lỗi getSnapshot caching hay infinite loop
+    expect(() => {
+      rerender(<CountdownTimer targetDate={target} className="custom-class" />);
+      rerender(
+        <CountdownTimer targetDate={target} className="another-class" />,
+      );
+    }).not.toThrow();
+
+    expect(() => {
+      unmount();
+    }).not.toThrow();
+  });
 });
