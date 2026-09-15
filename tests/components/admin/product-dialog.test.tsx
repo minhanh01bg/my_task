@@ -36,10 +36,17 @@ describe("ProductDialog (Admin)", () => {
       screen.getByRole("heading", { name: "Thêm sản phẩm mới" }),
     ).toBeInTheDocument();
 
-    // Kiểm tra class sizing của dialog content có responsive override rộng rãi
+    // Kiểm tra class sizing của dialog content có responsive override rộng rãi và chống tràn cuộn
     const dialogContent = screen.getByRole("dialog");
     expect(dialogContent.className).toContain("sm:max-w-3xl");
     expect(dialogContent.className).toContain("lg:max-w-4xl");
+    expect(dialogContent.className).toContain("overflow-hidden");
+    expect(dialogContent.className).toContain("p-0");
+
+    // Kiểm tra container nội dung có class modal-scroll cho thanh cuộn mềm mại
+    const scrollContainer = dialogContent.querySelector(".modal-scroll");
+    expect(scrollContainer).toBeInTheDocument();
+    expect(scrollContainer?.className).toContain("overflow-y-auto");
   });
 
   it("mở sẵn dialog khi có defaultOpen và hiển thị thông tin sản phẩm cần sửa", () => {
