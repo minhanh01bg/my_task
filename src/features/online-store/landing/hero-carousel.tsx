@@ -43,6 +43,7 @@ export function HeroCarousel({
   const startXRef = useRef<number | null>(null);
   const hasMovedRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dragOffsetRef = useRef(0);
 
   const total = slides.length;
 
@@ -75,6 +76,7 @@ export function HeroCarousel({
     setIsDragging(true);
     startXRef.current = clientX;
     hasMovedRef.current = false;
+    dragOffsetRef.current = 0;
     setDragOffset(0);
   };
 
@@ -84,18 +86,21 @@ export function HeroCarousel({
     if (Math.abs(diff) > 5) {
       hasMovedRef.current = true;
     }
+    dragOffsetRef.current = diff;
     setDragOffset(diff);
   };
 
   const handleEnd = () => {
+    const finalOffset = dragOffsetRef.current;
     if (startXRef.current !== null) {
-      if (dragOffset < -50) {
+      if (finalOffset < -50) {
         nextSlide();
-      } else if (dragOffset > 50) {
+      } else if (finalOffset > 50) {
         prevSlide();
       }
     }
     setIsDragging(false);
+    dragOffsetRef.current = 0;
     setDragOffset(0);
     startXRef.current = null;
     setIsPaused(false);
@@ -113,8 +118,6 @@ export function HeroCarousel({
       setIsPaused((p) => !p);
     }
   };
-
-  const currentSlide = slides[currentIndex] || slides[0];
 
   return (
     <div
@@ -144,28 +147,33 @@ export function HeroCarousel({
       }}
       className="border-border/60 shadow-primary/5 focus-visible:ring-primary/40 group from-card to-background relative overflow-hidden rounded-3xl border bg-gradient-to-br shadow-xl transition-shadow duration-500 focus-visible:ring-2 focus-visible:outline-none"
     >
-      {/* Background dynamic ambient gradient */}
-      <div
-        className={`pointer-events-none absolute inset-0 bg-gradient-to-br transition-all duration-700 ${
-          currentSlide?.gradient ?? "from-primary/15 to-transparent"
-        }`}
-      />
+      {/* Background dynamic ambient gradients (GPU opacity cross-fade) */}
+      {slides.map((slide, idx) => (
+        <div
+          key={slide.id}
+          className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${
+            slide.gradient ?? "from-primary/15 to-transparent"
+          } transition-opacity duration-500 ease-out ${
+            idx === currentIndex ? "opacity-100" : "opacity-0"
+          }`}
+        />
+      ))}
 
-      {/* Decorative ambient lighting orbs */}
-      <div className="bg-primary/20 pointer-events-none absolute -top-24 -right-24 size-96 rounded-full blur-3xl transition-opacity duration-700" />
-      <div className="bg-accent/15 pointer-events-none absolute -bottom-24 -left-24 size-80 rounded-full blur-3xl transition-opacity duration-700" />
+      {/* Decorative ambient lighting orbs with GPU compositor layer */}
+      <div className="bg-primary/20 pointer-events-none absolute -top-24 -right-24 size-96 transform-gpu rounded-full blur-3xl will-change-transform" />
+      <div className="bg-accent/15 pointer-events-none absolute -bottom-24 -left-24 size-80 transform-gpu rounded-full blur-3xl will-change-transform" />
 
       {/* Subtle tech dot overlay */}
       <div className="from-foreground/5 pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] via-transparent to-transparent opacity-40" />
 
-      {/* Slides Horizontal Track */}
+      {/* Slides Horizontal Track with GPU acceleration */}
       <div
-        className="flex w-full select-none"
+        className="flex w-full transform-gpu will-change-transform select-none"
         style={{
           transform: `translate3d(calc(-${currentIndex * 100}% + ${dragOffset}px), 0, 0)`,
           transition: isDragging
             ? "none"
-            : "transform 650ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+            : "transform 500ms cubic-bezier(0.25, 1, 0.5, 1)",
         }}
       >
         {slides.map((slide, index) => {
@@ -180,13 +188,7 @@ export function HeroCarousel({
               {/* Left Column: Heading, description, CTA */}
               <div className="relative z-10 max-w-2xl">
                 {/* Pill Badge with pulse dot */}
-                <div
-                  className={`transition-all duration-500 ${
-                    isActive
-                      ? "translate-y-0 opacity-100"
-                      : "translate-y-2 opacity-40"
-                  }`}
-                >
+                <div>
                   <Badge
                     variant="outline"
                     className="border-primary/25 bg-background/80 text-primary gap-2 rounded-full px-3.5 py-1.5 text-xs font-bold shadow-xs backdrop-blur-md"
@@ -201,13 +203,7 @@ export function HeroCarousel({
                 </div>
 
                 {/* Semantic H1 for active slide, H2 styling for inactive */}
-                <div
-                  className={`transition-all delay-75 duration-500 ${
-                    isActive
-                      ? "translate-y-0 opacity-100"
-                      : "translate-y-3 opacity-40"
-                  }`}
-                >
+                <div>
                   {isActive ? (
                     <h1 className="font-heading text-foreground mt-4 text-3xl leading-[1.18] font-black tracking-tight sm:text-4xl md:text-5xl lg:text-[3.25rem]">
                       {slide.title}
@@ -224,24 +220,12 @@ export function HeroCarousel({
                 </div>
 
                 {/* Description */}
-                <p
-                  className={`text-muted-foreground mt-4 max-w-xl text-base leading-relaxed transition-all delay-100 duration-500 sm:text-lg ${
-                    isActive
-                      ? "translate-y-0 opacity-100"
-                      : "translate-y-3 opacity-40"
-                  }`}
-                >
+                <p className="text-muted-foreground mt-4 max-w-xl text-base leading-relaxed sm:text-lg">
                   {slide.description}
                 </p>
 
                 {/* Call to action buttons */}
-                <div
-                  className={`mt-8 flex flex-wrap items-center gap-3.5 transition-all delay-150 duration-500 ${
-                    isActive
-                      ? "translate-y-0 opacity-100"
-                      : "translate-y-3 opacity-40"
-                  }`}
-                >
+                <div className="mt-8 flex flex-wrap items-center gap-3.5">
                   <Link
                     href={slide.ctaHref}
                     className={buttonVariants({
@@ -271,11 +255,7 @@ export function HeroCarousel({
 
                 {/* Trust Perks list */}
                 {slide.perks && slide.perks.length > 0 ? (
-                  <div
-                    className={`text-muted-foreground mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium transition-all delay-200 duration-500 ${
-                      isActive ? "opacity-100" : "opacity-0"
-                    }`}
-                  >
+                  <div className="text-muted-foreground mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium">
                     {slide.perks.map((perk) => (
                       <span
                         key={perk}
@@ -291,10 +271,7 @@ export function HeroCarousel({
 
               {/* Right Column: Visual Showcase Card */}
               {slide.visual ? (
-                <SlideVisualShowcase
-                  visual={slide.visual}
-                  isActive={isActive}
-                />
+                <SlideVisualShowcase visual={slide.visual} />
               ) : null}
             </div>
           );
@@ -358,7 +335,7 @@ export function HeroCarousel({
                 {isActive ? (
                   <span
                     key={`${index}-${isPaused}`}
-                    className="bg-primary animate-carousel-progress absolute inset-y-0 left-0 rounded-full"
+                    className="bg-primary animate-carousel-progress absolute inset-0 rounded-full"
                     style={
                       {
                         "--carousel-duration": `${autoPlayInterval}ms`,
@@ -383,21 +360,11 @@ export function HeroCarousel({
   );
 }
 
-function SlideVisualShowcase({
-  visual,
-  isActive,
-}: {
-  visual: HeroSlideVisual;
-  isActive: boolean;
-}) {
+function SlideVisualShowcase({ visual }: { visual: HeroSlideVisual }) {
   return (
-    <div
-      className={`relative hidden items-center justify-center p-4 transition-all delay-100 duration-700 lg:flex lg:w-5/12 ${
-        isActive ? "scale-100 opacity-100" : "scale-95 opacity-40"
-      }`}
-    >
-      {/* Frosted Glassmorphism Showcase Card */}
-      <div className="bg-background/80 dark:bg-card/75 shadow-primary/10 relative w-full max-w-sm rounded-3xl border border-white/30 p-6 shadow-2xl backdrop-blur-xl transition-transform duration-500 hover:scale-[1.02] dark:border-white/10">
+    <div className="relative hidden items-center justify-center p-4 lg:flex lg:w-5/12">
+      {/* Frosted Glassmorphism Showcase Card with GPU layer */}
+      <div className="bg-background/85 dark:bg-card/80 shadow-primary/10 relative w-full max-w-sm transform-gpu rounded-3xl border border-white/30 p-6 shadow-2xl backdrop-blur-md transition-transform duration-300 will-change-transform hover:scale-[1.02] dark:border-white/10">
         {/* Header */}
         <div className="border-border/50 flex items-center justify-between border-b pb-4">
           <div className="flex items-center gap-3">

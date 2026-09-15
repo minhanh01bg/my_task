@@ -38,13 +38,13 @@ describe("ProductForm (Admin)", () => {
     expect(priceInput.value).toBe("12000");
     expect(priceInput.step).toBe("1000");
 
-    // Kiểm tra trường Tồn kho
+    // Kiểm tra trường Tồn kho hỗ trợ số thập phân (step="any")
     const stockInput = container.querySelector<HTMLInputElement>(
       'input[name="stock"]',
     )!;
     expect(stockInput).toBeInTheDocument();
     expect(stockInput.value).toBe("24");
-    expect(stockInput.step).toBe("1");
+    expect(stockInput.step).toBe("any");
 
     // Kiểm tra trường Giá vốn
     const costPriceInput = container.querySelector<HTMLInputElement>(
@@ -136,5 +136,72 @@ describe("ProductForm (Admin)", () => {
     });
     await user.click(chip10k);
     expect(priceInput.value).toBe("22000");
+  });
+
+  it("hỗ trợ nhập số lượng tồn kho thập phân và giá vốn chuẩn xác", async () => {
+    const user = userEvent.setup();
+
+    const { container } = render(
+      <ProductForm
+        categories={mockCategories}
+        product={{
+          id: "prod-4",
+          name: "Thịt ba chỉ heo",
+          aliases: null,
+          sku: "TP-04",
+          categoryId: "cat-1",
+          unit: "kg",
+          stock: 2.5,
+          price: 130000,
+          costPrice: 95000,
+          imageUrl: null,
+        }}
+      />,
+    );
+
+    const stockInput = container.querySelector<HTMLInputElement>(
+      'input[name="stock"]',
+    )!;
+    expect(stockInput.value).toBe("2.5");
+
+    // Người dùng gõ thay đổi số lượng thập phân lẻ
+    await user.clear(stockInput);
+    await user.type(stockInput, "4.75");
+    expect(stockInput.value).toBe("4.75");
+
+    // Hỗ trợ nút tăng/giảm và chip cộng nhanh cho số lượng tồn kho
+    const increaseStockBtn = screen.getByRole("button", {
+      name: /tăng số lượng tồn kho 1/i,
+    });
+    await user.click(increaseStockBtn);
+    expect(stockInput.value).toBe("5.75");
+
+    const chip5Stock = screen.getByRole("button", {
+      name: /cộng \+5 vào số lượng tồn kho/i,
+    });
+    await user.click(chip5Stock);
+    expect(stockInput.value).toBe("10.75");
+
+    // Người dùng gõ giá vốn
+    const costPriceInput = container.querySelector<HTMLInputElement>(
+      'input[name="costPrice"]',
+    )!;
+    expect(costPriceInput.value).toBe("95000");
+    await user.clear(costPriceInput);
+    await user.type(costPriceInput, "105000");
+    expect(costPriceInput.value).toBe("105000");
+
+    // Hỗ trợ nút tăng/giảm và chip cộng nhanh cho giá vốn giống như giá bán
+    const increaseCostBtn = screen.getByRole("button", {
+      name: /tăng giá vốn 1\.000 ₫/i,
+    });
+    await user.click(increaseCostBtn);
+    expect(costPriceInput.value).toBe("106000");
+
+    const chip10kCost = screen.getByRole("button", {
+      name: /cộng \+10\.000 vào giá vốn/i,
+    });
+    await user.click(chip10kCost);
+    expect(costPriceInput.value).toBe("116000");
   });
 });

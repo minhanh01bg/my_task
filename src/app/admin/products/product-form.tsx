@@ -60,6 +60,7 @@ export function ProductForm({
           values[element.name] !== undefined
         ) {
           element.value = values[element.name];
+          element.dispatchEvent(new Event("input", { bubbles: true }));
         }
       }
       const restoreState = window.setTimeout(() => {
@@ -215,6 +216,7 @@ export function ProductForm({
           name="stock"
           min={0}
           step={1}
+          allowDecimal
           quickSteps={[1, 5, 10, 50]}
           defaultValue={product?.stock ?? 0}
           unit={unit}
@@ -241,11 +243,14 @@ export function ProductForm({
               name="costPrice"
               min={0}
               step={1000}
-              quickSteps={[1000, 5000, 10000, 50000]}
+              quickSteps={[1000, 5000, 10000, 50000, 100000]}
               defaultValue={product?.costPrice ?? 0}
               isCurrency
               aria-label="Giá vốn"
             />
+            <p className="text-muted-foreground text-xs">
+              Giá nhập ban đầu để theo dõi lợi nhuận. Tăng giảm 1.000 đ/lần bấm.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="product-sku">Mã nội bộ</Label>

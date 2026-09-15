@@ -14,7 +14,8 @@ export interface NumberStepperProps {
   onChange?: (val: number) => void;
   min?: number;
   max?: number;
-  step?: number;
+  step?: number | "any";
+  allowDecimal?: boolean;
   quickSteps?: readonly number[];
   unit?: string;
   isCurrency?: boolean;
@@ -43,6 +44,7 @@ export function NumberStepper({
   min = 0,
   max,
   step = 1,
+  allowDecimal = false,
   quickSteps,
   unit,
   isCurrency = false,
@@ -60,8 +62,22 @@ export function NumberStepper({
     if (value !== undefined) return value;
     return defaultValue;
   });
+  const [prevDefaultValue, setPrevDefaultValue] = useState(defaultValue);
+
+  // Dong bo internalValue khi defaultValue thay doi (khi chuyen sang sua san pham khac)
+  if (!isControlled && defaultValue !== prevDefaultValue) {
+    setPrevDefaultValue(defaultValue);
+    setInternalValue(defaultValue);
+  }
 
   const displayValue = isControlled ? value : internalValue;
+
+  // Dong bo gia tri DOM input khi defaultValue thay doi
+  useEffect(() => {
+    if (!isControlled && inputRef.current && defaultValue !== undefined) {
+      inputRef.current.value = String(defaultValue);
+    }
+  }, [defaultValue, isControlled]);
 
   // Dong bo internalValue khi DOM input thay doi tu ngoai (vi du khoi phuc localStorage draft)
   useEffect(() => {
@@ -82,6 +98,8 @@ export function NumberStepper({
     };
   }, []);
 
+  const numericStep = typeof step === "number" ? step : 1;
+
   const handleStep = (delta: number) => {
     const input = inputRef.current;
     if (!input || disabled) return;
@@ -92,7 +110,9 @@ export function NumberStepper({
     if (max !== undefined && nextVal > max) nextVal = max;
 
     // Lam tron tranh loi so thuc JavaScript (vi du 0.1 + 0.2 = 0.30000000000000004)
-    if (step >= 1) {
+    if (allowDecimal) {
+      nextVal = Math.round(nextVal * 1000) / 1000;
+    } else if (numericStep >= 1) {
       nextVal = Math.round(nextVal);
     } else {
       nextVal = Math.round(nextVal * 100) / 100;
@@ -105,9 +125,8 @@ export function NumberStepper({
     )?.set;
     if (nativeSetter) {
       nativeSetter.call(input, String(nextVal));
-    } else {
-      input.value = String(nextVal);
     }
+    input.value = String(nextVal);
 
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.dispatchEvent(new Event("change", { bubbles: true }));
@@ -126,10 +145,10 @@ export function NumberStepper({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "ArrowUp" && e.shiftKey) {
       e.preventDefault();
-      handleStep(step * 10);
+      handleStep(numericStep * 10);
     } else if (e.key === "ArrowDown" && e.shiftKey) {
       e.preventDefault();
-      handleStep(-step * 10);
+      handleStep(-numericStep * 10);
     }
   };
 
@@ -141,7 +160,9 @@ export function NumberStepper({
   const fieldDisplayName = ariaLabel || fieldNameMap[name] || name;
   const labelPrefix = fieldDisplayName ? `${fieldDisplayName} ` : "";
   const stepFormatted =
-    isCurrency && step >= 1000 ? `${formatVnd(step)} ₫` : String(step);
+    isCurrency && numericStep >= 1000
+      ? `${formatVnd(numericStep)} ₫`
+      : String(step);
 
   return (
     <div className="flex flex-col gap-2">
@@ -154,7 +175,7 @@ export function NumberStepper({
       >
         <button
           type="button"
-          onClick={() => handleStep(-step)}
+          onClick={() => handleStep(-numericStep)}
           disabled={disabled || (min !== undefined && displayValue <= min)}
           aria-label={`Giảm ${labelPrefix}${stepFormatted}`}
           className="hover:bg-muted active:bg-muted/80 border-input/60 text-muted-foreground hover:text-foreground inline-flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center border-r transition-colors select-none disabled:pointer-events-none disabled:opacity-30 sm:w-14"
@@ -170,7 +191,7 @@ export function NumberStepper({
           inputMode={isCurrency ? "numeric" : "decimal"}
           min={min}
           max={max}
-          step={step}
+          step={allowDecimal ? "any" : step}
           defaultValue={defaultValue}
           value={value}
           required={required}
@@ -178,6 +199,11 @@ export function NumberStepper({
           autoFocus={autoFocus}
           placeholder={placeholder}
           aria-label={ariaLabel}
+          onFocus={(e) => {
+            if (e.target.value === "0") {
+              e.target.select();
+            }
+          }}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           className={cn(
@@ -199,7 +225,7 @@ export function NumberStepper({
 
         <button
           type="button"
-          onClick={() => handleStep(step)}
+          onClick={() => handleStep(numericStep)}
           disabled={disabled || (max !== undefined && displayValue >= max)}
           aria-label={`Tăng ${labelPrefix}${stepFormatted}`}
           className="hover:bg-muted active:bg-muted/80 border-input/60 text-muted-foreground hover:text-foreground inline-flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center border-l transition-colors select-none disabled:pointer-events-none disabled:opacity-30 sm:w-14"
