@@ -9,6 +9,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownField } from "@/components/kit/dropdown-field";
 import { formatVnd } from "@/lib/money";
+import { cn } from "@/lib/utils";
 import type { CatalogFilter, CatalogSort } from "@/types/storefront";
 
 const SORT_OPTIONS = [
@@ -17,6 +18,13 @@ const SORT_OPTIONS = [
   { value: "price-asc", label: "Giá tăng dần" },
   { value: "price-desc", label: "Giá giảm dần" },
   { value: "name-asc", label: "Tên A - Z" },
+] as const;
+
+const PRICE_PRESETS = [
+  { label: "< 50k", min: null, max: 50_000 },
+  { label: "50k - 100k", min: 50_000, max: 100_000 },
+  { label: "100k - 200k", min: 100_000, max: 200_000 },
+  { label: "> 200k", min: 200_000, max: null },
 ] as const;
 
 import { useOnlineCart } from "./cart-context";
@@ -191,44 +199,114 @@ export function CatalogFilters({
             <span>Chỉ hiện còn hàng</span>
           </label>
 
-          {/* Price range inputs */}
-          <div className="flex items-center gap-2">
+          {/* Price range inputs and quick presets */}
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-muted-foreground text-xs font-semibold uppercase">
               Giá:
             </span>
-            <Input
-              type="number"
-              aria-label="Giá tối thiểu"
-              placeholder="Từ ₫"
-              min={0}
-              step={1000}
-              value={filter.minPrice !== null ? filter.minPrice : ""}
-              onChange={(e) =>
-                handleUpdate({
-                  minPrice: e.target.value
-                    ? Math.max(0, parseInt(e.target.value, 10))
-                    : null,
-                })
-              }
-              className="h-9 w-24 rounded-lg px-2 text-xs"
-            />
-            <span className="text-muted-foreground">-</span>
-            <Input
-              type="number"
-              aria-label="Giá tối đa"
-              placeholder="Đến ₫"
-              min={0}
-              step={1000}
-              value={filter.maxPrice !== null ? filter.maxPrice : ""}
-              onChange={(e) =>
-                handleUpdate({
-                  maxPrice: e.target.value
-                    ? Math.max(0, parseInt(e.target.value, 10))
-                    : null,
-                })
-              }
-              className="h-9 w-24 rounded-lg px-2 text-xs"
-            />
+            <div className="flex items-center gap-1.5">
+              <div className="relative flex items-center">
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  aria-label="Giá tối thiểu"
+                  placeholder="Từ"
+                  min={0}
+                  step={10000}
+                  value={filter.minPrice !== null ? filter.minPrice : ""}
+                  onChange={(e) =>
+                    handleUpdate({
+                      minPrice: e.target.value
+                        ? Math.max(0, parseInt(e.target.value, 10))
+                        : null,
+                    })
+                  }
+                  className="h-8.5 w-24 [appearance:textfield] rounded-lg pr-6 pl-2.5 text-xs tabular-nums sm:w-28 sm:text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                {filter.minPrice !== null ? (
+                  <button
+                    type="button"
+                    onClick={() => handleUpdate({ minPrice: null })}
+                    aria-label="Xóa giá tối thiểu"
+                    className="text-muted-foreground/60 hover:text-foreground absolute right-2 flex size-4 cursor-pointer items-center justify-center rounded-full transition-colors"
+                  >
+                    <X className="size-3" />
+                  </button>
+                ) : (
+                  <span className="text-muted-foreground/60 pointer-events-none absolute right-2 text-xs font-medium">
+                    ₫
+                  </span>
+                )}
+              </div>
+              <span className="text-muted-foreground text-xs font-bold">-</span>
+              <div className="relative flex items-center">
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  aria-label="Giá tối đa"
+                  placeholder="Đến"
+                  min={0}
+                  step={10000}
+                  value={filter.maxPrice !== null ? filter.maxPrice : ""}
+                  onChange={(e) =>
+                    handleUpdate({
+                      maxPrice: e.target.value
+                        ? Math.max(0, parseInt(e.target.value, 10))
+                        : null,
+                    })
+                  }
+                  className="h-8.5 w-24 [appearance:textfield] rounded-lg pr-6 pl-2.5 text-xs tabular-nums sm:w-28 sm:text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                {filter.maxPrice !== null ? (
+                  <button
+                    type="button"
+                    onClick={() => handleUpdate({ maxPrice: null })}
+                    aria-label="Xóa giá tối đa"
+                    className="text-muted-foreground/60 hover:text-foreground absolute right-2 flex size-4 cursor-pointer items-center justify-center rounded-full transition-colors"
+                  >
+                    <X className="size-3" />
+                  </button>
+                ) : (
+                  <span className="text-muted-foreground/60 pointer-events-none absolute right-2 text-xs font-medium">
+                    ₫
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Quick price presets */}
+            <div className="flex flex-wrap items-center gap-1 sm:ml-1">
+              {PRICE_PRESETS.map((preset) => {
+                const active =
+                  filter.minPrice === preset.min &&
+                  filter.maxPrice === preset.max;
+                return (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => {
+                      if (active) {
+                        handleUpdate({ minPrice: null, maxPrice: null });
+                      } else {
+                        handleUpdate({
+                          minPrice: preset.min,
+                          maxPrice: preset.max,
+                        });
+                      }
+                    }}
+                    aria-pressed={active}
+                    className={cn(
+                      "h-7 cursor-pointer rounded-lg px-2.5 text-xs font-medium transition-colors select-none",
+                      active
+                        ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
+                        : "bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground border-border/50 border",
+                    )}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
