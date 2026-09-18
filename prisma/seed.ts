@@ -28,6 +28,7 @@ const PRODUCTS = [
     stock: 40,
     aliases: null,
     sku: null,
+    imageUrl: "/products/duong-trang.webp",
   },
   {
     category: "grocery",
@@ -38,6 +39,7 @@ const PRODUCTS = [
     stock: 60,
     aliases: "nuoc ngot",
     sku: null,
+    imageUrl: "/products/coca-cola-390ml.webp",
   },
   {
     category: "grocery",
@@ -48,6 +50,7 @@ const PRODUCTS = [
     stock: 24,
     aliases: "nuoc ngot",
     sku: null,
+    imageUrl: "/products/coca-cola-can-320ml.webp",
   },
   {
     category: "grocery",
@@ -58,6 +61,7 @@ const PRODUCTS = [
     stock: 200,
     aliases: "mi tom",
     sku: null,
+    imageUrl: "/products/mi-hao-hao.webp",
   },
   {
     category: "grocery",
@@ -68,6 +72,7 @@ const PRODUCTS = [
     stock: 85.5,
     aliases: "day dien",
     sku: null,
+    imageUrl: "/products/day-dien-doi.webp",
   },
   {
     category: "footwear",
@@ -78,6 +83,7 @@ const PRODUCTS = [
     stock: 12,
     aliases: "dep lao",
     sku: null,
+    imageUrl: "/products/dep-lao.webp",
   },
   {
     category: "footwear",
@@ -88,6 +94,7 @@ const PRODUCTS = [
     stock: 6,
     aliases: null,
     sku: null,
+    imageUrl: "/products/giay-bata-trang.webp",
   },
   {
     category: "moto",
@@ -98,6 +105,7 @@ const PRODUCTS = [
     stock: 15,
     aliases: "nhot xe may",
     sku: "PT-101",
+    imageUrl: "/products/nhot-castrol-power1.webp",
   },
   {
     category: "moto",
@@ -108,6 +116,7 @@ const PRODUCTS = [
     stock: 20,
     aliases: "bugi wave, bugi thuong",
     sku: "PT-102",
+    imageUrl: "/products/bugi-ngk-c7hsa.webp",
   },
   {
     category: "moto",
@@ -118,6 +127,7 @@ const PRODUCTS = [
     stock: 4,
     aliases: "sen nhong dia, sen wave",
     sku: "PT-103",
+    imageUrl: "/products/nhong-sen-dia-wave.webp",
   },
   {
     category: "moto",
@@ -128,6 +138,7 @@ const PRODUCTS = [
     stock: 18,
     aliases: "sam xe",
     sku: "PT-104",
+    imageUrl: "/products/ruot-xe-may.webp",
   },
 ];
 
@@ -158,6 +169,7 @@ async function main() {
         costPrice: item.costPrice,
         stock: item.stock,
         aliases: item.aliases,
+        imageUrl: item.imageUrl,
         categoryId: categoryIds.get(item.category),
         searchText: buildSearchText({
           name: item.name,
