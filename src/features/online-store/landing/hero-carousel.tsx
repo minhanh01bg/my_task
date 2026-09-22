@@ -17,6 +17,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 import {
   DEFAULT_HERO_SLIDES,
@@ -36,8 +37,10 @@ export function HeroCarousel({
   autoPlayInterval = 5000,
 }: HeroCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [prevIndex, setPrevIndex] = useState(0);
+  const [prevIndex, setPrevIndex] = useState<number | null>(null);
   const [direction, setDirection] = useState<1 | -1>(1);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [animKey, setAnimKey] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -47,14 +50,25 @@ export function HeroCarousel({
   const containerRef = useRef<HTMLDivElement>(null);
   const dragOffsetRef = useRef(0);
   const isHoveredRef = useRef(false);
+  const transitionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const total = slides.length;
 
   const changeSlide = useCallback(
     (newIndex: number, dir: 1 | -1) => {
+      if (transitionTimerRef.current) {
+        clearTimeout(transitionTimerRef.current);
+      }
       setPrevIndex(currentIndex);
       setDirection(dir);
       setCurrentIndex(newIndex);
+      setIsAnimating(true);
+      setAnimKey((k) => k + 1);
+
+      transitionTimerRef.current = setTimeout(() => {
+        setIsAnimating(false);
+        setPrevIndex(null);
+      }, 550);
     },
     [currentIndex],
   );
@@ -71,6 +85,15 @@ export function HeroCarousel({
     if (index === currentIndex) return;
     changeSlide(index, index > currentIndex ? 1 : -1);
   };
+
+  // Cleanup transition timer on unmount
+  useEffect(() => {
+    return () => {
+      if (transitionTimerRef.current) {
+        clearTimeout(transitionTimerRef.current);
+      }
+    };
+  }, []);
 
   // Autoplay
   useEffect(() => {
@@ -164,7 +187,7 @@ export function HeroCarousel({
           e.stopPropagation();
         }
       }}
-      className="border-border/60 shadow-primary/5 focus-visible:ring-primary/40 group from-card to-background relative overflow-hidden rounded-3xl border bg-gradient-to-br shadow-xl transition-all duration-500 focus-visible:ring-2 focus-visible:outline-none"
+      className="border-border/60 shadow-primary/5 focus-visible:ring-primary/40 group from-card to-background relative touch-pan-y overflow-hidden rounded-3xl border bg-gradient-to-br shadow-xl transition-all duration-500 select-none focus-visible:ring-2 focus-visible:outline-none"
     >
       {/* Background dynamic ambient gradients (silky smooth cross-dissolve) */}
       {slides.map((slide, idx) => (
@@ -185,55 +208,80 @@ export function HeroCarousel({
       {/* Subtle tech dot overlay */}
       <div className="from-foreground/5 pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] via-transparent to-transparent opacity-40" />
 
-      {/* Stacked Slides Container with Fluid Parallax Transitions */}
+      {/* Slides Horizontal Container with True Circular Seamless Motion */}
       <div className="relative grid w-full grid-cols-1 grid-rows-1 select-none">
         {slides.map((slide, index) => {
           const isActive = index === currentIndex;
-          const isPrev = index === prevIndex;
+          const isEntering = isAnimating && index === currentIndex;
+          const isExiting = isAnimating && index === prevIndex;
 
-          // Compute directional offset when transitioning
-          let slideStyle: React.CSSProperties = {};
+          let animationClass = "";
+          let isVisible = false;
 
-          if (isActive) {
-            slideStyle = {
-              transform: `translate3d(${dragOffset}px, 0, 0)`,
-              transition: isDragging
-                ? "none"
-                : "transform 600ms cubic-bezier(0.16, 1, 0.3, 1), opacity 500ms ease-out, filter 500ms ease-out",
-            };
+          if (isDragging) {
+            if (isActive) {
+              isVisible = true;
+            } else if (dragOffset < 0 && index === (currentIndex + 1) % total) {
+              isVisible = true;
+            } else if (
+              dragOffset > 0 &&
+              index === (currentIndex - 1 + total) % total
+            ) {
+              isVisible = true;
+            }
+          } else if (isAnimating) {
+            if (isEntering) {
+              isVisible = true;
+              animationClass =
+                direction === 1
+                  ? "animate-carousel-slide-in-right z-10"
+                  : "animate-carousel-slide-in-left z-10";
+            } else if (isExiting) {
+              isVisible = true;
+              animationClass =
+                direction === 1
+                  ? "animate-carousel-slide-out-left z-0"
+                  : "animate-carousel-slide-out-right z-0";
+            }
           } else {
-            const exitDirection = direction === 1 ? -35 : 35;
-            const enterDirection = direction === 1 ? 35 : -35;
-            const targetX = isPrev ? exitDirection : enterDirection;
-
-            slideStyle = {
-              transform: `translate3d(${targetX}px, 0, 0)`,
-              transition:
-                "transform 600ms cubic-bezier(0.16, 1, 0.3, 1), opacity 500ms ease-out, filter 500ms ease-out",
-            };
+            if (isActive) {
+              isVisible = true;
+            }
           }
+
+          const dragStyle: React.CSSProperties | undefined = isDragging
+            ? {
+                transform:
+                  index === currentIndex
+                    ? `translate3d(${dragOffset}px, 0, 0)`
+                    : dragOffset < 0 && index === (currentIndex + 1) % total
+                      ? `translate3d(calc(100% + ${dragOffset}px), 0, 0)`
+                      : dragOffset > 0 &&
+                          index === (currentIndex - 1 + total) % total
+                        ? `translate3d(calc(-100% + ${dragOffset}px), 0, 0)`
+                        : undefined,
+                transition: "none",
+              }
+            : undefined;
 
           return (
             <div
-              key={slide.id}
+              key={`${slide.id}-${isAnimating ? animKey : "rest"}`}
               aria-hidden={!isActive}
-              style={slideStyle}
-              className={`col-start-1 row-start-1 flex min-h-[400px] w-full flex-col justify-between gap-8 px-6 py-10 sm:min-h-[440px] sm:px-12 sm:py-14 lg:flex-row lg:items-center lg:py-16 ${
-                isActive
-                  ? "pointer-events-auto relative z-10 opacity-100 blur-none"
-                  : "pointer-events-none absolute inset-0 z-0 opacity-0 blur-[2px]"
-              }`}
+              style={dragStyle}
+              className={cn(
+                "relative col-start-1 row-start-1 flex min-h-[400px] w-full transform-gpu flex-col justify-between gap-8 px-6 py-10 sm:min-h-[440px] sm:px-12 sm:py-14 lg:flex-row lg:items-center lg:py-16",
+                isVisible
+                  ? "opacity-100"
+                  : "pointer-events-none invisible opacity-0",
+                isActive ? "pointer-events-auto" : "pointer-events-none",
+                animationClass,
+              )}
             >
               {/* Left Column: Heading, description, CTA */}
               <div className="relative z-10 max-w-2xl">
-                {/* Pill Badge with pulse dot - Staggered enter */}
-                <div
-                  className={`transition-all duration-500 ease-out ${
-                    isActive
-                      ? "translate-y-0 opacity-100 delay-75"
-                      : "translate-y-2 opacity-0 delay-0"
-                  }`}
-                >
+                {/* Pill Badge with pulse dot */}
+                <div>
                   <Badge
                     variant="outline"
                     className="border-primary/25 bg-background/80 text-primary gap-2 rounded-full px-3.5 py-1.5 text-xs font-bold shadow-xs backdrop-blur-md transition-shadow hover:shadow-sm"
@@ -247,14 +295,8 @@ export function HeroCarousel({
                   </Badge>
                 </div>
 
-                {/* Semantic H1 for active slide, H2 styling for inactive - Staggered enter */}
-                <div
-                  className={`transition-all duration-600 ease-out ${
-                    isActive
-                      ? "translate-y-0 opacity-100 delay-150"
-                      : "translate-y-3 opacity-0 delay-0"
-                  }`}
-                >
+                {/* Semantic H1 for active slide, H2 styling for inactive */}
+                <div>
                   {isActive ? (
                     <h1 className="font-heading text-foreground mt-4 text-3xl leading-[1.18] font-black tracking-tight sm:text-4xl md:text-5xl lg:text-[3.25rem]">
                       {slide.title}
@@ -270,25 +312,13 @@ export function HeroCarousel({
                   )}
                 </div>
 
-                {/* Description - Staggered enter */}
-                <p
-                  className={`text-muted-foreground mt-4 max-w-xl text-base leading-relaxed transition-all duration-600 ease-out sm:text-lg ${
-                    isActive
-                      ? "translate-y-0 opacity-100 delay-200"
-                      : "translate-y-2 opacity-0 delay-0"
-                  }`}
-                >
+                {/* Description */}
+                <p className="text-muted-foreground mt-4 max-w-xl text-base leading-relaxed sm:text-lg">
                   {slide.description}
                 </p>
 
-                {/* Call to action buttons - Staggered enter */}
-                <div
-                  className={`mt-8 flex flex-wrap items-center gap-3.5 transition-all duration-600 ease-out ${
-                    isActive
-                      ? "translate-y-0 opacity-100 delay-300"
-                      : "translate-y-3 opacity-0 delay-0"
-                  }`}
-                >
+                {/* Call to action buttons */}
+                <div className="mt-8 flex flex-wrap items-center gap-3.5">
                   <Link
                     href={slide.ctaHref}
                     className={buttonVariants({
@@ -316,15 +346,9 @@ export function HeroCarousel({
                   ) : null}
                 </div>
 
-                {/* Trust Perks list - Staggered enter */}
+                {/* Trust Perks list */}
                 {slide.perks && slide.perks.length > 0 ? (
-                  <div
-                    className={`text-muted-foreground mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium transition-all duration-600 ease-out ${
-                      isActive
-                        ? "translate-y-0 opacity-100 delay-350"
-                        : "translate-y-2 opacity-0 delay-0"
-                    }`}
-                  >
+                  <div className="text-muted-foreground mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium">
                     {slide.perks.map((perk) => (
                       <span
                         key={perk}
@@ -338,15 +362,9 @@ export function HeroCarousel({
                 ) : null}
               </div>
 
-              {/* Right Column: Visual Showcase Card - Staggered scale & float */}
+              {/* Right Column: Visual Showcase Card */}
               {slide.visual ? (
-                <div
-                  className={`transition-all duration-700 ease-out lg:w-5/12 ${
-                    isActive
-                      ? "translate-y-0 scale-100 opacity-100 delay-150"
-                      : "translate-y-4 scale-95 opacity-0 delay-0"
-                  }`}
-                >
+                <div className="lg:w-5/12">
                   <SlideVisualShowcase visual={slide.visual} />
                 </div>
               ) : null}
