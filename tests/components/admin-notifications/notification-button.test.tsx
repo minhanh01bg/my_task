@@ -54,4 +54,15 @@ describe("NotificationButton", () => {
       ),
     );
   });
+
+  it("panel thông báo có z-index cao nhất (z-[100]) khi mở ra", async () => {
+    render(
+      <NotificationProvider>
+        <NotificationButton />
+      </NotificationProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Thông báo/ }));
+    const panel = screen.getByRole("region", { name: "Thông báo quản trị" });
+    expect(panel).toHaveClass("z-[100]");
+  });
 });

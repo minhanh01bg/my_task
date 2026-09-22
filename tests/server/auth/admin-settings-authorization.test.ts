@@ -88,15 +88,15 @@ describe("Admin Settings Authorization & Protection", () => {
     expect(auditLog?.entityType).toBe("store_settings");
   });
 
-  it("SettingsPage: chuyển hướng đến /admin/login khi chưa có phiên đăng nhập", async () => {
-    await expect(SettingsPage()).rejects.toThrow("NEXT_REDIRECT:/admin/login");
-    expect(mockRedirect).toHaveBeenCalledWith("/admin/login");
+  it("SettingsPage: chuyển hướng đến /login khi chưa có phiên đăng nhập", async () => {
+    await expect(SettingsPage()).rejects.toThrow("NEXT_REDIRECT:/login");
+    expect(mockRedirect).toHaveBeenCalledWith("/login");
   });
 
-  it("AdminLayout: chuyển hướng đến /admin/login khi chưa có phiên đăng nhập", async () => {
+  it("AdminLayout: chuyển hướng đến /login khi chưa có phiên đăng nhập", async () => {
     await expect(AdminLayout({ children: "content" })).rejects.toThrow(
-      "NEXT_REDIRECT:/admin/login",
+      "NEXT_REDIRECT:/login",
     );
-    expect(mockRedirect).toHaveBeenCalledWith("/admin/login");
+    expect(mockRedirect).toHaveBeenCalledWith("/login");
   });
 });

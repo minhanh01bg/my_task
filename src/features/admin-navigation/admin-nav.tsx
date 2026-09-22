@@ -176,7 +176,7 @@ export function AdminNav() {
         </div>
       </header>
 
-      <aside className="bg-card/85 border-r p-5 backdrop-blur-xl max-md:hidden md:sticky md:top-0 md:h-dvh">
+      <aside className="bg-card/85 border-r p-5 backdrop-blur-xl max-md:hidden md:sticky md:top-0 md:z-40 md:h-dvh">
         <div className="mb-5 flex items-center justify-between gap-3 px-2">
           <div className="flex items-center gap-3">
             <span className="bg-primary text-primary-foreground flex size-11 items-center justify-center rounded-2xl shadow-md">

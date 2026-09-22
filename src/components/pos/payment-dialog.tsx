@@ -131,10 +131,10 @@ export function PaymentDialog({
               aria-selected={method === tab.value}
               onClick={() => setMethod(tab.value)}
               className={cn(
-                "min-h-12 rounded-xl px-2 py-3 text-sm font-bold transition-colors sm:px-4 sm:text-base",
+                "min-h-12 cursor-pointer rounded-xl px-2 py-3 text-sm font-bold transition-all duration-200 ease-out active:scale-[0.97] sm:px-4 sm:text-base",
                 method === tab.value
-                  ? "bg-background text-primary shadow-sm ring-1 ring-black/5"
-                  : "text-muted-foreground hover:text-foreground",
+                  ? "bg-background text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                  : "text-muted-foreground hover:bg-background/40 hover:text-foreground",
               )}
             >
               {tab.label}
@@ -142,109 +142,114 @@ export function PaymentDialog({
           ))}
         </div>
 
-        {method === "cash" ? (
-          <div className="space-y-5">
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="cash-received" className="font-bold">
-                  Tiền khách đưa
-                </Label>
-                {receivedValue > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => setReceived("")}
-                    className="text-muted-foreground hover:text-foreground focus-visible:ring-ring min-h-8 rounded-lg px-2 text-xs font-bold focus-visible:ring-2 focus-visible:outline-none"
-                  >
-                    Nhập lại từ đầu
-                  </button>
-                ) : null}
+        <div
+          key={method}
+          className="animate-in fade-in-50 slide-in-from-top-1 duration-200 ease-out"
+        >
+          {method === "cash" ? (
+            <div className="space-y-5">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="cash-received" className="font-bold">
+                    Tiền khách đưa
+                  </Label>
+                  {receivedValue > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setReceived("")}
+                      className="text-muted-foreground hover:text-foreground focus-visible:ring-ring min-h-8 rounded-lg px-2 text-xs font-bold focus-visible:ring-2 focus-visible:outline-none"
+                    >
+                      Nhập lại từ đầu
+                    </button>
+                  ) : null}
+                </div>
+                <Input
+                  id="cash-received"
+                  aria-label="Tiền khách đưa"
+                  type="number"
+                  min="0"
+                  autoFocus
+                  value={received}
+                  onChange={(event) => setReceived(event.target.value)}
+                  inputMode="numeric"
+                  className="border-primary/30 bg-primary/5 h-16 rounded-2xl text-right text-3xl font-black tabular-nums"
+                />
               </div>
-              <Input
-                id="cash-received"
-                aria-label="Tiền khách đưa"
-                type="number"
-                min="0"
-                autoFocus
-                value={received}
-                onChange={(event) => setReceived(event.target.value)}
-                inputMode="numeric"
-                className="border-primary/30 bg-primary/5 h-16 rounded-2xl text-right text-3xl font-black tabular-nums"
-              />
-            </div>
 
-            <fieldset className="space-y-2.5">
-              <legend className="text-muted-foreground text-sm font-semibold">
-                Bấm để cộng thêm mệnh giá
-              </legend>
-              <div className="grid grid-cols-3 gap-2">
-                {CASH_DENOMINATIONS.map((amount) => (
+              <fieldset className="space-y-2.5">
+                <legend className="text-muted-foreground text-sm font-semibold">
+                  Bấm để cộng thêm mệnh giá
+                </legend>
+                <div className="grid grid-cols-3 gap-2">
+                  {CASH_DENOMINATIONS.map((amount) => (
+                    <TouchButton
+                      key={amount}
+                      type="button"
+                      variant="outline"
+                      aria-label={`Cộng ${amount.toLocaleString("vi-VN")} ₫`}
+                      onClick={() => addDenomination(amount)}
+                      className="hover:border-primary hover:bg-primary/10 active:bg-primary/20 min-h-12 rounded-xl px-1 font-black tabular-nums"
+                    >
+                      <span aria-hidden="true">
+                        +<Money amount={amount} />
+                      </span>
+                    </TouchButton>
+                  ))}
+                </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <TouchButton
-                    key={amount}
                     type="button"
                     variant="outline"
-                    aria-label={`Cộng ${amount.toLocaleString("vi-VN")} ₫`}
-                    onClick={() => addDenomination(amount)}
-                    className="hover:border-primary hover:bg-primary/10 active:bg-primary/20 min-h-12 rounded-xl px-1 font-black tabular-nums"
+                    className="min-h-12 rounded-xl font-bold"
+                    onClick={() => setReceived(String(total))}
                   >
-                    <span aria-hidden="true">
-                      +<Money amount={amount} />
-                    </span>
+                    Đúng số tiền
                   </TouchButton>
-                ))}
-              </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <TouchButton
-                  type="button"
-                  variant="outline"
-                  className="min-h-12 rounded-xl font-bold"
-                  onClick={() => setReceived(String(total))}
-                >
-                  Đúng số tiền
-                </TouchButton>
-                <p className="bg-muted text-muted-foreground flex min-h-12 items-center justify-center rounded-xl px-3 text-center text-xs font-semibold">
-                  Có thể bấm nhiều tờ cùng mệnh giá
-                </p>
-              </div>
-            </fieldset>
-
-            <div
-              aria-live="polite"
-              className={cn(
-                "flex items-baseline justify-between gap-4 rounded-2xl border p-4",
-                cashEnough
-                  ? "border-emerald-500/30 bg-emerald-500/10"
-                  : "border-amber-500/30 bg-amber-500/10",
-              )}
-            >
-              <div>
-                <span className="text-lg font-bold">Tiền thối lại</span>
-                {!cashEnough ? (
-                  <p className="text-muted-foreground text-xs font-semibold">
-                    Còn thiếu <Money amount={total - receivedValue} />
+                  <p className="bg-muted text-muted-foreground flex min-h-12 items-center justify-center rounded-xl px-3 text-center text-xs font-semibold">
+                    Có thể bấm nhiều tờ cùng mệnh giá
                   </p>
-                ) : null}
-              </div>
-              <span
-                data-testid="payment-change"
-                className="text-right text-4xl font-black tabular-nums sm:text-5xl"
+                </div>
+              </fieldset>
+
+              <div
+                aria-live="polite"
+                className={cn(
+                  "flex items-baseline justify-between gap-4 rounded-2xl border p-4",
+                  cashEnough
+                    ? "border-emerald-500/30 bg-emerald-500/10"
+                    : "border-amber-500/30 bg-amber-500/10",
+                )}
               >
-                <Money amount={change} size="display" />
-              </span>
+                <div>
+                  <span className="text-lg font-bold">Tiền thối lại</span>
+                  {!cashEnough ? (
+                    <p className="text-muted-foreground text-xs font-semibold">
+                      Còn thiếu <Money amount={total - receivedValue} />
+                    </p>
+                  ) : null}
+                </div>
+                <span
+                  data-testid="payment-change"
+                  className="text-right text-4xl font-black tabular-nums sm:text-5xl"
+                >
+                  <Money amount={change} size="display" />
+                </span>
+              </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
 
-        {method === "transfer" ? (
-          <TransferPanel
-            amount={total}
-            description={orderCode}
-            bankAccount={bankAccount}
-          />
-        ) : null}
+          {method === "transfer" ? (
+            <TransferPanel
+              amount={total}
+              description={orderCode}
+              bankAccount={bankAccount}
+            />
+          ) : null}
 
-        {method === "debt" ? (
-          <DebtPanel selected={customer} onSelect={setCustomer} />
-        ) : null}
+          {method === "debt" ? (
+            <DebtPanel selected={customer} onSelect={setCustomer} />
+          ) : null}
+        </div>
 
         <div className="flex gap-2">
           <TouchButton

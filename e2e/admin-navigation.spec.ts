@@ -50,3 +50,17 @@ test("admin có app shell mobile rõ ràng và menu đầy đủ truy cập đư
     page.getByRole("region", { name: "Thông báo quản trị" }),
   ).toBeVisible();
 });
+
+test("chưa đăng nhập truy cập trang quản lý hoặc /admin/login sẽ được chuyển hướng về /login", async ({
+  page,
+}) => {
+  // Khi chưa đăng nhập, truy cập trang quản trị phải chuyển hướng về /login chứ không phải /admin/login (404)
+  await page.goto("/admin/products");
+  await page.waitForURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login$/);
+
+  // Truy cập trực tiếp /admin/login cũng được chuyển hướng về /login
+  await page.goto("/admin/login");
+  await page.waitForURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login$/);
+});

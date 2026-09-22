@@ -45,6 +45,15 @@ const nextConfig: NextConfig = {
    */
   allowedDevOrigins: ["127.0.0.1", "160.250.247.137"],
   poweredByHeader: false,
+  async redirects() {
+    return [
+      {
+        source: "/admin/login",
+        destination: "/login",
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {

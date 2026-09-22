@@ -189,7 +189,7 @@ export function ProductFilters({
               type="button"
               aria-selected={isActive}
               onClick={() => handleStatusChange(tab.id)}
-              className={`flex shrink-0 cursor-pointer items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs font-bold transition-all select-none ${
+              className={`flex shrink-0 cursor-pointer items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs font-bold transition-all duration-200 ease-out select-none hover:scale-[1.02] active:scale-[0.96] ${
                 isActive
                   ? tab.activeClass ||
                     "border-primary bg-primary text-primary-foreground shadow-xs"
@@ -199,7 +199,7 @@ export function ProductFilters({
               {tab.icon}
               <span>{tab.label}</span>
               <span
-                className={`rounded-full px-2 py-0.5 text-[11px] font-black ${
+                className={`rounded-full px-2 py-0.5 text-[11px] font-black transition-colors duration-200 ${
                   isActive && tab.id === "all"
                     ? "bg-primary-foreground/20 text-primary-foreground"
                     : tab.badgeClass || "bg-muted text-foreground"

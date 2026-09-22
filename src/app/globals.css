@@ -277,6 +277,67 @@
     animation: fade-in-backdrop 0.25s ease-out forwards;
   }
 
+  /* Hiệu ứng chuyển Hero Slide Carousel mượt mà vượt trội */
+  @keyframes carousel-slide-in-right {
+    0% {
+      transform: translate3d(100%, 0, 0);
+    }
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes carousel-slide-out-left {
+    0% {
+      transform: translate3d(0, 0, 0);
+    }
+    100% {
+      transform: translate3d(-100%, 0, 0);
+    }
+  }
+
+  @keyframes carousel-slide-in-left {
+    0% {
+      transform: translate3d(-100%, 0, 0);
+    }
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes carousel-slide-out-right {
+    0% {
+      transform: translate3d(0, 0, 0);
+    }
+    100% {
+      transform: translate3d(100%, 0, 0);
+    }
+  }
+
+  .animate-carousel-slide-in-right {
+    animation: carousel-slide-in-right 550ms cubic-bezier(0.16, 1, 0.3, 1)
+      forwards;
+    will-change: transform;
+  }
+
+  .animate-carousel-slide-out-left {
+    animation: carousel-slide-out-left 550ms cubic-bezier(0.16, 1, 0.3, 1)
+      forwards;
+    will-change: transform;
+  }
+
+  .animate-carousel-slide-in-left {
+    animation: carousel-slide-in-left 550ms cubic-bezier(0.16, 1, 0.3, 1)
+      forwards;
+    will-change: transform;
+  }
+
+  .animate-carousel-slide-out-right {
+    animation: carousel-slide-out-right 550ms cubic-bezier(0.16, 1, 0.3, 1)
+      forwards;
+    will-change: transform;
+  }
+
   @keyframes carousel-progress {
     from {
       transform: scaleX(0);
@@ -330,17 +391,82 @@
     background: oklch(0.8 0 0 / 0.45);
   }
 
-  /* Hiệu ứng Dropdown siêu mượt cho Select / Popover Base UI */
+  /* Hiệu ứng Dropdown siêu mượt, nhẹ và tức thì cho Select / Popover Base UI */
   [data-slot="select-content"] {
-    transform-origin: var(--transform-origin);
+    transform-origin: var(--transform-origin, top center);
     transition:
-      transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
-      opacity 160ms cubic-bezier(0.16, 1, 0.3, 1);
+      transform 150ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 150ms cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform, opacity;
   }
 
   [data-slot="select-content"][data-starting-style],
   [data-slot="select-content"][data-ending-style] {
     opacity: 0;
+    transform: scale(0.97) translateY(-3px);
+  }
+
+  [data-side="top"] > [data-slot="select-content"][data-starting-style],
+  [data-side="top"] > [data-slot="select-content"][data-ending-style] {
+    opacity: 0;
+    transform: scale(0.97) translateY(3px);
+  }
+
+  /* Micro-interaction cho các item trong dropdown */
+  [data-slot="select-item"] {
+    transition:
+      background-color 100ms ease-out,
+      color 100ms ease-out;
+  }
+
+  [data-slot="select-item"]:active {
+    transform: scale(0.99);
+  }
+
+  /* Hiệu ứng mở popup/dropdown nhanh mượt cho các component độc lập (Notification, Popover, DatePicker, v.v.) */
+  @keyframes popover-enter {
+    from {
+      opacity: 0;
+      transform: scale(0.97) translateY(-3px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  .animate-in {
+    animation: popover-enter 150ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transform-origin: var(--transform-origin, top right);
+    will-change: transform, opacity;
+  }
+
+  /* Hiệu ứng chuyển Tab siêu mượt */
+  @keyframes tab-content-enter {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  [data-slot="tabs-content"] {
+    animation: tab-content-enter 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: transform, opacity;
+  }
+
+  [data-slot="tabs-trigger"] {
+    transition:
+      background-color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+      color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1),
+      transform 150ms ease-out;
+  }
+
+  [data-slot="tabs-trigger"]:active {
     transform: scale(0.96);
   }
 

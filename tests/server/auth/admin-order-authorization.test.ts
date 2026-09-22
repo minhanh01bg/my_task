@@ -132,14 +132,14 @@ describe("Admin Order Authorization (Task 9)", () => {
   });
 
   describe("requireAdminSession helper", () => {
-    it("redirects to /admin/login when redirectToLogin is true and unauthenticated", async () => {
+    it("redirects to /login when redirectToLogin is true and unauthenticated", async () => {
       mockCookies.clear();
 
       await expect(
         requireAdminSession({ redirectToLogin: true }),
-      ).rejects.toThrow("NEXT_REDIRECT:/admin/login");
+      ).rejects.toThrow("NEXT_REDIRECT:/login");
 
-      expect(mockRedirect).toHaveBeenCalledWith("/admin/login");
+      expect(mockRedirect).toHaveBeenCalledWith("/login");
     });
 
     it("throws AdminUnauthorizedError when redirectToLogin is false and unauthenticated", async () => {

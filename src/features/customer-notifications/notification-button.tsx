@@ -180,8 +180,8 @@ export function CustomerNotificationButton({
           aria-label="Hộp thư thông báo đơn hàng"
           className={
             placement === "page"
-              ? "bg-popover text-popover-foreground border-border animate-in fade-in-0 zoom-in-95 absolute top-12 right-0 z-50 max-h-[80dvh] w-80 origin-top-right transform-gpu overflow-auto rounded-2xl border p-4 shadow-2xl backdrop-blur-xl duration-200 ease-out will-change-[transform,opacity] sm:w-96"
-              : "bg-popover text-popover-foreground border-border animate-in fade-in-0 zoom-in-95 absolute top-full right-0 z-50 mt-2 max-h-[80dvh] w-80 origin-top-right transform-gpu overflow-auto rounded-2xl border p-4 shadow-2xl backdrop-blur-xl duration-200 ease-out will-change-[transform,opacity] sm:w-96"
+              ? "bg-popover text-popover-foreground border-border animate-in fade-in-0 zoom-in-95 absolute top-12 right-0 z-[100] max-h-[80dvh] w-80 origin-top-right transform-gpu overflow-auto rounded-2xl border p-4 shadow-2xl backdrop-blur-xl duration-200 ease-out will-change-[transform,opacity] sm:w-96"
+              : "bg-popover text-popover-foreground border-border animate-in fade-in-0 zoom-in-95 absolute top-full right-0 z-[100] mt-2 max-h-[80dvh] w-80 origin-top-right transform-gpu overflow-auto rounded-2xl border p-4 shadow-2xl backdrop-blur-xl duration-200 ease-out will-change-[transform,opacity] sm:w-96"
           }
         >
           <header className="mb-3 flex items-center justify-between gap-2 border-b pb-3">
