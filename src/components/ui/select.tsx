@@ -48,7 +48,7 @@ function SelectTrigger({
       {children}
       <SelectPrimitive.Icon
         render={
-          <span className="bg-muted text-muted-foreground -mr-1 flex size-7 items-center justify-center rounded-lg transition-transform duration-200 ease-out group-data-[popup-open]:rotate-180">
+          <span className="bg-muted text-muted-foreground cubic-bezier(0.16,1,0.3,1) -mr-1 flex size-7 items-center justify-center rounded-lg transition-transform duration-300 group-data-[popup-open]:rotate-180">
             <CaretDown aria-hidden="true" weight="bold" className="size-4" />
           </span>
         }
@@ -85,7 +85,7 @@ function SelectContent({
           data-slot="select-content"
           data-align-trigger={alignItemWithTrigger}
           className={cn(
-            "bg-popover/98 text-popover-foreground ring-border/80 modal-scroll relative isolate z-50 max-h-80 min-w-[var(--anchor-width)] origin-[var(--transform-origin)] transform-gpu overflow-x-hidden overflow-y-auto rounded-2xl p-1.5 shadow-2xl ring-1 backdrop-blur-xl will-change-[transform,opacity]",
+            "bg-popover/98 text-popover-foreground ring-border/80 modal-scroll relative isolate z-50 max-h-80 min-w-[var(--anchor-width)] origin-[var(--transform-origin)] transform-gpu overflow-x-hidden overflow-y-auto rounded-2xl p-1.5 shadow-2xl ring-1 backdrop-blur-xl will-change-[transform,opacity,filter]",
             className,
           )}
           {...props}
