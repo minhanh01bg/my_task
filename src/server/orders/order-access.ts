@@ -35,10 +35,14 @@ export const customerOrderSelect = {
   },
 } as const;
 
+/** Lich su don cua khach chi hien 50 don moi nhat. */
+export const CUSTOMER_ORDER_HISTORY_LIMIT = 50;
+
 export function listCustomerOrders(accountId: string) {
   return prisma.order.findMany({
     where: { customerAccountId: accountId, channel: "online" },
     orderBy: { createdAt: "desc" },
+    take: CUSTOMER_ORDER_HISTORY_LIMIT,
     select: customerOrderSelect,
   });
 }

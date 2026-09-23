@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/server/db/prisma";
 import {
   claimGuestOrder,
@@ -87,6 +87,18 @@ describe("order ownership", () => {
       ids.oa,
     ]);
     expect(await findOwnedCustomerOrder(ids.a, ids.ob)).toBeNull();
+  });
+  it("lịch sử đơn khách giới hạn 50 đơn, mới nhất trước", async () => {
+    const spy = vi.spyOn(prisma.order, "findMany");
+    try {
+      await listCustomerOrders(ids.a);
+      expect(spy.mock.calls[0]?.[0]).toMatchObject({
+        take: 50,
+        orderBy: { createdAt: "desc" },
+      });
+    } finally {
+      spy.mockRestore();
+    }
   });
   it("guest token expiry/revoke và code không cấp quyền", async () => {
     const token = "guest-test-token";
