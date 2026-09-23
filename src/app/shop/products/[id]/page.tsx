@@ -6,9 +6,7 @@ import { OnlineCartProvider } from "@/features/online-store/cart-context";
 import { ProductDetailView } from "@/features/online-store/product-detail-view";
 import { StoreFooter } from "@/features/online-store/store-footer";
 import { StoreHeader } from "@/features/online-store/store-header";
-import { hasAdminSession } from "@/server/auth/require-admin-session";
 import { getOnlineProductDetail } from "@/server/catalog/get-product-detail";
-import { getOptionalCustomerSession } from "@/server/customer-auth/session";
 import { getPublicStoreProfile } from "@/server/settings/store-settings";
 
 export const dynamic = "force-dynamic";
@@ -59,11 +57,9 @@ export default async function ProductDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [detail, storeProfile, isAdmin, customerSession] = await Promise.all([
+  const [detail, storeProfile] = await Promise.all([
     getOnlineProductDetail(id),
     getPublicStoreProfile(),
-    hasAdminSession(),
-    getOptionalCustomerSession(),
   ]);
 
   if (!detail) {
@@ -96,11 +92,7 @@ export default async function ProductDetailPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <StoreHeader
-        storeName={storeProfile.name}
-        isAdmin={isAdmin}
-        isCustomer={Boolean(customerSession)}
-      />
+      <StoreHeader storeName={storeProfile.name} />
       <main className="min-h-[70vh]">
         <ProductDetailView detail={detail} />
       </main>

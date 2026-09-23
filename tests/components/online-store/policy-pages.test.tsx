@@ -8,7 +8,7 @@ import PaymentPolicyPage from "@/app/shop/payment-policy/page";
 import ReturnPolicyPage from "@/app/shop/return-policy/page";
 import PrivacyPolicyPage from "@/app/shop/privacy/page";
 
-// Mock server settings & auth calls for server components
+// Mock server settings for server components (trang chính sách không đọc cookie)
 vi.mock("@/server/settings/store-settings", () => ({
   getPublicStoreProfile: vi.fn().mockResolvedValue({
     name: "Tạp Hóa Xanh",
@@ -16,14 +16,6 @@ vi.mock("@/server/settings/store-settings", () => ({
     address: "123 Lê Lợi, Quận 1, TP. Hồ Chí Minh",
     openingHours: "07:30 - 21:30",
   }),
-}));
-
-vi.mock("@/server/auth/require-admin-session", () => ({
-  hasAdminSession: vi.fn().mockResolvedValue(false),
-}));
-
-vi.mock("@/server/customer-auth/session", () => ({
-  getOptionalCustomerSession: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock("next/navigation", () => ({

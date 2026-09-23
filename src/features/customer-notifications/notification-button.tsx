@@ -10,11 +10,14 @@ import type {
 } from "@/types/customer-notification";
 
 export interface CustomerNotificationButtonProps {
+  /** Chỉ gọi API thông báo khi đã biết là khách hàng đăng nhập. */
+  enabled: boolean;
   className?: string;
   placement?: "header" | "page";
 }
 
 export function CustomerNotificationButton({
+  enabled,
   className = "",
   placement = "header",
 }: CustomerNotificationButtonProps) {
@@ -31,6 +34,7 @@ export function CustomerNotificationButton({
   const inFlight = useRef<Promise<void> | null>(null);
 
   const fetchNotifications = useCallback(async () => {
+    if (!enabled) return;
     if (inFlight.current) return inFlight.current;
     const task = (async () => {
       try {
@@ -63,7 +67,7 @@ export function CustomerNotificationButton({
     })();
     inFlight.current = task;
     return task;
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     void fetchNotifications();

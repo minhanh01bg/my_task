@@ -12,9 +12,7 @@ import { TrustSection } from "@/features/online-store/landing/trust-section";
 import { PromotionBanner } from "@/features/online-store/promotion-banner";
 import { StoreFooter } from "@/features/online-store/store-footer";
 import { StoreHeader } from "@/features/online-store/store-header";
-import { hasAdminSession } from "@/server/auth/require-admin-session";
 import { getOnlineCatalog } from "@/server/catalog/get-online-catalog";
-import { getOptionalCustomerSession } from "@/server/customer-auth/session";
 import { getPublicStoreProfile } from "@/server/settings/store-settings";
 import { getActivePromotions } from "@/server/storefront/promotions";
 
@@ -43,21 +41,13 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ShopPage() {
-  const [
-    catalog,
-    storeProfile,
-    isAdmin,
-    announcements,
-    heroPromotions,
-    customerSession,
-  ] = await Promise.all([
-    getOnlineCatalog(),
-    getPublicStoreProfile(),
-    hasAdminSession(),
-    getActivePromotions({ placement: "announcement", limit: 3 }),
-    getActivePromotions({ placement: "hero", limit: 1 }),
-    getOptionalCustomerSession(),
-  ]);
+  const [catalog, storeProfile, announcements, heroPromotions] =
+    await Promise.all([
+      getOnlineCatalog(),
+      getPublicStoreProfile(),
+      getActivePromotions({ placement: "announcement", limit: 3 }),
+      getActivePromotions({ placement: "hero", limit: 1 }),
+    ]);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -79,11 +69,7 @@ export default async function ShopPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <PromotionBanner promotions={announcements} placement="announcement" />
-      <StoreHeader
-        storeName={storeProfile.name}
-        isAdmin={isAdmin}
-        isCustomer={Boolean(customerSession)}
-      />
+      <StoreHeader storeName={storeProfile.name} />
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <PromotionBanner promotions={heroPromotions} placement="hero" />
       </div>

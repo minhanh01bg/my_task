@@ -1,6 +1,4 @@
 import { PolicyLayout } from "@/features/online-store/policy-layout";
-import { hasAdminSession } from "@/server/auth/require-admin-session";
-import { getOptionalCustomerSession } from "@/server/customer-auth/session";
 import { getPublicStoreProfile } from "@/server/settings/store-settings";
 
 export const dynamic = "force-dynamic";
@@ -11,17 +9,11 @@ export const metadata = {
 };
 
 export default async function PaymentPolicyPage() {
-  const [storeProfile, isAdmin, customerSession] = await Promise.all([
-    getPublicStoreProfile(),
-    hasAdminSession(),
-    getOptionalCustomerSession(),
-  ]);
+  const storeProfile = await getPublicStoreProfile();
 
   return (
     <PolicyLayout
       storeProfile={storeProfile}
-      isAdmin={isAdmin}
-      isCustomer={Boolean(customerSession)}
       title="Chính sách thanh toán"
       description="Hướng dẫn các phương thức thanh toán an toàn, minh bạch được áp dụng tại hệ thống cửa hàng."
     >

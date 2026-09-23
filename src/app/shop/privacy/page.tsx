@@ -1,6 +1,4 @@
 import { PolicyLayout } from "@/features/online-store/policy-layout";
-import { hasAdminSession } from "@/server/auth/require-admin-session";
-import { getOptionalCustomerSession } from "@/server/customer-auth/session";
 import { getPublicStoreProfile } from "@/server/settings/store-settings";
 
 export const dynamic = "force-dynamic";
@@ -12,17 +10,11 @@ export const metadata = {
 };
 
 export default async function PrivacyPolicyPage() {
-  const [storeProfile, isAdmin, customerSession] = await Promise.all([
-    getPublicStoreProfile(),
-    hasAdminSession(),
-    getOptionalCustomerSession(),
-  ]);
+  const storeProfile = await getPublicStoreProfile();
 
   return (
     <PolicyLayout
       storeProfile={storeProfile}
-      isAdmin={isAdmin}
-      isCustomer={Boolean(customerSession)}
       title="Chính sách bảo mật thông tin"
       description="Cam kết bảo vệ dữ liệu cá nhân, quyền riêng tư và tuân thủ các quy chuẩn bảo mật kỹ thuật số."
     >

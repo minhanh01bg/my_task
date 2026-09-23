@@ -7,6 +7,7 @@ import { Eye, EyeOff, LockKeyhole, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { invalidateStorefrontSession } from "@/features/online-store/storefront-session";
 
 export interface LoginFormProps {
   storeName: string;
@@ -46,6 +47,7 @@ export function LoginForm({ storeName }: LoginFormProps) {
       return;
     }
 
+    invalidateStorefrontSession();
     router.push("/pos");
     router.refresh();
   }

@@ -8,8 +8,6 @@ import type { PublicStoreProfile } from "@/types/storefront";
 
 export interface PolicyLayoutProps {
   storeProfile: PublicStoreProfile;
-  isAdmin?: boolean;
-  isCustomer?: boolean;
   title: string;
   description: string;
   children: React.ReactNode;
@@ -17,19 +15,13 @@ export interface PolicyLayoutProps {
 
 export function PolicyLayout({
   storeProfile,
-  isAdmin = false,
-  isCustomer = false,
   title,
   description,
   children,
 }: PolicyLayoutProps) {
   return (
     <OnlineCartProvider>
-      <StoreHeader
-        storeName={storeProfile.name}
-        isAdmin={isAdmin}
-        isCustomer={isCustomer}
-      />
+      <StoreHeader storeName={storeProfile.name} />
 
       <main className="mx-auto min-h-[60vh] max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
         {/* Breadcrumbs */}

@@ -24,7 +24,7 @@ export default async function CustomerOrdersPage() {
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <ThemeToggle />
-          <CustomerNotificationButton placement="page" />
+          <CustomerNotificationButton enabled placement="page" />
           <CustomerLogoutButton />
         </div>
       </div>

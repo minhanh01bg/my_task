@@ -1,6 +1,4 @@
 import { PolicyLayout } from "@/features/online-store/policy-layout";
-import { hasAdminSession } from "@/server/auth/require-admin-session";
-import { getOptionalCustomerSession } from "@/server/customer-auth/session";
 import { getPublicStoreProfile } from "@/server/settings/store-settings";
 
 export const dynamic = "force-dynamic";
@@ -11,17 +9,11 @@ export const metadata = {
 };
 
 export default async function ReturnPolicyPage() {
-  const [storeProfile, isAdmin, customerSession] = await Promise.all([
-    getPublicStoreProfile(),
-    hasAdminSession(),
-    getOptionalCustomerSession(),
-  ]);
+  const storeProfile = await getPublicStoreProfile();
 
   return (
     <PolicyLayout
       storeProfile={storeProfile}
-      isAdmin={isAdmin}
-      isCustomer={Boolean(customerSession)}
       title="Chính sách đổi trả & hoàn tiền"
       description="Quy định rõ ràng, trung thực nhằm bảo vệ quyền lợi của quý khách khi mua sắm trực tuyến."
     >

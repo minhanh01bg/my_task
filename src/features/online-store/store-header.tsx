@@ -2,27 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Heart, LayoutDashboard, ShoppingBag, UserRound } from "lucide-react";
+import { Heart, ShoppingBag } from "lucide-react";
 
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CustomerNotificationButton } from "@/features/customer-notifications/notification-button";
 import { useWishlist } from "@/lib/storage/wishlist";
 import { cn } from "@/lib/utils";
 
 import { useOnlineCart } from "./cart-context";
 import { CartDrawer } from "./cart-drawer";
+import { SessionAwareActions } from "./session-aware-actions";
 
-export function StoreHeader({
-  storeName,
-  isAdmin = false,
-  isCustomer = false,
-}: {
-  storeName: string;
-  isAdmin?: boolean;
-  isCustomer?: boolean;
-}) {
+export function StoreHeader({ storeName }: { storeName: string }) {
   const { lines, hydrated, openDrawer } = useOnlineCart();
   const { count: wishlistCount } = useWishlist();
   const count = lines.reduce((sum, line) => sum + line.quantity, 0);
@@ -50,32 +42,7 @@ export function StoreHeader({
             {storeName}
           </Link>
           <div className="flex items-center gap-2">
-            {isAdmin ? (
-              <Button
-                variant="outline"
-                className="min-h-11 font-bold"
-                nativeButton={false}
-                aria-label="Quay lại trang quản trị"
-                render={<Link href="/admin/orders" />}
-              >
-                <LayoutDashboard aria-hidden="true" className="size-5" />
-                <span className="ml-1.5 hidden sm:inline">Quản trị</span>
-              </Button>
-            ) : (
-              <>
-                <CustomerNotificationButton />
-                <Button
-                  variant="outline"
-                  className="min-h-11 font-bold"
-                  nativeButton={false}
-                  aria-label="Tài khoản khách hàng"
-                  render={<Link href="/account/orders" />}
-                >
-                  <UserRound aria-hidden="true" className="size-5" />
-                  <span className="ml-1.5 hidden sm:inline">Tài khoản</span>
-                </Button>
-              </>
-            )}
+            <SessionAwareActions />
             <ThemeToggle />
             <Link
               href="/shop?wishlist=true"
