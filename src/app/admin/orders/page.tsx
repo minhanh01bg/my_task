@@ -1,21 +1,21 @@
 import Link from "next/link";
 import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
 
-import { Money, PageHeader } from "@/components/kit";
+import { Money, PageHeader, Pagination } from "@/components/kit";
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DateField } from "@/components/kit/date-field";
 import { DropdownField } from "@/components/kit/dropdown-field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { listOrders } from "@/server/admin/list-orders";
+import { parsePageParam, totalPageCount } from "@/server/admin/pagination";
 import { requireAdminSession } from "@/server/auth/require-admin-session";
-import { prisma } from "@/server/db/prisma";
 
 import { cancelOrderAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 20;
 const STATUS_LABEL: Record<string, string> = {
   paid: "Đã thanh toán",
   pending: "Chờ thanh toán",
@@ -38,51 +38,6 @@ interface OrdersSearchParams {
   channel?: string;
 }
 
-function buildPageHref(params: OrdersSearchParams, page: number) {
-  const query = new URLSearchParams();
-  if (params.q) query.set("q", params.q);
-  if (params.status) query.set("status", params.status);
-  if (params.channel) query.set("channel", params.channel);
-  if (params.from) query.set("from", params.from);
-  if (params.to) query.set("to", params.to);
-  query.set("page", String(page));
-  return `/admin/orders?${query.toString()}`;
-}
-
-export function buildOrdersWhere(params: OrdersSearchParams) {
-  const q = params.q?.trim() ?? "";
-  const status = params.status ?? "";
-  const channel = params.channel ?? "";
-  const from = params.from ?? "";
-  const to = params.to ?? "";
-  const start = from ? new Date(`${from}T00:00:00`) : null;
-  const end = to ? new Date(`${to}T23:59:59.999`) : null;
-
-  return {
-    ...(channel ? { channel } : {}),
-    ...(status ? { status } : {}),
-    ...(start || end
-      ? {
-          createdAt: {
-            ...(start ? { gte: start } : {}),
-            ...(end ? { lte: end } : {}),
-          },
-        }
-      : {}),
-    ...(q
-      ? {
-          OR: [
-            { code: { contains: q } },
-            { contactName: { contains: q } },
-            { contactPhone: { contains: q } },
-            { customer: { is: { name: { contains: q } } } },
-            { customer: { is: { phone: { contains: q } } } },
-          ],
-        }
-      : {}),
-  };
-}
-
 export default async function OrdersPage({
   searchParams,
 }: {
@@ -96,24 +51,17 @@ export default async function OrdersPage({
   const channel = params.channel ?? "";
   const from = params.from ?? "";
   const to = params.to ?? "";
-  const requestedPage = Math.max(
-    1,
-    Number.parseInt(params.page ?? "1", 10) || 1,
-  );
-  const where = buildOrdersWhere(params);
-  const totalCount = await prisma.order.count({ where });
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const page = Math.min(requestedPage, totalPages);
-  const orders = await prisma.order.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    skip: (page - 1) * PAGE_SIZE,
-    take: PAGE_SIZE,
-    include: {
-      customer: { select: { name: true, phone: true } },
-      items: { select: { nameSnapshot: true, quantity: true, unit: true } },
-    },
+  const {
+    items: orders,
+    total: totalCount,
+    page,
+    pageSize,
+  } = await listOrders({
+    page: parsePageParam(params.page),
+    q,
+    filters: { status, channel, from, to },
   });
+  const totalPages = totalPageCount(totalCount, pageSize);
 
   return (
     <div className="space-y-6">
@@ -276,43 +224,14 @@ export default async function OrdersPage({
               ))}
             </ul>
           )}
-          {totalPages > 1 ? (
-            <nav
-              aria-label="Phân trang đơn hàng"
-              className="border-border mt-4 flex items-center justify-between gap-2 border-t pt-4"
-            >
-              <Button
-                variant="outline"
-                disabled={page <= 1}
-                nativeButton={page <= 1}
-                className="px-2.5 text-xs sm:px-4 sm:text-sm"
-                render={
-                  page > 1 ? (
-                    <Link href={buildPageHref(params, page - 1)} />
-                  ) : undefined
-                }
-              >
-                Trang trước
-              </Button>
-              <span className="text-center text-xs font-bold sm:text-sm">
-                {(page - 1) * PAGE_SIZE + 1}–
-                {Math.min(page * PAGE_SIZE, totalCount)} / {totalCount}
-              </span>
-              <Button
-                variant="outline"
-                disabled={page >= totalPages}
-                nativeButton={page >= totalPages}
-                className="px-2.5 text-xs sm:px-4 sm:text-sm"
-                render={
-                  page < totalPages ? (
-                    <Link href={buildPageHref(params, page + 1)} />
-                  ) : undefined
-                }
-              >
-                Trang sau
-              </Button>
-            </nav>
-          ) : null}
+          <Pagination
+            pathname="/admin/orders"
+            label="Phân trang đơn hàng"
+            page={page}
+            pageSize={pageSize}
+            total={totalCount}
+            searchParams={{ q, status, channel, from, to }}
+          />
         </CardContent>
       </Card>
     </div>

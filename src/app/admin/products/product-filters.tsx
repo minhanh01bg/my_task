@@ -73,6 +73,8 @@ export function ProductFilters({
       // Xoa params cu lien quan
       params.delete("lowStock");
       params.delete("edit");
+      // Doi bo loc thi quay ve trang 1
+      params.delete("page");
 
       for (const [key, value] of Object.entries(updates)) {
         if (!value || value === "all" || value === "") {

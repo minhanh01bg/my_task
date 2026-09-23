@@ -7,20 +7,21 @@ import {
   User,
 } from "@phosphor-icons/react/dist/ssr";
 
-import { PageHeader } from "@/components/kit";
+import { PageHeader, Pagination } from "@/components/kit";
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { prisma } from "@/server/db/prisma";
+import { listCustomers } from "@/server/admin/list-customers";
+import { parsePageParam } from "@/server/admin/pagination";
 
 import { toggleCustomerAccountAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 interface CustomersPageProps {
-  searchParams?: Promise<{ q?: string }>;
+  searchParams?: Promise<{ q?: string; page?: string }>;
 }
 
 export default async function CustomersPage({
@@ -29,20 +30,12 @@ export default async function CustomersPage({
   const params = searchParams ? await searchParams : {};
   const q = params?.q?.trim() ?? "";
 
-  const accounts = await prisma.customerAccount.findMany({
-    where: q
-      ? {
-          OR: [
-            { displayName: { contains: q } },
-            { phoneNormalized: { contains: q } },
-          ],
-        }
-      : undefined,
-    orderBy: { createdAt: "desc" },
-    include: {
-      _count: { select: { orders: true } },
-    },
-  });
+  const {
+    items: accounts,
+    total,
+    page,
+    pageSize,
+  } = await listCustomers({ page: parsePageParam(params?.page), q });
 
   return (
     <div className="space-y-6">
@@ -84,7 +77,7 @@ export default async function CustomersPage({
       {/* Danh sách tài khoản */}
       <Card>
         <CardHeader className="flex-row items-center justify-between gap-4">
-          <CardTitle>Danh sách tài khoản ({accounts.length})</CardTitle>
+          <CardTitle>Danh sách tài khoản ({total})</CardTitle>
         </CardHeader>
         <CardContent className="p-0 sm:p-6 sm:pt-0">
           {accounts.length === 0 ? (
@@ -204,6 +197,15 @@ export default async function CustomersPage({
               </table>
             </div>
           )}
+          <Pagination
+            pathname="/admin/customers"
+            label="Phân trang khách hàng"
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            searchParams={{ q }}
+            className="px-4 pb-4 sm:px-0 sm:pb-0"
+          />
         </CardContent>
       </Card>
     </div>

@@ -4,78 +4,34 @@ import {
   WarningCircle,
 } from "@phosphor-icons/react/dist/ssr";
 
-import { Money, PageHeader } from "@/components/kit";
+import { Money, PageHeader, Pagination } from "@/components/kit";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { prisma } from "@/server/db/prisma";
-import { settledDebtWhere } from "@/server/debts/debt-filters";
+import {
+  listDebts,
+  listSettledDebts,
+  SETTLED_DEBTS_LIMIT,
+  summarizeOpenDebts,
+} from "@/server/admin/list-debts";
+import { parsePageParam } from "@/server/admin/pagination";
 
 import { DebtPaymentForm } from "./debt-payment-form";
 
 export const dynamic = "force-dynamic";
 
-export default async function DebtsPage() {
-  const paymentHistory = {
-    where: {
-      method: { in: ["cash", "transfer"] },
-      receivedAt: { not: null },
-    },
-    orderBy: { createdAt: "desc" as const },
-    select: {
-      id: true,
-      amount: true,
-      method: true,
-      receivedAt: true,
-      createdAt: true,
-    },
-  };
+interface DebtsPageProps {
+  searchParams?: Promise<{ page?: string }>;
+}
 
-  const [debts, settledDebts] = await Promise.all([
-    prisma.order.findMany({
-      where: { status: "debt" },
-      orderBy: { createdAt: "asc" },
-      include: {
-        customer: { select: { name: true, phone: true } },
-        payments: paymentHistory,
-      },
-    }),
-    prisma.order.findMany({
-      where: settledDebtWhere,
-      orderBy: { createdAt: "desc" },
-      take: 20,
-      include: {
-        customer: { select: { name: true, phone: true } },
-        payments: paymentHistory,
-      },
-    }),
+export default async function DebtsPage({ searchParams }: DebtsPageProps) {
+  const params = searchParams ? await searchParams : {};
+
+  const [debtPage, byCustomer, settledRows] = await Promise.all([
+    listDebts({ page: parsePageParam(params.page) }),
+    summarizeOpenDebts(),
+    listSettledDebts(),
   ]);
-
-  const rows = debts.map((order) => {
-    const paid = order.payments.reduce(
-      (sum, payment) => sum + payment.amount,
-      0,
-    );
-    return { ...order, paid, balance: Math.max(0, order.total - paid) };
-  });
-
-  const settledRows = settledDebts.map((order) => ({
-    ...order,
-    paid: order.payments.reduce((sum, payment) => sum + payment.amount, 0),
-    settledAt: order.payments[0]?.receivedAt ?? order.payments[0]?.createdAt,
-  }));
-
-  const byCustomer = new Map<string, { name: string; balance: number }>();
-  for (const order of rows) {
-    const key = order.customerId ?? "unknown";
-    const current = byCustomer.get(key) ?? {
-      name: order.customer?.name ?? "Khách lẻ",
-      balance: 0,
-    };
-    byCustomer.set(key, {
-      name: current.name,
-      balance: current.balance + order.balance,
-    });
-  }
+  const { items: rows, total: openDebtCount, page, pageSize } = debtPage;
 
   return (
     <div className="space-y-6">
@@ -89,12 +45,12 @@ export default async function DebtsPage() {
           <CardTitle>Tổng còn nợ theo khách</CardTitle>
         </CardHeader>
         <CardContent>
-          {byCustomer.size === 0 ? (
+          {byCustomer.length === 0 ? (
             <p className="text-muted-foreground">Không ai đang nợ</p>
           ) : (
             <ul className="divide-y">
-              {[...byCustomer.entries()].map(([key, row]) => (
-                <li key={key} className="flex justify-between gap-4 py-3">
+              {byCustomer.map((row) => (
+                <li key={row.key} className="flex justify-between gap-4 py-3">
                   <span className="font-semibold">{row.name}</span>
                   <span className="text-destructive font-bold tabular-nums">
                     <Money amount={row.balance} />
@@ -119,11 +75,11 @@ export default async function DebtsPage() {
             className="min-h-7 px-3 text-sm font-bold"
           >
             <WarningCircle aria-hidden="true" weight="fill" />
-            {rows.length} đơn còn nợ
+            {openDebtCount} đơn còn nợ
           </Badge>
         </CardHeader>
         <CardContent>
-          {rows.length === 0 ? (
+          {openDebtCount === 0 ? (
             <div className="bg-success/10 text-success flex items-center gap-3 rounded-2xl p-4 font-semibold">
               <CheckCircle
                 aria-hidden="true"
@@ -219,6 +175,13 @@ export default async function DebtsPage() {
               ))}
             </ul>
           )}
+          <Pagination
+            pathname="/admin/debts"
+            label="Phân trang đơn còn nợ"
+            page={page}
+            pageSize={pageSize}
+            total={openDebtCount}
+          />
         </CardContent>
       </Card>
 
@@ -227,7 +190,7 @@ export default async function DebtsPage() {
           <div className="space-y-1">
             <CardTitle>Đã trả xong</CardTitle>
             <p className="text-muted-foreground text-sm">
-              20 đơn công nợ đã tất toán gần nhất
+              {SETTLED_DEBTS_LIMIT} đơn công nợ đã tất toán gần nhất
             </p>
           </div>
           <Badge className="bg-success/12 text-success min-h-7 px-3 text-sm font-bold">

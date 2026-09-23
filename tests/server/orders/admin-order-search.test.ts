@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { buildOrdersWhere } from "@/app/admin/orders/page";
+import { buildOrdersWhere } from "@/server/admin/list-orders";
 import { prisma } from "@/server/db/prisma";
 
 const testOnlineOrderId = "test-order-search-online";
@@ -86,14 +86,20 @@ describe("Admin Order Search Query", () => {
     expect(resultsByPhone.some((o) => o.id === testOnlineOrderId)).toBe(true);
     expect(resultsByPhone.some((o) => o.id === testPosOrderId)).toBe(false);
 
-    // 5. Search by POS customer name
-    const whereByPosCust = buildOrdersWhere({ q: "Lê Khách" });
-    const resultsByPosCust = await prisma.order.findMany({
-      where: whereByPosCust,
+    // 5. Exact order code (DH + digits) only matches that order
+    await prisma.order.update({
+      where: { id: testPosOrderId },
+      data: { code: "DH990042" },
     });
-    expect(resultsByPosCust.some((o) => o.id === testPosOrderId)).toBe(true);
-    expect(resultsByPosCust.some((o) => o.id === testOnlineOrderId)).toBe(
-      false,
-    );
+    const whereByCode = buildOrdersWhere({ q: "DH990042" });
+    const resultsByCode = await prisma.order.findMany({ where: whereByCode });
+    expect(resultsByCode.map((o) => o.id)).toEqual([testPosOrderId]);
+
+    // 6. Free text also matches part of the order code
+    const whereByPartialCode = buildOrdersWhere({ q: "ONLINE-SEARCH" });
+    const resultsByPartialCode = await prisma.order.findMany({
+      where: whereByPartialCode,
+    });
+    expect(resultsByPartialCode.map((o) => o.id)).toEqual([testOnlineOrderId]);
   });
 });

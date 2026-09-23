@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { NotePencil, Trash, Warning } from "@phosphor-icons/react/dist/ssr";
 
+import { Pagination } from "@/components/kit";
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { ProductImage } from "@/components/shared/product-image";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatVnd } from "@/lib/money";
-import { prisma } from "@/server/db/prisma";
+import {
+  findEditableProduct,
+  isProductStockStatus,
+  listProductCategories,
+  listProducts,
+} from "@/server/admin/list-products";
+import { parsePageParam } from "@/server/admin/pagination";
 
 import { ProductDialog } from "./product-dialog";
 import { ProductFilters } from "./product-filters";
@@ -33,69 +40,35 @@ export default async function ProductsPage({
     lowStock?: string;
     status?: string;
     categoryId?: string;
+    page?: string;
   }>;
 }) {
-  const { q = "", edit, lowStock, status, categoryId } = await searchParams;
-
-  const [categories, allProducts] = await Promise.all([
-    prisma.category.findMany({
-      orderBy: { sortOrder: "asc" },
-      select: { id: true, name: true, sortOrder: true },
-    }),
-    prisma.product.findMany({
-      where: {
-        deletedAt: null,
-        ...(q.trim()
-          ? {
-              OR: [
-                { name: { contains: q.trim() } },
-                { sku: { contains: q.trim() } },
-                { aliases: { contains: q.trim() } },
-              ],
-            }
-          : {}),
-      },
-      orderBy: { name: "asc" },
-      include: { category: { select: { name: true } } },
-    }),
-  ]);
-
-  // Thống kê tồn kho theo các nhóm
-  const counts = {
-    all: allProducts.length,
-    low: allProducts.filter((p) => !p.isService && p.stock <= 5).length,
-    out: allProducts.filter((p) => !p.isService && p.stock === 0).length,
-    negative: allProducts.filter((p) => !p.isService && p.stock < 0).length,
-    available: allProducts.filter((p) => !p.isService && p.stock > 5).length,
-  };
-
-  const lowStockCount = counts.low;
+  const {
+    q = "",
+    edit,
+    lowStock,
+    status,
+    categoryId,
+    page: pageParam,
+  } = await searchParams;
 
   // Xử lý trạng thái lọc
   const effectiveStatus =
-    lowStock === "true" ? "low" : status && status !== "all" ? status : "all";
+    lowStock === "true" ? "low" : isProductStockStatus(status) ? status : "all";
 
-  let products = allProducts;
+  const [categories, productPage, editingProduct] = await Promise.all([
+    listProductCategories(),
+    listProducts({
+      page: parsePageParam(pageParam),
+      q,
+      filters: { categoryId, status: effectiveStatus },
+    }),
+    edit ? findEditableProduct(edit) : null,
+  ]);
 
-  // Lọc theo danh mục
-  if (categoryId && categoryId !== "all") {
-    products = products.filter((p) => p.categoryId === categoryId);
-  }
-
-  // Lọc theo trạng thái tồn kho
-  if (effectiveStatus === "low") {
-    products = products.filter((p) => !p.isService && p.stock <= 5);
-  } else if (effectiveStatus === "out") {
-    products = products.filter((p) => !p.isService && p.stock === 0);
-  } else if (effectiveStatus === "negative") {
-    products = products.filter((p) => !p.isService && p.stock < 0);
-  } else if (effectiveStatus === "available") {
-    products = products.filter((p) => !p.isService && p.stock > 5);
-  }
-
-  const editingProduct = edit
-    ? await prisma.product.findFirst({ where: { id: edit, deletedAt: null } })
-    : null;
+  const { items: products, total, page, pageSize, counts } = productPage;
+  // Thống kê tồn kho theo các nhóm (đếm theo từ khóa tìm kiếm)
+  const lowStockCount = counts.low;
 
   return (
     <div className="space-y-6">
@@ -143,7 +116,7 @@ export default async function ProductsPage({
                 href={`/admin/products${q ? `?q=${encodeURIComponent(q)}` : ""}`}
                 className="text-primary bg-background rounded-lg border px-3 py-1.5 text-xs font-bold hover:underline"
               >
-                Hiện tất cả ({allProducts.length})
+                Hiện tất cả ({counts.all})
               </Link>
             ) : (
               <Link
@@ -170,13 +143,10 @@ export default async function ProductsPage({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>
-            Danh sách ({products.length}
-            {products.length !== allProducts.length
-              ? ` / ${allProducts.length}`
-              : ""}
-            )
+            Danh sách ({total}
+            {total !== counts.all ? ` / ${counts.all}` : ""})
           </CardTitle>
-          {products.length !== allProducts.length ? (
+          {total !== counts.all ? (
             <span className="text-muted-foreground text-xs font-medium">
               Đang áp dụng bộ lọc
             </span>
@@ -296,6 +266,14 @@ export default async function ProductsPage({
               )}
             </TableBody>
           </Table>
+          <Pagination
+            pathname="/admin/products"
+            label="Phân trang sản phẩm"
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            searchParams={{ q, status, lowStock, categoryId }}
+          />
         </CardContent>
       </Card>
     </div>
