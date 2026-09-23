@@ -86,7 +86,8 @@ describe("CheckoutForm - Structured Address & Experience", () => {
     // 7. Đổi sang quận khác trong TP.HCM -> phường phải reset
     await selectDropdown(/quận\/huyện/i, /Bình Thạnh/i, user);
     expect(wardTrigger).not.toHaveTextContent("Bến Nghé");
-  });
+    // 7 lan mo dropdown Base UI trong jsdom mat ~6-8s tren may cham/CI.
+  }, 20_000);
 
   it("hiển thị address summary trực quan trước submit", async () => {
     const user = userEvent.setup();
