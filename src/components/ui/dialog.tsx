@@ -31,7 +31,7 @@ function DialogOverlay({
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        "data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 fixed inset-0 isolate z-50 bg-stone-950/30 duration-200 supports-backdrop-filter:backdrop-blur-sm",
+        "fixed inset-0 isolate z-50 bg-stone-950/30 supports-backdrop-filter:backdrop-blur-sm",
         className,
       )}
       {...props}
@@ -53,7 +53,7 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "bg-popover text-popover-foreground ring-foreground/8 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl p-4 text-sm shadow-[0_24px_70px_-20px_oklch(0.15_0.02_70/0.45),inset_0_1px_0_white] ring-1 duration-200 outline-none sm:max-w-sm",
+          "bg-popover text-popover-foreground ring-foreground/8 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl p-4 text-sm shadow-[0_24px_70px_-20px_oklch(0.15_0.02_70/0.45),inset_0_1px_0_white] ring-1 outline-none sm:max-w-sm",
           className,
         )}
         {...props}
@@ -71,7 +71,7 @@ function DialogContent({
             }
           >
             <XIcon />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">Đóng</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Popup>
@@ -109,7 +109,7 @@ function DialogFooter({
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close render={<Button variant="outline" />}>
-          Close
+          Đóng
         </DialogPrimitive.Close>
       )}
     </div>
