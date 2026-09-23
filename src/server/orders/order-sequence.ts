@@ -3,7 +3,10 @@ import type { Prisma } from "@prisma/client";
 export const ORDER_SEQUENCE_KEY = "order.sequence";
 
 type SequenceRow = { seq: bigint | number };
-type MaxSequenceRow = { maxSeq: bigint | number | null };
+type MaxSequenceRow = {
+  maxSeq: bigint | number | null;
+  orderCount: bigint | number;
+};
 
 /**
  * Cap so thu tu don tiep theo tu hang `Setting` "order.sequence".
@@ -32,12 +35,25 @@ export async function nextOrderSequence(
   if (sequence > 1) return sequence;
 
   // Vua chen hang moi: seed tu ma don lon nhat da ton tai.
+  // Ma POS (DH + 6 chu so Date.now(), luon du 8 ky tu) khong phai ma sinh tu
+  // bo dem nay nen phai loai truoc khi lay MAX — neu khong so seed se nhay
+  // vot len hang tram nghin. Lay them floor la COUNT(*) de giu tuong thich
+  // voi cach tinh cu (`tx.order.count() + 1`) khi toan bo don hien co la ma POS.
   const [max] = await tx.$queryRaw<MaxSequenceRow[]>`
-    SELECT MAX(CAST(SUBSTR("code", 3) AS INTEGER)) AS maxSeq
-    FROM "Order"
-    WHERE "code" LIKE 'DH%'
+    SELECT
+      (
+        SELECT MAX(CAST(SUBSTR("code", 3) AS INTEGER))
+        FROM "Order"
+        WHERE "code" GLOB 'DH[0-9]*' AND LENGTH("code") <> 8
+      ) AS maxSeq,
+      (SELECT COUNT(*) FROM "Order") AS orderCount
   `;
-  const seeded = Number(max?.maxSeq ?? 0) + 1;
+  const genuineMax = Number(max?.maxSeq ?? 0);
+  const orderCount = Number(max?.orderCount ?? 0);
+  const seeded = Math.max(genuineMax, orderCount) + 1;
+  if (!Number.isSafeInteger(seeded)) {
+    throw new Error(`Bộ đếm mã đơn không hợp lệ: ${String(seeded)}`);
+  }
   if (seeded <= 1) return 1;
 
   await tx.$executeRaw`

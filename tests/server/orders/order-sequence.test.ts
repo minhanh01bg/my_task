@@ -50,6 +50,23 @@ describe("nextOrderSequence", () => {
     expect(await next()).toBe(44);
   });
 
+  it("bo qua ma dang POS (DH + 6 chu so, du 8 ky tu) khi seed", async () => {
+    await seedOrder("DH0042");
+    await seedOrder("DH123456"); // ma POS: DH + 6 so = 8 ky tu, khong tinh vao max
+
+    expect(await next()).toBe(43);
+    expect(await storedValue()).toBe("43");
+  });
+
+  it("chi co ma POS: seed tu so luong don hien co (COUNT), khong doc nham so POS", async () => {
+    await seedOrder("DH111111");
+    await seedOrder("DH222222");
+    await seedOrder("DH333333");
+
+    expect(await next()).toBe(4);
+    expect(await storedValue()).toBe("4");
+  });
+
   it("da co hang Setting: tang tu gia tri dang luu, khong seed lai", async () => {
     await prisma.setting.create({
       data: { key: ORDER_SEQUENCE_KEY, value: "100" },

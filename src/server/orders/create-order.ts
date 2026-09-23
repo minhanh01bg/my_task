@@ -102,9 +102,11 @@ function isUniqueViolationOn(error: unknown, field: string): boolean {
     return false;
   }
   const target = error.meta?.target;
+  const matches = (value: string): boolean =>
+    value === field || value.endsWith(`_${field}_key`);
   return Array.isArray(target)
-    ? target.includes(field)
-    : typeof target === "string" && target.includes(field);
+    ? target.some((value) => typeof value === "string" && matches(value))
+    : typeof target === "string" && matches(target);
 }
 
 async function isCodeTaken(
