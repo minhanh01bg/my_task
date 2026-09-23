@@ -92,6 +92,29 @@ describe("StoreHeader session island", () => {
     expect(notificationCalls(fetchMock)).toHaveLength(0);
   });
 
+  it("nút Quản trị giữ cùng khung hai ô với trạng thái khách để không layout shift", async () => {
+    renderHeader();
+    const guestButton = screen.getByRole("button", {
+      name: /tài khoản khách hàng/i,
+    });
+    const guestWidthClass = guestButton.className
+      .split(" ")
+      .find((name) => name.startsWith("sm:min-w-"));
+    expect(guestWidthClass).toBeDefined();
+
+    await act(async () => {
+      session.resolve({ isAdmin: true, isCustomer: false });
+    });
+
+    const adminButton = await screen.findByRole("button", {
+      name: /quản trị/i,
+    });
+    expect(adminButton.className.split(" ")).toContain(guestWidthClass);
+    expect(
+      screen.getByTestId("customer-notification-placeholder"),
+    ).toHaveAttribute("aria-hidden", "true");
+  });
+
   it("đổi sang nút thông báo khi phản hồi là khách hàng đã đăng nhập", async () => {
     renderHeader();
 

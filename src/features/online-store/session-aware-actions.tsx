@@ -37,6 +37,12 @@ export function useStorefrontSession(): StorefrontSession {
   return session;
 }
 
+/**
+ * "Quản trị" và "Tài khoản" dài khác nhau: cùng min-width (>= nút dài hơn) để
+ * đổi khách → admin không xô lệch header. Dưới `sm` chỉ còn icon nên đã bằng nhau.
+ */
+const SESSION_BUTTON_CLASS = "min-h-11 font-bold sm:min-w-36";
+
 /** Giữ đúng khung của `CustomerNotificationButton` để không layout shift. */
 function NotificationSlotPlaceholder() {
   return (
@@ -56,17 +62,21 @@ export function SessionAwareActions() {
   const { isAdmin, isCustomer } = useStorefrontSession();
 
   if (isAdmin) {
+    // Cùng hai ô với trạng thái khách: ô đầu giữ chỗ, ô sau cùng min-width.
     return (
-      <Button
-        variant="outline"
-        className="min-h-11 font-bold"
-        nativeButton={false}
-        aria-label="Quay lại trang quản trị"
-        render={<Link href="/admin/orders" />}
-      >
-        <LayoutDashboard aria-hidden="true" className="size-5" />
-        <span className="ml-1.5 hidden sm:inline">Quản trị</span>
-      </Button>
+      <>
+        <NotificationSlotPlaceholder />
+        <Button
+          variant="outline"
+          className={SESSION_BUTTON_CLASS}
+          nativeButton={false}
+          aria-label="Quay lại trang quản trị"
+          render={<Link href="/admin/orders" />}
+        >
+          <LayoutDashboard aria-hidden="true" className="size-5" />
+          <span className="ml-1.5 hidden sm:inline">Quản trị</span>
+        </Button>
+      </>
     );
   }
 
@@ -79,7 +89,7 @@ export function SessionAwareActions() {
       )}
       <Button
         variant="outline"
-        className="min-h-11 font-bold"
+        className={SESSION_BUTTON_CLASS}
         nativeButton={false}
         aria-label="Tài khoản khách hàng"
         render={<Link href="/account/orders" />}
