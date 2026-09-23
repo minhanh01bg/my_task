@@ -65,4 +65,14 @@ describe("LoginPage & LoginForm (Dynamic Store Name)", () => {
       }
     }
   });
+
+  it("LoginForm: có nút đổi giao diện sáng/tối ở góc trên thẻ đăng nhập", () => {
+    render(<LoginForm storeName="Cửa Hàng Xanh" />);
+
+    expect(
+      screen.getByRole("button", {
+        name: /chuyển sang giao diện (tối|sáng)|đổi giao diện/i,
+      }),
+    ).toBeInTheDocument();
+  });
 });

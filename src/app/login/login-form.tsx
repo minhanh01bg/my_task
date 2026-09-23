@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Eye, EyeOff, LockKeyhole, Store } from "lucide-react";
 
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -55,9 +56,12 @@ export function LoginForm({ storeName }: LoginFormProps) {
   return (
     <Card className="surface-panel w-full max-w-md border-0 p-1">
       <CardHeader className="space-y-4 p-6 pb-2 sm:p-8 sm:pb-3">
-        <span className="bg-primary/10 text-primary flex size-12 items-center justify-center rounded-2xl lg:hidden">
-          <Store aria-hidden="true" className="size-6" />
-        </span>
+        <div className="flex items-start justify-between gap-3">
+          <span className="bg-primary/10 text-primary flex size-12 items-center justify-center rounded-2xl lg:hidden">
+            <Store aria-hidden="true" className="size-6" />
+          </span>
+          <ThemeToggle variant="ghost" className="ml-auto" />
+        </div>
         <div>
           <p className="eyebrow mb-2">{displayStoreName}</p>
           <CardTitle className="font-heading text-3xl font-bold">
