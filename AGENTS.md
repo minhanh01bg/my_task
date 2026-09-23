@@ -12,6 +12,7 @@ This file provides guidance to agents when working with code in this repository.
 
 ## Project invariants
 
+- SQLite runs through ONE pooled connection (`connection_limit=1`, WAL, `busy_timeout` set in `src/server/db/prisma.ts`). Inside `prisma.$transaction(async (tx) => ...)` use only `tx`; touching the root `prisma` client there deadlocks until `maxWait`. Keep interactive transactions short: they block every other query in the process.
 - `src/server/orders/create-order.ts` is the sole order-write path: it recalculates money server-side and uses `clientId` idempotency. POS stock may become negative; online stock must be atomically guarded.
 - Write products through `saveProduct()` in `src/server/products/save-product.ts`; bypassing it leaves denormalized `searchText` stale. Category renames must rebuild affected product search text.
 - Preserve offline queue failures in IndexedDB for manual recovery; never discard a paid order merely because syncing failed.
