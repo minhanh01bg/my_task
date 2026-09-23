@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { env } from "./env";
+import { resolveDefaultStoreName } from "./store-name";
 
 const LOCAL_FALLBACK_URL = "http://localhost:3000";
 
@@ -17,7 +18,7 @@ export function resolveSiteUrl(source: SiteUrlEnv): string {
 }
 
 export const siteConfig = {
-  name: env.NEXT_PUBLIC_STORE_NAME ?? env.STORE_NAME ?? "Cửa hàng",
+  name: resolveDefaultStoreName(env),
   description:
     "Cửa hàng tạp hoá trực tuyến: nhu yếu phẩm, thực phẩm, đồ tiêu dùng chính hãng. Đặt nhanh, giao tận nơi.",
   url: resolveSiteUrl(env),

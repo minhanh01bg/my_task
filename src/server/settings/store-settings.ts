@@ -1,5 +1,6 @@
 import { cache } from "react";
 
+import { resolveDefaultStoreName } from "@/config/store-name";
 import type { BankAccount } from "@/lib/vietqr/types";
 import { cachedPublic, revalidatePublic } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
@@ -104,13 +105,9 @@ export async function saveStoreBankAccount(
   revalidatePublic(CACHE_TAGS.settings);
 }
 
+/** Đọc `process.env` lúc gọi (không cố định lúc import) — cùng thứ tự với `siteConfig.name`. */
 function getDefaultStoreName(): string {
-  return (
-    process.env.NEXT_PUBLIC_STORE_NAME?.trim() ||
-    process.env.STORE_NAME?.trim() ||
-    process.env.NEXT_PUBLIC_APP_NAME?.trim() ||
-    "Cửa hàng"
-  );
+  return resolveDefaultStoreName(process.env);
 }
 
 export async function getStoreName(): Promise<string> {
