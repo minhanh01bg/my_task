@@ -118,7 +118,7 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
               src={product.imageUrl}
               alt={product.name}
               fill
-              priority
+              preload
               className="object-cover transition-transform duration-500 hover:scale-105"
               sizes="(max-width: 768px) 100vw, 50vw"
             />
