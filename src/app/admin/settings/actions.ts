@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { expirePublicNow } from "@/server/cache/public-cache";
+import { CACHE_TAGS } from "@/server/cache/tags";
 import {
   saveStoreBankAccount,
   saveStoreProfile,
@@ -133,6 +135,9 @@ export async function saveSettingsAction(
     },
   });
 
+  // save* da danh dau stale (SWR); trang cai dat doc lai profile qua loader
+  // co cache nen het han ngay de form khong hien gia tri cu sau khi luu.
+  expirePublicNow(CACHE_TAGS.settings);
   revalidatePath("/admin/settings");
   revalidatePath("/pos");
   revalidatePath("/shop");
