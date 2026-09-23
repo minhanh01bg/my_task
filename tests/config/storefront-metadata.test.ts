@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { metadata as checkoutMetadata } from "@/app/checkout/page";
 import { metadata as accountLoginMetadata } from "@/app/account/login/page";
@@ -9,11 +9,47 @@ import { metadata as accountRegisterMetadata } from "@/app/account/register/page
 import { metadata as rootMetadata, viewport } from "@/app/layout";
 import { generateMetadata as loginMetadata } from "@/app/login/page";
 import { metadata as posMetadata } from "@/app/pos/layout";
-import { metadata as shopLayoutMetadata } from "@/app/shop/layout";
+import { generateMetadata as deliveryPolicyMetadata } from "@/app/shop/delivery-policy/page";
+import { generateMetadata as shopLayoutMetadata } from "@/app/shop/layout";
 import { generateMetadata } from "@/app/shop/page";
-import robots from "@/app/robots";
-import sitemap from "@/app/sitemap";
+import { generateMetadata as paymentPolicyMetadata } from "@/app/shop/payment-policy/page";
+import { generateMetadata as privacyPolicyMetadata } from "@/app/shop/privacy/page";
+import { generateMetadata as productMetadata } from "@/app/shop/products/[id]/page";
+import { generateMetadata as returnPolicyMetadata } from "@/app/shop/return-policy/page";
+import * as robotsModule from "@/app/robots";
+import * as sitemapModule from "@/app/sitemap";
 import { siteConfig, storeTitle } from "@/config/site";
+import { prisma } from "@/server/db/prisma";
+
+const robots = robotsModule.default;
+const sitemap = sitemapModule.default;
+
+const DB_STORE_NAME = "Tạp hoá Minh An SEO";
+const SEO_PRODUCT_ID = "test-seo-sitemap-01";
+const SEO_PRODUCT_NO_IMAGE_ID = "test-seo-sitemap-02";
+const SEO_INACTIVE_ID = "test-seo-sitemap-inactive";
+const SEO_DELETED_ID = "test-seo-sitemap-deleted";
+const SEO_PRODUCT_IDS = [
+  SEO_PRODUCT_ID,
+  SEO_PRODUCT_NO_IMAGE_ID,
+  SEO_INACTIVE_ID,
+  SEO_DELETED_ID,
+];
+
+async function cleanSeoFixtures() {
+  await prisma.product.deleteMany({ where: { id: { in: SEO_PRODUCT_IDS } } });
+  await prisma.setting.deleteMany({ where: { key: "store.name" } });
+}
+
+function ogImageUrls(metadata: Metadata): string[] {
+  const images = metadata.openGraph?.images;
+  const list = Array.isArray(images) ? images : images ? [images] : [];
+  return list.map((image) =>
+    typeof image === "string" || image instanceof URL
+      ? String(image)
+      : String(image.url),
+  );
+}
 
 vi.mock("next/font/google", () => {
   const font = () => ({ variable: "font-mock", className: "font-mock" });
@@ -60,6 +96,81 @@ describe("Storefront SEO & Metadata (Task 13)", () => {
       expect(og.locale).toBe("vi_VN");
     });
 
+    describe("khi DB có tên cửa hàng", () => {
+      beforeEach(async () => {
+        await cleanSeoFixtures();
+        await prisma.setting.create({
+          data: { key: "store.name", value: DB_STORE_NAME },
+        });
+      });
+      afterEach(cleanSeoFixtures);
+
+      it("title không chứa tên template và không lặp tên cửa hàng", async () => {
+        const metadata = await generateMetadata();
+        const title = JSON.stringify(metadata.title);
+
+        expect(title).not.toContain("Next.js with Agent");
+        expect(title.split(DB_STORE_NAME)).toHaveLength(2);
+        expect(metadata.title).toEqual({
+          absolute: `Cửa hàng trực tuyến | ${DB_STORE_NAME}`,
+        });
+      });
+
+      it("layout shop đặt template tiêu đề theo tên cửa hàng trong DB", async () => {
+        const metadata = await shopLayoutMetadata();
+
+        expect(metadata.title).toEqual({
+          default: DB_STORE_NAME,
+          template: `%s | ${DB_STORE_NAME}`,
+        });
+        expect(metadata.openGraph).toMatchObject({ siteName: DB_STORE_NAME });
+      });
+
+      it("trang chính sách dùng tiêu đề trang (template shop thêm tên), canonical và OpenGraph", async () => {
+        const cases: Array<[string, () => Promise<Metadata>, string]> = [
+          [
+            "/shop/delivery-policy",
+            deliveryPolicyMetadata,
+            "Chính sách giao hàng",
+          ],
+          [
+            "/shop/payment-policy",
+            paymentPolicyMetadata,
+            "Chính sách thanh toán",
+          ],
+          [
+            "/shop/return-policy",
+            returnPolicyMetadata,
+            "Chính sách đổi trả & hoàn tiền",
+          ],
+          [
+            "/shop/privacy",
+            privacyPolicyMetadata,
+            "Chính sách bảo mật thông tin",
+          ],
+        ];
+
+        for (const [path, load, pageTitle] of cases) {
+          const metadata = await load();
+          expect(metadata.title).toBe(pageTitle);
+          expect(metadata.alternates?.canonical).toBe(path);
+          expect(metadata.openGraph).toMatchObject({
+            title: `${pageTitle} | ${DB_STORE_NAME}`,
+            url: `${siteConfig.url}${path}`,
+            siteName: DB_STORE_NAME,
+            locale: "vi_VN",
+            type: "website",
+          });
+          expect(ogImageUrls(metadata)).toEqual(["/opengraph-image"]);
+        }
+      });
+    });
+
+    it("OpenGraph của /shop dùng ảnh OG mặc định", async () => {
+      const metadata = await generateMetadata();
+      expect(ogImageUrls(metadata)).toEqual(["/opengraph-image"]);
+    });
+
     it("không chứa query param, token hoặc PII trong canonical hoặc OpenGraph URL", async () => {
       const metadata = await generateMetadata();
       const canonical = String(metadata.alternates?.canonical || "");
@@ -76,6 +187,10 @@ describe("Storefront SEO & Metadata (Task 13)", () => {
   });
 
   describe("Robots Policy (src/app/robots.ts)", () => {
+    it("render theo request để host lúc build không bị đóng băng", () => {
+      expect(robotsModule.dynamic).toBe("force-dynamic");
+    });
+
     it("cho phép trang công khai và chặn các trang quản trị, bảo mật và tra cứu đơn", () => {
       const policy = robots();
 
@@ -105,21 +220,108 @@ describe("Storefront SEO & Metadata (Task 13)", () => {
   });
 
   describe("Sitemap Generation (src/app/sitemap.ts)", () => {
-    it("tạo danh sách URL công khai với absolute URL và priority", async () => {
+    beforeEach(cleanSeoFixtures);
+    afterEach(cleanSeoFixtures);
+
+    it("render theo request để host lúc build không bị đóng băng", () => {
+      expect(sitemapModule.dynamic).toBe("force-dynamic");
+    });
+
+    it("liệt kê trang công khai bằng URL tuyệt đối, không có / và không có lastModified giả", async () => {
       const entries = await sitemap();
 
       const urls = entries.map((entry) => entry.url);
-      expect(urls).toContain(`${siteConfig.url}/`);
-      expect(urls).toContain(`${siteConfig.url}/shop`);
-      expect(urls).toContain(`${siteConfig.url}/shop/delivery-policy`);
-      expect(urls).toContain(`${siteConfig.url}/shop/payment-policy`);
-      expect(urls).toContain(`${siteConfig.url}/shop/return-policy`);
-      expect(urls).toContain(`${siteConfig.url}/shop/privacy`);
+      expect(urls).not.toContain(`${siteConfig.url}/`);
+      expect(urls).not.toContain(siteConfig.url);
+
+      const staticUrls = [
+        `${siteConfig.url}/shop`,
+        `${siteConfig.url}/shop/delivery-policy`,
+        `${siteConfig.url}/shop/payment-policy`,
+        `${siteConfig.url}/shop/return-policy`,
+        `${siteConfig.url}/shop/privacy`,
+      ];
+      for (const url of staticUrls) {
+        const entry = entries.find((item) => item.url === url);
+        expect(entry, url).toBeDefined();
+        expect(entry?.lastModified, url).toBeUndefined();
+      }
 
       // Không chứa URL riêng tư
       expect(urls.some((url) => url.includes("/admin"))).toBe(false);
       expect(urls.some((url) => url.includes("/checkout"))).toBe(false);
       expect(urls.some((url) => url.includes("/orders/guest"))).toBe(false);
+    });
+
+    it("chứa URL sản phẩm đang bán với lastModified = updatedAt, bỏ sản phẩm ẩn/đã xoá", async () => {
+      const updatedAt = new Date("2026-09-20T03:00:00.000Z");
+      await prisma.product.create({
+        data: {
+          id: SEO_PRODUCT_ID,
+          name: "Nước mắm SEO",
+          price: 45_000,
+          updatedAt,
+        },
+      });
+      await prisma.product.create({
+        data: { id: SEO_INACTIVE_ID, name: "Hàng ẩn SEO", isActive: false },
+      });
+      await prisma.product.create({
+        data: {
+          id: SEO_DELETED_ID,
+          name: "Hàng xoá SEO",
+          deletedAt: new Date(),
+        },
+      });
+
+      const entries = await sitemap();
+      const productEntry = entries.find(
+        (entry) =>
+          entry.url === `${siteConfig.url}/shop/products/${SEO_PRODUCT_ID}`,
+      );
+
+      expect(productEntry).toBeDefined();
+      expect(new Date(String(productEntry?.lastModified)).toISOString()).toBe(
+        updatedAt.toISOString(),
+      );
+      const urls = entries.map((entry) => entry.url);
+      expect(urls.some((url) => url.endsWith(SEO_INACTIVE_ID))).toBe(false);
+      expect(urls.some((url) => url.endsWith(SEO_DELETED_ID))).toBe(false);
+    });
+  });
+
+  describe("Product page metadata", () => {
+    beforeEach(cleanSeoFixtures);
+    afterEach(cleanSeoFixtures);
+
+    it("dùng ảnh sản phẩm cho OpenGraph khi có, không thì ảnh OG mặc định", async () => {
+      await prisma.product.create({
+        data: {
+          id: SEO_PRODUCT_ID,
+          name: "Nước mắm SEO",
+          price: 45_000,
+          imageUrl: "/products/nuoc-mam.webp",
+        },
+      });
+      await prisma.product.create({
+        data: { id: SEO_PRODUCT_NO_IMAGE_ID, name: "Muối SEO", price: 5_000 },
+      });
+
+      const withImage = await productMetadata({
+        params: Promise.resolve({ id: SEO_PRODUCT_ID }),
+      });
+      expect(withImage.title).toBe("Nước mắm SEO");
+      expect(withImage.alternates?.canonical).toBe(
+        `/shop/products/${SEO_PRODUCT_ID}`,
+      );
+      expect(ogImageUrls(withImage)).toEqual([
+        `${siteConfig.url}/products/nuoc-mam.webp`,
+      ]);
+
+      const withoutImage = await productMetadata({
+        params: Promise.resolve({ id: SEO_PRODUCT_NO_IMAGE_ID }),
+      });
+      expect(ogImageUrls(withoutImage)).toEqual(["/opengraph-image"]);
     });
   });
 
@@ -151,9 +353,9 @@ describe("Storefront SEO & Metadata (Task 13)", () => {
   });
 
   describe("Manifest theo khu vực", () => {
-    it("POS dùng manifest.webmanifest, shop dùng shop.webmanifest", () => {
+    it("POS dùng manifest.webmanifest, shop dùng shop.webmanifest", async () => {
       expect(posMetadata.manifest).toBe("/manifest.webmanifest");
-      expect(shopLayoutMetadata.manifest).toBe("/shop.webmanifest");
+      expect((await shopLayoutMetadata()).manifest).toBe("/shop.webmanifest");
     });
   });
 

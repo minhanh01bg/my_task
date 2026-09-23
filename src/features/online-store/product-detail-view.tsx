@@ -5,9 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   CheckCircle2,
-  ChevronRight,
   Minus,
   Package,
   Plus,
@@ -23,6 +21,7 @@ import { WishlistButton } from "@/components/kit/wishlist-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/lib/money";
+import { productCrumbs } from "@/lib/seo/breadcrumbs";
 import { recordRecentlyViewed } from "@/lib/storage/recently-viewed";
 import type { OnlineProductDetail } from "@/server/catalog/get-product-detail";
 
@@ -30,6 +29,7 @@ import { useOnlineCart } from "./cart-context";
 import { CartFeedback } from "./cart-feedback";
 import { ProductReviews } from "./product-reviews";
 import { RecentlyViewedSection } from "./recently-viewed";
+import { StoreBreadcrumbs } from "./store-breadcrumbs";
 
 export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
   const { product, relatedProducts } = detail;
@@ -67,37 +67,7 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
       <CartFeedback />
 
-      {/* Breadcrumb Navigation */}
-      <nav
-        aria-label="Breadcrumb"
-        className="text-muted-foreground mb-6 flex items-center gap-2 text-xs font-medium sm:text-sm"
-      >
-        <Link
-          href="/shop"
-          className="hover:text-foreground inline-flex items-center gap-1 transition-colors"
-        >
-          <ArrowLeft className="size-3.5" />
-          <span>Cửa hàng</span>
-        </Link>
-        <ChevronRight className="text-muted-foreground/50 size-3.5" />
-        {product.category ? (
-          <>
-            <Link
-              href={`/shop?category=${encodeURIComponent(product.category.id)}#catalog`}
-              className="hover:text-foreground transition-colors"
-            >
-              {product.category.name}
-            </Link>
-            <ChevronRight className="text-muted-foreground/50 size-3.5" />
-          </>
-        ) : null}
-        <span
-          className="text-foreground truncate font-semibold"
-          aria-current="page"
-        >
-          {product.name}
-        </span>
-      </nav>
+      <StoreBreadcrumbs crumbs={productCrumbs(product)} className="mb-6" />
 
       {/* Product Details Section */}
       <div className="grid gap-8 md:grid-cols-2 lg:gap-12">

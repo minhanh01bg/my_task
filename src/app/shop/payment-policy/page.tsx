@@ -1,10 +1,21 @@
+import type { Metadata } from "next";
+
 import { PolicyLayout } from "@/features/online-store/policy-layout";
+import {
+  policyMetadata,
+  type PolicyPageMeta,
+} from "@/features/online-store/policy-metadata";
 import { getPublicStoreProfile } from "@/server/settings/store-settings";
 
-export const metadata = {
+const PAGE: PolicyPageMeta = {
+  path: "/shop/payment-policy",
   title: "Chính sách thanh toán",
   description: "Các phương thức thanh toán được hỗ trợ và quy trình xác nhận",
 };
+
+export function generateMetadata(): Promise<Metadata> {
+  return policyMetadata(PAGE);
+}
 
 export default async function PaymentPolicyPage() {
   const storeProfile = await getPublicStoreProfile();
@@ -12,7 +23,8 @@ export default async function PaymentPolicyPage() {
   return (
     <PolicyLayout
       storeProfile={storeProfile}
-      title="Chính sách thanh toán"
+      path={PAGE.path}
+      title={PAGE.title}
       description="Hướng dẫn các phương thức thanh toán an toàn, minh bạch được áp dụng tại hệ thống cửa hàng."
     >
       <section className="space-y-3">

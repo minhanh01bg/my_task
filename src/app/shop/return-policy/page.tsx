@@ -1,10 +1,21 @@
+import type { Metadata } from "next";
+
 import { PolicyLayout } from "@/features/online-store/policy-layout";
+import {
+  policyMetadata,
+  type PolicyPageMeta,
+} from "@/features/online-store/policy-metadata";
 import { getPublicStoreProfile } from "@/server/settings/store-settings";
 
-export const metadata = {
+const PAGE: PolicyPageMeta = {
+  path: "/shop/return-policy",
   title: "Chính sách đổi trả & hoàn tiền",
   description: "Quy định đổi trả hàng và điều kiện hoàn tiền minh bạch",
 };
+
+export function generateMetadata(): Promise<Metadata> {
+  return policyMetadata(PAGE);
+}
 
 export default async function ReturnPolicyPage() {
   const storeProfile = await getPublicStoreProfile();
@@ -12,7 +23,8 @@ export default async function ReturnPolicyPage() {
   return (
     <PolicyLayout
       storeProfile={storeProfile}
-      title="Chính sách đổi trả & hoàn tiền"
+      path={PAGE.path}
+      title={PAGE.title}
       description="Quy định rõ ràng, trung thực nhằm bảo vệ quyền lợi của quý khách khi mua sắm trực tuyến."
     >
       <section className="space-y-3">

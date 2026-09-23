@@ -1,13 +1,17 @@
-import Link from "next/link";
-import { ArrowLeft, ChevronRight } from "lucide-react";
-
+import { JsonLdScript } from "@/components/seo/json-ld-script";
+import { siteConfig } from "@/config/site";
 import { OnlineCartProvider } from "@/features/online-store/cart-context";
+import { StoreBreadcrumbs } from "@/features/online-store/store-breadcrumbs";
 import { StoreFooter } from "@/features/online-store/store-footer";
 import { StoreHeader } from "@/features/online-store/store-header";
+import { storefrontCrumbs, toBreadcrumbItems } from "@/lib/seo/breadcrumbs";
+import { breadcrumbJsonLd } from "@/lib/seo/json-ld";
 import type { PublicStoreProfile } from "@/types/storefront";
 
 export interface PolicyLayoutProps {
   storeProfile: PublicStoreProfile;
+  /** Đường dẫn canonical của trang, dùng cho breadcrumb. */
+  path: string;
   title: string;
   description: string;
   children: React.ReactNode;
@@ -15,32 +19,22 @@ export interface PolicyLayoutProps {
 
 export function PolicyLayout({
   storeProfile,
+  path,
   title,
   description,
   children,
 }: PolicyLayoutProps) {
+  const crumbs = storefrontCrumbs({ name: title, path });
+
   return (
     <OnlineCartProvider>
+      <JsonLdScript
+        data={breadcrumbJsonLd(toBreadcrumbItems(crumbs, siteConfig.url))}
+      />
       <StoreHeader storeName={storeProfile.name} />
 
       <main className="mx-auto min-h-[60vh] max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
-        {/* Breadcrumbs */}
-        <nav
-          aria-label="Breadcrumb"
-          className="text-muted-foreground mb-6 flex items-center gap-1.5 text-xs sm:text-sm"
-        >
-          <Link
-            href="/shop"
-            className="hover:text-foreground inline-flex items-center gap-1 transition-colors"
-          >
-            <ArrowLeft className="size-3.5" aria-hidden="true" />
-            <span>Cửa hàng</span>
-          </Link>
-          <ChevronRight className="size-3.5 opacity-50" aria-hidden="true" />
-          <span className="text-foreground font-medium" aria-current="page">
-            {title}
-          </span>
-        </nav>
+        <StoreBreadcrumbs crumbs={crumbs} className="mb-6" />
 
         {/* Header section */}
         <header className="border-border/60 mb-8 border-b pb-6">

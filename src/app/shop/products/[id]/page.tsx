@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { siteConfig, storeTitle } from "@/config/site";
+import { JsonLdScript } from "@/components/seo/json-ld-script";
+import { siteConfig } from "@/config/site";
 import { OnlineCartProvider } from "@/features/online-store/cart-context";
 import { ProductDetailView } from "@/features/online-store/product-detail-view";
 import { StoreFooter } from "@/features/online-store/store-footer";
 import { StoreHeader } from "@/features/online-store/store-header";
+import { productCrumbs, toBreadcrumbItems } from "@/lib/seo/breadcrumbs";
+import { breadcrumbJsonLd, productJsonLd } from "@/lib/seo/json-ld";
+import { storefrontOpenGraph } from "@/lib/seo/open-graph";
 import { getOnlineProductDetail } from "@/server/catalog/get-product-detail";
 import { getPublicStoreProfile } from "@/server/settings/store-settings";
 
@@ -37,22 +41,25 @@ export async function generateMetadata({
 
   const { product } = detail;
   const description = `Mua ${product.name} chính hãng tại ${storeProfile.name}. Đặt nhanh trực tuyến, giao hàng tận nơi.`;
+  const url = `${siteConfig.url}/shop/products/${id}`;
 
   return {
-    title: storeTitle(product.name, storeProfile.name),
+    // Template của shop/layout nối `| <tên cửa hàng trong DB>`.
+    title: product.name,
     description,
     alternates: {
       canonical: `/shop/products/${id}`,
     },
-    openGraph: {
+    openGraph: storefrontOpenGraph({
       title: `${product.name} | ${storeProfile.name}`,
       description,
-      url: `${siteConfig.url}/shop/products/${id}`,
+      url,
       siteName: storeProfile.name,
-      locale: "vi_VN",
-      type: "website",
-      ...(product.imageUrl ? { images: [{ url: product.imageUrl }] } : {}),
-    },
+      // Không có ảnh sản phẩm → ảnh OG mặc định (storefrontOpenGraph).
+      images: product.imageUrl
+        ? [{ url: new URL(product.imageUrl, url).href, alt: product.name }]
+        : undefined,
+    }),
   };
 }
 
@@ -73,31 +80,15 @@ export default async function ProductDetailPage({
   }
 
   const { product } = detail;
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: product.name,
-    ...(product.imageUrl ? { image: product.imageUrl } : {}),
-    ...(product.sku ? { sku: product.sku } : {}),
-    description: `Sản phẩm ${product.name} tại ${storeProfile.name}`,
-    offers: {
-      "@type": "Offer",
-      price: product.price,
-      priceCurrency: "VND",
-      availability:
-        product.stock > 0
-          ? "https://schema.org/InStock"
-          : "https://schema.org/OutOfStock",
-      url: `${siteConfig.url}/shop/products/${id}`,
-    },
-  };
+  const url = `${siteConfig.url}/shop/products/${id}`;
+  const jsonLd = [
+    productJsonLd(product, url, storeProfile),
+    breadcrumbJsonLd(toBreadcrumbItems(productCrumbs(product), siteConfig.url)),
+  ];
 
   return (
     <OnlineCartProvider>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <JsonLdScript data={jsonLd} />
       <StoreHeader storeName={storeProfile.name} />
       <main className="min-h-[70vh]">
         <ProductDetailView detail={detail} />
