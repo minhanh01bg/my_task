@@ -4,6 +4,9 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     await import("../sentry.server.config");
 
+    // Ap pragma SQLite (WAL, busy_timeout...) mot lan luc boot.
+    await import("@/server/db/prisma").then((m) => m.prismaReady);
+
     // Tren Windows/dev, cache file cua libvips gay canh bao khi hot-reload.
     // Production giu cache de next/image resize nhanh hon.
     if (process.env.NODE_ENV !== "production" || process.platform === "win32") {

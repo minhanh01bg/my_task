@@ -53,6 +53,8 @@ next-env.d.ts
 # SQLite
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 prisma/*.db
 
 # anh san pham nguoi dung upload luc chay
