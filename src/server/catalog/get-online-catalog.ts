@@ -58,5 +58,6 @@ export const getOnlineCatalog = cache(
     cachedPublic(loadOnlineCatalog, ["online-catalog"], {
       tags: [CACHE_TAGS.catalog],
       revalidate: 60,
+      fallback: () => ({ categories: [], products: [] }),
     }),
 );

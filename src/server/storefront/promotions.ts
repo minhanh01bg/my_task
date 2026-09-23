@@ -30,7 +30,7 @@ export async function getActivePromotions(
   return cachedPublic(
     () => loadActivePromotions(options.placement, limit, new Date()),
     ["active-promotions", options.placement ?? "all", String(limit)],
-    { tags: [CACHE_TAGS.promotions], revalidate: 60 },
+    { tags: [CACHE_TAGS.promotions], revalidate: 60, fallback: () => [] },
   );
 }
 

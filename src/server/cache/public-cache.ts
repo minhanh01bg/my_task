@@ -2,10 +2,15 @@ import { revalidateTag, unstable_cache, updateTag } from "next/cache";
 
 import { logger } from "@/lib/logger";
 
-export interface CachedPublicOptions {
+export interface CachedPublicOptions<T> {
   tags: string[];
   /** Giay. */
   revalidate: number;
+  /**
+   * Chi dung luc `next build` (prerender): loader loi (vd. DB chua co bang)
+   * thi tra gia tri nay thay vi lam hong build. Luc chay that loi van nem.
+   */
+  fallback?: () => T;
 }
 
 /**
@@ -16,7 +21,20 @@ function isTestRuntime(): boolean {
   return Boolean(process.env.VITEST);
 }
 
+function isBuildPhase(): boolean {
+  return process.env.NEXT_PHASE === "phase-production-build";
+}
+
 let warnedMissingStore = false;
+const warnedBuildFallbackKeys = new Set<string>();
+
+function errorCode(error: unknown): string | undefined {
+  if (typeof error === "object" && error !== null && "code" in error) {
+    const { code } = error;
+    return typeof code === "string" ? code : undefined;
+  }
+  return undefined;
+}
 
 /**
  * Doc du lieu cong khai qua Data Cache cua Next theo tag. Ket qua phai
@@ -24,11 +42,40 @@ let warnedMissingStore = false;
  * moi loader vi wrapper ben trong giong nhau giua cac loader.
  *
  * Ngoai request (script, test) unstable_cache khong co store: goi thang `fn`.
+ * Co `fallback` va dang `next build` thi loi loader tra fallback (xem
+ * `CachedPublicOptions.fallback`).
  */
 export async function cachedPublic<T>(
   fn: () => Promise<T>,
   keyParts: string[],
-  options: CachedPublicOptions,
+  options: CachedPublicOptions<T>,
+): Promise<T> {
+  try {
+    return await readThroughCache(fn, keyParts, options);
+  } catch (error: unknown) {
+    const { fallback } = options;
+    if (!fallback || !isBuildPhase()) throw error;
+
+    const key = keyParts.join("\u0000");
+    if (!warnedBuildFallbackKeys.has(key)) {
+      warnedBuildFallbackKeys.add(key);
+      logger.warn(
+        "Không đọc được dữ liệu công khai lúc build, dùng giá trị rỗng",
+        {
+          keyParts,
+          code: errorCode(error),
+          error: error instanceof Error ? error.message : String(error),
+        },
+      );
+    }
+    return fallback();
+  }
+}
+
+async function readThroughCache<T>(
+  fn: () => Promise<T>,
+  keyParts: string[],
+  options: CachedPublicOptions<T>,
 ): Promise<T> {
   if (isTestRuntime()) return fn();
 

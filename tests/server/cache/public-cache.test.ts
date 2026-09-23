@@ -162,5 +162,106 @@ describe("public-cache", () => {
       ).rejects.toThrow("db down");
       expect(fn).toHaveBeenCalledTimes(1);
     });
+
+    describe("fallback lúc build", () => {
+      function prismaTableMissing(): Error {
+        return Object.assign(
+          new Error("The table `main.Product` does not exist"),
+          {
+            code: "P2021",
+          },
+        );
+      }
+
+      beforeEach(() => {
+        vi.stubEnv("VITEST", "");
+        nextCache.unstable_cache.mockImplementation(
+          (cb: () => Promise<unknown>) => cb,
+        );
+      });
+
+      it("trong build phase: loader lỗi thì trả fallback và warn một lần mỗi key", async () => {
+        vi.stubEnv("NEXT_PHASE", "phase-production-build");
+        const fn = vi.fn(async (): Promise<string[]> => {
+          throw prismaTableMissing();
+        });
+        const options = {
+          tags: ["catalog"],
+          revalidate: 60,
+          fallback: (): string[] => [],
+        };
+
+        await expect(
+          cachedPublic(fn, ["build-fallback", "k1"], options),
+        ).resolves.toEqual([]);
+        await expect(
+          cachedPublic(fn, ["build-fallback", "k1"], options),
+        ).resolves.toEqual([]);
+
+        expect(fn).toHaveBeenCalledTimes(2);
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.any(String),
+          expect.objectContaining({
+            keyParts: ["build-fallback", "k1"],
+            code: "P2021",
+            error: "The table `main.Product` does not exist",
+          }),
+        );
+
+        await expect(
+          cachedPublic(fn, ["build-fallback", "k2"], options),
+        ).resolves.toEqual([]);
+        expect(warnSpy).toHaveBeenCalledTimes(2);
+      });
+
+      it("ngoài build phase: lỗi loader vẫn được ném lại dù có fallback", async () => {
+        vi.stubEnv("NEXT_PHASE", "phase-production-server");
+        const fallback = vi.fn((): string[] => []);
+        const fn = vi.fn(async (): Promise<string[]> => {
+          throw prismaTableMissing();
+        });
+
+        await expect(
+          cachedPublic(fn, ["runtime-error"], {
+            tags: ["catalog"],
+            revalidate: 60,
+            fallback,
+          }),
+        ).rejects.toThrow("does not exist");
+        expect(fallback).not.toHaveBeenCalled();
+        expect(fn).toHaveBeenCalledTimes(1);
+      });
+
+      it("trong build phase không có fallback: lỗi vẫn được ném lại", async () => {
+        vi.stubEnv("NEXT_PHASE", "phase-production-build");
+        const fn = vi.fn(async () => {
+          throw prismaTableMissing();
+        });
+
+        await expect(
+          cachedPublic(fn, ["no-fallback"], {
+            tags: ["catalog"],
+            revalidate: 60,
+          }),
+        ).rejects.toThrow("does not exist");
+      });
+
+      it("loader thành công thì bỏ qua fallback", async () => {
+        vi.stubEnv("NEXT_PHASE", "phase-production-build");
+        const fallback = vi.fn((): string[] => []);
+        const fn = vi.fn(async () => ["a"]);
+
+        await expect(
+          cachedPublic(fn, ["build-ok"], {
+            tags: ["catalog"],
+            revalidate: 60,
+            fallback,
+          }),
+        ).resolves.toEqual(["a"]);
+        expect(fallback).not.toHaveBeenCalled();
+        expect(warnSpy).not.toHaveBeenCalled();
+      });
+    });
   });
 });

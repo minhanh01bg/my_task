@@ -90,6 +90,7 @@ export const getOnlineProductDetail = cache(
       {
         tags: [CACHE_TAGS.product(id), CACHE_TAGS.catalog],
         revalidate: 60,
+        fallback: () => null,
       },
     ),
 );

@@ -56,7 +56,8 @@ const loadPublicSettings = cache(
     cachedPublic(
       () => readSettings(PUBLIC_SETTING_KEYS),
       ["store-settings", "public"],
-      { tags: [CACHE_TAGS.settings], revalidate: 300 },
+      // Rong → getPublicStoreProfile dung ten mac dinh tu env.
+      { tags: [CACHE_TAGS.settings], revalidate: 300, fallback: () => ({}) },
     ),
 );
 
