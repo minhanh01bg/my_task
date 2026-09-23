@@ -1,10 +1,17 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+
 import { CustomerOrderDetail } from "@/features/customer-account/order-detail";
 import { RevokeGuestButton } from "@/features/customer-account/revoke-guest-button";
 import { requireCustomerSession } from "@/server/customer-auth/session";
 import { findOwnedCustomerOrder } from "@/server/orders/order-access";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Chi tiết đơn hàng",
+  robots: { index: false, follow: false },
+};
 
 export default async function CustomerOrderPage({
   params,

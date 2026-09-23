@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { siteConfig } from "@/config/site";
+import { siteConfig, storeTitle } from "@/config/site";
 import { OnlineCartProvider } from "@/features/online-store/cart-context";
 import { ProductDetailView } from "@/features/online-store/product-detail-view";
 import { StoreFooter } from "@/features/online-store/store-footer";
@@ -36,17 +36,16 @@ export async function generateMetadata({
   }
 
   const { product } = detail;
-  const title = `${product.name} | ${storeProfile.name}`;
   const description = `Mua ${product.name} chính hãng tại ${storeProfile.name}. Đặt nhanh trực tuyến, giao hàng tận nơi.`;
 
   return {
-    title,
+    title: storeTitle(product.name, storeProfile.name),
     description,
     alternates: {
       canonical: `/shop/products/${id}`,
     },
     openGraph: {
-      title,
+      title: `${product.name} | ${storeProfile.name}`,
       description,
       url: `${siteConfig.url}/shop/products/${id}`,
       siteName: storeProfile.name,

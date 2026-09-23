@@ -24,7 +24,9 @@ describe("LoginPage & LoginForm (Dynamic Store Name)", () => {
     );
     const metadata = await generateMetadata();
 
-    expect(metadata.title).toBe("Đăng nhập - Tiệm Bách Hóa ABC");
+    expect(metadata.title).toEqual({
+      absolute: "Đăng nhập | Tiệm Bách Hóa ABC",
+    });
     expect(metadata.description).toContain("Tiệm Bách Hóa ABC");
   });
 

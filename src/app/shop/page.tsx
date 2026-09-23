@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { siteConfig } from "@/config/site";
+import { siteConfig, storeTitle } from "@/config/site";
 import { OnlineCartProvider } from "@/features/online-store/cart-context";
 import { CatalogBrowser } from "@/features/online-store/catalog-browser";
 import { CategorySection } from "@/features/online-store/landing/category-section";
@@ -41,17 +41,18 @@ function toCatalogProductDto(product: OnlineProduct): OnlineProduct {
 
 export async function generateMetadata(): Promise<Metadata> {
   const storeProfile = await getPublicStoreProfile();
-  const title = `Cửa hàng trực tuyến | ${storeProfile.name}`;
+  const pageTitle = "Cửa hàng trực tuyến";
   const description = `Mua sắm nhu yếu phẩm, thực phẩm và đồ tiêu dùng chính hãng tại ${storeProfile.name}. Đặt nhanh trực tuyến, giao hàng tận nơi.`;
 
   return {
-    title,
+    // Template gốc nối tên cửa hàng; chỉ dùng absolute khi tên DB khác cấu hình.
+    title: storeTitle(pageTitle, storeProfile.name),
     description,
     alternates: {
       canonical: "/shop",
     },
     openGraph: {
-      title,
+      title: `${pageTitle} | ${storeProfile.name}`,
       description,
       url: `${siteConfig.url}/shop`,
       siteName: storeProfile.name,

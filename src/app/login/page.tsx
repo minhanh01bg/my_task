@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ShieldCheck, Store } from "lucide-react";
 
+import { storeTitle } from "@/config/site";
 import { getStoreName } from "@/server/settings/store-settings";
 import { LoginForm } from "./login-form";
 
@@ -9,8 +10,9 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   const storeName = await getStoreName();
   return {
-    title: `Đăng nhập - ${storeName}`,
+    title: storeTitle("Đăng nhập", storeName),
     description: `Đăng nhập hệ thống quản lý và bán hàng ${storeName}`,
+    robots: { index: false, follow: false },
   };
 }
 

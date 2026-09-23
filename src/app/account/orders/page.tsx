@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CustomerLogoutButton } from "@/features/customer-account/logout-button";
@@ -8,6 +9,11 @@ import { requireCustomerSession } from "@/server/customer-auth/session";
 import { listCustomerOrders } from "@/server/orders/order-access";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Đơn hàng của tôi",
+  robots: { index: false, follow: false },
+};
 
 export default async function CustomerOrdersPage() {
   const session = await requireCustomerSession();
