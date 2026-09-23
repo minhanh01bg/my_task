@@ -63,3 +63,4 @@ prisma/*.db
 # ket qua chay test — san pham sinh ra, khong thuoc ve repo
 /playwright-report/
 /test-results/
+/e2e/screenshots/
