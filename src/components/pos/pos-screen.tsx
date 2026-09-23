@@ -99,11 +99,15 @@ export function PosScreen({
   useEffect(() => {
     if (initialCatalog.products.length > 0) return;
 
+    let cancelled = false;
     void loadCatalog().then((cached) => {
-      if (!cached) return;
+      if (cancelled || !cached) return;
       setCatalog(cached);
       setStale(isCatalogStale(cached));
     });
+    return () => {
+      cancelled = true;
+    };
   }, [initialCatalog.products.length]);
 
   const refreshCatalog = useCallback(async () => {
