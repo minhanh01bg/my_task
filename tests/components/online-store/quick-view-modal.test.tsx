@@ -1,4 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { OnlineCartProvider } from "@/features/online-store/cart-context";
@@ -63,5 +65,35 @@ describe("QuickViewModal Component", () => {
     const closeBtn = screen.getByLabelText("Đóng xem nhanh");
     fireEvent.click(closeBtn);
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("là dialog có tên theo sản phẩm, Escape đóng và trả focus về nút mở", async () => {
+    const user = userEvent.setup();
+
+    function Harness() {
+      const [product, setProduct] = useState<OnlineProduct | null>(null);
+      return (
+        <>
+          <button type="button" onClick={() => setProduct(mockProduct)}>
+            Xem nhanh
+          </button>
+          <QuickViewModal product={product} onClose={() => setProduct(null)} />
+        </>
+      );
+    }
+
+    renderWithCart(<Harness />);
+    const opener = screen.getByRole("button", { name: "Xem nhanh" });
+    await user.click(opener);
+    expect(
+      screen.getByRole("dialog", { name: "Nước khoáng thiên nhiên 500ml" }),
+    ).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(opener).toHaveFocus();
+    });
   });
 });

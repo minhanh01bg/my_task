@@ -135,4 +135,35 @@ describe("ProductSearch", () => {
 
     expect(input).toHaveValue("");
   });
+
+  it("combobox tro toi option dang chon qua aria-activedescendant", async () => {
+    const user = userEvent.setup();
+    render(<ProductSearch products={PRODUCTS} onSelect={vi.fn()} />);
+
+    const input = screen.getByRole("combobox");
+    expect(input).not.toHaveAttribute("aria-activedescendant");
+
+    await user.type(input, "u");
+    const options = screen.getAllByRole("option");
+    expect(options.length).toBeGreaterThanOrEqual(2);
+    for (const option of options) expect(option.id).not.toBe("");
+    expect(input).toHaveAttribute("aria-activedescendant", options[0]!.id);
+
+    await user.keyboard("{ArrowDown}");
+    expect(input).toHaveAttribute("aria-activedescendant", options[1]!.id);
+    expect(options[1]).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("cuon option dang chon vao tam nhin", async () => {
+    const user = userEvent.setup();
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    render(<ProductSearch products={PRODUCTS} onSelect={vi.fn()} />);
+
+    await user.type(screen.getByRole("combobox"), "u");
+    await user.keyboard("{ArrowDown}");
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest" });
+    delete (Element.prototype as Partial<Element>).scrollIntoView;
+  });
 });

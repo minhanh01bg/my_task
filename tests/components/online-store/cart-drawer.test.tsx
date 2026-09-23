@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, expect, it, beforeEach } from "vitest";
 
 import {
@@ -163,6 +163,29 @@ describe("CartDrawer", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("là sheet có tên, khoá cuộn trang và trả focus về nút mở", async () => {
+    render(
+      <OnlineCartProvider>
+        <TestContainer />
+      </OnlineCartProvider>,
+    );
+
+    const opener = screen.getByText("Mở giỏ hàng");
+    opener.focus();
+    fireEvent.click(opener);
+
+    const dialog = screen.getByRole("dialog", { name: "Giỏ hàng của bạn" });
+    expect(dialog).toHaveAttribute("data-slot", "sheet-content");
+    await waitFor(() =>
+      expect(document.documentElement).toHaveAttribute(
+        "data-base-ui-scroll-locked",
+      ),
+    );
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(opener).toHaveFocus());
   });
 
   it("hiển thị thanh tiến độ Free Shipping khi tổng tiền dưới 200.000đ", () => {

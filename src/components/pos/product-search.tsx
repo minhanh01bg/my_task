@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MagnifyingGlass, MagnifyingGlassMinus } from "@phosphor-icons/react";
 
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,11 @@ interface ProductSearchProps {
 }
 
 const RESULT_LIMIT = 20;
+const LISTBOX_ID = "pos-search-results";
+
+function optionId(index: number): string {
+  return `${LISTBOX_ID}-option-${index}`;
+}
 
 /**
  * O tim kiem la duong vao chinh cua moi giao dich — cua hang chua co barcode.
@@ -25,11 +30,22 @@ export function ProductSearch({ products, onSelect }: ProductSearchProps) {
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
 
   const results = useMemo(
     () => searchProducts(products, query, RESULT_LIMIT),
     [products, query],
   );
+  const activeResult = results[activeIndex];
+
+  // Giu option dang chon trong tam nhin khi di chuyen bang mui ten.
+  useEffect(() => {
+    if (!activeResult) return;
+    const option = listRef.current?.querySelector<HTMLElement>(
+      `#${optionId(activeIndex)}`,
+    );
+    option?.scrollIntoView?.({ block: "nearest" });
+  }, [activeIndex, activeResult]);
 
   function reset() {
     setQuery("");
@@ -89,8 +105,11 @@ export function ProductSearch({ products, onSelect }: ProductSearchProps) {
           ref={inputRef}
           role="combobox"
           aria-expanded={query.trim().length > 0 && results.length > 0}
-          aria-controls="pos-search-results"
+          aria-controls={LISTBOX_ID}
           aria-autocomplete="list"
+          aria-activedescendant={
+            activeResult ? optionId(activeIndex) : undefined
+          }
           value={query}
           autoFocus
           placeholder="Nhập tên, mã hoặc loại sản phẩm..."
@@ -121,15 +140,19 @@ export function ProductSearch({ products, onSelect }: ProductSearchProps) {
       ) : null}
 
       <ul
-        id="pos-search-results"
+        ref={listRef}
+        id={LISTBOX_ID}
         role="listbox"
+        aria-label="Kết quả tìm sản phẩm"
         className="flex max-h-72 flex-col gap-1 overflow-y-auto"
       >
         {results.map((product, index) => (
           <li key={product.id}>
             <button
               type="button"
+              id={optionId(index)}
               role="option"
+              tabIndex={-1}
               aria-selected={index === activeIndex}
               onClick={() => choose(product)}
               className={cn(

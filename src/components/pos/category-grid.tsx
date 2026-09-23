@@ -36,6 +36,7 @@ export function CategoryGrid({
           <button
             key={category.id}
             type="button"
+            aria-pressed={activeCategoryId === category.id}
             onClick={() =>
               onCategoryChange(
                 activeCategoryId === category.id ? null : category.id,

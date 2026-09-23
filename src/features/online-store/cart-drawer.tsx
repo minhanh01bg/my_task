@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
   Minus,
   PackageX,
+  PartyPopper,
   Plus,
   ShoppingBag,
   Trash2,
@@ -13,6 +14,12 @@ import {
   X,
 } from "lucide-react";
 
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { formatVnd } from "@/lib/money";
 
 import { useOnlineCart } from "./cart-context";
@@ -22,24 +29,6 @@ const FREE_SHIPPING_THRESHOLD = 200_000;
 export function CartDrawer() {
   const { lines, isDrawerOpen, closeDrawer, setQuantity, remove } =
     useOnlineCart();
-
-  const drawerRef = useRef<HTMLDivElement>(null);
-
-  // Close on Escape key
-  useEffect(() => {
-    if (!isDrawerOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        closeDrawer();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isDrawerOpen, closeDrawer]);
 
   const subtotal = useMemo(
     () => lines.reduce((sum, line) => sum + line.price * line.quantity, 0),
@@ -51,48 +40,37 @@ export function CartDrawer() {
     [lines],
   );
 
-  if (!isDrawerOpen) return null;
-
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="cart-drawer-title"
-      className="fixed inset-0 z-50 flex justify-end"
+    <Sheet
+      open={isDrawerOpen}
+      onOpenChange={(open) => {
+        if (!open) closeDrawer();
+      }}
     >
-      {/* Backdrop */}
-      <div
-        onClick={closeDrawer}
-        aria-hidden="true"
-        className="animate-fade-in fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
-      />
-
-      {/* Slide-over sheet */}
-      <div
-        ref={drawerRef}
-        className="border-border bg-background animate-slide-in-right relative z-10 flex h-full w-full max-w-md flex-col border-l shadow-2xl transition-transform"
+      <SheetContent
+        side="right"
+        showCloseButton={false}
+        className="bg-background gap-0"
       >
         {/* Header */}
         <div className="border-border flex items-center justify-between border-b px-6 py-4">
           <div className="flex items-center gap-2">
             <ShoppingBag aria-hidden="true" className="text-primary size-5" />
-            <h2 id="cart-drawer-title" className="text-lg font-bold">
+            <SheetTitle className="font-sans text-lg font-bold">
               Giỏ hàng của bạn
-            </h2>
+            </SheetTitle>
             {lines.length > 0 && (
               <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs font-semibold">
                 {totalItems}
               </span>
             )}
           </div>
-          <button
-            type="button"
-            onClick={closeDrawer}
+          <SheetClose
             aria-label="Đóng giỏ hàng"
-            className="text-muted-foreground hover:text-foreground inline-flex size-9 items-center justify-center rounded-xl transition-colors outline-none focus-visible:ring-2"
+            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex size-11 items-center justify-center rounded-xl transition-colors outline-none focus-visible:ring-2"
           >
             <X aria-hidden="true" className="size-5" />
-          </button>
+          </SheetClose>
         </div>
 
         {/* Free Shipping Progress Bar */}
@@ -101,12 +79,12 @@ export function CartDrawer() {
             <div className="flex items-center justify-between text-xs font-semibold">
               {subtotal >= FREE_SHIPPING_THRESHOLD ? (
                 <span className="text-success flex items-center gap-1.5 font-bold">
-                  <Truck className="size-4" />
-                  <span>🎉 Chúc mừng! Bạn đã được Miễn phí giao hàng!</span>
+                  <PartyPopper aria-hidden="true" className="size-4" />
+                  <span>Chúc mừng! Bạn đã được Miễn phí giao hàng!</span>
                 </span>
               ) : (
                 <span className="text-muted-foreground flex items-center gap-1.5">
-                  <Truck className="text-primary size-4" />
+                  <Truck aria-hidden="true" className="text-primary size-4" />
                   <span>
                     Mua thêm{" "}
                     <strong className="text-foreground font-bold">
@@ -279,7 +257,7 @@ export function CartDrawer() {
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -14,6 +14,8 @@ export function NotificationButton({
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const { items, unreadCount, loading, error, refresh, markOne, markAll } =
     useAdminNotifications();
 
@@ -21,8 +23,40 @@ export function NotificationButton({
     if (open) closeRef.current?.focus();
   }, [open]);
 
+  // Escape va bam ra ngoai dong panel, giong hanh vi popover chuan.
+  useEffect(() => {
+    if (!open) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      triggerRef.current?.focus();
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+      if (target instanceof Node && containerRef.current?.contains(target)) {
+        return;
+      }
+      setOpen(false);
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [open]);
+
+  function close() {
+    setOpen(false);
+    triggerRef.current?.focus();
+  }
+
   return (
     <div
+      ref={containerRef}
       className={
         placement === "desktop"
           ? `relative mb-4 ${open ? "z-[100]" : ""}`
@@ -30,6 +64,7 @@ export function NotificationButton({
       }
     >
       <button
+        ref={triggerRef}
         type="button"
         aria-label={`Thông báo${unreadCount ? `, ${unreadCount} chưa đọc` : ""}`}
         aria-expanded={open}
@@ -86,7 +121,7 @@ export function NotificationButton({
                 ref={closeRef}
                 type="button"
                 aria-label="Đóng thông báo"
-                onClick={() => setOpen(false)}
+                onClick={close}
                 className="hover:bg-muted flex size-11 items-center justify-center rounded-lg"
               >
                 <X aria-hidden="true" />
