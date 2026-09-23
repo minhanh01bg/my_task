@@ -26,6 +26,7 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -51,6 +52,8 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  /* 44px — sinh min-h-touch, min-w-touch, size-touch, h-touch. */
+  --spacing-touch: 2.75rem;
 }
 
 :root {
@@ -69,6 +72,7 @@
   --accent: oklch(0.72 0.115 73);
   --accent-foreground: oklch(0.22 0.028 68);
   --destructive: oklch(0.56 0.19 27);
+  --destructive-foreground: oklch(0.985 0.005 82);
   --border: oklch(0.875 0.018 79);
   --input: oklch(0.86 0.02 79);
   --ring: oklch(0.52 0.085 153);
@@ -79,11 +83,11 @@
   --info: oklch(0.62 0.1 238);
   --info-foreground: oklch(0.985 0.005 82);
   --touch-target: 2.75rem;
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --chart-1: oklch(0.52 0.11 153);
+  --chart-2: oklch(0.7 0.13 73);
+  --chart-3: oklch(0.58 0.12 238);
+  --chart-4: oklch(0.58 0.16 27);
+  --chart-5: oklch(0.55 0.13 300);
   --radius: 0.9rem;
   --sidebar: oklch(0.955 0.018 82);
   --sidebar-foreground: oklch(0.235 0.016 66);
@@ -95,44 +99,46 @@
   --sidebar-ring: oklch(0.52 0.085 153);
 }
 
+/* Dark cung thuong hieu voi light: nen am toi, primary xanh la cung hue 153. */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.72 0.11 151);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --background: oklch(0.17 0.01 60);
+  --foreground: oklch(0.95 0.008 82);
+  --card: oklch(0.21 0.012 62);
+  --card-foreground: oklch(0.95 0.008 82);
+  --popover: oklch(0.22 0.012 62);
+  --popover-foreground: oklch(0.95 0.008 82);
+  --primary: oklch(0.7 0.11 153);
+  --primary-foreground: oklch(0.17 0.02 153);
+  --secondary: oklch(0.26 0.014 64);
+  --secondary-foreground: oklch(0.93 0.01 82);
+  --muted: oklch(0.25 0.012 64);
+  --muted-foreground: oklch(0.72 0.02 75);
+  --accent: oklch(0.38 0.08 70);
+  --accent-foreground: oklch(0.93 0.05 82);
+  --destructive: oklch(0.7 0.18 27);
+  --destructive-foreground: oklch(0.18 0.03 27);
+  --border: oklch(0.31 0.014 66);
+  --input: oklch(0.35 0.016 66);
+  --ring: oklch(0.7 0.11 153);
   --success: oklch(0.7 0.13 151);
   --success-foreground: oklch(0.18 0.025 151);
   --warning: oklch(0.8 0.13 76);
   --warning-foreground: oklch(0.2 0.03 68);
   --info: oklch(0.72 0.11 238);
   --info-foreground: oklch(0.18 0.025 238);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.72 0.12 153);
+  --chart-2: oklch(0.8 0.13 73);
+  --chart-3: oklch(0.72 0.11 238);
+  --chart-4: oklch(0.7 0.16 27);
+  --chart-5: oklch(0.7 0.13 300);
+  --sidebar: oklch(0.19 0.011 62);
+  --sidebar-foreground: oklch(0.95 0.008 82);
+  --sidebar-primary: oklch(0.7 0.11 153);
+  --sidebar-primary-foreground: oklch(0.17 0.02 153);
+  --sidebar-accent: oklch(0.27 0.02 68);
+  --sidebar-accent-foreground: oklch(0.93 0.01 82);
+  --sidebar-border: oklch(0.3 0.014 66);
+  --sidebar-ring: oklch(0.7 0.11 153);
 }
 
 @layer base {
@@ -155,6 +161,10 @@
     background-attachment: fixed;
     text-rendering: optimizeLegibility;
   }
+  /* Gradient tren chinh cho nen sang; dark dung nen phang. */
+  .dark body {
+    background-image: none;
+  }
   html {
     @apply font-sans;
   }
@@ -173,6 +183,13 @@
       0 1px 2px oklch(0.22 0.02 70 / 0.04),
       0 10px 30px -14px oklch(0.22 0.02 70 / 0.16),
       inset 0 1px 0 oklch(1 0 0 / 0.7);
+  }
+
+  .dark .surface-panel {
+    box-shadow:
+      0 1px 2px oklch(0 0 0 / 0.3),
+      0 10px 30px -14px oklch(0 0 0 / 0.5),
+      inset 0 1px 0 oklch(1 0 0 / 0.05);
   }
 
   .eyebrow {
@@ -435,7 +452,8 @@
     }
   }
 
-  .animate-in {
+  /* Khong dat ten .animate-in — tw-animate-css da so huu utility do. */
+  .animate-popover-enter {
     animation: popover-enter 150ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
     transform-origin: var(--transform-origin, top right);
     will-change: transform, opacity;
