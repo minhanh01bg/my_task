@@ -71,7 +71,11 @@ export function Pagination({
           Trang trước
         </Link>
       ) : (
-        <span aria-disabled="true" className={cn(linkClass, "opacity-45")}>
+        <span
+          role="link"
+          aria-disabled="true"
+          className={cn(linkClass, "opacity-45")}
+        >
           Trang trước
         </span>
       )}
@@ -86,7 +90,11 @@ export function Pagination({
           Trang sau
         </Link>
       ) : (
-        <span aria-disabled="true" className={cn(linkClass, "opacity-45")}>
+        <span
+          role="link"
+          aria-disabled="true"
+          className={cn(linkClass, "opacity-45")}
+        >
           Trang sau
         </span>
       )}

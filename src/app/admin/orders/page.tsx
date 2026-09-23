@@ -9,7 +9,7 @@ import { DateField } from "@/components/kit/date-field";
 import { DropdownField } from "@/components/kit/dropdown-field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { listOrders } from "@/server/admin/list-orders";
-import { parsePageParam, totalPageCount } from "@/server/admin/pagination";
+import { parsePageParam } from "@/server/admin/pagination";
 import { requireAdminSession } from "@/server/auth/require-admin-session";
 
 import { cancelOrderAction } from "./actions";
@@ -61,8 +61,6 @@ export default async function OrdersPage({
     q,
     filters: { status, channel, from, to },
   });
-  const totalPages = totalPageCount(totalCount, pageSize);
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -152,9 +150,6 @@ export default async function OrdersPage({
       <Card>
         <CardHeader className="flex-row items-center justify-between gap-2 p-4 sm:gap-4 sm:p-6">
           <CardTitle>{totalCount} đơn hàng</CardTitle>
-          <span className="text-muted-foreground text-sm font-semibold">
-            Trang {page}/{totalPages}
-          </span>
         </CardHeader>
         <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
           {orders.length === 0 ? (

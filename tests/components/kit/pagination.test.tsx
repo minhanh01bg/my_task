@@ -31,16 +31,21 @@ describe("Pagination", () => {
     const { rerender } = render(
       <Pagination pathname="/admin/debts" page={1} pageSize={50} total={120} />,
     );
-    expect(screen.queryByRole("link", { name: "Trang trước" })).toBeNull();
-    expect(screen.getByText("Trang trước")).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Trang trước" })).toHaveAttribute(
       "aria-disabled",
       "true",
     );
+    expect(
+      screen.getByRole("link", { name: "Trang trước" }),
+    ).not.toHaveAttribute("href");
 
     rerender(
       <Pagination pathname="/admin/debts" page={3} pageSize={50} total={120} />,
     );
-    expect(screen.queryByRole("link", { name: "Trang sau" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Trang sau" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
     expect(screen.getByRole("link", { name: "Trang trước" })).toHaveAttribute(
       "href",
       "/admin/debts?page=2",
