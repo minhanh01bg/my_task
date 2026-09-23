@@ -113,17 +113,32 @@ describe("buildOrdersWhere — quy tac tim kiem", () => {
     expect(buildOrdersWhere({ q: " dh0012 " })).toEqual({ code: "DH0012" });
   });
 
-  it("toan chu so thi tim contactPhone bat dau bang q", () => {
+  it("toan chu so thi tim contactPhone hoac sdt khach hang lien ket bat dau bang q", () => {
     expect(buildOrdersWhere({ q: "0988777" })).toEqual({
-      contactPhone: { startsWith: "0988777" },
+      OR: [
+        { contactPhone: { startsWith: "0988777" } },
+        { customer: { is: { phone: { startsWith: "0988777" } } } },
+      ],
     });
   });
 
-  it("con lai thi contains tren contactName va code", () => {
+  it("q dang +84… thi cung khop dang 0… tuong ung", () => {
+    expect(buildOrdersWhere({ q: "+84988777666" })).toEqual({
+      OR: [
+        { contactPhone: { startsWith: "+84988777666" } },
+        { customer: { is: { phone: { startsWith: "+84988777666" } } } },
+        { contactPhone: { startsWith: "0988777666" } },
+        { customer: { is: { phone: { startsWith: "0988777666" } } } },
+      ],
+    });
+  });
+
+  it("con lai thi contains tren contactName, code va ten khach hang lien ket", () => {
     expect(buildOrdersWhere({ q: "Trần Khách" })).toEqual({
       OR: [
         { contactName: { contains: "Trần Khách" } },
         { code: { contains: "Trần Khách" } },
+        { customer: { is: { name: { contains: "Trần Khách" } } } },
       ],
     });
   });
