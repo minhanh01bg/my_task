@@ -15,6 +15,7 @@ const PUBLIC_API = [
   "/api/customer-auth/login",
   "/api/customer-auth/logout",
   "/api/csp-report",
+  "/api/storefront/session",
 ];
 
 export function isPublicPath(pathname: string): boolean {
