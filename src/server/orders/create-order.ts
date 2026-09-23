@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 
+import { logger } from "@/lib/logger";
 import { calculateCart } from "@/lib/pricing/calculate";
 import type { CartLine } from "@/lib/pricing/types";
 import { createCustomerOrderCreatedNotification } from "@/server/customer-notifications/create-customer-notification";
@@ -8,6 +9,10 @@ import { createOnlineOrderNotification } from "@/server/notifications/create-adm
 import { OnlineOrderError } from "@/types/online-order";
 
 import { generateOrderCode } from "./order-code";
+import { nextOrderSequence } from "./order-sequence";
+
+/** So lan chay transaction toi da khi dung unique `Order.code`. */
+const MAX_CODE_ATTEMPTS = 3;
 
 export interface CreateOrderLine {
   productId: string | null;
@@ -89,6 +94,50 @@ function resolveStatus(payments: CreateOrderPayment[]): string {
   return "paid";
 }
 
+function isUniqueViolationOn(error: unknown, field: string): boolean {
+  if (
+    !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+    error.code !== "P2002"
+  ) {
+    return false;
+  }
+  const target = error.meta?.target;
+  return Array.isArray(target)
+    ? target.includes(field)
+    : typeof target === "string" && target.includes(field);
+}
+
+async function isCodeTaken(
+  tx: Prisma.TransactionClient,
+  code: string,
+): Promise<boolean> {
+  const taken = await tx.order.findUnique({
+    where: { code },
+    select: { id: true },
+  });
+  return taken !== null;
+}
+
+/**
+ * Ma dat truoc chi duoc dung neu chua ai chiem — tranh vi pham unique.
+ * Ma dat truoc cua may POS (`DH` + 6 so) co the chiem truoc so cua bo dem,
+ * nen bo qua cac so da bi dung.
+ */
+async function resolveOrderCode(
+  tx: Prisma.TransactionClient,
+  sequence: number,
+  preferredCode: string | null | undefined,
+): Promise<string> {
+  if (preferredCode && !(await isCodeTaken(tx, preferredCode))) {
+    return preferredCode;
+  }
+  let code = generateOrderCode(sequence);
+  while (await isCodeTaken(tx, code)) {
+    code = generateOrderCode(await nextOrderSequence(tx));
+  }
+  return code;
+}
+
 /**
  * Tao don hang. Day la NOI DUY NHAT duoc phep tao don — POS goi qua
  * /api/orders, don online sau nay goi truc tiep.
@@ -153,164 +202,169 @@ export async function createOrder(
     (line) => (stockById.get(line.productId as string) ?? 0) < line.quantity,
   );
 
-  try {
-    return await prisma.$transaction(async (tx) => {
-      const sequence = (await tx.order.count()) + 1;
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        // Lenh GHI dau tien: giu khoa ghi ngay, khong doc-roi-nang-cap khoa.
+        const sequence = await nextOrderSequence(tx);
+        const code = await resolveOrderCode(tx, sequence, input.preferredCode);
 
-      // Ma dat truoc chi duoc dung neu chua ai chiem — tranh vi pham unique.
-      let code = generateOrderCode(sequence);
-      if (input.preferredCode) {
-        const taken = await tx.order.findUnique({
-          where: { code: input.preferredCode },
-          select: { id: true },
+        const order = await tx.order.create({
+          data: {
+            code,
+            channel: input.channel ?? "pos",
+            status,
+            subtotal: totals.subtotal,
+            discount: totals.discount,
+            total: totals.total,
+            customerId: input.customerId ?? null,
+            customerAccountId: input.customerAccountId ?? null,
+            note: input.note ?? null,
+            clientId: input.clientId,
+            syncedAt: new Date(),
+            hasStockWarning,
+            fulfillmentStatus: input.online?.fulfillmentStatus ?? null,
+            fulfillmentType: input.online?.fulfillmentType ?? null,
+            paymentMethod: input.online?.paymentMethod ?? null,
+            contactName: input.online?.contactName ?? null,
+            contactPhone: input.online?.contactPhone ?? null,
+            deliveryAddress: input.online?.deliveryAddress ?? null,
+            deliveryWard: input.online?.deliveryWard ?? null,
+            deliveryDistrict: input.online?.deliveryDistrict ?? null,
+            deliveryProvince: input.online?.deliveryProvince ?? null,
+            shippingFee: input.online?.shippingFee ?? 0,
+            receiptNonceHash: input.receiptNonceHash ?? null,
+            items: {
+              create: totals.lines.map((line) => ({
+                productId: line.productId,
+                nameSnapshot: line.name,
+                unitPrice: line.unitPrice,
+                originalPrice: line.originalPrice,
+                quantity: line.quantity,
+                discount: line.discount,
+                lineTotal: line.lineTotal,
+                unit: line.unit,
+                isService: line.isService,
+              })),
+            },
+            payments: {
+              create: input.payments.map((payment) => ({
+                method: payment.method,
+                amount: payment.amount,
+                receivedAt:
+                  payment.receivedAt ??
+                  (payment.method === "cash" && input.autoReceiveCash !== false
+                    ? new Date()
+                    : null),
+                note: payment.note ?? null,
+              })),
+            },
+            guestAccess: input.guestAccess
+              ? { create: input.guestAccess }
+              : undefined,
+            idempotency: input.idempotency
+              ? {
+                  create: {
+                    clientId: input.clientId,
+                    requestFingerprint: input.idempotency.requestFingerprint,
+                    recoveryDigest: input.idempotency.recoveryDigest,
+                    encryptedGuestToken: input.idempotency.encryptedGuestToken,
+                    responsePayload: input.idempotency.responsePayload,
+                    expiresAt: input.idempotency.expiresAt,
+                  },
+                }
+              : undefined,
+          },
         });
-        if (!taken) code = input.preferredCode;
-      }
 
-      const order = await tx.order.create({
-        data: {
-          code,
-          channel: input.channel ?? "pos",
-          status,
-          subtotal: totals.subtotal,
-          discount: totals.discount,
-          total: totals.total,
-          customerId: input.customerId ?? null,
-          customerAccountId: input.customerAccountId ?? null,
-          note: input.note ?? null,
-          clientId: input.clientId,
-          syncedAt: new Date(),
-          hasStockWarning,
-          fulfillmentStatus: input.online?.fulfillmentStatus ?? null,
-          fulfillmentType: input.online?.fulfillmentType ?? null,
-          paymentMethod: input.online?.paymentMethod ?? null,
-          contactName: input.online?.contactName ?? null,
-          contactPhone: input.online?.contactPhone ?? null,
-          deliveryAddress: input.online?.deliveryAddress ?? null,
-          deliveryWard: input.online?.deliveryWard ?? null,
-          deliveryDistrict: input.online?.deliveryDistrict ?? null,
-          deliveryProvince: input.online?.deliveryProvince ?? null,
-          shippingFee: input.online?.shippingFee ?? 0,
-          receiptNonceHash: input.receiptNonceHash ?? null,
-          items: {
-            create: totals.lines.map((line) => ({
-              productId: line.productId,
-              nameSnapshot: line.name,
-              unitPrice: line.unitPrice,
-              originalPrice: line.originalPrice,
-              quantity: line.quantity,
-              discount: line.discount,
-              lineTotal: line.lineTotal,
-              unit: line.unit,
-              isService: line.isService,
-            })),
-          },
-          payments: {
-            create: input.payments.map((payment) => ({
-              method: payment.method,
-              amount: payment.amount,
-              receivedAt:
-                payment.receivedAt ??
-                (payment.method === "cash" && input.autoReceiveCash !== false
-                  ? new Date()
-                  : null),
-              note: payment.note ?? null,
-            })),
-          },
-          guestAccess: input.guestAccess
-            ? { create: input.guestAccess }
-            : undefined,
-          idempotency: input.idempotency
-            ? {
-                create: {
-                  clientId: input.clientId,
-                  requestFingerprint: input.idempotency.requestFingerprint,
-                  recoveryDigest: input.idempotency.recoveryDigest,
-                  encryptedGuestToken: input.idempotency.encryptedGuestToken,
-                  responsePayload: input.idempotency.responsePayload,
-                  expiresAt: input.idempotency.expiresAt,
-                },
-              }
-            : undefined,
-        },
-      });
-
-      for (const line of stockLines) {
-        const productId = line.productId as string;
-        if (input.channel === "online") {
-          const updatedCount = await tx.$executeRaw`
+        for (const line of stockLines) {
+          const productId = line.productId as string;
+          if (input.channel === "online") {
+            const updatedCount = await tx.$executeRaw`
           UPDATE "Product"
           SET "stock" = "stock" - ${line.quantity},
               "soldCount" = "soldCount" + 1
           WHERE "id" = ${productId} AND "stock" >= ${line.quantity}
         `;
-          if (updatedCount === 0) {
-            throw new OnlineOrderError(
-              "OUT_OF_STOCK",
-              "Một số sản phẩm không đủ tồn kho",
-              [productId],
-            );
+            if (updatedCount === 0) {
+              throw new OnlineOrderError(
+                "OUT_OF_STOCK",
+                "Một số sản phẩm không đủ tồn kho",
+                [productId],
+              );
+            }
+          } else {
+            await tx.product.update({
+              where: { id: productId },
+              data: {
+                stock: { decrement: line.quantity },
+                soldCount: { increment: 1 },
+              },
+            });
           }
-        } else {
-          await tx.product.update({
-            where: { id: productId },
-            data: {
-              stock: { decrement: line.quantity },
-              soldCount: { increment: 1 },
-            },
+        }
+
+        if (stockLines.length > 0) {
+          await tx.stockMovement.createMany({
+            data: stockLines.map((line) => ({
+              productId: line.productId as string,
+              delta: -line.quantity,
+              reason: "sale",
+              refId: order.id,
+            })),
           });
         }
-        await tx.stockMovement.create({
-          data: {
-            productId,
-            delta: -line.quantity,
-            reason: "sale",
-            refId: order.id,
-          },
-        });
-      }
 
-      if (input.channel === "online") {
-        await createOnlineOrderNotification(tx, order);
-        await createCustomerOrderCreatedNotification(tx, order);
-      }
+        if (input.channel === "online") {
+          await createOnlineOrderNotification(tx, order);
+          await createCustomerOrderCreatedNotification(tx, order);
+        }
 
-      return {
-        order: {
-          id: order.id,
-          code: order.code,
-          subtotal: order.subtotal,
-          discount: order.discount,
-          total: order.total,
-          status: order.status,
-          hasStockWarning: order.hasStockWarning,
-        },
-        duplicated: false,
-      };
-    });
-  } catch (error: unknown) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
-      const existing = await prisma.order.findUnique({
-        where: { clientId: input.clientId },
-      });
-      if (existing) {
         return {
           order: {
-            id: existing.id,
-            code: existing.code,
-            subtotal: existing.subtotal,
-            discount: existing.discount,
-            total: existing.total,
-            status: existing.status,
-            hasStockWarning: existing.hasStockWarning,
+            id: order.id,
+            code: order.code,
+            subtotal: order.subtotal,
+            discount: order.discount,
+            total: order.total,
+            status: order.status,
+            hasStockWarning: order.hasStockWarning,
           },
-          duplicated: true,
+          duplicated: false,
         };
+      });
+    } catch (error: unknown) {
+      if (isUniqueViolationOn(error, "code")) {
+        if (attempt >= MAX_CODE_ATTEMPTS) throw error;
+        logger.warn("Trùng mã đơn, thử lại transaction", {
+          clientId: input.clientId,
+          attempt,
+        });
+        continue;
       }
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        const existing = await prisma.order.findUnique({
+          where: { clientId: input.clientId },
+        });
+        if (existing) {
+          return {
+            order: {
+              id: existing.id,
+              code: existing.code,
+              subtotal: existing.subtotal,
+              discount: existing.discount,
+              total: existing.total,
+              status: existing.status,
+              hasStockWarning: existing.hasStockWarning,
+            },
+            duplicated: true,
+          };
+        }
+      }
+      throw error;
     }
-    throw error;
   }
 }

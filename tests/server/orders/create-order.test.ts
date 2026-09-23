@@ -1,8 +1,19 @@
-import { PrismaClient } from "@prisma/client";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { Prisma, PrismaClient } from "@prisma/client";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
+import { logger } from "@/lib/logger";
+import { prisma as appPrisma } from "@/server/db/prisma";
 import { createOrder } from "@/server/orders/create-order";
 import { generateOrderCode } from "@/server/orders/order-code";
+import { ORDER_SEQUENCE_KEY } from "@/server/orders/order-sequence";
 
 const prisma = new PrismaClient();
 
@@ -43,9 +54,29 @@ beforeEach(async () => {
   await prisma.product.deleteMany();
 });
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 afterAll(async () => {
   await prisma.$disconnect();
 });
+
+async function setSequence(value: number) {
+  await prisma.setting.upsert({
+    where: { key: ORDER_SEQUENCE_KEY },
+    create: { key: ORDER_SEQUENCE_KEY, value: String(value) },
+    update: { value: String(value) },
+  });
+}
+
+function uniqueViolation(target: string[]) {
+  return new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
+    code: "P2002",
+    clientVersion: Prisma.prismaVersion.client,
+    meta: { target },
+  });
+}
 
 describe("generateOrderCode", () => {
   it("sinh ma dang DH + 4 chu so", () => {
@@ -259,5 +290,133 @@ describe("createOrder", () => {
     });
 
     expect(result.order.code).toMatch(/^DH\d+$/);
+  });
+
+  it("ma dat truoc bi trung thi dung ma tu bo dem", async () => {
+    const product = await seedProduct();
+    await createOrder({
+      clientId: "pref5",
+      preferredCode: "DH9001",
+      lines: [cashLine(product.id)],
+      payments: [{ method: "cash", amount: 30000 }],
+    });
+    await setSequence(41);
+
+    const second = await createOrder({
+      clientId: "pref6",
+      preferredCode: "DH9001",
+      lines: [cashLine(product.id)],
+      payments: [{ method: "cash", amount: 30000 }],
+    });
+
+    expect(second.duplicated).toBe(false);
+    expect(second.order.code).toBe("DH0042");
+  });
+
+  it("ma tu bo dem da bi ma dat truoc chiem thi nhay sang so ke tiep", async () => {
+    const product = await seedProduct();
+    await createOrder({
+      clientId: "seq-taken-1",
+      preferredCode: "DH0005",
+      lines: [cashLine(product.id)],
+      payments: [{ method: "cash", amount: 30000 }],
+    });
+    await setSequence(4);
+
+    const result = await createOrder({
+      clientId: "seq-taken-2",
+      lines: [cashLine(product.id)],
+      payments: [{ method: "cash", amount: 30000 }],
+    });
+
+    expect(result.order.code).toBe("DH0006");
+  });
+
+  it("10 don song song: tat ca thanh cong, ma khac nhau va lien tiep", async () => {
+    const product = await seedProduct({ stock: 100 });
+    await setSequence(200);
+
+    const results = await Promise.all(
+      Array.from({ length: 10 }, (_, index) =>
+        createOrder({
+          clientId: `parallel-${index}`,
+          lines: [cashLine(product.id, { quantity: 1 })],
+          payments: [{ method: "cash", amount: 15000 }],
+        }),
+      ),
+    );
+
+    expect(results.every((result) => !result.duplicated)).toBe(true);
+    const codes = results.map((result) => result.order.code).sort();
+    expect(new Set(codes).size).toBe(10);
+    expect(codes).toEqual(
+      Array.from({ length: 10 }, (_, index) => generateOrderCode(201 + index)),
+    );
+    expect(await prisma.order.count()).toBe(10);
+    expect(await prisma.stockMovement.count()).toBe(10);
+    const after = await prisma.product.findUniqueOrThrow({
+      where: { id: product.id },
+    });
+    expect(after.stock).toBe(90);
+  });
+
+  it("P2002 tren code thi thu lai toan bo transaction", async () => {
+    const product = await seedProduct();
+    const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    const spy = vi
+      .spyOn(appPrisma, "$transaction")
+      .mockRejectedValueOnce(uniqueViolation(["code"]));
+
+    const result = await createOrder({
+      clientId: "retry-code",
+      lines: [cashLine(product.id)],
+      payments: [{ method: "cash", amount: 30000 }],
+    });
+
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(result.duplicated).toBe(false);
+    expect(await prisma.order.count()).toBe(1);
+  });
+
+  it("P2002 tren code lap lai qua 3 lan thi nem loi", async () => {
+    const product = await seedProduct();
+    vi.spyOn(logger, "warn").mockImplementation(() => {});
+    const spy = vi
+      .spyOn(appPrisma, "$transaction")
+      .mockRejectedValue(uniqueViolation(["code"]));
+
+    await expect(
+      createOrder({
+        clientId: "retry-exhausted",
+        lines: [cashLine(product.id)],
+        payments: [{ method: "cash", amount: 30000 }],
+      }),
+    ).rejects.toMatchObject({ code: "P2002" });
+
+    expect(spy).toHaveBeenCalledTimes(3);
+    expect(await prisma.order.count()).toBe(0);
+  });
+
+  it("P2002 tren clientId thi tra ve don da ton tai, khong thu lai", async () => {
+    const product = await seedProduct();
+    const spy = vi
+      .spyOn(appPrisma, "$transaction")
+      .mockImplementationOnce(async () => {
+        await prisma.order.create({
+          data: { code: "DH6060", clientId: "race-client", total: 30000 },
+        });
+        throw uniqueViolation(["clientId"]);
+      });
+
+    const result = await createOrder({
+      clientId: "race-client",
+      lines: [cashLine(product.id)],
+      payments: [{ method: "cash", amount: 30000 }],
+    });
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(result.duplicated).toBe(true);
+    expect(result.order.code).toBe("DH6060");
   });
 });
