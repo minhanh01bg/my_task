@@ -66,8 +66,8 @@ export function NotificationButton({
           aria-label="Thông báo quản trị"
           className={
             placement === "desktop"
-              ? "bg-popover text-popover-foreground animate-in absolute top-0 left-full z-[100] ml-3 max-h-[75dvh] w-96 overflow-auto rounded-2xl border p-3 shadow-xl"
-              : "bg-popover text-popover-foreground animate-in fixed inset-x-3 top-18 z-[100] max-h-[calc(100dvh-6rem)] overflow-auto rounded-2xl border p-3 shadow-xl"
+              ? "bg-popover text-popover-foreground animate-popover-enter absolute top-0 left-full z-[100] ml-3 max-h-[75dvh] w-96 overflow-auto rounded-2xl border p-3 shadow-xl"
+              : "bg-popover text-popover-foreground animate-popover-enter fixed inset-x-3 top-18 z-[100] max-h-[calc(100dvh-6rem)] overflow-auto rounded-2xl border p-3 shadow-xl"
           }
         >
           <header className="mb-2 flex items-center justify-between gap-2">
