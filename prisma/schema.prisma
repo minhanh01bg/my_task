@@ -46,6 +46,10 @@ model Product {
 
   @@index([isActive])
   @@index([categoryId])
+  @@index([isActive, deletedAt, isService, soldCount])
+  @@index([isActive, deletedAt, name])
+  @@index([categoryId, isActive, soldCount])
+  @@index([deletedAt, isService, stock])
 }
 
 model Customer {
@@ -83,6 +87,7 @@ model CustomerSession {
   revokedAt  DateTime?
 
   @@index([accountId, expiresAt])
+  @@index([expiresAt])
 }
 
 model Order {
@@ -132,6 +137,10 @@ model Order {
   @@index([channel])
   @@index([fulfillmentStatus])
   @@index([customerAccountId])
+  @@index([status, createdAt])
+  @@index([channel, createdAt])
+  @@index([customerAccountId, channel, createdAt])
+  @@index([anonymizedAt, legalHold, createdAt])
 }
 
 model GuestOrderAccess {
@@ -142,6 +151,8 @@ model GuestOrderAccess {
   expiresAt DateTime
   createdAt DateTime  @default(now())
   revokedAt DateTime?
+
+  @@index([expiresAt])
 }
 
 model CheckoutIdempotency {
@@ -192,6 +203,7 @@ model CustomerNotification {
 
   @@index([accountId, readAt, createdAt])
   @@index([accountId, createdAt, id])
+  @@index([createdAt])
 }
 
 model OrderItem {
@@ -225,6 +237,7 @@ model Payment {
   createdAt  DateTime  @default(now())
 
   @@index([orderId])
+  @@index([orderId, method])
 }
 
 model StockMovement {
@@ -278,6 +291,7 @@ model AdminSession {
 
   @@index([identityId, expiresAt])
   @@index([tokenHash, revokedAt])
+  @@index([expiresAt])
 }
 
 model AdminAuditEvent {
