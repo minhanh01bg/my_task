@@ -6,16 +6,31 @@ import { z } from "zod";
  * CRITICAL SECURITY INVARIANT:
  * Production startup MUST fail immediately before serving any traffic
  * if mandatory security configurations (Upstash Redis REST URL & token,
- * rate limit HMAC secret, trusted proxy configuration, or canonical origin)
- * are absent or malformed.
+ * rate limit HMAC secret, trusted proxy configuration, canonical origin, or a
+ * public site URL) are absent or malformed.
  */
+
+const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "0.0.0.0", "[::1]"]);
+
+/** URL công khai thật (không phải localhost/loopback) — dùng cho SEO và origin. */
+export function isPublicUrl(value: string | undefined): value is string {
+  if (!value) return false;
+  try {
+    const { hostname } = new URL(value);
+    return !LOCAL_HOSTNAMES.has(hostname) && !hostname.endsWith(".localhost");
+  } catch {
+    return false;
+  }
+}
+
 export const envSchema = z
   .object({
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
     NEXT_PUBLIC_APP_NAME: z.string().min(1).default("Next.js with Agent"),
-    NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
+    // URL công khai của site (canonical, sitemap, OpenGraph). Thiếu → dùng CANONICAL_ORIGIN.
+    NEXT_PUBLIC_APP_URL: z.string().url().optional(),
     NEXT_PUBLIC_STORE_NAME: z.string().trim().min(1).optional(),
     STORE_NAME: z.string().trim().min(1).optional(),
     NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
@@ -110,6 +125,17 @@ export const envSchema = z
           path: ["CANONICAL_ORIGIN"],
         });
       }
+      // URL site thực tế (NEXT_PUBLIC_APP_URL, rồi CANONICAL_ORIGIN) phải là
+      // domain công khai: canonical/sitemap trỏ về localhost sẽ phá SEO.
+      const siteUrl = data.NEXT_PUBLIC_APP_URL ?? data.CANONICAL_ORIGIN;
+      if (!isPublicUrl(siteUrl)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "NEXT_PUBLIC_APP_URL or CANONICAL_ORIGIN must be a public (non-localhost) URL in production",
+          path: ["NEXT_PUBLIC_APP_URL"],
+        });
+      }
       if (
         !data.STORE_PASSWORD_HASH ||
         !/^[0-9a-fA-F]{32}:[0-9a-fA-F]{64}$/.test(data.STORE_PASSWORD_HASH)
@@ -140,7 +166,14 @@ const envToParse =
         UPSTASH_REDIS_REST_TOKEN: "build-time-dummy-token",
         RATE_LIMIT_KEY_SECRET: "build-time-dummy-rate-limit-secret-32-chars",
         TRUSTED_PROXY_MODE: "vercel",
-        CANONICAL_ORIGIN: "http://localhost:3000",
+        // Giữ giá trị thật nếu đã là URL công khai; nếu không dùng dummy công
+        // khai để qua kiểm tra URL site (localhost bị từ chối ở production).
+        CANONICAL_ORIGIN: isPublicUrl(process.env.CANONICAL_ORIGIN)
+          ? process.env.CANONICAL_ORIGIN
+          : "https://build-time-dummy.invalid",
+        NEXT_PUBLIC_APP_URL: isPublicUrl(process.env.NEXT_PUBLIC_APP_URL)
+          ? process.env.NEXT_PUBLIC_APP_URL
+          : undefined,
         STORE_PASSWORD_HASH:
           process.env.STORE_PASSWORD_HASH ||
           "00000000000000000000000000000000:0000000000000000000000000000000000000000000000000000000000000000",

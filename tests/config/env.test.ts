@@ -156,6 +156,49 @@ describe("envSchema", () => {
       expect(resultMalformed.success).toBe(false);
     });
 
+    it("rejects production without any public site URL", () => {
+      const env = { ...validProd };
+      delete (env as Record<string, unknown>).CANONICAL_ORIGIN;
+      const result = envSchema.safeParse(env);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(
+          result.error.issues.some((i) =>
+            i.path.includes("NEXT_PUBLIC_APP_URL"),
+          ),
+        ).toBe(true);
+      }
+    });
+
+    it("rejects production when the public site URL resolves to localhost", () => {
+      const localCanonical = envSchema.safeParse({
+        ...validProd,
+        CANONICAL_ORIGIN: "http://localhost:3000",
+      });
+      expect(localCanonical.success).toBe(false);
+      if (!localCanonical.success) {
+        expect(
+          localCanonical.error.issues.some((i) =>
+            i.path.includes("NEXT_PUBLIC_APP_URL"),
+          ),
+        ).toBe(true);
+      }
+
+      const localAppUrl = envSchema.safeParse({
+        ...validProd,
+        NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3000",
+      });
+      expect(localAppUrl.success).toBe(false);
+    });
+
+    it("accepts production with a public NEXT_PUBLIC_APP_URL", () => {
+      const result = envSchema.safeParse({
+        ...validProd,
+        NEXT_PUBLIC_APP_URL: "https://www.shop.example.com",
+      });
+      expect(result.success).toBe(true);
+    });
+
     it("rejects absent or empty STORE_PASSWORD_HASH in production", () => {
       const envAbsent = { ...validProd };
       delete (envAbsent as Record<string, unknown>).STORE_PASSWORD_HASH;
