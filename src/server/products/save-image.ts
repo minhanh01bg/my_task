@@ -4,8 +4,11 @@ import path from "node:path";
 
 import sharp from "sharp";
 
-// Disable libvips file cache to prevent Windows EBUSY file locks and GLib VipsInterpretation warnings
-sharp.cache(false);
+// Tat cache file cua libvips ngoai production: tranh EBUSY tren Windows va
+// canh bao VipsInterpretation khi hot-reload. Production giu cache cho nhanh.
+if (process.env.NODE_ENV !== "production") {
+  sharp.cache(false);
+}
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];

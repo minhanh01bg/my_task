@@ -10,7 +10,6 @@ export interface HeroSectionProps {
 export function HeroSection({
   storeName = "Cửa hàng",
   tagline = "Hàng thiết yếu, đặt nhanh tại nhà",
-  hotline: _hotline,
 }: HeroSectionProps = {}) {
   const customSlides = [
     {
