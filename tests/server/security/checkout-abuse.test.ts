@@ -6,6 +6,8 @@ import {
 } from "@/server/security/checkout-abuse";
 import {
   createRateLimiter,
+  type RateLimitDecision,
+  type RateLimiter,
   type RateLimitStore,
 } from "@/server/security/rate-limit";
 import type { OnlineCheckoutInput } from "@/types/online-order";
@@ -189,12 +191,12 @@ describe("Checkout Layered Anti-Abuse", () => {
         lines: [{ productId: "hot_deal_product", quantity: 1 }],
       };
 
-      // Product limit is 100 in POLICIES.checkoutProduct
-      for (let i = 0; i < 100; i++) {
+      // Product limit is 600 in POLICIES.checkoutProduct
+      for (let i = 0; i < 600; i++) {
         const pass = await checkPostParseAbuse(
           {
             ...orderWithHotProduct,
-            contactPhone: `09000000${String(i).padStart(2, "0")}`,
+            contactPhone: `0900000${String(i).padStart(3, "0")}`,
           },
           req,
           { limiter },
@@ -202,7 +204,7 @@ describe("Checkout Layered Anti-Abuse", () => {
         expect(pass.ok).toBe(true);
       }
 
-      // 101st request on hot_deal_product is blocked
+      // 601st request on hot_deal_product is blocked
       const blocked = await checkPostParseAbuse(
         {
           ...orderWithHotProduct,
@@ -215,6 +217,99 @@ describe("Checkout Layered Anti-Abuse", () => {
       if (!blocked.ok) {
         expect(blocked.status).toBe(429);
         expect(blocked.error).toBe("rate_limited");
+      }
+    });
+  });
+
+  describe("Post-parse checks run in parallel", () => {
+    const allowed: RateLimitDecision = {
+      allowed: true,
+      remaining: 1,
+      limit: 5,
+      resetInSeconds: 60,
+    };
+    const limited: RateLimitDecision = {
+      allowed: false,
+      reason: "rate_limited",
+      retryAfterSeconds: 30,
+      limit: 5,
+      remaining: 0,
+    };
+
+    function gatedLimiter(decisions: Record<string, RateLimitDecision>) {
+      const started: string[] = [];
+      const waiters: Array<() => void> = [];
+      const limiter: RateLimiter = {
+        async check(policy) {
+          started.push(policy.name);
+          await new Promise<void>((resolve) => waiters.push(resolve));
+          return decisions[policy.name] ?? allowed;
+        },
+      };
+      const releaseAll = () => {
+        for (const release of waiters.splice(0)) release();
+      };
+      return { limiter, started, releaseAll };
+    }
+
+    async function flushMicrotasks(): Promise<void> {
+      for (let i = 0; i < 10; i++) await Promise.resolve();
+    }
+
+    it("checks phone and product velocity concurrently", async () => {
+      const { limiter, started, releaseAll } = gatedLimiter({});
+
+      const pending = checkPostParseAbuse(mockOrder, makeRequest(), {
+        limiter,
+      });
+      await flushMicrotasks();
+
+      expect(started.sort()).toEqual(["checkout-phone", "checkout-product"]);
+      releaseAll();
+      expect(await pending).toEqual({ ok: true });
+    });
+
+    it("reports the phone denial when both phone and product are limited", async () => {
+      const { limiter, releaseAll } = gatedLimiter({
+        "checkout-phone": limited,
+        "checkout-product": limited,
+      });
+
+      const pending = checkPostParseAbuse(mockOrder, makeRequest(), {
+        limiter,
+      });
+      await flushMicrotasks();
+      releaseAll();
+
+      const res = await pending;
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.status).toBe(429);
+        expect(res.message).toBe(
+          "Quá nhiều đơn hàng từ số điện thoại này trong thời gian ngắn",
+        );
+      }
+    });
+
+    it("denies on product velocity even when the phone bucket allows", async () => {
+      const { limiter, releaseAll } = gatedLimiter({
+        "checkout-product": limited,
+      });
+
+      const pending = checkPostParseAbuse(mockOrder, makeRequest(), {
+        limiter,
+      });
+      await flushMicrotasks();
+      releaseAll();
+
+      const res = await pending;
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.status).toBe(429);
+        expect(res.retryAfterSeconds).toBe(30);
+        expect(res.message).toBe(
+          "Sản phẩm đang có quá nhiều lượt mua cùng lúc. Vui lòng thử lại.",
+        );
       }
     });
   });

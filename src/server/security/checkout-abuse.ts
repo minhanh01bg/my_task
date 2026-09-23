@@ -161,13 +161,23 @@ export async function checkPostParseAbuse(
 
   const limiter = getLimiter(options?.limiter);
 
-  // 2. Check phone velocity
-  const phoneDecision = await limiter.check(POLICIES.checkoutPhone, [
-    {
-      bucketName: "phone-hourly",
-      dimension: "phone",
-      identifier: orderData.contactPhone,
-    },
+  // 2 & 3. Phone and product velocity are independent buckets: check them
+  // concurrently. The phone denial still takes precedence in the response.
+  const productTargets = orderData.lines.map((line) => ({
+    bucketName: "product-velocity",
+    dimension: "product",
+    identifier: line.productId,
+  }));
+
+  const [phoneDecision, productDecision] = await Promise.all([
+    limiter.check(POLICIES.checkoutPhone, [
+      {
+        bucketName: "phone-hourly",
+        dimension: "phone",
+        identifier: orderData.contactPhone,
+      },
+    ]),
+    limiter.check(POLICIES.checkoutProduct, productTargets),
   ]);
 
   if (!phoneDecision.allowed) {
@@ -188,18 +198,6 @@ export async function checkPostParseAbuse(
       message: "Quá nhiều đơn hàng từ số điện thoại này trong thời gian ngắn",
     };
   }
-
-  // 3. Check product velocity for lines
-  const productTargets = orderData.lines.map((line) => ({
-    bucketName: "product-velocity",
-    dimension: "product",
-    identifier: line.productId,
-  }));
-
-  const productDecision = await limiter.check(
-    POLICIES.checkoutProduct,
-    productTargets,
-  );
 
   if (!productDecision.allowed) {
     if (productDecision.reason === "limiter_unavailable") {

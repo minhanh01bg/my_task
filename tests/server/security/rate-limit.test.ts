@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   createRateLimiter,
@@ -6,7 +6,47 @@ import {
   type RateLimitStore,
   type RateLimitTarget,
 } from "@/server/security/rate-limit";
-import type { RateLimitPolicy } from "@/server/security/rate-limit-policy";
+import {
+  POLICIES,
+  type RateLimitPolicy,
+} from "@/server/security/rate-limit-policy";
+
+/**
+ * Store whose increments stay pending until released, so a test can observe
+ * how many bucket increments are in flight at the same time.
+ */
+class GatedStore implements RateLimitStore {
+  public counts = new Map<string, number>();
+  public inFlight = 0;
+  public maxInFlight = 0;
+  private waiters: Array<() => void> = [];
+
+  constructor(private readonly seed: Record<string, number> = {}) {}
+
+  async incrementAndGetTtl(
+    key: string,
+    windowSeconds: number,
+  ): Promise<{ count: number; ttlSeconds: number }> {
+    this.inFlight += 1;
+    this.maxInFlight = Math.max(this.maxInFlight, this.inFlight);
+    await new Promise<void>((resolve) => this.waiters.push(resolve));
+    this.inFlight -= 1;
+    const bucket = key.split(":").slice(2, 4).join(":");
+    const next = (this.counts.get(key) ?? this.seed[bucket] ?? 0) + 1;
+    this.counts.set(key, next);
+    return { count: next, ttlSeconds: windowSeconds };
+  }
+
+  releaseAll(): void {
+    const pending = this.waiters;
+    this.waiters = [];
+    for (const release of pending) release();
+  }
+}
+
+async function flushMicrotasks(): Promise<void> {
+  for (let i = 0; i < 10; i++) await Promise.resolve();
+}
 
 class FakeRedisStore implements RateLimitStore {
   public map = new Map<string, { count: number; expiresAt: number }>();
@@ -216,6 +256,157 @@ describe("Distributed Rate Limiter", () => {
       if (!res3.allowed) {
         expect(res3.reason).toBe("rate_limited");
       }
+    });
+  });
+
+  describe("Parallel bucket evaluation", () => {
+    const threeBucketPolicy: RateLimitPolicy = {
+      name: "parallel",
+      failClosed: true,
+      buckets: [
+        { name: "ip", limit: 10, windowSeconds: 60 },
+        { name: "subnet", limit: 50, windowSeconds: 60 },
+        { name: "global", limit: 100, windowSeconds: 60 },
+      ],
+    };
+    const targets: RateLimitTarget[] = [
+      { bucketName: "ip", dimension: "ip", identifier: "198.51.100.9" },
+      {
+        bucketName: "subnet",
+        dimension: "subnet",
+        identifier: "198.51.100.0/24",
+      },
+      { bucketName: "global", dimension: "global", identifier: "global" },
+    ];
+
+    it("increments every bucket of one check concurrently", async () => {
+      const store = new GatedStore();
+      const limiter = createRateLimiter({ store, secret: testSecret });
+
+      const pending = limiter.check(threeBucketPolicy, targets);
+      await flushMicrotasks();
+
+      expect(store.inFlight).toBe(3);
+      store.releaseAll();
+
+      const decision = await pending;
+      expect(decision.allowed).toBe(true);
+      expect(store.maxInFlight).toBe(3);
+      if (decision.allowed) {
+        expect(decision.remaining).toBe(9);
+        expect(decision.limit).toBe(100);
+      }
+    });
+
+    it("still evaluates all buckets and denies when any single one is exceeded", async () => {
+      // The subnet bucket (middle target) is already at its limit.
+      const store = new GatedStore({ "parallel:subnet": 50 });
+      const limiter = createRateLimiter({ store, secret: testSecret });
+
+      const pending = limiter.check(threeBucketPolicy, targets);
+      await flushMicrotasks();
+      expect(store.inFlight).toBe(3);
+      store.releaseAll();
+
+      const decision = await pending;
+      expect(decision.allowed).toBe(false);
+      if (!decision.allowed) {
+        expect(decision.reason).toBe("rate_limited");
+        expect(decision.retryAfterSeconds).toBe(60);
+      }
+      // Every bucket was still incremented exactly once.
+      expect([...store.counts.values()].sort((a, b) => a - b)).toEqual([
+        1, 1, 51,
+      ]);
+    });
+  });
+
+  describe("Timeout timer cleanup", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("clears the timeout timer once the store answers", async () => {
+      vi.useFakeTimers();
+      const store = new FakeRedisStore();
+      const limiter = createRateLimiter({
+        store,
+        secret: testSecret,
+        timeoutMs: 1500,
+      });
+
+      const decision = await limiter.check(
+        {
+          name: "timer",
+          failClosed: true,
+          buckets: [{ name: "burst", limit: 5, windowSeconds: 60 }],
+        },
+        [{ bucketName: "burst", dimension: "ip", identifier: "1.2.3.4" }],
+      );
+
+      expect(decision.allowed).toBe(true);
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it("clears the timeout timer when the store fails fast", async () => {
+      vi.useFakeTimers();
+      const store = new FakeRedisStore();
+      store.shouldThrow = true;
+      const limiter = createRateLimiter({ store, secret: testSecret });
+
+      const decision = await limiter.check(
+        {
+          name: "timer",
+          failClosed: true,
+          buckets: [{ name: "burst", limit: 5, windowSeconds: 60 }],
+        },
+        [{ bucketName: "burst", dimension: "ip", identifier: "1.2.3.4" }],
+      );
+
+      expect(decision.allowed).toBe(false);
+      expect(vi.getTimerCount()).toBe(0);
+    });
+  });
+
+  describe("Production policy caps", () => {
+    it("raises global caps to realistic values", () => {
+      const bucket = (
+        policy: RateLimitPolicy,
+        name: string,
+      ): { limit: number; windowSeconds: number } | undefined =>
+        policy.buckets.find((b) => b.name === name);
+
+      expect(bucket(POLICIES.checkoutIp, "global-burst")).toEqual({
+        name: "global-burst",
+        limit: 6000,
+        windowSeconds: 60,
+      });
+      expect(bucket(POLICIES.checkoutProduct, "product-velocity")).toEqual({
+        name: "product-velocity",
+        limit: 600,
+        windowSeconds: 60,
+      });
+      expect(bucket(POLICIES.customerAuth, "global-attempts")).toEqual({
+        name: "global-attempts",
+        limit: 10000,
+        windowSeconds: 900,
+      });
+    });
+
+    it("keeps per-IP, subnet and phone caps unchanged", () => {
+      const limits = (policy: RateLimitPolicy) =>
+        Object.fromEntries(policy.buckets.map((b) => [b.name, b.limit]));
+
+      expect(limits(POLICIES.checkoutIp)).toMatchObject({
+        "ip-burst": 10,
+        "subnet-burst": 50,
+      });
+      expect(limits(POLICIES.checkoutPhone)).toEqual({ "phone-hourly": 5 });
+      expect(limits(POLICIES.customerAuth)).toMatchObject({
+        "ip-attempts": 20,
+        "subnet-attempts": 100,
+        "phone-attempts": 5,
+      });
     });
   });
 

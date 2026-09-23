@@ -22,7 +22,7 @@ export const POLICIES = {
     buckets: [
       { name: "ip-burst", limit: 10, windowSeconds: 60 },
       { name: "subnet-burst", limit: 50, windowSeconds: 60 },
-      { name: "global-burst", limit: 500, windowSeconds: 60 },
+      { name: "global-burst", limit: 6000, windowSeconds: 60 },
     ],
   },
   checkoutPhone: {
@@ -35,7 +35,7 @@ export const POLICIES = {
     name: "checkout-product",
     failClosed: true,
     timeoutMs: 1500,
-    buckets: [{ name: "product-velocity", limit: 100, windowSeconds: 60 }],
+    buckets: [{ name: "product-velocity", limit: 600, windowSeconds: 60 }],
   },
   customerAuth: {
     name: "customer-auth",
@@ -45,7 +45,7 @@ export const POLICIES = {
       { name: "ip-attempts", limit: 20, windowSeconds: 900 },
       { name: "subnet-attempts", limit: 100, windowSeconds: 900 },
       { name: "phone-attempts", limit: 5, windowSeconds: 900 },
-      { name: "global-attempts", limit: 1000, windowSeconds: 900 },
+      { name: "global-attempts", limit: 10000, windowSeconds: 900 },
     ],
   },
   adminLogin: {
