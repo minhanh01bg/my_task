@@ -24,6 +24,12 @@ import { SyncIndicator } from "@/components/pos/sync-indicator";
 import { usePosShortcuts } from "@/components/pos/use-pos-shortcuts";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { formatVnd } from "@/lib/money";
 import { calculateCart } from "@/lib/pricing/calculate";
 import {
@@ -68,6 +74,9 @@ export function PosScreen({
   const [serviceOpen, setServiceOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [lastSale, setLastSale] = useState<LastSale | null>(null);
+  // Tach co mo khoi du lieu de hop thoai con noi dung trong luc dong (animation).
+  const [saleOpen, setSaleOpen] = useState(false);
+  const newOrderRef = useRef<HTMLButtonElement>(null);
   const [refreshingCatalog, setRefreshingCatalog] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -111,9 +120,14 @@ export function PosScreen({
     }
   }, []);
 
+  const searchInput = useCallback(
+    () => searchRef.current?.querySelector("input") ?? null,
+    [],
+  );
+
   const focusSearch = useCallback(() => {
-    searchRef.current?.querySelector("input")?.focus();
-  }, []);
+    searchInput()?.focus();
+  }, [searchInput]);
 
   const holdCurrent = useCallback(() => {
     if (lines.length === 0) return;
@@ -159,6 +173,7 @@ export function PosScreen({
       change: Math.max(0, result.received - totals.total),
       synced: outcome.synced,
     });
+    setSaleOpen(true);
 
     setPendingCode(`DH${Date.now().toString().slice(-6)}`);
     clear();
@@ -289,50 +304,51 @@ export function PosScreen({
         onConfirm={handleConfirm}
       />
 
-      {lastSale ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="sale-success-title"
-            className="bg-background w-full max-w-md space-y-4 rounded-3xl p-6 text-center shadow-2xl sm:p-8"
-          >
-            <div className="bg-primary/10 text-primary mx-auto flex size-14 items-center justify-center rounded-full">
-              <CheckCircle
-                aria-hidden="true"
-                weight="fill"
-                className="size-8"
-              />
-            </div>
-            <h2
-              id="sale-success-title"
-              className="font-heading text-2xl font-bold"
-            >
-              Thanh toán thành công
-            </h2>
-            <p className="text-muted-foreground">
-              {lastSale.synced
-                ? `Đã lưu đơn ${lastSale.code}`
-                : "Đã lưu tạm — sẽ đồng bộ khi có mạng"}
-            </p>
-            <p className="text-lg">Khách đưa {formatVnd(lastSale.received)}</p>
-            <p className="text-muted-foreground text-sm">Tiền thối lại</p>
-            <p
-              data-testid="last-sale-change"
-              className="text-7xl font-bold tabular-nums"
-            >
-              {formatVnd(lastSale.change)}
-            </p>
-            <Button
-              autoFocus
-              className="h-16 w-full text-xl"
-              onClick={() => setLastSale(null)}
-            >
-              Đơn mới
-            </Button>
-          </div>
-        </div>
-      ) : null}
+      <Dialog open={saleOpen && lastSale !== null} onOpenChange={setSaleOpen}>
+        <DialogContent
+          showCloseButton={false}
+          initialFocus={newOrderRef}
+          finalFocus={() => searchInput() ?? true}
+          className="bg-background block space-y-4 rounded-3xl p-6 text-center shadow-2xl sm:max-w-md sm:p-8"
+        >
+          {lastSale ? (
+            <>
+              <div className="bg-primary/10 text-primary mx-auto flex size-14 items-center justify-center rounded-full">
+                <CheckCircle
+                  aria-hidden="true"
+                  weight="fill"
+                  className="size-8"
+                />
+              </div>
+              <DialogTitle className="text-2xl leading-tight font-bold">
+                Thanh toán thành công
+              </DialogTitle>
+              <DialogDescription className="text-base">
+                {lastSale.synced
+                  ? `Đã lưu đơn ${lastSale.code}`
+                  : "Đã lưu tạm — sẽ đồng bộ khi có mạng"}
+              </DialogDescription>
+              <p className="text-lg">
+                Khách đưa {formatVnd(lastSale.received)}
+              </p>
+              <p className="text-muted-foreground text-sm">Tiền thối lại</p>
+              <p
+                data-testid="last-sale-change"
+                className="text-7xl font-bold tabular-nums"
+              >
+                {formatVnd(lastSale.change)}
+              </p>
+              <Button
+                ref={newOrderRef}
+                className="h-16 w-full text-xl"
+                onClick={() => setSaleOpen(false)}
+              >
+                Đơn mới
+              </Button>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

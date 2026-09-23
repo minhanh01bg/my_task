@@ -1,9 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { DebtPanel } from "@/components/pos/debt-panel";
 import { TransferPanel } from "@/components/pos/transfer-panel";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { OrderPayloadPayment } from "@/lib/sync/types";
@@ -25,6 +31,8 @@ interface PaymentDialogProps {
   total: number;
   orderCode: string;
   bankAccount: BankAccount | null;
+  /** Dang gui don: khoa Escape/bam nen va cac nut de tranh gui trung. */
+  submitting?: boolean;
   onCancel: () => void;
   onConfirm: (result: PaymentResult) => void;
 }
@@ -44,14 +52,14 @@ export function PaymentDialog({
   total,
   orderCode,
   bankAccount,
+  submitting = false,
   onCancel,
   onConfirm,
 }: PaymentDialogProps) {
   const [method, setMethod] = useState<Method>("cash");
   const [received, setReceived] = useState("");
   const [customer, setCustomer] = useState<CustomerOption | null>(null);
-
-  if (!open) return null;
+  const cashInputRef = useRef<HTMLInputElement>(null);
 
   const receivedValue = Math.round(Number(received) || 0);
   const change = Math.max(0, receivedValue - total);
@@ -92,22 +100,26 @@ export function PaymentDialog({
     });
   }
 
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen && !submitting) onCancel();
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-4">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="payment-dialog-title"
-        className="bg-background ring-foreground/10 max-h-[calc(100dvh-1.5rem)] w-full max-w-xl space-y-5 overflow-y-auto rounded-3xl p-4 shadow-2xl ring-1 sm:max-h-[calc(100dvh-2rem)] sm:p-6"
+    <Dialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      disablePointerDismissal={submitting}
+    >
+      <DialogContent
+        showCloseButton={false}
+        initialFocus={() => cashInputRef.current ?? true}
+        className="bg-background ring-foreground/10 modal-scroll block max-h-[calc(100dvh-1.5rem)] w-full max-w-[calc(100%-1.5rem)] space-y-5 overflow-y-auto rounded-3xl p-4 shadow-2xl ring-1 sm:max-h-[calc(100dvh-2rem)] sm:max-w-xl sm:p-6"
       >
         <div className="border-border bg-muted/40 flex items-baseline justify-between gap-4 rounded-2xl border p-4">
           <div>
-            <p
-              id="payment-dialog-title"
-              className="text-muted-foreground text-sm font-semibold"
-            >
+            <DialogTitle className="text-muted-foreground font-sans text-sm leading-normal font-semibold">
               Thanh toán đơn hàng
-            </p>
+            </DialogTitle>
             <span className="text-lg font-bold">Khách phải trả</span>
           </div>
           <span
@@ -164,11 +176,11 @@ export function PaymentDialog({
                   ) : null}
                 </div>
                 <Input
+                  ref={cashInputRef}
                   id="cash-received"
                   aria-label="Tiền khách đưa"
                   type="number"
                   min="0"
-                  autoFocus
                   value={received}
                   onChange={(event) => setReceived(event.target.value)}
                   inputMode="numeric"
@@ -252,14 +264,18 @@ export function PaymentDialog({
         </div>
 
         <div className="flex gap-2">
-          <TouchButton
-            type="button"
-            variant="outline"
-            className="h-14 flex-1"
-            onClick={onCancel}
+          <DialogClose
+            disabled={submitting}
+            render={
+              <TouchButton
+                type="button"
+                variant="outline"
+                className="h-14 flex-1"
+              />
+            }
           >
             Huỷ
-          </TouchButton>
+          </DialogClose>
 
           {method === "transfer" ? (
             <>
@@ -267,6 +283,7 @@ export function PaymentDialog({
                 type="button"
                 variant="outline"
                 className="h-14 flex-1"
+                disabled={submitting}
                 onClick={() => confirmTransfer(false)}
               >
                 Chưa nhận được tiền
@@ -274,6 +291,7 @@ export function PaymentDialog({
               <TouchButton
                 type="button"
                 className="h-14 flex-1 text-lg"
+                disabled={submitting}
                 onClick={() => confirmTransfer(true)}
               >
                 Đã nhận tiền
@@ -283,14 +301,16 @@ export function PaymentDialog({
             <TouchButton
               type="button"
               className="h-14 flex-1 text-lg"
-              disabled={method === "cash" ? !cashEnough : !customer}
+              disabled={
+                submitting || (method === "cash" ? !cashEnough : !customer)
+              }
               onClick={method === "cash" ? confirmCash : confirmDebt}
             >
               Xác nhận
             </TouchButton>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
