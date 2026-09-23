@@ -35,9 +35,9 @@ jobs:
       - name: Prepare build database
         run: pnpm exec prisma db push --skip-generate
         env:
-          DATABASE_URL: file:./prisma/ci.db
+          DATABASE_URL: file:./ci.db
 
       - name: Build
         run: pnpm build
         env:
-          DATABASE_URL: file:./prisma/ci.db
+          DATABASE_URL: file:./ci.db
