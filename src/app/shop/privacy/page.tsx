@@ -1,8 +1,6 @@
 import { PolicyLayout } from "@/features/online-store/policy-layout";
 import { getPublicStoreProfile } from "@/server/settings/store-settings";
 
-export const dynamic = "force-dynamic";
-
 export const metadata = {
   title: "Chính sách bảo mật thông tin",
   description:

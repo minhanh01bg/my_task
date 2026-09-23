@@ -1,8 +1,6 @@
 import { PolicyLayout } from "@/features/online-store/policy-layout";
 import { getPublicStoreProfile } from "@/server/settings/store-settings";
 
-export const dynamic = "force-dynamic";
-
 export const metadata = {
   title: "Chính sách thanh toán",
   description: "Các phương thức thanh toán được hỗ trợ và quy trình xác nhận",

@@ -9,7 +9,13 @@ import { StoreHeader } from "@/features/online-store/store-header";
 import { getOnlineProductDetail } from "@/server/catalog/get-product-detail";
 import { getPublicStoreProfile } from "@/server/settings/store-settings";
 
-export const dynamic = "force-dynamic";
+/** ISR: HTML không phụ thuộc cookie; tag cache (Task 4) lo invalidation. */
+export const revalidate = 60;
+
+/** Mảng rỗng: không prerender lúc build, render lần đầu khi có request rồi cache (ISR). */
+export function generateStaticParams(): Array<{ id: string }> {
+  return [];
+}
 
 export async function generateMetadata({
   params,
@@ -57,6 +63,7 @@ export default async function ProductDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  // Cùng loader `cache()` với generateMetadata → một truy vấn mỗi request.
   const [detail, storeProfile] = await Promise.all([
     getOnlineProductDetail(id),
     getPublicStoreProfile(),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -29,8 +29,10 @@ const defaultFilter: CatalogFilter = {
   sort: "relevance",
 };
 
+type CatalogSearchParams = ReturnType<typeof useSearchParams> | null;
+
 function parseFilterFromParams(
-  searchParams: URLSearchParams | null,
+  searchParams: CatalogSearchParams,
 ): CatalogFilter {
   if (!searchParams) return defaultFilter;
   const raw: Record<string, unknown> = {};
@@ -53,8 +55,33 @@ function parseFilterFromParams(
   return parsed.success ? parsed.data : defaultFilter;
 }
 
+/**
+ * `/shop` được render tĩnh (ISR) nên `useSearchParams` phải nằm trong Suspense.
+ * Fallback là danh mục mặc định (chưa lọc) để HTML tĩnh vẫn có lưới sản phẩm;
+ * sau hydrate, bản đọc query string (`?q=`, `?category=`, `?wishlist=`) thay thế.
+ */
 export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
+  return (
+    <Suspense
+      fallback={<CatalogBrowserView catalog={catalog} searchParams={null} />}
+    >
+      <CatalogBrowserWithParams catalog={catalog} />
+    </Suspense>
+  );
+}
+
+function CatalogBrowserWithParams({ catalog }: { catalog: OnlineCatalog }) {
   const searchParams = useSearchParams();
+  return <CatalogBrowserView catalog={catalog} searchParams={searchParams} />;
+}
+
+function CatalogBrowserView({
+  catalog,
+  searchParams,
+}: {
+  catalog: OnlineCatalog;
+  searchParams: CatalogSearchParams;
+}) {
   const { add } = useOnlineCart();
 
   const [prevParams, setPrevParams] = useState(searchParams);

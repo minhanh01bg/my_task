@@ -12,11 +12,32 @@ import { TrustSection } from "@/features/online-store/landing/trust-section";
 import { PromotionBanner } from "@/features/online-store/promotion-banner";
 import { StoreFooter } from "@/features/online-store/store-footer";
 import { StoreHeader } from "@/features/online-store/store-header";
+import type { OnlineProduct } from "@/features/online-store/types";
 import { getOnlineCatalog } from "@/server/catalog/get-online-catalog";
 import { getPublicStoreProfile } from "@/server/settings/store-settings";
 import { getActivePromotions } from "@/server/storefront/promotions";
 
-export const dynamic = "force-dynamic";
+/** ISR: HTML không đọc cookie; phần phụ thuộc phiên nằm ở client island của header. */
+export const revalidate = 60;
+
+const FLASH_SALE_LIMIT = 4;
+const FEATURED_LIMIT = 8;
+
+/** DTO tối thiểu gửi xuống client — không để field thừa lọt vào RSC payload. */
+function toCatalogProductDto(product: OnlineProduct): OnlineProduct {
+  return {
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    unit: product.unit,
+    stock: product.stock,
+    imageUrl: product.imageUrl,
+    categoryId: product.categoryId,
+    soldCount: product.soldCount ?? 0,
+    // Giữ: CatalogBrowser lọc/tìm kiếm bỏ dấu phía client.
+    searchText: product.searchText,
+  };
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const storeProfile = await getPublicStoreProfile();
@@ -49,6 +70,15 @@ export default async function ShopPage() {
       getActivePromotions({ placement: "hero", limit: 1 }),
     ]);
 
+  const products = catalog.products.map(toCatalogProductDto);
+  const flashSaleProducts = products
+    .filter((p) => p.stock > 0)
+    .slice(0, FLASH_SALE_LIMIT);
+  const featuredProducts = products
+    .filter((p) => p.stock > 0)
+    .sort((a, b) => (b.soldCount ?? 0) - (a.soldCount ?? 0))
+    .slice(0, FEATURED_LIMIT);
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Store",
@@ -79,18 +109,15 @@ export default async function ShopPage() {
         hotline={storeProfile.hotline}
       />
       <CategorySection categories={catalog.categories} />
-      <FlashSaleSection products={catalog.products} />
-      {catalog.products.length > 0 ? (
+      <FlashSaleSection products={flashSaleProducts} />
+      {products.length > 0 ? (
         <ProductRail
           title="Sản phẩm nổi bật"
           subtitle="Lựa chọn phổ biến được nhiều khách hàng tin tưởng"
-          products={[...catalog.products]
-            .filter((p) => p.stock > 0)
-            .sort((a, b) => (b.soldCount ?? 0) - (a.soldCount ?? 0))
-            .slice(0, 8)}
+          products={featuredProducts}
         />
       ) : null}
-      <CatalogBrowser catalog={catalog} />
+      <CatalogBrowser catalog={{ categories: catalog.categories, products }} />
       <RecentlyViewedSection />
       <TrustSection
         storeName={storeProfile.name}
