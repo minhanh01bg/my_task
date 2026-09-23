@@ -4,13 +4,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
+  Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Leaf,
   Pause,
   Play,
   ShieldCheck,
-  ShoppingBag,
   Sparkles,
   Truck,
 } from "lucide-react";
@@ -464,12 +465,12 @@ function SlideVisualShowcase({ visual }: { visual: HeroSlideVisual }) {
         <div className="border-border/50 flex items-center justify-between border-b pb-4">
           <div className="flex items-center gap-3">
             <div className="bg-primary/15 text-primary flex size-11 items-center justify-center rounded-2xl shadow-inner transition-transform duration-300 hover:rotate-3">
-              {visual.accentBadge.includes("🥬") ? (
-                <ShoppingBag className="size-5" />
-              ) : visual.accentBadge.includes("🚚") ? (
-                <Truck className="size-5" />
+              {visual.accentIcon === "leaf" ? (
+                <Leaf aria-hidden="true" className="size-5" />
+              ) : visual.accentIcon === "truck" ? (
+                <Truck aria-hidden="true" className="size-5" />
               ) : (
-                <ShieldCheck className="size-5" />
+                <ShieldCheck aria-hidden="true" className="size-5" />
               )}
             </div>
             <div>
@@ -507,8 +508,9 @@ function SlideVisualShowcase({ visual }: { visual: HeroSlideVisual }) {
               Tồn kho thời gian thực
             </span>
           </span>
-          <span className="text-primary text-[11px] font-bold">
-            ✓ Đã xác thực
+          <span className="text-primary flex items-center gap-1 text-[11px] font-bold">
+            <Check aria-hidden="true" className="size-3" />
+            Đã xác thực
           </span>
         </div>
       </div>

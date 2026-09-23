@@ -1,7 +1,9 @@
 "use client";
 
 import { useActionState } from "react";
+import { Check, X } from "lucide-react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,19 +28,15 @@ export function SettingsForm({ storeProfile, account }: SettingsFormProps) {
     <form action={formAction} className="space-y-6">
       {state ? (
         state.ok ? (
-          <div
-            role="status"
-            className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm font-medium text-emerald-700 dark:text-emerald-300"
-          >
-            ✓ {state.message}
-          </div>
+          <Alert variant="success" role="status" className="p-4">
+            <Check aria-hidden="true" />
+            <AlertDescription>{state.message}</AlertDescription>
+          </Alert>
         ) : (
-          <div
-            role="alert"
-            className="border-destructive/30 bg-destructive/10 text-destructive rounded-xl border p-4 text-sm font-medium"
-          >
-            ✕ {state.error}
-          </div>
+          <Alert variant="destructive" className="p-4">
+            <X aria-hidden="true" />
+            <AlertDescription>{state.error}</AlertDescription>
+          </Alert>
         )
       ) : null}
 

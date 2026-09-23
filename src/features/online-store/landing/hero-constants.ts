@@ -4,7 +4,8 @@ export interface HeroSlideVisual {
   metricValue: string;
   metricLabel: string;
   highlightPill: string;
-  accentBadge: string;
+  /** Icon lucide cho the showcase — khong dung emoji lam icon. */
+  accentIcon: "leaf" | "truck" | "shield";
 }
 
 export interface HeroSlide {
@@ -43,8 +44,8 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
       subtitle: "Nông sản & Bách hóa tuyển chọn",
       metricValue: "100%",
       metricLabel: "Độ tươi mới trong ngày",
-      highlightPill: "⚡ GIẢM TỚI 35%",
-      accentBadge: "🥬 Tươi mới",
+      highlightPill: "GIẢM TỚI 35%",
+      accentIcon: "leaf",
     },
   },
   {
@@ -68,8 +69,8 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
       subtitle: "Phục vụ tận cửa mọi khung giờ",
       metricValue: "30p",
       metricLabel: "Giao nhanh nội thành",
-      highlightPill: "🚀 FREESHIP 0Đ",
-      accentBadge: "🚚 Giao tận nơi",
+      highlightPill: "FREESHIP 0Đ",
+      accentIcon: "truck",
     },
   },
   {
@@ -93,8 +94,8 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
       subtitle: "Chính hãng & Minh bạch nguồn gốc",
       metricValue: "4.9★",
       metricLabel: "2.800+ đánh giá tin cậy",
-      highlightPill: "🛡️ BẢO VỆ 100%",
-      accentBadge: "⭐ Uy tín 5 sao",
+      highlightPill: "BẢO VỆ 100%",
+      accentIcon: "shield",
     },
   },
 ];

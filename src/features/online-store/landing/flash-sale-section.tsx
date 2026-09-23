@@ -161,8 +161,12 @@ export function FlashSaleSection({
                           style={{ width: `${soldPercent}%` }}
                         />
                       </div>
-                      <span className="text-muted-foreground mt-1 block text-[0.65rem] font-semibold">
-                        🔥 Đã bán {soldPercent}%
+                      <span className="text-muted-foreground mt-1 flex items-center gap-1 text-[0.65rem] font-semibold">
+                        <Flame
+                          aria-hidden="true"
+                          className="text-destructive size-3"
+                        />
+                        Đã bán {soldPercent}%
                       </span>
                     </div>
                   </div>

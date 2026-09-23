@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Check } from "lucide-react";
+
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function RevokeGuestButton({ orderId }: { orderId: string }) {
   const [loading, setLoading] = useState(false);
@@ -31,9 +34,12 @@ export function RevokeGuestButton({ orderId }: { orderId: string }) {
 
   if (revoked) {
     return (
-      <div className="mt-4 rounded-xl bg-green-50 p-3 text-sm text-green-700 dark:bg-green-950/40 dark:text-green-300">
-        ✓ Đã thu hồi toàn bộ quyền truy cập của khách cho đơn hàng này.
-      </div>
+      <Alert variant="success" role="status" className="mt-4">
+        <Check aria-hidden="true" />
+        <AlertDescription>
+          Đã thu hồi toàn bộ quyền truy cập của khách cho đơn hàng này.
+        </AlertDescription>
+      </Alert>
     );
   }
 
