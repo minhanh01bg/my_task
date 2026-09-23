@@ -107,7 +107,10 @@ export async function saveStoreBankAccount(
 
 /** Đọc `process.env` lúc gọi (không cố định lúc import) — cùng thứ tự với `siteConfig.name`. */
 function getDefaultStoreName(): string {
-  return resolveDefaultStoreName(process.env);
+  return resolveDefaultStoreName({
+    NEXT_PUBLIC_STORE_NAME: process.env.NEXT_PUBLIC_STORE_NAME,
+    STORE_NAME: process.env.STORE_NAME,
+  });
 }
 
 export async function getStoreName(): Promise<string> {
