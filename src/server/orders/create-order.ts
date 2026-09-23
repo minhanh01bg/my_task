@@ -3,6 +3,8 @@ import { Prisma } from "@prisma/client";
 import { logger } from "@/lib/logger";
 import { calculateCart } from "@/lib/pricing/calculate";
 import type { CartLine } from "@/lib/pricing/types";
+import { revalidatePublic } from "@/server/cache/public-cache";
+import { CACHE_TAGS } from "@/server/cache/tags";
 import { createCustomerOrderCreatedNotification } from "@/server/customer-notifications/create-customer-notification";
 import { prisma } from "@/server/db/prisma";
 import { createOnlineOrderNotification } from "@/server/notifications/create-admin-notification";
@@ -206,7 +208,7 @@ export async function createOrder(
 
   for (let attempt = 1; ; attempt += 1) {
     try {
-      return await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx) => {
         // Lenh GHI dau tien: giu khoa ghi ngay, khong doc-roi-nang-cap khoa.
         const sequence = await nextOrderSequence(tx);
         const code = await resolveOrderCode(tx, sequence, input.preferredCode);
@@ -335,6 +337,9 @@ export async function createOrder(
           duplicated: false,
         };
       });
+      // Sau commit (khong trong transaction): ton kho/soldCount da doi.
+      if (stockLines.length > 0) revalidatePublic(CACHE_TAGS.catalog);
+      return result;
     } catch (error: unknown) {
       if (isUniqueViolationOn(error, "code")) {
         if (attempt >= MAX_CODE_ATTEMPTS) throw error;

@@ -1,7 +1,15 @@
+import { cache } from "react";
+
 import type { OnlineCatalog } from "@/features/online-store/types";
+import { cachedPublic } from "@/server/cache/public-cache";
+import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
 
-export async function getOnlineCatalog(): Promise<OnlineCatalog> {
+/**
+ * Giu `searchText` trong DTO: cua hang online loc/tim kiem phia client
+ * (`features/online-store/filter-products.ts`).
+ */
+async function loadOnlineCatalog(): Promise<OnlineCatalog> {
   const [categories, products] = await Promise.all([
     prisma.category.findMany({
       orderBy: { sortOrder: "asc" },
@@ -43,3 +51,12 @@ export async function getOnlineCatalog(): Promise<OnlineCatalog> {
     products,
   };
 }
+
+/** Dedupe trong request (cache) + dung chung giua request theo tag catalog. */
+export const getOnlineCatalog = cache(
+  (): Promise<OnlineCatalog> =>
+    cachedPublic(loadOnlineCatalog, ["online-catalog"], {
+      tags: [CACHE_TAGS.catalog],
+      revalidate: 60,
+    }),
+);

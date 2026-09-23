@@ -2,6 +2,8 @@ import {
   createCustomerOrderPaymentNotification,
   createCustomerOrderStatusNotification,
 } from "@/server/customer-notifications/create-customer-notification";
+import { revalidatePublic } from "@/server/cache/public-cache";
+import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
 
 import { cancelOrder } from "./cancel-order";
@@ -15,7 +17,7 @@ export async function transitionOnlineOrder(
   orderId: string,
   next: OnlineOrderStatus,
 ) {
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
       where: { id: orderId },
       select: {
@@ -53,6 +55,9 @@ export async function transitionOnlineOrder(
     await createCustomerOrderStatusNotification(tx, order, next);
     return updated;
   });
+  // Huy don da hoan ton kho trong transaction tren — lam moi catalog sau commit.
+  if (next === "cancelled") revalidatePublic(CACHE_TAGS.catalog);
+  return updated;
 }
 
 export async function markOnlineOrderPaid(orderId: string) {

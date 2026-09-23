@@ -1,10 +1,15 @@
 import type { Prisma } from "@prisma/client";
 
+import { revalidatePublic } from "@/server/cache/public-cache";
+import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
 
 /**
  * Huy don va hoan lai ton kho. Idempotent — huy don da huy khong lam gi them,
  * neu khong se cong ton kho nhieu lan.
+ *
+ * Khi truyen `txClient`, transaction thuoc ve nguoi goi: nguoi goi PHAI goi
+ * `revalidatePublic(CACHE_TAGS.catalog)` sau khi transaction cua ho commit.
  */
 export async function cancelOrder(
   orderId: string,
@@ -46,5 +51,6 @@ export async function cancelOrder(
     await runner(txClient);
   } else {
     await prisma.$transaction(runner);
+    revalidatePublic(CACHE_TAGS.catalog);
   }
 }

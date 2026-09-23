@@ -1,4 +1,8 @@
+import { cache } from "react";
+
 import type { OnlineProduct } from "@/features/online-store/types";
+import { cachedPublic } from "@/server/cache/public-cache";
+import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
 
 export interface OnlineProductDetail {
@@ -9,7 +13,7 @@ export interface OnlineProductDetail {
   relatedProducts: OnlineProduct[];
 }
 
-export async function getOnlineProductDetail(
+async function loadOnlineProductDetail(
   id: string,
 ): Promise<OnlineProductDetail | null> {
   const product = await prisma.product.findFirst({
@@ -72,3 +76,20 @@ export async function getOnlineProductDetail(
     relatedProducts,
   };
 }
+
+/**
+ * generateMetadata va page cung goi — cache() gom lai mot lan trong request.
+ * Tag `product:<id>` cho lan sua san pham nay, `catalog` cho thay doi chung
+ * (ton kho, san pham lien quan).
+ */
+export const getOnlineProductDetail = cache(
+  (id: string): Promise<OnlineProductDetail | null> =>
+    cachedPublic(
+      () => loadOnlineProductDetail(id),
+      ["online-product-detail", id],
+      {
+        tags: [CACHE_TAGS.product(id), CACHE_TAGS.catalog],
+        revalidate: 60,
+      },
+    ),
+);

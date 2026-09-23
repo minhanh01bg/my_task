@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import { logAdminAction } from "@/server/auth/admin-audit";
 import { requireAdminSession } from "@/server/auth/require-admin-session";
+import { revalidatePublic } from "@/server/cache/public-cache";
+import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
 import { promotionActionSchema } from "@/types/storefront";
 import type { PromotionActionResult } from "@/types/storefront";
@@ -60,6 +62,7 @@ export async function savePromotionAction(
       metadata: { title: data.title },
     });
 
+    revalidatePublic(CACHE_TAGS.promotions);
     safeRevalidatePath("/admin/promotions");
     safeRevalidatePath("/shop");
 
@@ -82,6 +85,7 @@ export async function savePromotionAction(
     metadata: { title: data.title },
   });
 
+  revalidatePublic(CACHE_TAGS.promotions);
   safeRevalidatePath("/admin/promotions");
   safeRevalidatePath("/shop");
 
@@ -111,6 +115,7 @@ export async function togglePromotionActiveAction(
     metadata: { isActive },
   });
 
+  revalidatePublic(CACHE_TAGS.promotions);
   safeRevalidatePath("/admin/promotions");
   safeRevalidatePath("/shop");
 
@@ -136,6 +141,7 @@ export async function deletePromotionAction(
     entityId: id,
   });
 
+  revalidatePublic(CACHE_TAGS.promotions);
   safeRevalidatePath("/admin/promotions");
   safeRevalidatePath("/shop");
 

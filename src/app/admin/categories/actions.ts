@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { revalidatePublic } from "@/server/cache/public-cache";
+import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
 import { requireAdminSession } from "@/server/auth/require-admin-session";
 import { buildSearchText } from "@/lib/search/search-text";
@@ -49,6 +51,7 @@ export async function saveCategoryAction(formData: FormData): Promise<void> {
     await prisma.category.create({ data });
   }
 
+  revalidatePublic(CACHE_TAGS.catalog);
   revalidatePath("/admin/categories");
   revalidatePath("/pos");
 }
@@ -71,6 +74,7 @@ export async function deleteCategoryAction(id: string): Promise<void> {
     ),
     prisma.category.delete({ where: { id } }),
   ]);
+  revalidatePublic(CACHE_TAGS.catalog);
   revalidatePath("/admin/categories");
   revalidatePath("/admin/products");
   revalidatePath("/pos");
@@ -103,6 +107,7 @@ export async function moveCategoryAction(
     ),
   );
 
+  revalidatePublic(CACHE_TAGS.catalog);
   revalidatePath("/admin/categories");
   revalidatePath("/pos");
 }

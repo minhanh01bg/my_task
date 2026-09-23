@@ -1,4 +1,6 @@
 import { buildSearchText } from "@/lib/search/search-text";
+import { revalidatePublic } from "@/server/cache/public-cache";
+import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
 
 export interface SaveProductInput {
@@ -58,6 +60,7 @@ export async function saveProduct(
       data: dataWithImage,
       select: { id: true },
     });
+    revalidatePublic(CACHE_TAGS.catalog, CACHE_TAGS.product(updated.id));
     return updated;
   }
 
@@ -65,6 +68,7 @@ export async function saveProduct(
     data: dataWithImage,
     select: { id: true },
   });
+  revalidatePublic(CACHE_TAGS.catalog, CACHE_TAGS.product(created.id));
   return created;
 }
 
@@ -76,4 +80,5 @@ export async function softDeleteProduct(id: string): Promise<void> {
     where: { id },
     data: { deletedAt: new Date(), isActive: false },
   });
+  revalidatePublic(CACHE_TAGS.catalog, CACHE_TAGS.product(id));
 }
