@@ -154,6 +154,7 @@ describe("CustomerNotificationButton", () => {
     const button = await screen.findByRole("button", { name: /thông báo/i });
     fireEvent.click(button);
 
-    expect(await screen.findByText("Chưa có thông báo")).toBeInTheDocument();
+    const title = await screen.findByText("Chưa có thông báo");
+    expect(title.closest('[data-slot="empty-state"]')).not.toBeNull();
   });
 });

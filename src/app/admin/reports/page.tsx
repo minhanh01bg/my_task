@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { PackageCheck, ReceiptText, TrendingUp } from "lucide-react";
 
+import { EmptyState, Money, PageHeader, StatTile } from "@/components/kit";
 import { ChartSvg } from "@/components/kit/chart-svg";
-import { Money, PageHeader, StatTile } from "@/components/kit";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -91,7 +92,12 @@ export default async function ReportsPage({
         </CardHeader>
         <CardContent>
           {revenue.length === 0 ? (
-            <p className="text-muted-foreground">Chưa có đơn nào</p>
+            <EmptyState
+              size="compact"
+              icon={ReceiptText}
+              title="Chưa có đơn nào"
+              description={`Không có đơn bán nào trong ${periodLabel}.`}
+            />
           ) : (
             <ul className="divide-y">
               {revenue.map((row) => (
@@ -126,16 +132,25 @@ export default async function ReportsPage({
           <CardTitle>Hàng bán chạy</CardTitle>
         </CardHeader>
         <CardContent>
-          <ul className="divide-y">
-            {topProducts.map((row) => (
-              <li key={row.id} className="flex justify-between py-2">
-                <span>{row.name}</span>
-                <span className="text-muted-foreground">
-                  {row.soldCount} lượt
-                </span>
-              </li>
-            ))}
-          </ul>
+          {topProducts.length === 0 ? (
+            <EmptyState
+              size="compact"
+              icon={TrendingUp}
+              title="Chưa có hàng bán chạy"
+              description="Bán vài đơn là danh sách sẽ tự hiện."
+            />
+          ) : (
+            <ul className="divide-y">
+              {topProducts.map((row) => (
+                <li key={row.id} className="flex justify-between py-2">
+                  <span>{row.name}</span>
+                  <span className="text-muted-foreground">
+                    {row.soldCount} lượt
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </CardContent>
       </Card>
 
@@ -145,7 +160,11 @@ export default async function ReportsPage({
         </CardHeader>
         <CardContent>
           {lowStock.length === 0 ? (
-            <p className="text-muted-foreground">Không có hàng nào sắp hết</p>
+            <EmptyState
+              size="compact"
+              icon={PackageCheck}
+              title="Không có hàng nào sắp hết"
+            />
           ) : (
             <ul className="divide-y">
               {lowStock.map((row) => (

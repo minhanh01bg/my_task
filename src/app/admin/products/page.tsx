@@ -1,9 +1,14 @@
 import Link from "next/link";
 import { NotePencil, Trash, Warning } from "@phosphor-icons/react/dist/ssr";
+import { SearchX } from "lucide-react";
 
-import { Pagination } from "@/components/kit";
+import {
+  EmptyState,
+  PageHeader,
+  Pagination,
+  ProductImage,
+} from "@/components/kit";
 import { ConfirmAction } from "@/components/shared/confirm-action";
-import { ProductImage } from "@/components/shared/product-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,23 +77,19 @@ export default async function ProductsPage({
 
   return (
     <div className="space-y-6">
-      {/* Header with Title and Add Product Button */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="eyebrow">Danh mục hàng hóa</p>
-          <h1 className="font-heading mt-1 text-3xl font-bold">Sản phẩm</h1>
-          <p className="text-muted-foreground mt-1">
-            Quản lý giá, tồn kho, phân loại danh mục và cảnh báo nhập hàng.
-          </p>
-        </div>
-
-        {/* Modal Thêm / Sửa sản phẩm */}
-        <ProductDialog
-          categories={categories}
-          product={editingProduct ?? undefined}
-          defaultOpen={Boolean(editingProduct)}
-        />
-      </div>
+      <PageHeader
+        eyebrow="Danh mục hàng hóa"
+        title="Sản phẩm"
+        description="Quản lý giá, tồn kho, phân loại danh mục và cảnh báo nhập hàng."
+        action={
+          // Modal Thêm / Sửa sản phẩm
+          <ProductDialog
+            categories={categories}
+            product={editingProduct ?? undefined}
+            defaultOpen={Boolean(editingProduct)}
+          />
+        }
+      />
 
       {/* Low stock alert banner */}
       {lowStockCount > 0 ? (
@@ -153,37 +154,44 @@ export default async function ProductsPage({
           ) : null}
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Sản phẩm</TableHead>
-                <TableHead>Danh mục</TableHead>
-                <TableHead className="text-right">Giá bán</TableHead>
-                <TableHead className="text-right">Tồn</TableHead>
-                <TableHead className="text-right">
-                  <span className="sr-only">Thao tác</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.length === 0 ? (
+          {products.length === 0 ? (
+            <EmptyState
+              icon={SearchX}
+              title={
+                counts.all === 0
+                  ? "Chưa có sản phẩm nào"
+                  : "Không tìm thấy sản phẩm nào khớp với điều kiện lọc."
+              }
+              description={
+                counts.all === 0
+                  ? "Bấm “Thêm sản phẩm” để bắt đầu bán tại quầy."
+                  : "Thử bỏ bớt bộ lọc hoặc tìm bằng tên gọi khác."
+              }
+            />
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-muted-foreground py-8 text-center text-sm"
-                  >
-                    Không tìm thấy sản phẩm nào khớp với điều kiện lọc.
-                  </TableCell>
+                  <TableHead>Sản phẩm</TableHead>
+                  <TableHead>Danh mục</TableHead>
+                  <TableHead className="text-right">Giá bán</TableHead>
+                  <TableHead className="text-right">Tồn</TableHead>
+                  <TableHead className="text-right">
+                    <span className="sr-only">Thao tác</span>
+                  </TableHead>
                 </TableRow>
-              ) : (
-                products.map((product) => (
+              </TableHeader>
+              <TableBody>
+                {products.map((product) => (
                   <TableRow key={product.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <ProductImage
                           src={product.imageUrl}
+                          name={product.name}
                           alt={`Ảnh ${product.name}`}
-                          className="size-12"
+                          size={48}
+                          className="rounded-xl"
                         />
                         <div className="min-w-0">
                           <p className="font-bold">{product.name}</p>
@@ -262,10 +270,10 @@ export default async function ProductsPage({
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ))}
+              </TableBody>
+            </Table>
+          )}
           <Pagination
             pathname="/admin/products"
             label="Phân trang sản phẩm"

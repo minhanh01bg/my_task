@@ -3,6 +3,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell, CheckCircle, X } from "@phosphor-icons/react";
+import { BellOff } from "lucide-react";
+
+import { EmptyState } from "@/components/kit/empty-state";
 
 import { useAdminNotifications } from "./notification-provider";
 
@@ -144,9 +147,12 @@ export function NotificationButton({
               </button>
             </div>
           ) : items.length === 0 ? (
-            <p className="text-muted-foreground p-4 text-sm">
-              Chưa có thông báo.
-            </p>
+            <EmptyState
+              size="compact"
+              icon={BellOff}
+              title="Chưa có thông báo"
+              description="Đơn online mới và cảnh báo tồn kho sẽ hiện ở đây."
+            />
           ) : (
             <ul className="space-y-1">
               {items.map((item) => (

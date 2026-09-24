@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, ReceiptText } from "lucide-react";
 import { notFound } from "next/navigation";
 
+import { PageHeader } from "@/components/kit";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatVnd } from "@/lib/money";
@@ -59,18 +60,15 @@ export default async function OrderDetailPage({
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
-        <div className="min-w-0 flex-1">
-          <p className="eyebrow">Chi tiết đơn hàng</p>
-          <h1 className="font-heading mt-1 text-2xl font-bold break-all sm:text-3xl">
-            {order.code}
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-            {new Intl.DateTimeFormat("vi-VN", {
-              dateStyle: "long",
-              timeStyle: "short",
-            }).format(order.createdAt)}
-          </p>
-        </div>
+        <PageHeader
+          eyebrow="Chi tiết đơn hàng"
+          title={order.code}
+          description={new Intl.DateTimeFormat("vi-VN", {
+            dateStyle: "long",
+            timeStyle: "short",
+          }).format(order.createdAt)}
+          className="min-w-0 flex-1"
+        />
         <Badge
           className="shrink-0"
           variant={order.status === "cancelled" ? "outline" : "default"}

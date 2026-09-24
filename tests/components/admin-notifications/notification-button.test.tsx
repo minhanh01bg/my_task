@@ -109,4 +109,25 @@ describe("NotificationButton", () => {
       screen.queryByRole("region", { name: "Thông báo quản trị" }),
     ).not.toBeInTheDocument();
   });
+
+  it("không có thông báo thì hiện EmptyState chung của kit", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          data: { ...response.data, items: [], unreadCount: 0 },
+        }),
+      }),
+    );
+    render(
+      <NotificationProvider>
+        <NotificationButton />
+      </NotificationProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Thông báo/ }));
+
+    const title = await screen.findByText("Chưa có thông báo");
+    expect(title.closest('[data-slot="empty-state"]')).not.toBeNull();
+  });
 });

@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MagnifyingGlass, MagnifyingGlassMinus } from "@phosphor-icons/react";
+import { MagnifyingGlass } from "@phosphor-icons/react";
+import { SearchX } from "lucide-react";
 
+import { EmptyState } from "@/components/kit/empty-state";
+import { ProductImage } from "@/components/kit/product-image";
 import { Input } from "@/components/ui/input";
-import { ProductImage } from "@/components/shared/product-image";
 import { formatVnd } from "@/lib/money";
 import { searchProducts } from "@/lib/search/match";
 import type { SearchableProduct } from "@/lib/search/types";
@@ -126,17 +128,13 @@ export function ProductSearch({ products, onSelect }: ProductSearchProps) {
       </div>
 
       {showEmpty ? (
-        <p
-          className="text-muted-foreground flex flex-col items-center gap-2 px-4 py-7 text-center"
+        <EmptyState
           role="status"
-        >
-          <MagnifyingGlassMinus
-            aria-hidden="true"
-            weight="duotone"
-            className="size-8"
-          />
-          Không tìm thấy sản phẩm. Thử nhập tên ngắn hơn.
-        </p>
+          size="compact"
+          icon={SearchX}
+          title="Không tìm thấy sản phẩm"
+          description="Thử nhập tên ngắn hơn hoặc tên gọi khác."
+        />
       ) : null}
 
       <ul
@@ -165,8 +163,10 @@ export function ProductSearch({ products, onSelect }: ProductSearchProps) {
               <span className="flex min-w-0 items-center gap-3">
                 <ProductImage
                   src={product.imageUrl}
+                  name={product.name}
                   alt={`Ảnh ${product.name}`}
-                  className="size-12"
+                  size={48}
+                  className="rounded-xl"
                 />
                 <span className="flex min-w-0 flex-col">
                   <span className="font-medium">{product.name}</span>

@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Eye, ShoppingCart } from "lucide-react";
+import { ArrowRight, Eye, PackageOpen, ShoppingCart } from "lucide-react";
 
+import { EmptyState } from "@/components/kit/empty-state";
 import { StarRating } from "@/components/kit/star-rating";
 import { WishlistButton } from "@/components/kit/wishlist-button";
 import { Badge } from "@/components/ui/badge";
@@ -163,9 +164,12 @@ export function ProductRail({
           })}
         </div>
       ) : (
-        <div className="border-border bg-muted/20 text-muted-foreground mt-6 rounded-2xl border border-dashed p-8 text-center text-sm">
-          Chưa có sản phẩm nổi bật, sản phẩm sẽ sớm được cập nhật.
-        </div>
+        <EmptyState
+          icon={PackageOpen}
+          title="Chưa có sản phẩm nổi bật"
+          description="Cửa hàng đang bổ sung hàng mới, bạn quay lại sau nhé."
+          className="border-border bg-muted/20 mt-6 rounded-2xl border border-dashed"
+        />
       )}
 
       <QuickViewModal

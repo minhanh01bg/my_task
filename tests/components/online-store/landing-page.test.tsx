@@ -206,11 +206,11 @@ describe("Storefront Landing Page Components", () => {
         </OnlineCartProvider>,
       );
 
-      expect(
-        screen.getByText(
-          /chưa có sản phẩm nổi bật|sản phẩm sẽ sớm được cập nhật/i,
-        ),
-      ).toBeInTheDocument();
+      const fallback = screen.getByText(
+        /chưa có sản phẩm nổi bật|sản phẩm sẽ sớm được cập nhật/i,
+      );
+      expect(fallback).toBeInTheDocument();
+      expect(fallback.closest('[data-slot="empty-state"]')).not.toBeNull();
     });
   });
 
