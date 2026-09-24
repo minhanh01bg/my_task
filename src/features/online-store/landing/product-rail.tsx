@@ -108,7 +108,7 @@ export function ProductRail({
                         setQuickViewProduct(product);
                       }}
                       aria-label={`Xem nhanh ${product.name}`}
-                      className="bg-background/90 text-foreground hover:bg-background absolute bottom-2.5 left-1/2 z-10 hidden -translate-x-1/2 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold shadow-md backdrop-blur-sm transition-all group-hover:flex hover:scale-105"
+                      className="bg-background/90 text-foreground hover:bg-background absolute bottom-2.5 left-1/2 z-10 hidden -translate-x-1/2 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold shadow-md backdrop-blur-sm transition-colors group-hover:flex"
                     >
                       <Eye className="size-3.5" />
                       <span>Xem nhanh</span>

@@ -296,7 +296,7 @@ export function PromotionForm({ initialData, onSuccess }: PromotionFormProps) {
         </div>
 
         <div
-          className={`border-border bg-muted/20 mx-auto overflow-hidden rounded-2xl border p-4 transition-all ${
+          className={`border-border bg-muted/20 mx-auto overflow-hidden rounded-2xl border p-4 ${
             previewDevice === "mobile" ? "max-w-sm" : "w-full"
           }`}
         >

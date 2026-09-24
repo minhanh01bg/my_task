@@ -278,7 +278,7 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
             {relatedProducts.map((rel) => (
               <article
                 key={rel.id}
-                className="border-border bg-card group flex flex-col justify-between overflow-hidden rounded-2xl border transition-all hover:shadow-md"
+                className="border-border bg-card group flex flex-col justify-between overflow-hidden rounded-2xl border transition-shadow hover:shadow-md"
               >
                 <div>
                   <div className="bg-muted relative aspect-square overflow-hidden">

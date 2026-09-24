@@ -100,7 +100,7 @@ export function CartDrawer() {
               className="bg-muted mt-2 h-2 w-full overflow-hidden rounded-full"
             >
               <div
-                className={`h-full rounded-full transition-all duration-500 ${
+                className={`h-full rounded-full transition-[width,background-color] duration-500 ${
                   subtotal >= FREE_SHIPPING_THRESHOLD
                     ? "bg-success"
                     : "bg-primary"
@@ -249,7 +249,7 @@ export function CartDrawer() {
               <Link
                 href="/checkout"
                 onClick={closeDrawer}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl font-bold shadow-md transition-all active:scale-[0.98]"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl font-bold shadow-md transition-[background-color,transform] active:scale-[0.98]"
               >
                 <ShoppingBag aria-hidden="true" className="size-5" />
                 Tiến hành đặt hàng

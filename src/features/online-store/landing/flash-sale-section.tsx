@@ -158,7 +158,7 @@ export function FlashSaleSection({
                     <div className="mt-2.5">
                       <div className="bg-muted h-3.5 w-full overflow-hidden rounded-full p-0.5">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-amber-500 to-red-500 transition-all duration-500"
+                          className="h-full rounded-full bg-gradient-to-r from-amber-500 to-red-500 transition-[width] duration-500"
                           style={{ width: `${soldPercent}%` }}
                         />
                       </div>

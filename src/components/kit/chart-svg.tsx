@@ -172,7 +172,7 @@ export function ChartSvg({
                   cx={point.x}
                   cy={point.y}
                   r={isHovered ? "6" : "4"}
-                  className="fill-background stroke-primary transition-all"
+                  className="fill-background stroke-primary transition-[r,stroke-width]"
                   strokeWidth={isHovered ? "3" : "2"}
                 />
               </g>

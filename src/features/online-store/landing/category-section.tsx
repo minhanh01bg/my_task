@@ -147,10 +147,10 @@ export function CategorySection({ categories }: CategorySectionProps) {
               <Link
                 key={category.id}
                 href={categoryHref(category)}
-                className={`group border-border/70 bg-card/90 hover:bg-card focus-visible:ring-primary relative flex flex-col items-center justify-between rounded-2xl border p-4 text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-md focus-visible:ring-2 focus-visible:outline-none ${theme.cardBorderHover}`}
+                className={`group border-border/70 bg-card/90 hover:bg-card focus-visible:ring-primary relative flex flex-col items-center justify-between rounded-2xl border p-4 text-center transition-[background-color,border-color,box-shadow] duration-200 hover:shadow-md focus-visible:ring-2 focus-visible:outline-none ${theme.cardBorderHover}`}
               >
                 <div
-                  className={`flex h-14 w-14 items-center justify-center rounded-2xl transition-all duration-300 group-hover:scale-110 sm:h-16 sm:w-16 ${theme.iconBg} ${theme.iconColor}`}
+                  className={`flex h-14 w-14 items-center justify-center rounded-2xl sm:h-16 sm:w-16 ${theme.iconBg} ${theme.iconColor}`}
                 >
                   <IconComponent className="h-7 w-7 transition-transform duration-300 group-hover:rotate-3 sm:h-8 sm:w-8" />
                 </div>
@@ -170,7 +170,7 @@ export function CategorySection({ categories }: CategorySectionProps) {
                   )}
                 </div>
 
-                <div className="text-primary mt-2.5 flex translate-y-1 items-center gap-1 text-[11px] font-bold opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
+                <div className="text-primary mt-2.5 flex items-center gap-1 text-[11px] font-bold opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                   <span>Xem hàng</span>
                   <ArrowRight className="h-3 w-3" />
                 </div>

@@ -168,7 +168,7 @@ export function NumberStepper({
     <div className="flex flex-col gap-2">
       <div
         className={cn(
-          "border-input bg-background focus-within:border-primary focus-within:ring-primary/20 relative flex items-center overflow-hidden rounded-2xl border shadow-xs transition-all focus-within:ring-3",
+          "border-input bg-background focus-within:border-primary focus-within:ring-primary/20 relative flex items-center overflow-hidden rounded-2xl border shadow-xs transition-[border-color,box-shadow] focus-within:ring-3",
           disabled && "pointer-events-none opacity-50",
           className,
         )}
@@ -253,7 +253,7 @@ export function NumberStepper({
                   onClick={() => handleStep(quickStep)}
                   disabled={disabled}
                   aria-label={`Cộng ${chipLabel} vào ${ariaLabel || name}`}
-                  className="border-border/80 bg-muted/40 hover:bg-primary/10 hover:border-primary/40 hover:text-primary rounded-lg border px-2.5 py-1 text-xs font-bold transition-all select-none active:scale-95 disabled:pointer-events-none disabled:opacity-40"
+                  className="border-border/80 bg-muted/40 hover:bg-primary/10 hover:border-primary/40 hover:text-primary rounded-lg border px-2.5 py-1 text-xs font-bold transition-[background-color,border-color,color,transform] select-none active:scale-95 disabled:pointer-events-none disabled:opacity-40"
                 >
                   {chipLabel}
                 </button>

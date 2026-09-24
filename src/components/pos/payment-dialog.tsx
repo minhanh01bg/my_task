@@ -143,7 +143,7 @@ export function PaymentDialog({
               aria-selected={method === tab.value}
               onClick={() => setMethod(tab.value)}
               className={cn(
-                "min-h-12 cursor-pointer rounded-xl px-2 py-3 text-sm font-bold transition-all duration-200 ease-out active:scale-[0.97] sm:px-4 sm:text-base",
+                "min-h-12 cursor-pointer rounded-xl px-2 py-3 text-sm font-bold transition-[background-color,color,box-shadow,transform] duration-200 ease-out active:scale-[0.97] sm:px-4 sm:text-base",
                 method === tab.value
                   ? "bg-background text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10"
                   : "text-muted-foreground hover:bg-background/40 hover:text-foreground",

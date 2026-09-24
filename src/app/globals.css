@@ -253,12 +253,15 @@
     animation: pulse-subtle 2.5s infinite ease-in-out;
   }
 
+  /* The trong luoi san pham: chi doi bong/vien khi hover — khong nhac the
+     len (translate/scale) de luoi khong giat va khong che the ben canh. */
   .card-interactive {
-    @apply transition-all duration-300 ease-out;
+    transition:
+      box-shadow 300ms ease-out,
+      border-color 300ms ease-out;
   }
 
   .card-interactive:hover {
-    transform: translateY(-4px);
     box-shadow: 0 12px 28px -10px oklch(0.22 0.02 70 / 0.18);
   }
 

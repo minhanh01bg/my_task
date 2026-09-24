@@ -52,6 +52,8 @@ export function HeroCarousel({
   const dragOffsetRef = useRef(0);
   const isHoveredRef = useRef(false);
   const transitionTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Khung hinh dang cho de day dragOffset vao state — toi da 1 lan/khung.
+  const dragFrameRef = useRef<number | null>(null);
 
   const total = slides.length;
 
@@ -87,11 +89,21 @@ export function HeroCarousel({
     changeSlide(index, index > currentIndex ? 1 : -1);
   };
 
-  // Cleanup transition timer on unmount
+  const cancelDragFrame = () => {
+    if (dragFrameRef.current !== null) {
+      cancelAnimationFrame(dragFrameRef.current);
+      dragFrameRef.current = null;
+    }
+  };
+
+  // Cleanup transition timer and pending drag frame on unmount
   useEffect(() => {
     return () => {
       if (transitionTimerRef.current) {
         clearTimeout(transitionTimerRef.current);
+      }
+      if (dragFrameRef.current !== null) {
+        cancelAnimationFrame(dragFrameRef.current);
       }
     };
   }, []);
@@ -123,11 +135,18 @@ export function HeroCarousel({
     if (Math.abs(diff) > 5) {
       hasMovedRef.current = true;
     }
+    // Luu vi tri moi nhat vao ref; chi re-render mot lan moi khung hinh
+    // thay vi moi su kien touchmove/mousemove (60-120 lan/giay).
     dragOffsetRef.current = diff;
-    setDragOffset(diff);
+    if (dragFrameRef.current !== null) return;
+    dragFrameRef.current = requestAnimationFrame(() => {
+      dragFrameRef.current = null;
+      setDragOffset(dragOffsetRef.current);
+    });
   };
 
   const handleEnd = () => {
+    cancelDragFrame();
     const finalOffset = dragOffsetRef.current;
     if (startXRef.current !== null) {
       if (finalOffset < -50) {
@@ -177,6 +196,7 @@ export function HeroCarousel({
       onTouchStart={(e) => handleStart(e.touches[0].clientX)}
       onTouchMove={(e) => handleMove(e.touches[0].clientX)}
       onTouchEnd={handleEnd}
+      onTouchCancel={handleEnd}
       onMouseDown={(e) => handleStart(e.clientX)}
       onMouseMove={(e) => {
         if (isDragging) handleMove(e.clientX);
@@ -188,7 +208,7 @@ export function HeroCarousel({
           e.stopPropagation();
         }
       }}
-      className="border-border/60 shadow-primary/5 focus-visible:ring-primary/40 group from-card to-background relative touch-pan-y overflow-hidden rounded-3xl border bg-gradient-to-br shadow-xl transition-all duration-500 select-none focus-visible:ring-2 focus-visible:outline-none"
+      className="border-border/60 shadow-primary/5 focus-visible:ring-primary/40 group from-card to-background relative touch-pan-y overflow-hidden rounded-3xl border bg-gradient-to-br shadow-xl select-none focus-visible:ring-2 focus-visible:outline-none"
     >
       {/* Background dynamic ambient gradients (silky smooth cross-dissolve) */}
       {slides.map((slide, idx) => (
@@ -325,7 +345,7 @@ export function HeroCarousel({
                     className={buttonVariants({
                       size: "lg",
                       className:
-                        "group/btn btn-press hover:shadow-primary/25 gap-2.5 rounded-2xl px-6 text-base font-bold shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98]",
+                        "group/btn btn-press hover:shadow-primary/25 gap-2.5 rounded-2xl px-6 text-base font-bold shadow-lg transition-[box-shadow,background-color,transform] active:scale-[0.98]",
                     })}
                   >
                     <span>{slide.ctaText}</span>
@@ -339,7 +359,7 @@ export function HeroCarousel({
                         variant: "outline",
                         size: "lg",
                         className:
-                          "btn-press border-border/80 bg-background/60 hover:bg-background/90 text-foreground rounded-2xl px-5 text-base font-semibold backdrop-blur-md transition-all active:scale-[0.98]",
+                          "btn-press border-border/80 bg-background/60 hover:bg-background/90 text-foreground rounded-2xl px-5 text-base font-semibold backdrop-blur-md transition-[background-color,border-color,transform] active:scale-[0.98]",
                       })}
                     >
                       {slide.secondaryText}
@@ -379,7 +399,7 @@ export function HeroCarousel({
         type="button"
         onClick={prevSlide}
         aria-label="Slide trước đó"
-        className="bg-background/75 hover:bg-background border-border/60 hover:border-primary/40 text-foreground absolute top-1/2 left-3.5 z-20 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border shadow-lg backdrop-blur-md transition-all duration-200 hover:scale-110 active:scale-95 sm:left-5"
+        className="bg-background/75 hover:bg-background border-border/60 hover:border-primary/40 text-foreground absolute top-1/2 left-3.5 z-20 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border shadow-lg backdrop-blur-md transition-[background-color,border-color,transform] duration-200 active:scale-95 sm:left-5"
       >
         <ChevronLeft className="size-5 transition-transform group-hover:-translate-x-0.5" />
       </button>
@@ -388,7 +408,7 @@ export function HeroCarousel({
         type="button"
         onClick={nextSlide}
         aria-label="Slide tiếp theo"
-        className="bg-background/75 hover:bg-background border-border/60 hover:border-primary/40 text-foreground absolute top-1/2 right-3.5 z-20 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border shadow-lg backdrop-blur-md transition-all duration-200 hover:scale-110 active:scale-95 sm:right-5"
+        className="bg-background/75 hover:bg-background border-border/60 hover:border-primary/40 text-foreground absolute top-1/2 right-3.5 z-20 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border shadow-lg backdrop-blur-md transition-[background-color,border-color,transform] duration-200 active:scale-95 sm:right-5"
       >
         <ChevronRight className="size-5 transition-transform group-hover:translate-x-0.5" />
       </button>
@@ -400,7 +420,7 @@ export function HeroCarousel({
           type="button"
           onClick={() => setIsPaused((p) => !p)}
           aria-label={isPaused ? "Tiếp tục chạy slide" : "Tạm dừng slide"}
-          className="text-muted-foreground hover:text-foreground inline-flex size-6 cursor-pointer items-center justify-center rounded-full transition-all duration-200 hover:scale-110 active:scale-90"
+          className="text-muted-foreground hover:text-foreground inline-flex size-6 cursor-pointer items-center justify-center rounded-full transition-[color,transform] duration-200 active:scale-90"
         >
           {isPaused ? (
             <Play className="size-3 fill-current" />
@@ -422,7 +442,7 @@ export function HeroCarousel({
                 onClick={() => goToSlide(index)}
                 aria-label={`Chuyển tới slide ${index + 1}`}
                 aria-current={isActive ? "true" : "false"}
-                className={`relative h-2 cursor-pointer rounded-full transition-all duration-500 ease-out ${
+                className={`relative h-2 cursor-pointer rounded-full transition-[width,background-color] duration-500 ease-out ${
                   isActive
                     ? "bg-muted w-12 overflow-hidden sm:w-16"
                     : "bg-muted-foreground/30 hover:bg-muted-foreground/60 w-3 hover:w-5"
@@ -460,7 +480,7 @@ function SlideVisualShowcase({ visual }: { visual: HeroSlideVisual }) {
   return (
     <div className="relative hidden items-center justify-center p-4 lg:flex">
       {/* Frosted Glassmorphism Showcase Card with GPU layer */}
-      <div className="bg-background/85 dark:bg-card/80 shadow-primary/10 hover:shadow-3xl relative w-full max-w-sm transform-gpu rounded-3xl border border-white/30 p-6 shadow-2xl backdrop-blur-md transition-all duration-300 will-change-transform hover:scale-[1.02] dark:border-white/10">
+      <div className="bg-background/85 dark:bg-card/80 shadow-primary/10 relative w-full max-w-sm rounded-3xl border border-white/30 p-6 shadow-2xl backdrop-blur-md dark:border-white/10">
         {/* Header */}
         <div className="border-border/50 flex items-center justify-between border-b pb-4">
           <div className="flex items-center gap-3">
