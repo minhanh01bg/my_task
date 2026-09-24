@@ -17,7 +17,8 @@ beforeEach(async () => {
     data: [
       ...Array.from({ length: 12 }, (_, index) => ({
         productId: REVIEW_PRODUCT_ID,
-        accountId,
+        // Mỗi tài khoản một đánh giá / sản phẩm: chỉ đánh giá đầu gắn tài khoản.
+        accountId: index === 0 ? accountId : null,
         authorName: `Khách ${index + 1}`,
         rating: 4,
         content: `Đánh giá số ${index + 1}`,

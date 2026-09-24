@@ -147,6 +147,50 @@ describe("ProductReviews", () => {
     expect(screen.queryByText("Chưa có đánh giá")).not.toBeInTheDocument();
   });
 
+  it("gửi lại cập nhật đánh giá sẵn có trong danh sách, không nhân đôi", async () => {
+    mockFetch(true, () =>
+      json({
+        review: review({
+          id: "r-mine",
+          authorName: "Minh Anh",
+          rating: 3,
+          content: "Đổi ý, sản phẩm tạm ổn",
+        }),
+        summary: { avg: 4, count: 2 },
+        updated: true,
+      }),
+    );
+    render(
+      <ProductReviews
+        productId={PRODUCT.id}
+        productName={PRODUCT.name}
+        initialReviews={page([
+          review({ id: "r-1" }),
+          review({ id: "r-mine", authorName: "Minh Anh", rating: 5 }),
+        ])}
+        summary={{ avg: 5, count: 2 }}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /viết đánh giá/i }),
+    );
+    fireEvent.change(screen.getByLabelText(/nội dung đánh giá/i), {
+      target: { value: "Đổi ý, sản phẩm tạm ổn" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /gửi đánh giá/i }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      /đã cập nhật đánh giá/i,
+    );
+    expect(screen.getAllByText("Minh Anh")).toHaveLength(1);
+    expect(screen.getByText("Đổi ý, sản phẩm tạm ổn")).toBeInTheDocument();
+    expect(screen.getByText("(2 đánh giá)")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /cập nhật đánh giá/i }),
+    ).toBeInTheDocument();
+  });
+
   it("hiển thị lỗi từ API (vd. giới hạn gửi) và không thêm đánh giá", async () => {
     mockFetch(true, () =>
       json({ message: "Bạn đã gửi quá nhiều đánh giá." }, 429),

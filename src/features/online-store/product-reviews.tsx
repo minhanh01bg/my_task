@@ -58,9 +58,11 @@ async function readMessage(response: Response, fallback: string) {
   return fallback;
 }
 
-function isReviewResponse(
-  body: unknown,
-): body is { review: PublicReview; summary: RatingSummary } {
+function isReviewResponse(body: unknown): body is {
+  review: PublicReview;
+  summary: RatingSummary;
+  updated?: boolean;
+} {
   return (
     typeof body === "object" &&
     body !== null &&
@@ -97,7 +99,11 @@ export function ProductReviews({
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState<"created" | "updated" | null>(
+    null,
+  );
+  /** Đã biết tài khoản có đánh giá cho sản phẩm (sau lần gửi trong phiên). */
+  const hasOwnReview = submitted !== null;
 
   const hasMore = reviews.length < total;
   const trimmedLength = content.trim().length;
@@ -135,13 +141,19 @@ export function ProductReviews({
         setFormError("Không gửi được đánh giá. Vui lòng thử lại.");
         return;
       }
-      setReviews((prev) => [body.review, ...prev]);
-      setTotal((prev) => prev + 1);
+      const saved = body.review;
+      setReviews((prev) =>
+        prev.some((item) => item.id === saved.id)
+          ? prev.map((item) => (item.id === saved.id ? saved : item))
+          : [saved, ...prev],
+      );
+      // Mỗi tài khoản một đánh giá: tổng số đánh giá đã đăng = summary.count.
+      setTotal(body.summary.count);
       setSummary(body.summary);
       setContent("");
       setRating(5);
       setShowForm(false);
-      setSubmitted(true);
+      setSubmitted(body.updated ? "updated" : "created");
     } catch {
       setFormError("Mất kết nối. Vui lòng thử lại.");
     } finally {
@@ -213,7 +225,13 @@ export function ProductReviews({
             className="min-h-11 gap-2 rounded-xl font-bold"
           >
             <MessageSquarePlus className="size-4" aria-hidden="true" />
-            <span>{showForm ? "Đóng form" : "Viết đánh giá"}</span>
+            <span>
+              {showForm
+                ? "Đóng form"
+                : hasOwnReview
+                  ? "Cập nhật đánh giá"
+                  : "Viết đánh giá"}
+            </span>
           </Button>
         ) : (
           <Link
@@ -235,7 +253,11 @@ export function ProductReviews({
           className="border-success/20 bg-success/10 text-success mt-4 flex items-center gap-2 rounded-xl border p-3.5 text-sm"
         >
           <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
-          <span>Cảm ơn bạn đã gửi đánh giá!</span>
+          <span>
+            {submitted === "updated"
+              ? "Đã cập nhật đánh giá của bạn."
+              : "Cảm ơn bạn đã gửi đánh giá!"}
+          </span>
         </p>
       ) : null}
 
@@ -245,9 +267,17 @@ export function ProductReviews({
           className="bg-muted/40 mt-6 space-y-4 rounded-2xl border p-5"
           noValidate
         >
-          <h3 className="text-base font-bold">
-            Chia sẻ cảm nhận của bạn về sản phẩm
-          </h3>
+          <div>
+            <h3 className="text-base font-bold">
+              {hasOwnReview
+                ? "Cập nhật đánh giá của bạn"
+                : "Chia sẻ cảm nhận của bạn về sản phẩm"}
+            </h3>
+            <p className="text-muted-foreground mt-1 text-xs">
+              Mỗi tài khoản có một đánh giá cho sản phẩm; gửi lại sẽ thay thế
+              đánh giá trước đó.
+            </p>
+          </div>
 
           <div>
             <p className="text-muted-foreground mb-1.5 text-xs font-semibold tracking-wider uppercase">

@@ -92,6 +92,36 @@ describe("POST /api/online/products/[id]/reviews", () => {
     expect((await response.json()).message).toBeTruthy();
   });
 
+  it.each([
+    [{ ...validBody, rating: "5" }],
+    [{ ...validBody, authorName: "Giả mạo" }],
+  ])("400 với payload không đúng schema %j", async (payload) => {
+    const response = await POST(
+      postRequest(payload, `customer_session=${token}`),
+      context(),
+    );
+    expect(response.status).toBe(400);
+    expect(await prisma.productReview.count()).toBe(0);
+  });
+
+  it("gửi lại cập nhật đánh giá cũ (200, updated) thay vì tạo mới", async () => {
+    const cookie = `customer_session=${token}`;
+    const first = await POST(postRequest(validBody, cookie), context());
+    expect(first.status).toBe(201);
+    expect((await first.json()).updated).toBe(false);
+
+    const second = await POST(
+      postRequest({ rating: 3, content: "Đổi ý, sản phẩm tạm ổn" }, cookie),
+      context(),
+    );
+    expect(second.status).toBe(200);
+    const body = await second.json();
+    expect(body.updated).toBe(true);
+    expect(body.review).toMatchObject({ rating: 3 });
+    expect(body.summary).toEqual({ avg: 3, count: 1 });
+    expect(await prisma.productReview.count()).toBe(1);
+  });
+
   it("404 khi sản phẩm không tồn tại", async () => {
     const response = await POST(
       postRequest(validBody, `customer_session=${token}`),
@@ -121,7 +151,9 @@ describe("POST /api/online/products/[id]/reviews", () => {
       );
       statuses.push(response.status);
     }
-    expect(statuses).toEqual([201, 201, 201, 201, 201, 429]);
+    // Lần đầu tạo (201), các lần sau cập nhật đánh giá cũ (200).
+    expect(statuses).toEqual([201, 200, 200, 200, 200, 429]);
+    expect(await prisma.productReview.count()).toBe(1);
   });
 });
 

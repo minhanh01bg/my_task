@@ -379,5 +379,7 @@ model ProductReview {
   status             String           @default("published")
   createdAt          DateTime         @default(now())
 
+  /// Mỗi tài khoản một đánh giá / sản phẩm (accountId NULL không bị ràng buộc).
+  @@unique([productId, accountId])
   @@index([productId, status, createdAt])
 }

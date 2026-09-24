@@ -3,7 +3,7 @@ import { CheckCircle2, MessagesSquare } from "lucide-react";
 
 import { EmptyState, PageHeader, Pagination } from "@/components/kit";
 import { StarRating } from "@/components/kit/star-rating";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { productHref } from "@/lib/seo/product-href";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ import {
 import { REVIEW_STATUSES, type ReviewStatus } from "@/types/review";
 
 import { deleteReviewAction, setReviewStatusAction } from "./actions";
+import { ReviewRowActions } from "./review-row-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -135,36 +136,16 @@ export default async function AdminReviewsPage({
                       </div>
                     </div>
 
-                    <div className="flex shrink-0 flex-wrap items-center gap-2">
-                      <form
-                        action={async () => {
-                          "use server";
-                          await setReviewStatusAction(
-                            review.id,
-                            hidden ? "published" : "hidden",
-                          );
-                        }}
-                      >
-                        <Button type="submit" variant="outline" size="sm">
-                          {hidden ? "Hiện" : "Ẩn"}
-                        </Button>
-                      </form>
-                      <form
-                        action={async () => {
-                          "use server";
-                          await deleteReviewAction(review.id);
-                        }}
-                      >
-                        <Button
-                          type="submit"
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:bg-destructive/10"
-                        >
-                          Xoá
-                        </Button>
-                      </form>
-                    </div>
+                    <ReviewRowActions
+                      authorName={review.authorName}
+                      hidden={hidden}
+                      toggleAction={setReviewStatusAction.bind(
+                        null,
+                        review.id,
+                        hidden ? "published" : "hidden",
+                      )}
+                      deleteAction={deleteReviewAction.bind(null, review.id)}
+                    />
                   </li>
                 );
               })}

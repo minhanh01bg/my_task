@@ -84,8 +84,12 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
     return NextResponse.json(
-      { review: result.review, summary: result.summary },
-      { status: 201, headers: NO_STORE },
+      {
+        review: result.review,
+        summary: result.summary,
+        updated: result.updated,
+      },
+      { status: result.updated ? 200 : 201, headers: NO_STORE },
     );
   } catch (error: unknown) {
     logger.error("product_review_create_failed", {
