@@ -126,6 +126,12 @@ model Order {
   deliveryDistrict  String?
   deliveryProvince  String?
   shippingFee       Int              @default(0)
+  /// Ma voucher da ap dung (UPPER); null khi khong dung voucher
+  voucherCode       String?
+  /// Phan giam tien hang cua voucher — da nam trong `discount`
+  voucherDiscount   Int              @default(0)
+  /// Khung gio giao hang khach chon (don giao tan noi)
+  deliverySlot      String?
   /// Nonce SHA-256 digest for non-enumerable public receipt lookup
   receiptNonceHash  String?          @unique
   anonymizedAt      DateTime?
@@ -331,4 +337,24 @@ model StorefrontPromotion {
 
   @@index([placement, isActive, priority])
   @@index([isActive, startsAt, endsAt])
+}
+
+/// Ma giam gia nhap khi dat hang online. `code` luon UPPER.
+model Voucher {
+  id            String    @id @default(cuid())
+  code          String    @unique
+  /// percent | fixed | freeship
+  type          String
+  /// percent: 1-100; fixed: so tien VND; freeship: 0 (khong dung)
+  value         Int
+  /// Tran giam (percent) hoac tran giam phi ship (freeship)
+  maxDiscount   Int?
+  minOrderTotal Int       @default(0)
+  maxUses       Int?
+  usedCount     Int       @default(0)
+  startsAt      DateTime?
+  endsAt        DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }

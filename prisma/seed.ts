@@ -143,6 +143,22 @@ const PRODUCTS = [
   },
 ];
 
+const SAMPLE_VOUCHERS = [
+  {
+    code: "GIAM10",
+    type: "percent",
+    value: 10,
+    maxDiscount: 30_000,
+    minOrderTotal: 0,
+  },
+  {
+    code: "FREESHIP",
+    type: "freeship",
+    value: 0,
+    minOrderTotal: 200_000,
+  },
+];
+
 async function main() {
   await prisma.stockMovement.deleteMany();
   await prisma.payment.deleteMany();
@@ -192,11 +208,20 @@ async function main() {
     update: {},
   });
 
+  // Voucher mẫu: upsert theo code, không đụng usedCount đã có.
+  for (const voucher of SAMPLE_VOUCHERS) {
+    await prisma.voucher.upsert({
+      where: { code: voucher.code },
+      create: voucher,
+      update: {},
+    });
+  }
+
   // Seed ghi thẳng Prisma: gán slug SEO cùng quy tắc với saveProduct.
   const slugs = await backfillSlugs(prisma);
 
   console.log(
-    `Seeded ${CATEGORIES.length} categories, ${PRODUCTS.length} products, 1 admin identity; slugs: ${slugs.products} products, ${slugs.categories} categories`,
+    `Seeded ${CATEGORIES.length} categories, ${PRODUCTS.length} products, 1 admin identity, ${SAMPLE_VOUCHERS.length} vouchers; slugs: ${slugs.products} products, ${slugs.categories} categories`,
   );
 }
 
