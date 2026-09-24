@@ -1,6 +1,10 @@
 import { cache } from "react";
 
 import { resolveDefaultStoreName } from "@/config/store-name";
+import {
+  DEFAULT_SHIPPING_SETTINGS,
+  type ShippingSettings,
+} from "@/lib/shipping/shipping-fee";
 import type { BankAccount } from "@/lib/vietqr/types";
 import { cachedPublic, revalidatePublic } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
@@ -18,6 +22,8 @@ const KEY_STORE_HOTLINE = "store.hotline";
 const KEY_STORE_ADDRESS = "store.address";
 const KEY_STORE_OPENING_HOURS = "store.openingHours";
 const KEY_STORE_MAP_URL = "store.mapUrl";
+const KEY_SHIPPING_FEE = "store.shippingFee";
+const KEY_FREE_SHIPPING_THRESHOLD = "store.freeShippingThreshold";
 
 const PUBLIC_SETTING_KEYS = [
   KEY_STORE_NAME,
@@ -25,6 +31,8 @@ const PUBLIC_SETTING_KEYS = [
   KEY_STORE_ADDRESS,
   KEY_STORE_OPENING_HOURS,
   KEY_STORE_MAP_URL,
+  KEY_SHIPPING_FEE,
+  KEY_FREE_SHIPPING_THRESHOLD,
 ] as const;
 
 const BANK_SETTING_KEYS = [
@@ -172,5 +180,46 @@ export async function saveStoreProfile(
   if (writes.length === 0) return;
 
   await Promise.all(writes);
+  revalidatePublic(CACHE_TAGS.settings);
+}
+
+/** Chuoi so nguyen VND >= 0; sai/thieu thi dung mac dinh. */
+function parseMoneySetting(
+  value: string | undefined,
+  fallback: number,
+): number {
+  if (value === undefined || !/^\d+$/.test(value.trim())) return fallback;
+  const parsed = Number(value.trim());
+  return Number.isSafeInteger(parsed) ? parsed : fallback;
+}
+
+/**
+ * Phi giao hang + nguong mien phi. Doc cung loader cong khai (mot query, tag
+ * settings) — gio hang/checkout va duong ghi don dung chung mot nguon.
+ */
+export async function getShippingSettings(): Promise<ShippingSettings> {
+  const settings = await loadPublicSettings();
+  return {
+    shippingFee: parseMoneySetting(
+      settings[KEY_SHIPPING_FEE],
+      DEFAULT_SHIPPING_SETTINGS.shippingFee,
+    ),
+    freeShippingThreshold: parseMoneySetting(
+      settings[KEY_FREE_SHIPPING_THRESHOLD],
+      DEFAULT_SHIPPING_SETTINGS.freeShippingThreshold,
+    ),
+  };
+}
+
+export async function saveShippingSettings(
+  settings: ShippingSettings,
+): Promise<void> {
+  await Promise.all([
+    writeSetting(KEY_SHIPPING_FEE, String(Math.round(settings.shippingFee))),
+    writeSetting(
+      KEY_FREE_SHIPPING_THRESHOLD,
+      String(Math.round(settings.freeShippingThreshold)),
+    ),
+  ]);
   revalidatePublic(CACHE_TAGS.settings);
 }

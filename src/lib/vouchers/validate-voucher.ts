@@ -25,7 +25,8 @@ export type VoucherRejectReason =
   | "not_started"
   | "expired"
   | "exhausted"
-  | "min_order";
+  | "min_order"
+  | "no_shipping_fee";
 
 export interface ApplyVoucherContext {
   /** Tạm tính tiền hàng (VND, số nguyên) do server tính. */
@@ -84,6 +85,9 @@ export function applyVoucher(
   if (subtotal < voucher.minOrderTotal) return reject("min_order");
 
   if (voucher.type === "freeship") {
+    // Don da mien phi ship (nhan tai cua hang / dat nguong) — ma freeship vo
+    // nghia, tu choi de khong "tieu" mot luot dung ma khong giam gi.
+    if (shippingFee === 0) return reject("no_shipping_fee");
     const cap = voucher.maxDiscount ?? shippingFee;
     return {
       ok: true,
@@ -126,6 +130,8 @@ export function voucherReasonMessage(
       return voucher
         ? `Đơn hàng tối thiểu ${formatVnd(voucher.minOrderTotal)} ₫ để dùng mã này`
         : "Đơn hàng chưa đạt giá trị tối thiểu để dùng mã này";
+    case "no_shipping_fee":
+      return "Đơn này đã được miễn phí giao hàng";
   }
 }
 

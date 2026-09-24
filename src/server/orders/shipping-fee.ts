@@ -1,8 +1,12 @@
+import { computeShippingFee } from "@/lib/shipping/shipping-fee";
+import { getShippingSettings } from "@/server/settings/store-settings";
+
 /**
- * Phí giao hàng đơn online TRƯỚC khi áp voucher freeship (VND).
- * Hiện cửa hàng chưa thu phí ship nên luôn 0; khi có cài đặt phí ship chỉ cần
- * sửa ở đây — API kiểm tra mã và đường ghi đơn dùng chung một nguồn.
+ * Phi giao hang don online giao tan noi TRUOC khi ap voucher freeship (VND):
+ * `store.shippingFee` khi tam tinh duoi `store.freeShippingThreshold`, nguoc
+ * lai 0. API kiem tra ma va duong ghi don dung chung nguon nay. Don nhan tai
+ * cua hang KHONG goi ham nay — phi luon 0.
  */
-export async function resolveShippingFee(): Promise<number> {
-  return 0;
+export async function resolveShippingFee(subtotal: number): Promise<number> {
+  return computeShippingFee(subtotal, await getShippingSettings());
 }

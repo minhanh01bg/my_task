@@ -250,7 +250,9 @@ export async function createOnlineOrder(
     0,
   );
   const shippingFee =
-    input.fulfillmentType === "delivery" ? await resolveShippingFee() : 0;
+    input.fulfillmentType === "delivery"
+      ? await resolveShippingFee(subtotal)
+      : 0;
   const voucher = await resolveVoucher(
     input.voucherCode,
     subtotal,

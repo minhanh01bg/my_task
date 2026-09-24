@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { ShippingSettings } from "@/lib/shipping/shipping-fee";
 import type { BankAccount } from "@/lib/vietqr/types";
 import type { PublicStoreProfile } from "@/types/storefront";
 
@@ -16,9 +17,14 @@ import { saveSettingsAction, type SaveSettingsResult } from "./actions";
 interface SettingsFormProps {
   storeProfile: PublicStoreProfile;
   account: BankAccount | null;
+  shipping: ShippingSettings;
 }
 
-export function SettingsForm({ storeProfile, account }: SettingsFormProps) {
+export function SettingsForm({
+  storeProfile,
+  account,
+  shipping,
+}: SettingsFormProps) {
   const [state, formAction, pending] = useActionState<
     SaveSettingsResult | null,
     FormData
@@ -97,6 +103,47 @@ export function SettingsForm({ storeProfile, account }: SettingsFormProps) {
               type="url"
               defaultValue={storeProfile.mapUrl ?? ""}
               placeholder="VD: https://maps.google.com/?q=..."
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Giao hàng đơn online</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="shipping-fee">Phí giao hàng (₫)</Label>
+            <Input
+              id="shipping-fee"
+              name="shippingFee"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={1000}
+              required
+              defaultValue={shipping.shippingFee}
+              aria-describedby="shipping-fee-hint"
+            />
+            <p id="shipping-fee-hint" className="text-muted-foreground text-xs">
+              Chỉ áp dụng cho đơn giao tận nơi. Để 0 nếu không thu phí.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="free-shipping-threshold">
+              Miễn phí giao hàng cho đơn từ (₫)
+            </Label>
+            <Input
+              id="free-shipping-threshold"
+              name="freeShippingThreshold"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={1000}
+              required
+              defaultValue={shipping.freeShippingThreshold}
             />
           </div>
         </CardContent>

@@ -8,6 +8,7 @@ import {
   VoucherForm,
   type VoucherFormValues,
 } from "@/features/admin-vouchers/voucher-form";
+import { VoucherRowActions } from "@/features/admin-vouchers/voucher-row-actions";
 import {
   describeVoucher,
   isVoucherType,
@@ -20,8 +21,6 @@ import {
   VOUCHERS_PAGE_SIZE,
 } from "@/server/vouchers/admin-vouchers";
 import { toVnDateInput } from "@/types/voucher";
-
-import { deleteVoucherAction, toggleVoucherActiveAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -180,34 +179,11 @@ export default async function AdminVouchersPage({
                       >
                         Sửa
                       </Button>
-                      <form
-                        action={async () => {
-                          "use server";
-                          await toggleVoucherActiveAction(
-                            voucher.id,
-                            !voucher.isActive,
-                          );
-                        }}
-                      >
-                        <Button type="submit" variant="outline" size="sm">
-                          {voucher.isActive ? "Tạm dừng" : "Kích hoạt"}
-                        </Button>
-                      </form>
-                      <form
-                        action={async () => {
-                          "use server";
-                          await deleteVoucherAction(voucher.id);
-                        }}
-                      >
-                        <Button
-                          type="submit"
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:bg-destructive/10"
-                        >
-                          Xóa
-                        </Button>
-                      </form>
+                      <VoucherRowActions
+                        id={voucher.id}
+                        code={voucher.code}
+                        isActive={voucher.isActive}
+                      />
                     </div>
                   </li>
                 );

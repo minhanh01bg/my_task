@@ -6,6 +6,7 @@ import { z } from "zod";
 import { expirePublicNow } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
 import {
+  saveShippingSettings,
   saveStoreBankAccount,
   saveStoreProfile,
 } from "@/server/settings/store-settings";
@@ -14,6 +15,22 @@ import {
   AdminUnauthorizedError,
   requireAdminSession,
 } from "@/server/auth/require-admin-session";
+
+/** Tien VND so nguyen >= 0; o trong = giu nguyen gia tri dang luu. */
+const optionalMoney = (label: string) =>
+  z
+    .union([z.literal(""), z.undefined(), z.null(), z.coerce.number()])
+    .transform((value) =>
+      value === "" || value === null || value === undefined ? undefined : value,
+    )
+    .pipe(
+      z
+        .number({ message: `${label} không hợp lệ` })
+        .int(`${label} phải là số nguyên`)
+        .min(0, `${label} không được âm`)
+        .max(100_000_000, `${label} quá lớn`)
+        .optional(),
+    );
 
 export const adminSettingsSchema = z.object({
   storeName: z
@@ -64,6 +81,8 @@ export const adminSettingsSchema = z.object({
   bankBin: z.string().regex(/^\d{6}$/, "Mã ngân hàng phải là 6 chữ số"),
   accountNumber: z.string().trim().min(1, "Số tài khoản không được để trống"),
   accountName: z.string().trim().min(1, "Tên tài khoản không được để trống"),
+  shippingFee: optionalMoney("Phí giao hàng"),
+  freeShippingThreshold: optionalMoney("Ngưỡng miễn phí giao hàng"),
 });
 
 export type AdminSettingsInput = z.infer<typeof adminSettingsSchema>;
@@ -99,6 +118,8 @@ export async function saveSettingsAction(
     bankBin: formData.get("bankBin"),
     accountNumber: formData.get("accountNumber"),
     accountName: formData.get("accountName"),
+    shippingFee: formData.get("shippingFee") ?? undefined,
+    freeShippingThreshold: formData.get("freeShippingThreshold") ?? undefined,
   };
 
   const parsed = adminSettingsSchema.safeParse(raw);
@@ -107,6 +128,15 @@ export async function saveSettingsAction(
     const errorMsg =
       parsed.error.issues[0]?.message ?? "Thông tin cài đặt không hợp lệ";
     return { ok: false, error: errorMsg };
+  }
+
+  // Hai o phi ship di cung nhau: thieu mot o thi khong luu gi ca.
+  const { shippingFee, freeShippingThreshold } = parsed.data;
+  if ((shippingFee === undefined) !== (freeShippingThreshold === undefined)) {
+    return {
+      ok: false,
+      error: "Nhập đủ cả phí giao hàng và ngưỡng miễn phí giao hàng",
+    };
   }
 
   await saveStoreProfile({
@@ -123,6 +153,10 @@ export async function saveSettingsAction(
     accountName: parsed.data.accountName,
   });
 
+  if (shippingFee !== undefined && freeShippingThreshold !== undefined) {
+    await saveShippingSettings({ shippingFee, freeShippingThreshold });
+  }
+
   await logAdminAction({
     identityId: adminIdentity?.id,
     action: "settings.update",
@@ -132,6 +166,8 @@ export async function saveSettingsAction(
       storeName: parsed.data.storeName,
       bankBin: parsed.data.bankBin,
       accountName: parsed.data.accountName,
+      shippingFee,
+      freeShippingThreshold,
     },
   });
 

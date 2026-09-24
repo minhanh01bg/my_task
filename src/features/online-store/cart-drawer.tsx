@@ -20,25 +20,67 @@ import {
   SheetContent,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { ToastProvider, useToast } from "@/components/ui/toast";
 import { formatVnd } from "@/lib/money";
+import {
+  computeShippingFee,
+  DEFAULT_SHIPPING_SETTINGS,
+  type ShippingSettings,
+} from "@/lib/shipping/shipping-fee";
 
 import { useOnlineCart } from "./cart-context";
+import type { OnlineCartLine } from "./types";
 import { useVoucher } from "./use-voucher";
 import { VoucherField } from "./voucher-field";
 
-const FREE_SHIPPING_THRESHOLD = 200_000;
+const UNDO_TIMEOUT_MS = 5000;
 
-export function CartDrawer() {
-  const { lines, isDrawerOpen, closeDrawer, setQuantity, remove } =
+interface CartDrawerProps {
+  /** Tu cai dat `store.shippingFee`/`store.freeShippingThreshold`. */
+  shipping?: ShippingSettings;
+}
+
+/** Tu boc ToastProvider cho toast "Hoàn tác" khi xoa dong. */
+export function CartDrawer({
+  shipping = DEFAULT_SHIPPING_SETTINGS,
+}: CartDrawerProps) {
+  return (
+    <ToastProvider>
+      <CartDrawerContent shipping={shipping} />
+    </ToastProvider>
+  );
+}
+
+function CartDrawerContent({ shipping }: { shipping: ShippingSettings }) {
+  const { lines, isDrawerOpen, closeDrawer, setQuantity, remove, add } =
     useOnlineCart();
+  const toast = useToast();
+  const threshold = shipping.freeShippingThreshold;
+  // Khong thu phi ship thi thanh "mua them de freeship" la sai su that.
+  const showShippingProgress = shipping.shippingFee > 0;
 
   const subtotal = useMemo(
     () => lines.reduce((sum, line) => sum + line.price * line.quantity, 0),
     [lines],
   );
 
-  const voucher = useVoucher(subtotal, isDrawerOpen);
+  const voucher = useVoucher(
+    subtotal,
+    isDrawerOpen,
+    computeShippingFee(subtotal, shipping),
+  );
   const voucherDiscount = voucher.applied?.discount ?? 0;
+
+  /** Xoa ngay, cho 5 giay de hoan tac thay vi hoi xac nhan. */
+  function removeWithUndo(line: OnlineCartLine) {
+    remove(line.id);
+    toast.add({
+      title: `Đã xoá ${line.name} khỏi giỏ hàng`,
+      type: "info",
+      timeout: UNDO_TIMEOUT_MS,
+      action: { label: "Hoàn tác", onClick: () => add(line, line.quantity) },
+    });
+  }
 
   const totalItems = useMemo(
     () => lines.reduce((sum, line) => sum + line.quantity, 0),
@@ -79,10 +121,10 @@ export function CartDrawer() {
         </div>
 
         {/* Free Shipping Progress Bar */}
-        {lines.length > 0 && (
+        {lines.length > 0 && showShippingProgress && (
           <div className="border-border bg-muted/30 border-b px-6 py-3.5">
             <div className="flex items-center justify-between text-xs font-semibold">
-              {subtotal >= FREE_SHIPPING_THRESHOLD ? (
+              {subtotal >= threshold ? (
                 <span className="text-success flex items-center gap-1.5 font-bold">
                   <PartyPopper aria-hidden="true" className="size-4" />
                   <span>Chúc mừng! Bạn đã được Miễn phí giao hàng!</span>
@@ -93,7 +135,7 @@ export function CartDrawer() {
                   <span>
                     Mua thêm{" "}
                     <strong className="text-foreground font-bold">
-                      {formatVnd(FREE_SHIPPING_THRESHOLD - subtotal)} ₫
+                      {formatVnd(threshold - subtotal)} ₫
                     </strong>{" "}
                     để được Miễn phí giao hàng
                   </span>
@@ -106,12 +148,10 @@ export function CartDrawer() {
             >
               <div
                 className={`h-full rounded-full transition-[width,background-color] duration-500 ${
-                  subtotal >= FREE_SHIPPING_THRESHOLD
-                    ? "bg-success"
-                    : "bg-primary"
+                  subtotal >= threshold ? "bg-success" : "bg-primary"
                 }`}
                 style={{
-                  width: `${Math.min(100, (subtotal / FREE_SHIPPING_THRESHOLD) * 100)}%`,
+                  width: `${threshold > 0 ? Math.min(100, (subtotal / threshold) * 100) : 100}%`,
                 }}
               />
             </div>
@@ -181,7 +221,7 @@ export function CartDrawer() {
                         </div>
                         <button
                           type="button"
-                          onClick={() => remove(line.id)}
+                          onClick={() => removeWithUndo(line)}
                           aria-label={`Xóa ${line.name} khỏi giỏ hàng`}
                           className="text-muted-foreground hover:text-destructive inline-flex size-7 items-center justify-center rounded-lg transition-colors"
                         >

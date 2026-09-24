@@ -95,8 +95,14 @@ function toPreview(
  * tính thay đổi. Server luôn tính lại voucher khi tạo đơn.
  *
  * `active` = false tạm dừng việc đọc mã đã lưu (vd. giỏ hàng đang đóng).
+ * `shippingFee` = phí ship thật của đơn hiện tại (0 khi nhận tại cửa hàng);
+ * bỏ trống thì dùng phần giảm ship server trả về lúc kiểm tra mã.
  */
-export function useVoucher(subtotal: number, active = true) {
+export function useVoucher(
+  subtotal: number,
+  active = true,
+  shippingFee?: number,
+) {
   const [input, setInput] = useState("");
   const [preview, setPreview] = useState<VoucherPreview | null>(null);
   const [requestError, setRequestError] = useState("");
@@ -137,11 +143,11 @@ export function useVoucher(subtotal: number, active = true) {
       preview
         ? applyVoucher(preview.rule, {
             subtotal,
-            shippingFee: preview.shippingDiscount,
+            shippingFee: shippingFee ?? preview.shippingDiscount,
             now: new Date(),
           })
         : null,
-    [preview, subtotal],
+    [preview, subtotal, shippingFee],
   );
 
   const applied: AppliedVoucher | null =
@@ -193,6 +199,13 @@ export function useVoucher(subtotal: number, active = true) {
     writeStoredCode(null);
   }, []);
 
+  /** Server từ chối mã khi đặt hàng (409 VOUCHER_INVALID): gỡ mã, báo tại ô nhập. */
+  const invalidate = useCallback((message: string) => {
+    setPreview(null);
+    setRequestError(message);
+    writeStoredCode(null);
+  }, []);
+
   return {
     input,
     setInput,
@@ -203,6 +216,7 @@ export function useVoucher(subtotal: number, active = true) {
     pending,
     apply,
     remove,
+    invalidate,
   };
 }
 

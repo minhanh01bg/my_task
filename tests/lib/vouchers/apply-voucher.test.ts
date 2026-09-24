@@ -91,6 +91,21 @@ describe("applyVoucher", () => {
     ).toEqual({ ok: true, discount: 0, shippingDiscount: 15_000 });
   });
 
+  it("freeship bị từ chối khi đơn đã miễn phí giao hàng (phí ship 0)", () => {
+    const voucher = rule({ type: "freeship", value: 0 });
+    expect(
+      applyVoucher(voucher, { subtotal: 250_000, shippingFee: 0, now: NOW }),
+    ).toEqual({
+      ok: false,
+      discount: 0,
+      shippingDiscount: 0,
+      reason: "no_shipping_fee",
+    });
+    expect(voucherReasonMessage("no_shipping_fee")).toBe(
+      "Đơn này đã được miễn phí giao hàng",
+    );
+  });
+
   it("hết hạn", () => {
     const voucher = rule({ endsAt: new Date("2026-09-23T00:00:00.000Z") });
     expect(

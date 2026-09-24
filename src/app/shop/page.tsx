@@ -21,7 +21,10 @@ import {
 } from "@/lib/seo/json-ld";
 import { storefrontOpenGraph } from "@/lib/seo/open-graph";
 import { getOnlineCatalog } from "@/server/catalog/get-online-catalog";
-import { getPublicStoreProfile } from "@/server/settings/store-settings";
+import {
+  getPublicStoreProfile,
+  getShippingSettings,
+} from "@/server/settings/store-settings";
 import { getActivePromotions } from "@/server/storefront/promotions";
 
 /** ISR: HTML không đọc cookie; phần phụ thuộc phiên nằm ở client island của header. */
@@ -71,12 +74,13 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ShopPage() {
-  const [catalog, storeProfile, announcements, heroPromotions] =
+  const [catalog, storeProfile, announcements, heroPromotions, shipping] =
     await Promise.all([
       getOnlineCatalog(),
       getPublicStoreProfile(),
       getActivePromotions({ placement: "announcement", limit: 3 }),
       getActivePromotions({ placement: "hero", limit: 1 }),
+      getShippingSettings(),
     ]);
 
   const products = catalog.products.map(toCatalogProductDto);
@@ -98,7 +102,7 @@ export default async function ShopPage() {
     <OnlineCartProvider>
       <JsonLdScript data={jsonLd} />
       <PromotionBanner promotions={announcements} placement="announcement" />
-      <StoreHeader storeName={storeProfile.name} />
+      <StoreHeader storeName={storeProfile.name} shipping={shipping} />
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <PromotionBanner promotions={heroPromotions} placement="hero" />
       </div>

@@ -5,7 +5,9 @@ import { prisma } from "@/server/db/prisma";
 import {
   getPublicStoreProfile,
   getStoreBankAccount,
+  getShippingSettings,
   getStoreName,
+  saveShippingSettings,
   saveStoreBankAccount,
   saveStoreName,
   saveStoreProfile,
@@ -28,6 +30,8 @@ describe("Store Settings & Public Profile", () => {
             "store.address",
             "store.openingHours",
             "store.mapUrl",
+            "store.shippingFee",
+            "store.freeShippingThreshold",
             "bank.bin",
             "bank.accountNumber",
             "bank.accountName",
@@ -89,6 +93,38 @@ describe("Store Settings & Public Profile", () => {
       ["settings"],
     ]);
     await expect(getStoreName()).resolves.toBe("Tiệm Mới");
+  });
+
+  it("getShippingSettings: mặc định phí 0, ngưỡng 200.000; đọc lại giá trị đã lưu", async () => {
+    await expect(getShippingSettings()).resolves.toEqual({
+      shippingFee: 0,
+      freeShippingThreshold: 200_000,
+    });
+
+    await saveShippingSettings({
+      shippingFee: 25_000,
+      freeShippingThreshold: 300_000,
+    });
+    expect(revalidatePublic).toHaveBeenLastCalledWith("settings");
+    await expect(getShippingSettings()).resolves.toEqual({
+      shippingFee: 25_000,
+      freeShippingThreshold: 300_000,
+    });
+  });
+
+  it("getShippingSettings: giá trị hỏng trong DB thì dùng mặc định, không cùng query riêng", async () => {
+    await prisma.setting.createMany({
+      data: [
+        { key: "store.shippingFee", value: "abc" },
+        { key: "store.freeShippingThreshold", value: "-5" },
+      ],
+    });
+    const findMany = vi.spyOn(prisma.setting, "findMany");
+    await expect(getShippingSettings()).resolves.toEqual({
+      shippingFee: 0,
+      freeShippingThreshold: 200_000,
+    });
+    expect(findMany).toHaveBeenCalledTimes(1);
   });
 
   it("getPublicStoreProfile: trả về profile mặc định khi chưa có dữ liệu", async () => {

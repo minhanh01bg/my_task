@@ -16,7 +16,29 @@ async function cleanup() {
   await prisma.orderItem.deleteMany({ where: { productId } });
   await prisma.order.deleteMany({ where: { channel: "online" } });
   await prisma.voucher.deleteMany();
+  await prisma.setting.deleteMany({
+    where: {
+      key: { in: ["store.shippingFee", "store.freeShippingThreshold"] },
+    },
+  });
 }
+
+async function shippingSettings(shippingFee: number, threshold: number) {
+  await prisma.setting.createMany({
+    data: [
+      { key: "store.shippingFee", value: String(shippingFee) },
+      { key: "store.freeShippingThreshold", value: String(threshold) },
+    ],
+  });
+}
+
+const DELIVERY = {
+  fulfillmentType: "delivery" as const,
+  deliveryAddress: "12 Lê Lợi",
+  deliveryWard: "Phường Bến Nghé",
+  deliveryDistrict: "Quận 1",
+  deliveryProvince: "TP. Hồ Chí Minh",
+};
 
 beforeEach(async () => {
   await prisma.$queryRawUnsafe("PRAGMA busy_timeout = 5000;");
@@ -292,5 +314,69 @@ describe("createOrder với voucher (đường ghi đơn duy nhất)", () => {
       (await prisma.voucher.findUniqueOrThrow({ where: { code: "GIAM10" } }))
         .usedCount,
     ).toBe(1);
+  });
+});
+
+describe("createOnlineOrder — phí giao hàng từ cài đặt", () => {
+  it("giao tận nơi dưới ngưỡng: cộng store.shippingFee vào tổng", async () => {
+    await shippingSettings(20_000, 500_000);
+    const { order } = await createOnlineOrder(checkout(DELIVERY));
+    const saved = await prisma.order.findUniqueOrThrow({
+      where: { id: order.id },
+    });
+    expect(saved).toMatchObject({
+      subtotal: 300_000,
+      shippingFee: 20_000,
+      total: 320_000,
+    });
+  });
+
+  it("giao tận nơi từ ngưỡng trở lên: miễn phí", async () => {
+    await shippingSettings(20_000, 300_000);
+    const { order } = await createOnlineOrder(checkout(DELIVERY));
+    const saved = await prisma.order.findUniqueOrThrow({
+      where: { id: order.id },
+    });
+    expect(saved).toMatchObject({ shippingFee: 0, total: 300_000 });
+  });
+
+  it("nhận tại cửa hàng: không tính phí dù dưới ngưỡng", async () => {
+    await shippingSettings(20_000, 500_000);
+    const { order } = await createOnlineOrder(checkout());
+    const saved = await prisma.order.findUniqueOrThrow({
+      where: { id: order.id },
+    });
+    expect(saved).toMatchObject({ shippingFee: 0, total: 300_000 });
+  });
+
+  it("freeship trên đơn có phí: phí về 0, voucherDiscount 0", async () => {
+    await shippingSettings(20_000, 500_000);
+    await voucher({ code: "FREESHIP", type: "freeship", value: 0 });
+    const { order } = await createOnlineOrder(
+      checkout({ ...DELIVERY, voucherCode: "freeship" }),
+    );
+    const saved = await prisma.order.findUniqueOrThrow({
+      where: { id: order.id },
+    });
+    expect(saved).toMatchObject({
+      voucherCode: "FREESHIP",
+      voucherDiscount: 0,
+      shippingFee: 0,
+      total: 300_000,
+    });
+  });
+
+  it("freeship khi đơn đã miễn phí ship: từ chối VOUCHER_INVALID, không tiêu lượt", async () => {
+    await voucher({ code: "FREESHIP", type: "freeship", value: 0 });
+    await expect(
+      createOnlineOrder(checkout({ voucherCode: "FREESHIP" })),
+    ).rejects.toMatchObject({
+      code: "VOUCHER_INVALID",
+      message: "Đơn này đã được miễn phí giao hàng",
+    });
+    const saved = await prisma.voucher.findUniqueOrThrow({
+      where: { code: "FREESHIP" },
+    });
+    expect(saved.usedCount).toBe(0);
   });
 });

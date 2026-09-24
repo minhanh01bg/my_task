@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 
 import { CheckoutForm } from "@/features/online-store/checkout-form";
-import { getPublicStoreProfile } from "@/server/settings/store-settings";
+import {
+  getPublicStoreProfile,
+  getShippingSettings,
+} from "@/server/settings/store-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +14,9 @@ export const metadata: Metadata = {
 };
 
 export default async function CheckoutPage() {
-  const storeProfile = await getPublicStoreProfile();
-  return <CheckoutForm storeProfile={storeProfile} />;
+  const [storeProfile, shipping] = await Promise.all([
+    getPublicStoreProfile(),
+    getShippingSettings(),
+  ]);
+  return <CheckoutForm storeProfile={storeProfile} shipping={shipping} />;
 }

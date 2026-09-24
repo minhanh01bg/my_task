@@ -30,14 +30,20 @@ const mockProductB: OnlineProduct = {
   searchText: "tra lai",
 };
 
-function TestContainer() {
+const PAID_SHIPPING = { shippingFee: 20_000, freeShippingThreshold: 200_000 };
+
+function TestContainer({
+  shipping = PAID_SHIPPING,
+}: {
+  shipping?: { shippingFee: number; freeShippingThreshold: number };
+}) {
   const { add, openDrawer } = useOnlineCart();
   return (
     <div>
       <button onClick={openDrawer}>Mở giỏ hàng</button>
       <button onClick={() => add(mockProductA)}>Thêm A</button>
       <button onClick={() => add(mockProductB)}>Thêm B</button>
-      <CartDrawer />
+      <CartDrawer shipping={shipping} />
     </div>
   );
 }
@@ -222,6 +228,56 @@ describe("CartDrawer", () => {
     expect(
       screen.getByText(/bạn đã được miễn phí giao hàng/i),
     ).toBeInTheDocument();
+  });
+
+  it("ngưỡng freeship đọc từ cài đặt", () => {
+    render(
+      <OnlineCartProvider>
+        <TestContainer
+          shipping={{ shippingFee: 15_000, freeShippingThreshold: 300_000 }}
+        />
+      </OnlineCartProvider>,
+    );
+    fireEvent.click(screen.getByText("Thêm A")); // 50.000
+    fireEvent.click(screen.getByText("Mở giỏ hàng"));
+    expect(
+      screen.getByText(/mua thêm/i).closest("span")?.textContent,
+    ).toContain("250.000");
+  });
+
+  it("không thu phí ship (phí 0) thì ẩn thanh tiến độ freeship", () => {
+    render(
+      <OnlineCartProvider>
+        <TestContainer
+          shipping={{ shippingFee: 0, freeShippingThreshold: 200_000 }}
+        />
+      </OnlineCartProvider>,
+    );
+    fireEvent.click(screen.getByText("Thêm A"));
+    fireEvent.click(screen.getByText("Mở giỏ hàng"));
+    expect(screen.queryByTestId("free-shipping-bar")).not.toBeInTheDocument();
+  });
+
+  it("xoá dòng hiện toast Hoàn tác; bấm Hoàn tác trả lại đúng số lượng", async () => {
+    render(
+      <OnlineCartProvider>
+        <TestContainer />
+      </OnlineCartProvider>,
+    );
+    fireEvent.click(screen.getByText("Thêm A"));
+    fireEvent.click(screen.getByText("Thêm A"));
+    fireEvent.click(screen.getByText("Mở giỏ hàng"));
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /xóa.*cà phê robusta/i }),
+    );
+    expect(screen.queryByTestId("quantity-p1")).not.toBeInTheDocument();
+    expect(
+      await screen.findByText("Đã xoá Cà phê Robusta khỏi giỏ hàng"),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Hoàn tác" }));
+    expect(await screen.findByTestId("quantity-p1")).toHaveTextContent("2");
   });
 
   it("nhập mã giảm giá trong giỏ gọi API validate và lưu mã cho trang thanh toán", async () => {

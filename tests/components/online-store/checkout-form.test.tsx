@@ -220,4 +220,113 @@ describe("CheckoutForm - Structured Address & Experience", () => {
     expect(pickupCard).toBeInTheDocument();
     expect(pickupCard.textContent).toContain("chưa cập nhật địa chỉ");
   });
+
+  it("phí giao hàng chỉ hiện khi giao tận nơi và được cộng vào tổng", () => {
+    render(
+      <CheckoutForm
+        shipping={{ shippingFee: 20_000, freeShippingThreshold: 500_000 }}
+      />,
+    );
+
+    expect(screen.getByTestId("checkout-shipping-fee")).toHaveTextContent(
+      "20.000",
+    );
+    // 2 x 50.000 + 20.000 phí ship
+    expect(screen.getByText("120.000 ₫")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText(/nhận tại cửa hàng/i));
+    expect(
+      screen.queryByTestId("checkout-shipping-fee"),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByText("100.000 ₫").length).toBeGreaterThan(0);
+  });
+
+  it("mã freeship: dòng miễn phí ship chỉ khi giao tận nơi; nhận tại cửa hàng thì báo đã miễn phí", async () => {
+    localStorage.setItem("online-voucher-v1", "FREESHIP");
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          ok: true,
+          code: "FREESHIP",
+          type: "freeship",
+          value: 0,
+          maxDiscount: null,
+          minOrderTotal: 0,
+          discount: 0,
+          shippingDiscount: 20_000,
+          message: "ok",
+        },
+      }),
+    } as Response);
+
+    render(
+      <CheckoutForm
+        shipping={{ shippingFee: 20_000, freeShippingThreshold: 500_000 }}
+      />,
+    );
+
+    expect(
+      await screen.findByTestId("checkout-shipping-discount"),
+    ).toHaveTextContent("20.000");
+
+    fireEvent.click(screen.getByLabelText(/nhận tại cửa hàng/i));
+    expect(
+      screen.queryByTestId("checkout-shipping-discount"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Đơn này đã được miễn phí giao hàng"),
+    ).toBeInTheDocument();
+  });
+
+  it("409 VOUCHER_INVALID: gỡ mã đang áp và báo lỗi tại ô voucher", async () => {
+    localStorage.setItem("online-voucher-v1", "GIAM10");
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            ok: true,
+            code: "GIAM10",
+            type: "fixed",
+            value: 10_000,
+            maxDiscount: null,
+            minOrderTotal: 0,
+            discount: 10_000,
+            shippingDiscount: 0,
+            message: "ok",
+          },
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 409,
+        json: async () => ({
+          code: "VOUCHER_INVALID",
+          message: "Mã giảm giá đã hết lượt sử dụng",
+        }),
+      } as Response);
+
+    render(<CheckoutForm />);
+    expect(await screen.findByText(/Giảm giá \(GIAM10\)/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText(/nhận tại cửa hàng/i));
+    fireEvent.change(screen.getByLabelText(/họ và tên/i), {
+      target: { value: "Nguyễn Văn B" },
+    });
+    fireEvent.change(screen.getByLabelText(/số điện thoại/i), {
+      target: { value: "0912345678" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /xác nhận đặt hàng/i }));
+
+    const message = await screen.findByText("Mã giảm giá đã hết lượt sử dụng");
+    expect(message.closest("[aria-live]")).not.toBeNull();
+    expect(screen.queryByText(/Giảm giá \(GIAM10\)/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(localStorage.getItem("online-voucher-v1")).toBeNull();
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    // Ô voucher mở lại để khách nhập mã khác.
+    expect(screen.getByLabelText(/mã ưu đãi/i)).not.toBeDisabled();
+  });
 });

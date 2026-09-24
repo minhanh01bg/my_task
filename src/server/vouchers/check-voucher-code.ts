@@ -12,7 +12,8 @@ import { getVoucherByCode } from "./get-voucher";
 
 /**
  * Xem trước voucher cho khách (giỏ hàng / checkout). Chỉ để hiển thị — đơn
- * hàng luôn tính lại voucher từ DB trong `createOnlineOrder`.
+ * hàng luôn tính lại voucher từ DB trong `createOnlineOrder`. Phí ship xem
+ * trước tính như đơn giao tận nơi; checkout tự tính lại theo cách nhận hàng.
  */
 export async function checkVoucherCode(
   rawCode: string,
@@ -22,7 +23,7 @@ export async function checkVoucherCode(
   const code = normalizeVoucherCode(rawCode);
   const [voucher, shippingFee] = await Promise.all([
     getVoucherByCode(code),
-    resolveShippingFee(),
+    resolveShippingFee(subtotal),
   ]);
   const result = applyVoucher(voucher, { subtotal, shippingFee, now });
 

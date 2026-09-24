@@ -7,6 +7,7 @@ import { Heart, ShoppingBag } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { ShippingSettings } from "@/lib/shipping/shipping-fee";
 import { useWishlist } from "@/lib/storage/wishlist";
 import { cn } from "@/lib/utils";
 
@@ -14,7 +15,14 @@ import { useOnlineCart } from "./cart-context";
 import { CartDrawer } from "./cart-drawer";
 import { SessionAwareActions } from "./session-aware-actions";
 
-export function StoreHeader({ storeName }: { storeName: string }) {
+export function StoreHeader({
+  storeName,
+  shipping,
+}: {
+  storeName: string;
+  /** Phi ship/nguong freeship cho gio hang; thieu thi dung mac dinh. */
+  shipping?: ShippingSettings;
+}) {
   const { lines, hydrated, openDrawer } = useOnlineCart();
   const { count: wishlistCount } = useWishlist();
   const count = lines.reduce((sum, line) => sum + line.quantity, 0);
@@ -84,7 +92,7 @@ export function StoreHeader({ storeName }: { storeName: string }) {
           </div>
         </div>
       </header>
-      <CartDrawer />
+      <CartDrawer shipping={shipping} />
     </>
   );
 }

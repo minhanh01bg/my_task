@@ -29,7 +29,10 @@ vi.mock("@/server/db/prisma", () => ({
   prisma: { order: { findUnique: vi.fn() } },
 }));
 
-function mockOnlineOrder(fulfillmentStatus: string) {
+function mockOnlineOrder(
+  fulfillmentStatus: string,
+  extra: Record<string, unknown> = {},
+) {
   vi.mocked(prisma.order.findUnique).mockResolvedValue({
     id: "o1",
     code: "DH-201",
@@ -47,6 +50,10 @@ function mockOnlineOrder(fulfillmentStatus: string) {
     customer: null,
     items: [],
     payments: [],
+    voucherCode: null,
+    voucherDiscount: 0,
+    shippingFee: 0,
+    ...extra,
   } as unknown as Awaited<ReturnType<typeof prisma.order.findUnique>>);
 }
 
@@ -86,6 +93,26 @@ describe("/admin/orders/[id] — in hoá đơn K80", () => {
     expect(
       screen.getByRole("button", { name: "In hoá đơn" }),
     ).toBeInTheDocument();
+    cleanup();
+  });
+});
+
+describe("/admin/orders/[id] — dòng voucher", () => {
+  it("mã giảm tiền hàng: hiện 'Trong đó mã …'", async () => {
+    mockOnlineOrder("new", { voucherCode: "GIAM10", voucherDiscount: 10_000 });
+    render(await OrderDetailPage({ params: Promise.resolve({ id: "o1" }) }));
+    expect(screen.getByText("Trong đó mã GIAM10")).toBeInTheDocument();
+    expect(screen.queryByTestId("freeship-code")).not.toBeInTheDocument();
+    cleanup();
+  });
+
+  it("mã freeship: không hiện 'Trong đó mã', ghi mã cạnh phí giao hàng", async () => {
+    mockOnlineOrder("new", { voucherCode: "FREESHIP", voucherDiscount: 0 });
+    render(await OrderDetailPage({ params: Promise.resolve({ id: "o1" }) }));
+    expect(screen.queryByText(/Trong đó mã/)).not.toBeInTheDocument();
+    expect(screen.getByTestId("freeship-code")).toHaveTextContent(
+      "(mã FREESHIP)",
+    );
     cleanup();
   });
 });

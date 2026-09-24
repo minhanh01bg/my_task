@@ -16,7 +16,10 @@ import {
   type CategoryProductsPage,
 } from "@/server/catalog/list-category-products";
 import { parsePageParam } from "@/server/admin/pagination";
-import { getPublicStoreProfile } from "@/server/settings/store-settings";
+import {
+  getPublicStoreProfile,
+  getShippingSettings,
+} from "@/server/settings/store-settings";
 import type { PublicStoreProfile } from "@/types/storefront";
 
 /** Dữ liệu qua Data Cache (tag `catalog`, 60 giây) như trang sản phẩm. */
@@ -96,13 +99,14 @@ export default async function CategoryPage(props: CategoryPageProps) {
   }
 
   const crumbs = categoryCrumbs(data.category);
+  const shipping = await getShippingSettings();
 
   return (
     <OnlineCartProvider>
       <JsonLdScript
         data={breadcrumbJsonLd(toBreadcrumbItems(crumbs, siteConfig.url))}
       />
-      <StoreHeader storeName={storeProfile.name} />
+      <StoreHeader storeName={storeProfile.name} shipping={shipping} />
       <main className="min-h-[70vh]">
         <CategoryLanding
           data={data}

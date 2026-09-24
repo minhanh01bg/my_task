@@ -56,6 +56,10 @@ export default async function OrderDetailPage({
 
   if (!order) notFound();
 
+  // Voucher khong giam tien hang (freeship) thi phan giam nam o phi ship.
+  const freeshipCode =
+    order.voucherCode && order.voucherDiscount === 0 ? order.voucherCode : null;
+
   // Tien da thu that: bo ghi no va chuyen khoan chua xac nhan nhan tien.
   const received = order.payments
     .filter((payment) => payment.method !== "debt" && payment.receivedAt)
@@ -168,7 +172,7 @@ export default async function OrderDetailPage({
                 -{formatVnd(order.discount)}
               </dd>
             </div>
-            {order.voucherCode ? (
+            {order.voucherCode && order.voucherDiscount > 0 ? (
               <div className="mt-2 flex justify-between gap-2 text-sm">
                 <dt className="text-muted-foreground">
                   Trong đó mã {order.voucherCode}
@@ -180,7 +184,15 @@ export default async function OrderDetailPage({
             ) : null}
             {order.channel === "online" ? (
               <div className="mt-2 flex justify-between gap-2">
-                <dt className="text-muted-foreground">Phí giao hàng</dt>
+                <dt className="text-muted-foreground">
+                  Phí giao hàng
+                  {freeshipCode ? (
+                    <span data-testid="freeship-code">
+                      {" "}
+                      (mã {freeshipCode})
+                    </span>
+                  ) : null}
+                </dt>
                 <dd className="shrink-0 font-medium">
                   {formatVnd(order.shippingFee)}
                 </dd>

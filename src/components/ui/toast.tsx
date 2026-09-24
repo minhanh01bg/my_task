@@ -87,6 +87,10 @@ function ToastList() {
             className="text-muted-foreground text-sm"
           />
         </div>
+        <ToastPrimitive.Action
+          data-slot="toast-action"
+          className="border-border hover:bg-muted focus-visible:ring-ring/30 mt-0.5 shrink-0 self-center rounded-lg border px-3 py-1.5 text-sm font-bold outline-none focus-visible:ring-3"
+        />
         <ToastPrimitive.Close
           data-slot="toast-close"
           aria-label="Đóng thông báo"
@@ -105,6 +109,8 @@ interface ToastOptions {
   type?: ToastType;
   timeout?: number;
   priority?: "low" | "high";
+  /** Nut hanh dong trong toast (vd. "Hoàn tác"); bam xong toast tu dong. */
+  action?: { label: string; onClick: () => void };
 }
 
 /** API gon: `const toast = useToast(); toast.add({ title, type })`. */
@@ -112,12 +118,23 @@ function useToast() {
   const manager = ToastPrimitive.useToastManager();
   return React.useMemo(
     () => ({
-      add: (options: ToastOptions) =>
-        manager.add({
+      add: ({ action, ...options }: ToastOptions) => {
+        const id: string = manager.add({
           ...options,
           priority:
             options.priority ?? (options.type === "error" ? "high" : "low"),
-        }),
+          actionProps: action
+            ? {
+                children: action.label,
+                onClick: () => {
+                  action.onClick();
+                  manager.close(id);
+                },
+              }
+            : undefined,
+        });
+        return id;
+      },
       close: (id?: string) => manager.close(id),
     }),
     [manager],
