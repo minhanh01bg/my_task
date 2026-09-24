@@ -1,11 +1,12 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/kit/empty-state";
+import { ProductCardSkeleton } from "@/components/kit/skeleton-loader";
 import { useWishlist } from "@/lib/storage/wishlist";
 import { catalogFilterSchema, type CatalogFilter } from "@/types/storefront";
 
@@ -82,11 +83,22 @@ function CatalogBrowserView({
   const [filter, setFilter] = useState<CatalogFilter>(() =>
     parseFilterFromParams(searchParams),
   );
+  // O loc cap nhat ngay (`filter`); luoi loc lai trong transition
+  // (`appliedFilter`) — trong luc cho thi hien skeleton thay vi dung hinh.
+  const [appliedFilter, setAppliedFilter] = useState(filter);
+  const [isFiltering, startFiltering] = useTransition();
 
   // Adjust state on searchParams change during render (React-recommended pattern)
   if (searchParams !== prevParams) {
+    const parsed = parseFilterFromParams(searchParams);
     setPrevParams(searchParams);
-    setFilter(parseFilterFromParams(searchParams));
+    setFilter(parsed);
+    setAppliedFilter(parsed);
+  }
+
+  function changeFilter(next: CatalogFilter) {
+    setFilter(next);
+    startFiltering(() => setAppliedFilter(next));
   }
 
   const [quickView, setQuickView] = useState<OnlineProduct | null>(null);
@@ -94,10 +106,10 @@ function CatalogBrowserView({
   const isWishlistOnly = searchParams?.get("wishlist") === "true";
 
   const products = useMemo(() => {
-    const base = filterAndSortProducts(catalog.products, filter);
+    const base = filterAndSortProducts(catalog.products, appliedFilter);
     if (!isWishlistOnly) return base;
     return base.filter((p) => hasWishlist(p.id));
-  }, [catalog.products, filter, isWishlistOnly, hasWishlist]);
+  }, [catalog.products, appliedFilter, isWishlistOnly, hasWishlist]);
 
   return (
     <section
@@ -140,12 +152,25 @@ function CatalogBrowserView({
         <CatalogFilters
           categories={catalog.categories}
           filter={filter}
-          onFilterChange={setFilter}
+          onFilterChange={changeFilter}
           resultCount={products.length}
         />
       </div>
 
-      {products.length > 0 ? (
+      {isFiltering ? (
+        <div
+          data-testid="catalog-skeleton"
+          aria-busy="true"
+          className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4"
+        >
+          <span role="status" className="sr-only">
+            Đang lọc sản phẩm…
+          </span>
+          {Array.from({ length: 8 }, (_, index) => (
+            <ProductCardSkeleton key={index} />
+          ))}
+        </div>
+      ) : products.length > 0 ? (
         <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
           {products.map((product) => (
             <ProductCard
@@ -164,7 +189,7 @@ function CatalogBrowserView({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setFilter(defaultFilter)}
+                onClick={() => changeFilter(defaultFilter)}
                 className="font-bold"
               >
                 Xóa tất cả bộ lọc

@@ -13,6 +13,7 @@ import OrderSuccessLoading from "@/app/order-success/[receipt]/loading";
 import GuestOrderLoading from "@/app/orders/guest/[token]/loading";
 import PosError from "@/app/pos/error";
 import PosLoading from "@/app/pos/loading";
+import AdminProductsLoading from "@/app/admin/products/loading";
 import ShopLoading from "@/app/shop/loading";
 
 const captureException = vi.fn();
@@ -78,6 +79,7 @@ describe.each(ERROR_BOUNDARIES)("%s/error.tsx", (_name, Boundary, title) => {
 const LOADINGS: [string, ComponentType][] = [
   ["app/loading", RootLoading],
   ["admin/loading", AdminLoading],
+  ["admin/products/loading", AdminProductsLoading],
   ["pos/loading", PosLoading],
   ["login/loading", LoginLoading],
   ["order-success/[receipt]/loading", OrderSuccessLoading],
@@ -105,6 +107,13 @@ describe("skeleton đúng dạng nội dung", () => {
     expect(
       container.querySelectorAll('[data-row-skeleton="true"]').length,
     ).toBeGreaterThan(0);
+  });
+
+  it("admin/products dùng TableSkeleton", () => {
+    const { container } = render(<AdminProductsLoading />);
+    expect(
+      container.querySelectorAll('[data-row-skeleton="true"]').length,
+    ).toBeGreaterThanOrEqual(8);
   });
 
   it("shop dùng ProductCardSkeleton dạng lưới", () => {
