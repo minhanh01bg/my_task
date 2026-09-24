@@ -85,9 +85,12 @@ export const useCartStore = create<CartState>()(
         })),
 
       updateQuantity: (lineId, quantity) =>
-        set((state) => ({
-          lines: patchLine(state.lines, lineId, { quantity }),
-        })),
+        // Dong so luong 0/am bi server tu choi va ket mai trong hang doi.
+        set((state) =>
+          Number.isFinite(quantity) && quantity > 0
+            ? { lines: patchLine(state.lines, lineId, { quantity }) }
+            : state,
+        ),
 
       updateUnitPrice: (lineId, unitPrice) =>
         set((state) => ({
