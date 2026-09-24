@@ -9,6 +9,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { overlayClassName } from "@/components/ui/overlay";
 
 describe("Dialog", () => {
   it("nút đóng có nhãn tiếng Việt và không dùng class tw-animate", async () => {
@@ -32,5 +33,23 @@ describe("Dialog", () => {
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     );
+  });
+
+  it("lớp phủ dùng overlayClassName chung", async () => {
+    const user = userEvent.setup();
+    render(
+      <Dialog>
+        <DialogTrigger>Mở</DialogTrigger>
+        <DialogContent>
+          <DialogTitle>Tiêu đề</DialogTitle>
+        </DialogContent>
+      </Dialog>,
+    );
+    await user.click(screen.getByRole("button", { name: "Mở" }));
+
+    const overlay = document.querySelector('[data-slot="dialog-overlay"]');
+    for (const token of overlayClassName.split(" ")) {
+      expect(overlay).toHaveClass(token);
+    }
   });
 });

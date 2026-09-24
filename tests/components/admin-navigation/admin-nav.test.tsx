@@ -112,4 +112,33 @@ describe("AdminNav", () => {
 
     fetchMock.mockRestore();
   });
+
+  it("menu đầy đủ là Sheet trượt lên từ cạnh dưới", () => {
+    render(<AdminNav />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Mở toàn bộ menu quản lý" }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Menu quản lý" });
+    expect(dialog).toHaveAttribute("data-slot", "sheet-content");
+    expect(dialog).toHaveAttribute("data-side", "bottom");
+    expect(dialog).not.toHaveAttribute("id", "mobile-admin-menu");
+    expect(within(dialog).getByText("Đơn hàng").closest("a")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("đóng menu bằng nút Đóng menu", async () => {
+    render(<AdminNav />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Mở toàn bộ menu quản lý" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Đóng menu" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+  });
 });

@@ -6,6 +6,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { XIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { overlayClassName } from "@/components/ui/overlay";
 import { cn } from "@/lib/utils";
 
 /**
@@ -34,7 +35,8 @@ function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
     <SheetPrimitive.Backdrop
       data-slot="sheet-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 bg-stone-950/40 transition-opacity duration-300 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-xs",
+        overlayClassName,
+        "transition-opacity duration-300 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0",
         className,
       )}
       {...props}

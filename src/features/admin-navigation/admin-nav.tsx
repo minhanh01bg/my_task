@@ -19,18 +19,18 @@ import {
   X,
 } from "@phosphor-icons/react";
 
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { AdminLogoutButton } from "@/features/admin-navigation/admin-logout-button";
 import { NotificationButton } from "@/features/admin-notifications/notification-button";
-import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -204,7 +204,7 @@ export function AdminNav() {
         <AdminLogoutButton className="border-border mt-5 border-t pt-3" />
       </aside>
 
-      <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
+      <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
         <nav
           aria-label="Điều hướng quản lý trên điện thoại"
           className="bg-card/95 border-border fixed inset-x-0 bottom-0 z-40 border-t px-2 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] shadow-[0_-10px_30px_-20px_oklch(0.15_0.02_70/0.5)] backdrop-blur-xl md:hidden"
@@ -230,7 +230,7 @@ export function AdminNav() {
               );
             })}
             <li>
-              <DialogTrigger
+              <SheetTrigger
                 aria-label="Mở toàn bộ menu quản lý"
                 render={<button type="button" />}
                 className={cn(
@@ -244,30 +244,28 @@ export function AdminNav() {
                   className="size-5"
                 />
                 Thêm
-              </DialogTrigger>
+              </SheetTrigger>
             </li>
           </ul>
         </nav>
-        <DialogContent
-          id="mobile-admin-menu"
+        <SheetContent
+          side="bottom"
           showCloseButton={false}
-          className="top-auto right-0 bottom-0 left-0 z-[60] max-h-[85dvh] max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-t-3xl rounded-b-none px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:hidden"
+          className="gap-0 overflow-y-auto px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:hidden"
         >
-          <DialogHeader className="mb-3 flex-row items-center justify-between text-left">
+          <SheetHeader className="mb-3 flex-row items-center justify-between p-0 text-left">
             <div>
-              <DialogTitle className="text-lg font-bold">
-                Menu quản lý
-              </DialogTitle>
-              <DialogDescription>Tất cả chức năng cửa hàng</DialogDescription>
+              <SheetTitle>Menu quản lý</SheetTitle>
+              <SheetDescription>Tất cả chức năng cửa hàng</SheetDescription>
             </div>
-            <DialogClose
+            <SheetClose
               aria-label="Đóng menu"
               render={<button type="button" />}
               className="hover:bg-muted focus-visible:ring-ring flex size-11 shrink-0 items-center justify-center rounded-xl focus-visible:ring-2 focus-visible:outline-none"
             >
               <X aria-hidden="true" className="size-5" />
-            </DialogClose>
-          </DialogHeader>
+            </SheetClose>
+          </SheetHeader>
           <nav aria-label="Toàn bộ chức năng quản lý">
             <ul className="grid grid-cols-1 gap-1 min-[420px]:grid-cols-2">
               {NAV.map((item) => (
@@ -291,8 +289,8 @@ export function AdminNav() {
             className="border-border mt-2 border-t pt-3"
             onLogout={() => setMenuOpen(false)}
           />
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

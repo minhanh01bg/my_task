@@ -9,6 +9,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { overlayClassName } from "@/components/ui/overlay";
 
 function Demo({ side }: { side?: "right" | "bottom" }) {
   return (
@@ -65,5 +66,18 @@ describe("Sheet", () => {
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     );
+  });
+
+  it("lớp phủ dùng chung token với Dialog, không hard-code màu", async () => {
+    const user = userEvent.setup();
+    render(<Demo />);
+    await user.click(screen.getByRole("button", { name: "Mở giỏ" }));
+
+    const overlay = document.querySelector('[data-slot="sheet-overlay"]');
+    expect(overlay).not.toBeNull();
+    for (const token of overlayClassName.split(" ")) {
+      expect(overlay).toHaveClass(token);
+    }
+    expect(overlay?.className).not.toMatch(/bg-stone-/);
   });
 });
