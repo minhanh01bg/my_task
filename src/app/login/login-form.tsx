@@ -9,12 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { invalidateStorefrontSession } from "@/features/online-store/storefront-session";
+import { resolvePostLoginPath } from "@/lib/auth/post-login-path";
 
 export interface LoginFormProps {
   storeName: string;
+  /** Trang admin da yeu cau truoc khi bi chuyen ve /login (`?next=`). */
+  next?: string;
 }
 
-export function LoginForm({ storeName }: LoginFormProps) {
+export function LoginForm({ storeName, next }: LoginFormProps) {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +52,7 @@ export function LoginForm({ storeName }: LoginFormProps) {
     }
 
     invalidateStorefrontSession();
-    router.push("/pos");
+    router.push(resolvePostLoginPath(next));
     router.refresh();
   }
 
