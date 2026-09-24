@@ -10,6 +10,8 @@ datasource db {
 model Category {
   id        String    @id @default(cuid())
   name      String
+  /// URL SEO /shop/c/<slug>; sinh tu ten luc luu (src/server/categories/category-slug.ts)
+  slug      String?   @unique
   sortOrder Int       @default(0)
   products  Product[]
 
@@ -19,6 +21,8 @@ model Category {
 model Product {
   id         String    @id @default(cuid())
   name       String
+  /// URL SEO /shop/p/<slug>; sinh boi saveProduct tu ten
+  slug       String?   @unique
   sku        String?   @unique
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)

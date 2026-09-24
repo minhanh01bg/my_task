@@ -1,6 +1,8 @@
 export interface RecentlyViewedItem {
   id: string;
   name: string;
+  /** Mục lưu trước Task 10 không có slug → link theo id (tự chuyển hướng). */
+  slug?: string | null;
   price: number;
   unit: string;
   stock: number;

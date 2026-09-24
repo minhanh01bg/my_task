@@ -134,6 +134,20 @@ describe("Storefront Landing Page Components", () => {
       );
     });
 
+    it("link tới trang danh mục /shop/c/<slug> khi danh mục có slug", () => {
+      render(
+        <CategorySection
+          categories={[
+            { id: "c1", name: "Đồ uống & Cà phê", slug: "do-uong-ca-phe" },
+          ]}
+        />,
+      );
+
+      expect(
+        screen.getByRole("link", { name: /đồ uống & cà phê/i }),
+      ).toHaveAttribute("href", "/shop/c/do-uong-ca-phe");
+    });
+
     it("hiển thị số lượng sản phẩm khi có productCount và nút xem toàn bộ danh mục", () => {
       const categoriesWithCount: OnlineCategory[] = [
         { id: "c1", name: "Đồ uống & Cà phê", productCount: 15 },

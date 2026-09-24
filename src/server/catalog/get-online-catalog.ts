@@ -16,6 +16,7 @@ async function loadOnlineCatalog(): Promise<OnlineCatalog> {
       select: {
         id: true,
         name: true,
+        slug: true,
         _count: {
           select: {
             products: {
@@ -31,6 +32,7 @@ async function loadOnlineCatalog(): Promise<OnlineCatalog> {
       select: {
         id: true,
         name: true,
+        slug: true,
         price: true,
         unit: true,
         stock: true,
@@ -46,6 +48,7 @@ async function loadOnlineCatalog(): Promise<OnlineCatalog> {
     categories: categories.map((cat) => ({
       id: cat.id,
       name: cat.name,
+      slug: cat.slug,
       productCount: cat._count.products,
     })),
     products,

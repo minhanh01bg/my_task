@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { normalize } from "@/lib/search/normalize";
+import { categoryHref } from "@/lib/seo/product-href";
 import type { OnlineCategory } from "../types";
 
 export interface CategorySectionProps {
@@ -145,7 +146,7 @@ export function CategorySection({ categories }: CategorySectionProps) {
             return (
               <Link
                 key={category.id}
-                href={`/shop?category=${encodeURIComponent(category.id)}#catalog`}
+                href={categoryHref(category)}
                 className={`group border-border/70 bg-card/90 hover:bg-card focus-visible:ring-primary relative flex flex-col items-center justify-between rounded-2xl border p-4 text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-md focus-visible:ring-2 focus-visible:outline-none ${theme.cardBorderHover}`}
               >
                 <div

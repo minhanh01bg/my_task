@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/lib/money";
 import { productCrumbs } from "@/lib/seo/breadcrumbs";
+import { categoryHref, productHref } from "@/lib/seo/product-href";
 import { recordRecentlyViewed } from "@/lib/storage/recently-viewed";
 import type { OnlineProductDetail } from "@/server/catalog/get-product-detail";
 
@@ -263,9 +264,9 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
                 Có thể bạn cũng quan tâm những mặt hàng này
               </p>
             </div>
-            {product.categoryId ? (
+            {product.category ? (
               <Link
-                href={`/shop?category=${encodeURIComponent(product.categoryId)}#catalog`}
+                href={categoryHref(product.category)}
                 className="text-primary text-sm font-semibold hover:underline"
               >
                 Xem thêm
@@ -282,7 +283,7 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
                 <div>
                   <div className="bg-muted relative aspect-square overflow-hidden">
                     <Link
-                      href={`/shop/products/${rel.id}`}
+                      href={productHref(rel)}
                       tabIndex={-1}
                       aria-hidden="true"
                       className="block h-full w-full"
@@ -304,7 +305,7 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
                   </div>
                   <div className="p-4 pb-2">
                     <Link
-                      href={`/shop/products/${rel.id}`}
+                      href={productHref(rel)}
                       className="hover:text-primary transition-colors"
                     >
                       <h3 className="line-clamp-2 min-h-10 text-sm font-bold sm:text-base">

@@ -9,6 +9,7 @@ import { CountdownTimer } from "@/components/kit/countdown-timer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/lib/money";
+import { productHref } from "@/lib/seo/product-href";
 
 import { useOnlineCart } from "../cart-context";
 import type { OnlineProduct } from "../types";
@@ -112,7 +113,7 @@ export function FlashSaleSection({
                     </div>
 
                     <Link
-                      href={`/shop/products/${product.id}`}
+                      href={productHref(product)}
                       className="block h-full w-full"
                       tabIndex={-1}
                       aria-hidden="true"
@@ -136,7 +137,7 @@ export function FlashSaleSection({
                   {/* Title and Prices */}
                   <div className="mt-3">
                     <Link
-                      href={`/shop/products/${product.id}`}
+                      href={productHref(product)}
                       className="hover:text-primary transition-colors"
                     >
                       <h3 className="text-foreground line-clamp-2 min-h-10 text-xs font-bold sm:text-sm">

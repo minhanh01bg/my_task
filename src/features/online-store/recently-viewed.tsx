@@ -7,6 +7,7 @@ import { Clock, ShoppingCart, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/lib/money";
+import { productHref } from "@/lib/seo/product-href";
 import {
   clearRecentlyViewed,
   getRecentlyViewed,
@@ -82,7 +83,7 @@ export function RecentlyViewedSection() {
               <div>
                 <div className="bg-muted relative aspect-square overflow-hidden rounded-xl">
                   <Link
-                    href={`/shop/products/${item.id}`}
+                    href={productHref(item)}
                     className="block h-full w-full"
                     tabIndex={-1}
                     aria-hidden="true"
@@ -105,7 +106,7 @@ export function RecentlyViewedSection() {
 
                 <div className="mt-2.5">
                   <Link
-                    href={`/shop/products/${item.id}`}
+                    href={productHref(item)}
                     className="hover:text-primary transition-colors"
                   >
                     <h3 className="text-foreground line-clamp-1 text-xs font-bold sm:text-sm">
@@ -132,6 +133,7 @@ export function RecentlyViewedSection() {
                     add({
                       id: item.id,
                       name: item.name,
+                      slug: item.slug ?? null,
                       price: item.price,
                       unit: item.unit,
                       stock: item.stock,

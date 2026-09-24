@@ -205,6 +205,22 @@ describe("breadcrumbs helpers", () => {
     ]);
   });
 
+  it("productCrumbs: dùng URL slug của sản phẩm và danh mục khi có", () => {
+    expect(
+      productCrumbs({
+        ...product,
+        slug: "mi-hao-hao-tom-chua-cay",
+        category: { id: "cat-01", name: "Mì gói", slug: "mi-goi" },
+      }).slice(-2),
+    ).toEqual([
+      { name: "Mì gói", path: "/shop/c/mi-goi" },
+      {
+        name: "Mì Hảo Hảo tôm chua cay",
+        path: "/shop/p/mi-hao-hao-tom-chua-cay",
+      },
+    ]);
+  });
+
   it("productCrumbs: bỏ cấp danh mục khi sản phẩm không có danh mục", () => {
     expect(
       productCrumbs({ ...product, category: null }).map((c) => c.name),

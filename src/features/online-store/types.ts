@@ -1,6 +1,8 @@
 export interface OnlineProduct {
   id: string;
   name: string;
+  /** URL SEO `/shop/p/<slug>`; null với dữ liệu cũ chưa backfill. */
+  slug?: string | null;
   price: number;
   unit: string;
   stock: number;
@@ -13,6 +15,8 @@ export interface OnlineProduct {
 export interface OnlineCategory {
   id: string;
   name: string;
+  /** Trang danh mục `/shop/c/<slug>`; null thì dùng bộ lọc `?category=`. */
+  slug?: string | null;
   productCount?: number;
 }
 

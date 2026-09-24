@@ -50,4 +50,32 @@ describe("RecentlyViewedSection Component", () => {
 
     expect(screen.queryByText(/sản phẩm bạn vừa xem/i)).not.toBeInTheDocument();
   });
+
+  it("link theo slug khi có, mục cũ trong localStorage không có slug thì link theo id", () => {
+    // Mục lưu trước Task 10: không có trường slug.
+    localStorage.setItem(
+      "pos_store_recently_viewed",
+      JSON.stringify([
+        { id: "old-1", name: "Muối hột", price: 5000, unit: "gói", stock: 3 },
+      ]),
+    );
+    recordRecentlyViewed({
+      id: "p2",
+      name: "Nước mắm Phú Quốc",
+      slug: "nuoc-mam-phu-quoc",
+      price: 45000,
+      unit: "chai",
+      stock: 4,
+    });
+
+    renderWithCart(<RecentlyViewedSection />);
+
+    expect(screen.getByRole("link", { name: "Muối hột" })).toHaveAttribute(
+      "href",
+      "/shop/products/old-1",
+    );
+    expect(
+      screen.getByRole("link", { name: "Nước mắm Phú Quốc" }),
+    ).toHaveAttribute("href", "/shop/p/nuoc-mam-phu-quoc");
+  });
 });

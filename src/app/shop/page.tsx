@@ -35,6 +35,7 @@ function toCatalogProductDto(product: OnlineProduct): OnlineProduct {
   return {
     id: product.id,
     name: product.name,
+    slug: product.slug ?? null,
     price: product.price,
     unit: product.unit,
     stock: product.stock,

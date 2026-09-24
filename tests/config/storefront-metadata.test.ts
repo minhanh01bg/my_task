@@ -15,6 +15,7 @@ import { generateMetadata } from "@/app/shop/page";
 import { generateMetadata as paymentPolicyMetadata } from "@/app/shop/payment-policy/page";
 import { generateMetadata as privacyPolicyMetadata } from "@/app/shop/privacy/page";
 import { generateMetadata as productMetadata } from "@/app/shop/products/[id]/page";
+import { generateMetadata as productSlugMetadata } from "@/app/shop/p/[slug]/page";
 import { generateMetadata as returnPolicyMetadata } from "@/app/shop/return-policy/page";
 import * as robotsModule from "@/app/robots";
 import * as sitemapModule from "@/app/sitemap";
@@ -29,15 +30,22 @@ const SEO_PRODUCT_ID = "test-seo-sitemap-01";
 const SEO_PRODUCT_NO_IMAGE_ID = "test-seo-sitemap-02";
 const SEO_INACTIVE_ID = "test-seo-sitemap-inactive";
 const SEO_DELETED_ID = "test-seo-sitemap-deleted";
+const SEO_SLUG_PRODUCT_ID = "test-seo-sitemap-slug";
 const SEO_PRODUCT_IDS = [
   SEO_PRODUCT_ID,
   SEO_PRODUCT_NO_IMAGE_ID,
   SEO_INACTIVE_ID,
   SEO_DELETED_ID,
+  SEO_SLUG_PRODUCT_ID,
 ];
+const SEO_CATEGORY_ID = "test-seo-category";
+const SEO_EMPTY_CATEGORY_ID = "test-seo-category-empty";
 
 async function cleanSeoFixtures() {
   await prisma.product.deleteMany({ where: { id: { in: SEO_PRODUCT_IDS } } });
+  await prisma.category.deleteMany({
+    where: { id: { in: [SEO_CATEGORY_ID, SEO_EMPTY_CATEGORY_ID] } },
+  });
   await prisma.setting.deleteMany({ where: { key: "store.name" } });
 }
 
@@ -290,6 +298,43 @@ describe("Storefront SEO & Metadata (Task 13)", () => {
     });
   });
 
+  describe("Sitemap — slug SEO", () => {
+    beforeEach(cleanSeoFixtures);
+    afterEach(cleanSeoFixtures);
+
+    it("dùng URL slug cho sản phẩm có slug, URL id cho sản phẩm chưa có, và thêm trang danh mục có hàng", async () => {
+      await prisma.category.createMany({
+        data: [
+          { id: SEO_CATEGORY_ID, name: "Nước chấm SEO", slug: "nuoc-cham-seo" },
+          { id: SEO_EMPTY_CATEGORY_ID, name: "Trống SEO", slug: "trong-seo" },
+        ],
+      });
+      await prisma.product.create({
+        data: {
+          id: SEO_SLUG_PRODUCT_ID,
+          name: "Nước mắm slug SEO",
+          slug: "nuoc-mam-slug-seo",
+          categoryId: SEO_CATEGORY_ID,
+        },
+      });
+      await prisma.product.create({
+        data: { id: SEO_PRODUCT_ID, name: "Nước mắm SEO" },
+      });
+
+      const urls = (await sitemap()).map((entry) => entry.url);
+
+      expect(urls).toContain(`${siteConfig.url}/shop/p/nuoc-mam-slug-seo`);
+      expect(urls).not.toContain(
+        `${siteConfig.url}/shop/products/${SEO_SLUG_PRODUCT_ID}`,
+      );
+      expect(urls).toContain(
+        `${siteConfig.url}/shop/products/${SEO_PRODUCT_ID}`,
+      );
+      expect(urls).toContain(`${siteConfig.url}/shop/c/nuoc-cham-seo`);
+      expect(urls).not.toContain(`${siteConfig.url}/shop/c/trong-seo`);
+    });
+  });
+
   describe("Product page metadata", () => {
     beforeEach(cleanSeoFixtures);
     afterEach(cleanSeoFixtures);
@@ -322,6 +367,36 @@ describe("Storefront SEO & Metadata (Task 13)", () => {
         params: Promise.resolve({ id: SEO_PRODUCT_NO_IMAGE_ID }),
       });
       expect(ogImageUrls(withoutImage)).toEqual(["/opengraph-image"]);
+    });
+
+    it("canonical là URL slug cho cả trang slug lẫn URL id cũ", async () => {
+      await prisma.product.create({
+        data: {
+          id: SEO_SLUG_PRODUCT_ID,
+          name: "Nước mắm slug SEO",
+          slug: "nuoc-mam-slug-seo",
+          price: 45_000,
+        },
+      });
+
+      const bySlug = await productSlugMetadata({
+        params: Promise.resolve({ slug: "nuoc-mam-slug-seo" }),
+      });
+      expect(bySlug.title).toBe("Nước mắm slug SEO");
+      expect(bySlug.alternates?.canonical).toBe("/shop/p/nuoc-mam-slug-seo");
+      expect(bySlug.openGraph?.url).toBe(
+        `${siteConfig.url}/shop/p/nuoc-mam-slug-seo`,
+      );
+
+      const byId = await productMetadata({
+        params: Promise.resolve({ id: SEO_SLUG_PRODUCT_ID }),
+      });
+      expect(byId.alternates?.canonical).toBe("/shop/p/nuoc-mam-slug-seo");
+
+      const missing = await productSlugMetadata({
+        params: Promise.resolve({ slug: "khong-ton-tai" }),
+      });
+      expect(missing.title).toBe("Sản phẩm không tồn tại");
     });
   });
 

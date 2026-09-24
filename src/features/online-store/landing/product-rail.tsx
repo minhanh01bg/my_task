@@ -10,6 +10,7 @@ import { WishlistButton } from "@/components/kit/wishlist-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/lib/money";
+import { productHref } from "@/lib/seo/product-href";
 
 import { useOnlineCart } from "../cart-context";
 import { QuickViewModal } from "../quick-view-modal";
@@ -80,7 +81,7 @@ export function ProductRail({
                       </div>
                     ) : null}
                     <Link
-                      href={`/shop/products/${product.id}`}
+                      href={productHref(product)}
                       className="block h-full w-full"
                       tabIndex={-1}
                       aria-hidden="true"
@@ -115,7 +116,7 @@ export function ProductRail({
 
                   <div className="p-4 pb-2">
                     <Link
-                      href={`/shop/products/${product.id}`}
+                      href={productHref(product)}
                       className="hover:text-primary transition-colors"
                     >
                       <h3 className="text-foreground line-clamp-2 min-h-10 text-sm font-bold sm:text-base">

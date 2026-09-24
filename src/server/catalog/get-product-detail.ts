@@ -8,36 +8,44 @@ import { prisma } from "@/server/db/prisma";
 export interface OnlineProductDetail {
   product: OnlineProduct & {
     sku: string | null;
-    category: { id: string; name: string } | null;
+    category: { id: string; name: string; slug?: string | null } | null;
   };
   relatedProducts: OnlineProduct[];
 }
 
+const ONLINE_PRODUCT_SELECT = {
+  id: true,
+  name: true,
+  slug: true,
+  price: true,
+  unit: true,
+  stock: true,
+  imageUrl: true,
+  categoryId: true,
+  searchText: true,
+  soldCount: true,
+} as const;
+
+type ProductLookup = { id: string } | { slug: string };
+
 async function loadOnlineProductDetail(
-  id: string,
+  lookup: ProductLookup,
 ): Promise<OnlineProductDetail | null> {
   const product = await prisma.product.findFirst({
     where: {
-      id,
+      ...lookup,
       isActive: true,
       isService: false,
       deletedAt: null,
     },
     select: {
-      id: true,
-      name: true,
+      ...ONLINE_PRODUCT_SELECT,
       sku: true,
-      price: true,
-      unit: true,
-      stock: true,
-      imageUrl: true,
-      categoryId: true,
-      searchText: true,
-      soldCount: true,
       category: {
         select: {
           id: true,
           name: true,
+          slug: true,
         },
       },
     },
@@ -57,17 +65,7 @@ async function loadOnlineProductDetail(
       },
       orderBy: [{ soldCount: "desc" }, { name: "asc" }],
       take: 4,
-      select: {
-        id: true,
-        name: true,
-        price: true,
-        unit: true,
-        stock: true,
-        imageUrl: true,
-        categoryId: true,
-        searchText: true,
-        soldCount: true,
-      },
+      select: ONLINE_PRODUCT_SELECT,
     });
   }
 
@@ -80,15 +78,32 @@ async function loadOnlineProductDetail(
 /**
  * generateMetadata va page cung goi — cache() gom lai mot lan trong request.
  * Tag `product:<id>` cho lan sua san pham nay, `catalog` cho thay doi chung
- * (ton kho, san pham lien quan).
+ * (ton kho, san pham lien quan, slug).
  */
 export const getOnlineProductDetail = cache(
   (id: string): Promise<OnlineProductDetail | null> =>
     cachedPublic(
-      () => loadOnlineProductDetail(id),
+      () => loadOnlineProductDetail({ id }),
       ["online-product-detail", id],
       {
         tags: [CACHE_TAGS.product(id), CACHE_TAGS.catalog],
+        revalidate: 60,
+        fallback: () => null,
+      },
+    ),
+);
+
+/**
+ * Trang canonical `/shop/p/<slug>`. Chưa biết id trước khi đọc nên chỉ gắn
+ * tag `catalog` — mọi lần saveProduct đều revalidate tag này.
+ */
+export const getOnlineProductDetailBySlug = cache(
+  (slug: string): Promise<OnlineProductDetail | null> =>
+    cachedPublic(
+      () => loadOnlineProductDetail({ slug }),
+      ["online-product-detail-slug", slug],
+      {
+        tags: [CACHE_TAGS.catalog],
         revalidate: 60,
         fallback: () => null,
       },

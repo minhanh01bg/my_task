@@ -20,6 +20,7 @@ const catalog = {
     {
       id: "p1",
       name: "Cà phê sữa",
+      slug: "ca-phe-sua",
       price: 20_000,
       unit: "chai",
       stock: 5,
@@ -41,6 +42,22 @@ const catalog = {
 };
 
 describe("CatalogBrowser", () => {
+  it("link sản phẩm dùng URL slug khi có, URL id khi chưa có slug", () => {
+    render(
+      <OnlineCartProvider>
+        <CatalogBrowser catalog={catalog} />
+      </OnlineCartProvider>,
+    );
+    expect(screen.getByRole("link", { name: "Cà phê sữa" })).toHaveAttribute(
+      "href",
+      "/shop/p/ca-phe-sua",
+    );
+    expect(screen.getByRole("link", { name: "Bánh mì" })).toHaveAttribute(
+      "href",
+      "/shop/products/p2",
+    );
+  });
+
   it("tìm bỏ dấu và khóa sản phẩm hết hàng", async () => {
     const user = userEvent.setup();
     render(

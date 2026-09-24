@@ -1,7 +1,11 @@
 import type { MetadataRoute } from "next";
 
 import { siteConfig } from "@/config/site";
-import { listSitemapProducts } from "@/server/catalog/list-sitemap-products";
+import { categoryHref, productHref } from "@/lib/seo/product-href";
+import {
+  listSitemapCategories,
+  listSitemapProducts,
+} from "@/server/catalog/list-sitemap-products";
 
 /**
  * Render theo request: build không có CANONICAL_ORIGIN thật (dùng host dummy)
@@ -18,7 +22,10 @@ const POLICY_PATHS = [
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.url;
-  const products = await listSitemapProducts();
+  const [products, categories] = await Promise.all([
+    listSitemapProducts(),
+    listSitemapCategories(),
+  ]);
 
   // Trang tĩnh không có ngày sửa thật → bỏ lastModified thay vì ghi "now".
   // `/` không vào sitemap vì chuyển hướng vĩnh viễn sang /shop.
@@ -29,8 +36,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly" as const,
       priority: 0.5,
     })),
+    // Danh mục chưa có ngày sửa (Category không có updatedAt).
+    ...categories.map((category) => ({
+      url: `${baseUrl}${categoryHref(category)}`,
+      changeFrequency: "daily" as const,
+      priority: 0.8,
+    })),
     ...products.map((product) => ({
-      url: `${baseUrl}/shop/products/${product.id}`,
+      url: `${baseUrl}${productHref(product)}`,
       lastModified: new Date(product.updatedAt),
       changeFrequency: "weekly" as const,
       priority: 0.7,

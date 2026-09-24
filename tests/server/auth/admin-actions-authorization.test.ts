@@ -149,6 +149,29 @@ describe("Admin Server Actions and Route Authorization", () => {
       });
       expect(created).toBeDefined();
       expect(created?.name).toBe(categoryName);
+      expect(created?.slug).toMatch(/^danh-muc-bao-mat-\d+$/);
+
+      // Sửa không đổi tên giữ slug; đổi tên sinh slug mới.
+      const keep = new FormData();
+      keep.set("id", created!.id);
+      keep.set("name", categoryName);
+      keep.set("sortOrder", "98");
+      await saveCategoryAction(keep);
+      const kept = await prisma.category.findUniqueOrThrow({
+        where: { id: created!.id },
+      });
+      expect(kept.slug).toBe(created?.slug);
+
+      const rename = new FormData();
+      rename.set("id", created!.id);
+      rename.set("name", `Đồ uống ${categoryName}`);
+      rename.set("sortOrder", "98");
+      await saveCategoryAction(rename);
+      const renamed = await prisma.category.findUniqueOrThrow({
+        where: { id: created!.id },
+      });
+      expect(renamed.slug).toMatch(/^do-uong-danh-muc-bao-mat-\d+$/);
+      await prisma.category.delete({ where: { id: created!.id } });
     });
   });
 });

@@ -1,15 +1,11 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 
-import { JsonLdScript } from "@/components/seo/json-ld-script";
-import { siteConfig } from "@/config/site";
-import { OnlineCartProvider } from "@/features/online-store/cart-context";
-import { ProductDetailView } from "@/features/online-store/product-detail-view";
-import { StoreFooter } from "@/features/online-store/store-footer";
-import { StoreHeader } from "@/features/online-store/store-header";
-import { productCrumbs, toBreadcrumbItems } from "@/lib/seo/breadcrumbs";
-import { breadcrumbJsonLd, productJsonLd } from "@/lib/seo/json-ld";
-import { storefrontOpenGraph } from "@/lib/seo/open-graph";
+import {
+  ProductPage,
+  productPageMetadata,
+} from "@/features/online-store/product-page";
+import { productHref } from "@/lib/seo/product-href";
 import { getOnlineProductDetail } from "@/server/catalog/get-product-detail";
 import { getPublicStoreProfile } from "@/server/settings/store-settings";
 
@@ -31,38 +27,13 @@ export async function generateMetadata({
     getOnlineProductDetail(id),
     getPublicStoreProfile(),
   ]);
-
-  if (!detail) {
-    return {
-      title: "Sản phẩm không tồn tại",
-      description: "Không tìm thấy sản phẩm yêu cầu tại cửa hàng.",
-    };
-  }
-
-  const { product } = detail;
-  const description = `Mua ${product.name} chính hãng tại ${storeProfile.name}. Đặt nhanh trực tuyến, giao hàng tận nơi.`;
-  const url = `${siteConfig.url}/shop/products/${id}`;
-
-  return {
-    // Template của shop/layout nối `| <tên cửa hàng trong DB>`.
-    title: product.name,
-    description,
-    alternates: {
-      canonical: `/shop/products/${id}`,
-    },
-    openGraph: storefrontOpenGraph({
-      title: `${product.name} | ${storeProfile.name}`,
-      description,
-      url,
-      siteName: storeProfile.name,
-      // Không có ảnh sản phẩm → ảnh OG mặc định (storefrontOpenGraph).
-      images: product.imageUrl
-        ? [{ url: new URL(product.imageUrl, url).href, alt: product.name }]
-        : undefined,
-    }),
-  };
+  return productPageMetadata(detail, storeProfile);
 }
 
+/**
+ * URL cũ theo id: sản phẩm đã có slug → 308 sang `/shop/p/<slug>` (link cũ,
+ * bookmark, localStorage vẫn chạy); chưa có slug thì render như trước.
+ */
 export default async function ProductDetailPage({
   params,
 }: {
@@ -78,22 +49,9 @@ export default async function ProductDetailPage({
   if (!detail) {
     notFound();
   }
+  if (detail.product.slug) {
+    permanentRedirect(productHref(detail.product));
+  }
 
-  const { product } = detail;
-  const url = `${siteConfig.url}/shop/products/${id}`;
-  const jsonLd = [
-    productJsonLd(product, url, storeProfile),
-    breadcrumbJsonLd(toBreadcrumbItems(productCrumbs(product), siteConfig.url)),
-  ];
-
-  return (
-    <OnlineCartProvider>
-      <JsonLdScript data={jsonLd} />
-      <StoreHeader storeName={storeProfile.name} />
-      <main className="min-h-[70vh]">
-        <ProductDetailView detail={detail} />
-      </main>
-      <StoreFooter profile={storeProfile} />
-    </OnlineCartProvider>
-  );
+  return <ProductPage detail={detail} storeProfile={storeProfile} />;
 }

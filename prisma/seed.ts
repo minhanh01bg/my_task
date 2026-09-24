@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 
 import { buildSearchText } from "../src/lib/search/search-text";
+import { backfillSlugs } from "../src/server/seo/backfill-slugs";
 
 if (existsSync(".env.local")) {
   process.loadEnvFile(".env.local");
@@ -191,8 +192,11 @@ async function main() {
     update: {},
   });
 
+  // Seed ghi thẳng Prisma: gán slug SEO cùng quy tắc với saveProduct.
+  const slugs = await backfillSlugs(prisma);
+
   console.log(
-    `Seeded ${CATEGORIES.length} categories, ${PRODUCTS.length} products, 1 admin identity`,
+    `Seeded ${CATEGORIES.length} categories, ${PRODUCTS.length} products, 1 admin identity; slugs: ${slugs.products} products, ${slugs.categories} categories`,
   );
 }
 

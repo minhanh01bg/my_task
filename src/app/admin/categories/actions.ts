@@ -5,8 +5,10 @@ import { z } from "zod";
 
 import { revalidatePublic } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
+import { resolveCategorySlug } from "@/server/categories/category-slug";
 import { prisma } from "@/server/db/prisma";
 import { requireAdminSession } from "@/server/auth/require-admin-session";
+import { retryOnSlugConflict } from "@/server/seo/slug-conflict";
 import { buildSearchText } from "@/lib/search/search-text";
 
 const schema = z.object({
@@ -25,30 +27,36 @@ export async function saveCategoryAction(formData: FormData): Promise<void> {
 
   if (!parsed.success) return;
 
-  const { id, ...data } = parsed.data;
+  const { id, ...fields } = parsed.data;
   if (id) {
     const products = await prisma.product.findMany({
       where: { categoryId: id },
       select: { id: true, name: true, aliases: true, sku: true },
     });
-    await prisma.$transaction([
-      prisma.category.update({ where: { id }, data }),
-      ...products.map((product) =>
-        prisma.product.update({
-          where: { id: product.id },
-          data: {
-            searchText: buildSearchText({
-              name: product.name,
-              aliases: product.aliases,
-              sku: product.sku,
-              categoryName: data.name,
-            }),
-          },
-        }),
-      ),
-    ]);
+    await retryOnSlugConflict(async () => {
+      const slug = await resolveCategorySlug(prisma, { id, name: fields.name });
+      await prisma.$transaction([
+        prisma.category.update({ where: { id }, data: { ...fields, slug } }),
+        ...products.map((product) =>
+          prisma.product.update({
+            where: { id: product.id },
+            data: {
+              searchText: buildSearchText({
+                name: product.name,
+                aliases: product.aliases,
+                sku: product.sku,
+                categoryName: fields.name,
+              }),
+            },
+          }),
+        ),
+      ]);
+    });
   } else {
-    await prisma.category.create({ data });
+    await retryOnSlugConflict(async () => {
+      const slug = await resolveCategorySlug(prisma, { name: fields.name });
+      await prisma.category.create({ data: { ...fields, slug } });
+    });
   }
 
   revalidatePublic(CACHE_TAGS.catalog);

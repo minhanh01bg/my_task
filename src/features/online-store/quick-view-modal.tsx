@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatVnd } from "@/lib/money";
+import { productHref } from "@/lib/seo/product-href";
 
 import { useOnlineCart } from "./cart-context";
 import type { OnlineProduct } from "./types";
@@ -179,7 +180,7 @@ export function QuickViewModal({ product, onClose }: QuickViewModalProps) {
                 </Button>
 
                 <Link
-                  href={`/shop/products/${current.id}`}
+                  href={productHref(current)}
                   className="text-primary hover:text-primary/80 inline-flex w-full items-center justify-center gap-1.5 text-xs font-semibold hover:underline"
                 >
                   <span>Xem trang chi tiết đầy đủ</span>
