@@ -214,9 +214,9 @@ export function ProductForm({
         <NumberStepper
           id="product-stock"
           name="stock"
-          min={0}
-          step={1}
+          allowNegative
           allowDecimal
+          step={1}
           quickSteps={[1, 5, 10, 50]}
           defaultValue={product?.stock ?? 0}
           unit={unit}
@@ -227,7 +227,12 @@ export function ProductForm({
         </p>
       </div>
 
-      <details className="border-border bg-muted/35 col-span-full rounded-2xl border p-4 open:pb-5">
+      <details
+        onInvalidCapture={(e) => {
+          e.currentTarget.open = true;
+        }}
+        className="border-border bg-muted/35 col-span-full rounded-2xl border p-4 open:pb-5"
+      >
         <summary className="flex min-h-8 cursor-pointer list-none items-center gap-2 font-bold">
           <Sparkle aria-hidden="true" className="text-primary size-5" />
           Thông tin thêm

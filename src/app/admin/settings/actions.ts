@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 
 import { expirePublicNow } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
