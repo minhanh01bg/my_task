@@ -121,6 +121,24 @@ export default async function OrderDetailPage({
                 -{formatVnd(order.discount)}
               </dd>
             </div>
+            {order.voucherCode ? (
+              <div className="mt-2 flex justify-between gap-2 text-sm">
+                <dt className="text-muted-foreground">
+                  Trong đó mã {order.voucherCode}
+                </dt>
+                <dd className="shrink-0 font-medium">
+                  -{formatVnd(order.voucherDiscount)}
+                </dd>
+              </div>
+            ) : null}
+            {order.channel === "online" ? (
+              <div className="mt-2 flex justify-between gap-2">
+                <dt className="text-muted-foreground">Phí giao hàng</dt>
+                <dd className="shrink-0 font-medium">
+                  {formatVnd(order.shippingFee)}
+                </dd>
+              </div>
+            ) : null}
             <div className="mt-4 flex items-baseline justify-between gap-2 border-t pt-4">
               <dt className="font-bold">Tổng cộng</dt>
               <dd className="font-heading shrink-0 text-xl font-bold sm:text-2xl">
@@ -203,6 +221,20 @@ export default async function OrderDetailPage({
                       .filter(Boolean)
                       .join(", ")}
                   </dd>
+                </div>
+              ) : null}
+              {order.deliverySlot ? (
+                <div>
+                  <dt className="text-muted-foreground text-sm">
+                    Khung giờ giao
+                  </dt>
+                  <dd className="font-medium">{order.deliverySlot}</dd>
+                </div>
+              ) : null}
+              {order.note ? (
+                <div className="sm:col-span-2">
+                  <dt className="text-muted-foreground text-sm">Ghi chú</dt>
+                  <dd className="font-medium break-words">{order.note}</dd>
                 </div>
               ) : null}
               <div>

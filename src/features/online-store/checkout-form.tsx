@@ -7,13 +7,14 @@ import { CheckCircle2, ShieldCheck } from "lucide-react";
 
 import { formatFullAddress } from "@/lib/address/vietnam-address";
 import { formatVnd } from "@/lib/money";
-import { validateVoucher } from "@/lib/vouchers/validate-voucher";
 import { onlineOrderResponseSchema } from "@/types/online-order";
 import type { PublicStoreProfile } from "@/types/storefront";
 
 import { DropdownField } from "@/components/kit/dropdown-field";
 import { AddressFields, type AddressState } from "./address-fields";
 import { OnlineCartProvider, useOnlineCart } from "./cart-context";
+import { clearStoredVoucher, useVoucher } from "./use-voucher";
+import { VoucherField } from "./voucher-field";
 
 const DELIVERY_SLOT_OPTIONS = [
   {
@@ -57,13 +58,6 @@ function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
     street: "",
     isManual: false,
   });
-  const [voucherInput, setVoucherInput] = useState("");
-  const [appliedVoucher, setAppliedVoucher] = useState<{
-    code: string;
-    discount: number;
-  } | null>(null);
-  const [voucherError, setVoucherError] = useState("");
-
   const [clientId, setClientId] = useState(() => crypto.randomUUID());
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -71,28 +65,10 @@ function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
     (sum, line) => sum + Math.round(line.price * line.quantity),
     0,
   );
-  const discount = appliedVoucher ? appliedVoucher.discount : 0;
+  const voucher = useVoucher(subtotal);
+  const appliedVoucher = voucher.applied;
+  const discount = appliedVoucher?.discount ?? 0;
   const finalTotal = Math.max(0, subtotal - discount);
-
-  function handleApplyVoucher() {
-    setVoucherError("");
-    const result = validateVoucher(voucherInput, subtotal);
-    if (!result.valid) {
-      setVoucherError(result.message);
-      setAppliedVoucher(null);
-      return;
-    }
-    setAppliedVoucher({
-      code: result.code!,
-      discount: result.discount,
-    });
-  }
-
-  function handleRemoveVoucher() {
-    setAppliedVoucher(null);
-    setVoucherInput("");
-    setVoucherError("");
-  }
 
   const formattedAddress = formatFullAddress({
     street: address.street,
@@ -165,6 +141,7 @@ function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
       }
       const parsed = onlineOrderResponseSchema.parse(body);
       clear();
+      clearStoredVoucher();
       setClientId(crypto.randomUUID());
       router.push(
         parsed.data.order.accessUrl ?? parsed.data.order.receiptUrl ?? "/shop",
@@ -420,55 +397,24 @@ function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
               <span className="font-semibold">{formatVnd(subtotal)} ₫</span>
             </div>
 
-            {appliedVoucher ? (
-              <div className="flex justify-between text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+            {appliedVoucher && appliedVoucher.discount > 0 ? (
+              <div className="text-success flex justify-between text-sm font-semibold">
                 <span>Giảm giá ({appliedVoucher.code}):</span>
                 <span>- {formatVnd(appliedVoucher.discount)} ₫</span>
               </div>
             ) : null}
-
-            <div className="mt-3 border-t border-dashed pt-3">
-              <label className="text-muted-foreground mb-1.5 block text-xs font-semibold tracking-wider uppercase">
-                Mã ưu đãi / Voucher
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Nhập mã voucher (VD: FREESHIP, GIAM20K)"
-                  value={voucherInput}
-                  onChange={(e) => setVoucherInput(e.target.value)}
-                  disabled={!!appliedVoucher}
-                  className="border-input bg-background h-10 flex-1 rounded-xl border px-3 text-xs uppercase outline-none focus-visible:ring-2"
-                />
-                {appliedVoucher ? (
-                  <button
-                    type="button"
-                    onClick={handleRemoveVoucher}
-                    className="text-destructive border-destructive/30 hover:bg-destructive/10 h-10 rounded-xl border px-3 text-xs font-semibold transition-colors"
-                  >
-                    Gỡ
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleApplyVoucher}
-                    className="bg-secondary text-secondary-foreground hover:bg-secondary/85 h-10 rounded-xl px-3.5 text-xs font-bold transition-colors"
-                  >
-                    Áp dụng
-                  </button>
-                )}
+            {appliedVoucher?.type === "freeship" ? (
+              <div className="text-success flex justify-between text-sm font-semibold">
+                <span>Phí giao hàng ({appliedVoucher.code}):</span>
+                <span>Miễn phí</span>
               </div>
-              {voucherError ? (
-                <p className="text-destructive mt-1.5 text-xs">
-                  {voucherError}
-                </p>
-              ) : null}
-              {appliedVoucher ? (
-                <p className="mt-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                  Đã áp dụng: Giảm {formatVnd(appliedVoucher.discount)} ₫
-                </p>
-              ) : null}
-            </div>
+            ) : null}
+
+            <VoucherField
+              id="checkout-voucher"
+              voucher={voucher}
+              className="mt-3 border-t border-dashed pt-3"
+            />
           </div>
 
           <div className="mt-4 flex justify-between border-t pt-4 text-xl font-bold">

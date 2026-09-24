@@ -23,6 +23,8 @@ import {
 import { formatVnd } from "@/lib/money";
 
 import { useOnlineCart } from "./cart-context";
+import { useVoucher } from "./use-voucher";
+import { VoucherField } from "./voucher-field";
 
 const FREE_SHIPPING_THRESHOLD = 200_000;
 
@@ -34,6 +36,9 @@ export function CartDrawer() {
     () => lines.reduce((sum, line) => sum + line.price * line.quantity, 0),
     [lines],
   );
+
+  const voucher = useVoucher(subtotal, isDrawerOpen);
+  const voucherDiscount = voucher.applied?.discount ?? 0;
 
   const totalItems = useMemo(
     () => lines.reduce((sum, line) => sum + line.quantity, 0),
@@ -233,6 +238,11 @@ export function CartDrawer() {
         {/* Footer */}
         {lines.length > 0 && (
           <div className="border-border bg-muted/30 border-t p-6">
+            <VoucherField
+              id="cart-voucher"
+              voucher={voucher}
+              className="mb-4"
+            />
             <div className="flex items-center justify-between text-base font-bold">
               <span>Tạm tính</span>
               <span
@@ -242,6 +252,15 @@ export function CartDrawer() {
                 {formatVnd(subtotal)} ₫
               </span>
             </div>
+            {voucherDiscount > 0 ? (
+              <div
+                data-testid="cart-voucher-discount"
+                className="text-success mt-1 flex items-center justify-between text-sm font-semibold"
+              >
+                <span>Giảm giá ({voucher.applied?.code})</span>
+                <span>- {formatVnd(voucherDiscount)} ₫</span>
+              </div>
+            ) : null}
             <p className="text-muted-foreground mt-1 text-xs">
               Giá và tồn kho sẽ được xác nhận lại khi bạn đặt hàng.
             </p>

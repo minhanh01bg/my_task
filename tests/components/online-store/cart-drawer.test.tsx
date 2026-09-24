@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, vi } from "vitest";
 
 import {
   OnlineCartProvider,
@@ -222,5 +222,47 @@ describe("CartDrawer", () => {
     expect(
       screen.getByText(/bạn đã được miễn phí giao hàng/i),
     ).toBeInTheDocument();
+  });
+
+  it("nhập mã giảm giá trong giỏ gọi API validate và lưu mã cho trang thanh toán", async () => {
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: {
+          ok: true,
+          code: "GIAM10",
+          type: "percent",
+          value: 10,
+          maxDiscount: 30_000,
+          minOrderTotal: 0,
+          discount: 5_000,
+          shippingDiscount: 0,
+          message: "ok",
+        },
+      }),
+    } as Response);
+
+    render(
+      <OnlineCartProvider>
+        <TestContainer />
+      </OnlineCartProvider>,
+    );
+    fireEvent.click(screen.getByText("Thêm A"));
+    fireEvent.click(screen.getByText("Mở giỏ hàng"));
+
+    fireEvent.change(screen.getByLabelText(/mã ưu đãi/i), {
+      target: { value: "giam10" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Áp dụng" }));
+
+    expect(
+      await screen.findByTestId("cart-voucher-discount"),
+    ).toHaveTextContent("5.000");
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "/api/online/vouchers/validate",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(localStorage.getItem("online-voucher-v1")).toBe("GIAM10");
+    fetchSpy.mockRestore();
   });
 });

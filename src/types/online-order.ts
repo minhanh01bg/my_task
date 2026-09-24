@@ -119,7 +119,8 @@ export class OnlineOrderError extends Error {
     public readonly code:
       | "OUT_OF_STOCK"
       | "PRODUCT_UNAVAILABLE"
-      | "IDEMPOTENCY_CONFLICT",
+      | "IDEMPOTENCY_CONFLICT"
+      | "VOUCHER_INVALID",
     message: string,
     public readonly productIds: string[] = [],
   ) {
