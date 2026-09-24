@@ -21,8 +21,10 @@ export interface SaveProductInput {
 }
 
 /**
- * Noi duy nhat duoc phep ghi san pham — vi searchText va slug PHAI duoc sinh
- * lai moi lan luu. Sua san pham bang duong khac se lam tim kiem/URL sai.
+ * Noi duy nhat duoc phep ghi san pham — vi searchText phai duoc sinh lai moi
+ * lan luu, con slug thi giu nguyen khi da co (chi sinh moi cho ban ghi chua
+ * tung co slug) de URL on dinh khi doi ten. Sua san pham bang duong khac se
+ * lam tim kiem sai va co the lam sai quy tac giu slug.
  */
 export async function saveProduct(
   input: SaveProductInput,

@@ -25,7 +25,7 @@ describe("resolveCategorySlug", () => {
     );
   });
 
-  it("giữ slug khi tên không đổi, đổi tên thì bỏ qua slug của chính nó", async () => {
+  it("giữ nguyên slug đã có kể cả khi đổi tên", async () => {
     const category = await prisma.category.create({
       data: { name: "Mì gói", slug: "mi-goi-cu" },
     });
@@ -34,7 +34,7 @@ describe("resolveCategorySlug", () => {
     ).toBe("mi-goi-cu");
     expect(
       await resolveCategorySlug(prisma, { id: category.id, name: "Mì  gói!" }),
-    ).toBe("mi-goi");
+    ).toBe("mi-goi-cu");
   });
 
   it("tên rỗng ký tự hợp lệ dùng slug dự phòng", async () => {

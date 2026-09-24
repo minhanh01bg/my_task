@@ -22,7 +22,10 @@ export async function findTakenCategorySlugs(
   return rows.flatMap((row) => (row.slug ? [row.slug] : []));
 }
 
-/** Cùng quy tắc với sản phẩm: giữ slug khi tên không đổi, hậu tố `-2`, `-3`. */
+/**
+ * Cùng quy tắc với sản phẩm: giữ nguyên slug đã có (không đổi khi đổi tên);
+ * chỉ sinh mới khi bản ghi chưa từng có slug.
+ */
 export async function resolveCategorySlug(
   db: CategorySlugDb,
   input: { id?: string; name: string },
@@ -30,9 +33,9 @@ export async function resolveCategorySlug(
   if (input.id) {
     const existing = await db.category.findUnique({
       where: { id: input.id },
-      select: { name: true, slug: true },
+      select: { slug: true },
     });
-    if (existing?.slug && existing.name === input.name) return existing.slug;
+    if (existing?.slug) return existing.slug;
   }
   return resolveUniqueSlug(input.name, CATEGORY_SLUG_FALLBACK, (prefix) =>
     findTakenCategorySlugs(db, prefix, input.id),

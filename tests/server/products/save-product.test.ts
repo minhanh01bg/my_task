@@ -192,22 +192,25 @@ describe("saveProduct — slug SEO", () => {
     expect(await slugOf(id)).toBe("bugi-ngk");
   });
 
-  it("đổi tên thì sinh slug mới, bỏ qua slug của chính sản phẩm", async () => {
+  it("đổi tên không làm đổi slug đã có (URL ổn định)", async () => {
     const { id } = await saveProduct({ ...BASE_INPUT, name: "Bugi NGK" });
 
     await saveProduct({ ...BASE_INPUT, id, name: "BUGI ngk" });
     expect(await slugOf(id)).toBe("bugi-ngk");
 
     await saveProduct({ ...BASE_INPUT, id, name: "Bugi Denso" });
-    expect(await slugOf(id)).toBe("bugi-denso");
+    expect(await slugOf(id)).toBe("bugi-ngk");
   });
 
-  it("đổi tên trùng sản phẩm khác thì nhận hậu tố", async () => {
+  it("bản ghi cũ chưa có slug đổi tên thành tên đã bị chiếm slug thì nhận hậu tố -2", async () => {
     await saveProduct({ ...BASE_INPUT, name: "Bugi Denso" });
-    const { id } = await saveProduct({ ...BASE_INPUT, name: "Bugi NGK" });
+    const legacy = await prisma.product.create({
+      data: { name: "Bugi NGK", price: 1000 },
+    });
+    expect(legacy.slug).toBeNull();
 
-    await saveProduct({ ...BASE_INPUT, id, name: "Bugi Denso" });
-    expect(await slugOf(id)).toBe("bugi-denso-2");
+    await saveProduct({ ...BASE_INPUT, id: legacy.id, name: "Bugi Denso" });
+    expect(await slugOf(legacy.id)).toBe("bugi-denso-2");
   });
 
   it("sản phẩm cũ chưa có slug được gán slug ở lần sửa kế tiếp", async () => {

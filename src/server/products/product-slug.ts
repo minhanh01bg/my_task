@@ -23,8 +23,9 @@ export async function findTakenProductSlugs(
 }
 
 /**
- * Slug cho lần lưu: giữ slug cũ khi tên không đổi (URL ổn định), còn lại
- * sinh từ tên, duy nhất bằng hậu tố `-2`, `-3`.
+ * Slug cho lần lưu: giữ nguyên slug đã có (URL ổn định, không đổi khi đổi
+ * tên); chỉ sinh mới khi bản ghi chưa từng có slug (tạo mới hoặc bản ghi cũ
+ * chưa có slug).
  */
 export async function resolveProductSlug(
   db: ProductSlugDb,
@@ -33,9 +34,9 @@ export async function resolveProductSlug(
   if (input.id) {
     const existing = await db.product.findUnique({
       where: { id: input.id },
-      select: { name: true, slug: true },
+      select: { slug: true },
     });
-    if (existing?.slug && existing.name === input.name) return existing.slug;
+    if (existing?.slug) return existing.slug;
   }
   return resolveUniqueSlug(input.name, PRODUCT_SLUG_FALLBACK, (prefix) =>
     findTakenProductSlugs(db, prefix, input.id),
