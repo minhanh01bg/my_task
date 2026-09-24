@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
-import { PRODUCT_LOW_STOCK_THRESHOLD } from "@/server/admin/list-products";
 import { prisma } from "@/server/db/prisma";
+import { LOW_STOCK_WHERE } from "@/server/products/low-stock";
 import {
   getDailyRevenue,
   toVietnamDateKey,
@@ -15,13 +15,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Don online dang doi cua hang ra tay: chua xac nhan hoac chua soan hang. */
 export const AWAITING_FULFILLMENT_STATUSES = ["new", "confirmed"] as const;
-
-/** Giong tab "Sắp hết" o /admin/products — hai con so khong duoc lech nhau. */
-const LOW_STOCK_WHERE = {
-  deletedAt: null,
-  isService: false,
-  stock: { lte: PRODUCT_LOW_STOCK_THRESHOLD },
-} satisfies Prisma.ProductWhereInput;
 
 const latestOnlineOrderSelect = {
   id: true,
