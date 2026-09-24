@@ -286,6 +286,16 @@ describe("listOrders", () => {
     const exact = await listOrders({ page: 1, q: "DH9001" });
     expect(exact.items.map((order) => order.code)).toEqual(["DH9001"]);
   });
+
+  it("bỏ qua bộ lọc ngày không hợp lệ thay vì gây crash truy vấn", async () => {
+    const where = buildOrdersWhere({ from: "invalid-date", to: "not-a-date" });
+    expect(where.createdAt).toBeUndefined();
+
+    // Khong gay loi khi goi listOrders voi query param tu nguoi dung nhu ?from=bad
+    await expect(
+      listOrders({ filters: { from: "bad", to: "xyz" } }),
+    ).resolves.toBeDefined();
+  });
 });
 
 describe("listDebts", () => {
