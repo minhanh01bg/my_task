@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { useOnlineCart } from "./cart-context";
 import { CartDrawer } from "./cart-drawer";
 import { SessionAwareActions } from "./session-aware-actions";
+import { WishlistDrawer } from "./wishlist-drawer";
 
 export function StoreHeader({
   storeName,
@@ -28,6 +29,7 @@ export function StoreHeader({
   const count = lines.reduce((sum, line) => sum + line.quantity, 0);
 
   const [isBouncing, setIsBouncing] = useState(false);
+  const [wishlistOpen, setWishlistOpen] = useState(false);
   const prevCountRef = useRef(count);
 
   useEffect(() => {
@@ -52,10 +54,11 @@ export function StoreHeader({
           <div className="flex items-center gap-2">
             <SessionAwareActions />
             <ThemeToggle />
-            <Link
-              href="/shop?wishlist=true"
+            <button
+              type="button"
+              onClick={() => setWishlistOpen(true)}
               aria-label={`Danh sách yêu thích (${wishlistCount} sản phẩm)`}
-              className="border-input bg-background text-muted-foreground hover:text-foreground hover:bg-muted relative inline-flex h-11 w-11 items-center justify-center rounded-xl border transition-colors"
+              className="border-input bg-background text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:ring-ring relative inline-flex h-11 w-11 items-center justify-center rounded-xl border transition-colors outline-none focus-visible:ring-2"
             >
               <Heart
                 aria-hidden="true"
@@ -69,7 +72,7 @@ export function StoreHeader({
                   {wishlistCount}
                 </span>
               ) : null}
-            </Link>
+            </button>
             <Button
               type="button"
               onClick={openDrawer}
@@ -93,6 +96,7 @@ export function StoreHeader({
         </div>
       </header>
       <CartDrawer shipping={shipping} />
+      <WishlistDrawer open={wishlistOpen} onOpenChange={setWishlistOpen} />
     </>
   );
 }
