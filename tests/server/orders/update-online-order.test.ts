@@ -1,10 +1,16 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { revalidatePublic } from "@/server/cache/public-cache";
 import { prisma } from "@/server/db/prisma";
 import {
   markOnlineOrderPaid,
   transitionOnlineOrder,
 } from "@/server/orders/update-online-order";
+
+vi.mock("@/server/cache/public-cache", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/server/cache/public-cache")>()),
+  revalidatePublic: vi.fn(),
+}));
 
 const testOrderId = "test-order-update-123";
 
@@ -113,5 +119,38 @@ describe("Online Order Status & Payment Updates", () => {
     expect(order?.status).toBe("paid");
     expect(order?.payments[0].receivedAt).toBeDefined();
     expect(order?.payments[0].receivedAt).not.toBeNull();
+  });
+
+  it("huỷ đơn online dùng voucher: hoàn một lượt và revalidate tag vouchers sau commit", async () => {
+    await prisma.voucher.deleteMany({ where: { code: "HUYDON" } });
+    await prisma.voucher.create({
+      data: { code: "HUYDON", type: "fixed", value: 10_000, usedCount: 4 },
+    });
+    await prisma.order.create({
+      data: {
+        id: testOrderId,
+        clientId: "client-id-voucher",
+        code: "ORD-UPDATE-V",
+        channel: "online",
+        status: "pending",
+        fulfillmentStatus: "new",
+        fulfillmentType: "pickup",
+        subtotal: 100_000,
+        discount: 10_000,
+        total: 90_000,
+        voucherCode: "HUYDON",
+        voucherDiscount: 10_000,
+      },
+    });
+    vi.mocked(revalidatePublic).mockClear();
+
+    await transitionOnlineOrder(testOrderId, "cancelled");
+
+    const voucher = await prisma.voucher.findUniqueOrThrow({
+      where: { code: "HUYDON" },
+    });
+    expect(voucher.usedCount).toBe(3);
+    expect(revalidatePublic).toHaveBeenCalledWith("catalog", "vouchers");
+    await prisma.voucher.delete({ where: { code: "HUYDON" } });
   });
 });

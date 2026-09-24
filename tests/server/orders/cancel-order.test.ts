@@ -1,8 +1,14 @@
 import { PrismaClient } from "@prisma/client";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { revalidatePublic } from "@/server/cache/public-cache";
 import { cancelOrder } from "@/server/orders/cancel-order";
 import { createOrder } from "@/server/orders/create-order";
+
+vi.mock("@/server/cache/public-cache", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/server/cache/public-cache")>()),
+  revalidatePublic: vi.fn(),
+}));
 
 const prisma = new PrismaClient();
 
@@ -24,7 +30,50 @@ beforeEach(async () => {
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
   await prisma.product.deleteMany();
+  await prisma.voucher.deleteMany();
+  vi.mocked(revalidatePublic).mockClear();
 });
+
+function sugarLine(productId: string, quantity = 1) {
+  return {
+    productId,
+    name: "Đường trắng",
+    unitPrice: 15000,
+    originalPrice: 15000,
+    quantity,
+    discount: 0,
+    unit: "kg",
+    isService: false,
+  };
+}
+
+async function soldCountOf(id: string) {
+  return (await prisma.product.findUniqueOrThrow({ where: { id } })).soldCount;
+}
+
+async function seedVoucherOrder(usedCount: number, clientId: string) {
+  await prisma.voucher.create({
+    data: { code: "GIAM10", type: "fixed", value: 10_000, usedCount },
+  });
+  return prisma.order.create({
+    data: {
+      code: `DH-${clientId}`,
+      clientId,
+      channel: "online",
+      status: "pending",
+      subtotal: 100_000,
+      discount: 10_000,
+      total: 90_000,
+      voucherCode: "GIAM10",
+      voucherDiscount: 10_000,
+    },
+  });
+}
+
+async function usedCountOf(code: string) {
+  return (await prisma.voucher.findUniqueOrThrow({ where: { code } }))
+    .usedCount;
+}
 
 afterAll(async () => {
   await prisma.$disconnect();
@@ -169,5 +218,71 @@ describe("cancelOrder", () => {
       (await prisma.product.findUniqueOrThrow({ where: { id: product.id } }))
         .stock,
     ).toBe(10);
+  });
+
+  it("giam soldCount moi dong mot lan (khop createOrder), huy lai khong giam them", async () => {
+    const product = await seedProduct(10);
+    await prisma.product.update({
+      where: { id: product.id },
+      data: { soldCount: 5 },
+    });
+    const { order } = await createOrder({
+      clientId: "c6",
+      lines: [sugarLine(product.id, 2), sugarLine(product.id, 1)],
+      payments: [{ method: "cash", amount: 45000 }],
+    });
+    expect(await soldCountOf(product.id)).toBe(7);
+
+    await cancelOrder(order.id);
+    expect(await soldCountOf(product.id)).toBe(5);
+
+    await cancelOrder(order.id);
+    expect(await soldCountOf(product.id)).toBe(5);
+  });
+
+  it("soldCount khong am khi huy", async () => {
+    const product = await seedProduct(10);
+    const { order } = await createOrder({
+      clientId: "c7",
+      lines: [sugarLine(product.id, 1)],
+      payments: [{ method: "cash", amount: 15000 }],
+    });
+    await prisma.product.update({
+      where: { id: product.id },
+      data: { soldCount: 0 },
+    });
+
+    await cancelOrder(order.id);
+    expect(await soldCountOf(product.id)).toBe(0);
+  });
+
+  it("hoan mot luot voucher khi huy don dung ma, idempotent khi huy hai lan", async () => {
+    const order = await seedVoucherOrder(3, "v1");
+
+    await cancelOrder(order.id);
+    expect(await usedCountOf("GIAM10")).toBe(2);
+    expect(revalidatePublic).toHaveBeenCalledWith("catalog", "vouchers");
+
+    vi.mocked(revalidatePublic).mockClear();
+    await cancelOrder(order.id);
+    expect(await usedCountOf("GIAM10")).toBe(2);
+    expect(revalidatePublic).not.toHaveBeenCalled();
+  });
+
+  it("usedCount voucher khong am", async () => {
+    const order = await seedVoucherOrder(0, "v2");
+
+    await cancelOrder(order.id);
+    expect(await usedCountOf("GIAM10")).toBe(0);
+  });
+
+  it("txClient: tra ve voucherCode de nguoi goi tu revalidate sau commit", async () => {
+    const order = await seedVoucherOrder(1, "v3");
+
+    const result = await prisma.$transaction((tx) => cancelOrder(order.id, tx));
+
+    expect(result).toEqual({ cancelled: true, voucherCode: "GIAM10" });
+    expect(await usedCountOf("GIAM10")).toBe(0);
+    expect(revalidatePublic).not.toHaveBeenCalled();
   });
 });

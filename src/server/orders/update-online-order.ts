@@ -17,6 +17,7 @@ export async function transitionOnlineOrder(
   orderId: string,
   next: OnlineOrderStatus,
 ) {
+  let restoredVoucher = false;
   const updated = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
       where: { id: orderId },
@@ -40,7 +41,8 @@ export async function transitionOnlineOrder(
       throw new Error("Chuyển trạng thái không hợp lệ");
     }
     if (next === "cancelled") {
-      await cancelOrder(orderId, tx);
+      const cancelled = await cancelOrder(orderId, tx);
+      restoredVoucher = cancelled.voucherCode !== null;
       const updated = await tx.order.update({
         where: { id: orderId },
         data: { fulfillmentStatus: "cancelled" },
@@ -55,8 +57,15 @@ export async function transitionOnlineOrder(
     await createCustomerOrderStatusNotification(tx, order, next);
     return updated;
   });
-  // Huy don da hoan ton kho trong transaction tren — lam moi catalog sau commit.
-  if (next === "cancelled") revalidatePublic(CACHE_TAGS.catalog);
+  // Huy don da hoan ton kho (va luot voucher) trong transaction tren — cancelOrder
+  // voi txClient khong tu revalidate nen lam moi cache o day, sau commit.
+  if (next === "cancelled") {
+    if (restoredVoucher) {
+      revalidatePublic(CACHE_TAGS.catalog, CACHE_TAGS.vouchers);
+    } else {
+      revalidatePublic(CACHE_TAGS.catalog);
+    }
+  }
   return updated;
 }
 
