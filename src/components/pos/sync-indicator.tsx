@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CloudArrowUp } from "@phosphor-icons/react";
 
 import { flushQueue } from "@/lib/sync/flush";
@@ -14,27 +14,60 @@ const POLL_INTERVAL_MS = 15_000;
  */
 export function SyncIndicator() {
   const [pending, setPending] = useState(0);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const refresh = useCallback(async () => {
-    setPending(await countQueuedOrders());
+    try {
+      const count = await countQueuedOrders();
+      if (isMountedRef.current && typeof window !== "undefined") {
+        setPending(count);
+      }
+    } catch {
+      // IndexedDB dong hoac moi truong bi huy luc teardown
+    }
   }, []);
 
   const flush = useCallback(async () => {
-    if (!navigator.onLine) return;
-    await flushQueue();
-    await refresh();
+    if (typeof navigator !== "undefined" && !navigator.onLine) return;
+    try {
+      await flushQueue();
+      if (isMountedRef.current && typeof window !== "undefined") {
+        await refresh();
+      }
+    } catch {
+      // Bo qua loi flush nen
+    }
   }, [refresh]);
 
   useEffect(() => {
-    const initial = setTimeout(() => void refresh(), 0);
-    const timer = setInterval(() => void flush(), POLL_INTERVAL_MS);
-    const handleOnline = () => void flush();
+    if (typeof window === "undefined") return;
+    let cancelled = false;
+
+    const initial = setTimeout(() => {
+      if (!cancelled && isMountedRef.current) void refresh();
+    }, 0);
+    const timer = setInterval(() => {
+      if (!cancelled && isMountedRef.current) void flush();
+    }, POLL_INTERVAL_MS);
+    const handleOnline = () => {
+      if (!cancelled && isMountedRef.current) void flush();
+    };
     // Ban luc mat mang: hang doi doi ngay ca khi khong the flush.
-    const handleQueueChanged = () => void refresh();
+    const handleQueueChanged = () => {
+      if (!cancelled && isMountedRef.current) void refresh();
+    };
     window.addEventListener("online", handleOnline);
     window.addEventListener(QUEUE_CHANGED_EVENT, handleQueueChanged);
 
     return () => {
+      cancelled = true;
       clearTimeout(initial);
       clearInterval(timer);
       window.removeEventListener("online", handleOnline);
