@@ -37,6 +37,16 @@ export function toVietnamDateKey(value: Date): string {
     .slice(0, 10);
 }
 
+/** Khoa ngay VN cua `days` ngay gan nhat (tinh ca hom nay), cu nhat truoc. */
+export function listVietnamDateKeys(
+  days: number,
+  now: Date = new Date(),
+): string[] {
+  return Array.from({ length: days }, (_, index) =>
+    toVietnamDateKey(new Date(now.getTime() - (days - 1 - index) * DAY_MS)),
+  );
+}
+
 /** 00:00 gio VN cua ngay som nhat trong ky `days` ngay (tinh ca hom nay). */
 function vietnamPeriodStart(now: Date, days: number): Date {
   const vietnamNow = now.getTime() + VIETNAM_OFFSET_MS;

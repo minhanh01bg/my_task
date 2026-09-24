@@ -5,6 +5,8 @@ import { useId, useState } from "react";
 export interface ChartDataPoint {
   label: string;
   value: number;
+  /** Series thu hai (tuy chon) — ve khi co `seriesLabels`. */
+  secondaryValue?: number;
 }
 
 export interface ChartSvgProps {
@@ -15,6 +17,20 @@ export interface ChartSvgProps {
   formatValue?: (v: number) => string;
   height?: number;
   className?: string;
+  /** Ten hai series [chinh, phu]; co thi ve them duong `secondaryValue` va chu thich. */
+  seriesLabels?: [string, string];
+}
+
+/** Qua nhieu nhan truc ngang (30 ngay) se chong len nhau — chi hien ~10 nhan. */
+const MAX_AXIS_LABELS = 14;
+
+function smoothPath(points: Array<{ x: number; y: number }>): string {
+  return points.reduce((acc, point, index) => {
+    if (index === 0) return `M ${point.x},${point.y}`;
+    const prev = points[index - 1];
+    const cpX = prev.x + (point.x - prev.x) / 2;
+    return `${acc} C ${cpX},${prev.y} ${cpX},${point.y} ${point.x},${point.y}`;
+  }, "");
 }
 
 export function ChartSvg({
@@ -25,6 +41,7 @@ export function ChartSvg({
   formatValue,
   height = 220,
   className = "",
+  seriesLabels,
 }: ChartSvgProps) {
   const gradientId = useId();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
@@ -59,32 +76,42 @@ export function ChartSvg({
     );
   }
 
-  const maxValue = Math.max(...data.map((d) => d.value), 1);
+  const twoSeries = seriesLabels !== undefined;
+  const maxValue = Math.max(
+    ...data.map((d) =>
+      twoSeries ? Math.max(d.value, d.secondaryValue ?? 0) : d.value,
+    ),
+    1,
+  );
   const width = 600;
   const paddingX = 40;
   const paddingY = 30;
   const chartWidth = width - paddingX * 2;
   const chartHeight = height - paddingY * 2;
 
-  const points = data.map((d, index) => {
-    const x = paddingX + (index / Math.max(data.length - 1, 1)) * chartWidth;
-    const y = paddingY + chartHeight - (d.value / maxValue) * chartHeight;
-    return { x, y, data: d };
-  });
+  const xAt = (index: number) =>
+    paddingX + (index / Math.max(data.length - 1, 1)) * chartWidth;
+  const yAt = (value: number) =>
+    paddingY + chartHeight - (value / maxValue) * chartHeight;
 
-  // Generate SVG path for line
-  const pathD = points.reduce((acc, point, index) => {
-    if (index === 0) return `M ${point.x},${point.y}`;
-    const prev = points[index - 1];
-    const cpX1 = prev.x + (point.x - prev.x) / 2;
-    const cpY1 = prev.y;
-    const cpX2 = prev.x + (point.x - prev.x) / 2;
-    const cpY2 = point.y;
-    return `${acc} C ${cpX1},${cpY1} ${cpX2},${cpY2} ${point.x},${point.y}`;
-  }, "");
+  const points = data.map((d, index) => ({
+    x: xAt(index),
+    y: yAt(d.value),
+    data: d,
+  }));
+  const secondaryPoints = twoSeries
+    ? data.map((d, index) => ({ x: xAt(index), y: yAt(d.secondaryValue ?? 0) }))
+    : [];
+
+  const pathD = smoothPath(points);
+  const secondaryPathD = twoSeries ? smoothPath(secondaryPoints) : "";
 
   // Generate SVG path for area fill
   const areaD = `${pathD} L ${points[points.length - 1].x},${height - paddingY} L ${points[0].x},${height - paddingY} Z`;
+
+  const labelStep =
+    data.length > MAX_AXIS_LABELS ? Math.ceil(data.length / 10) : 1;
+  const hovered = hoverIndex !== null ? points[hoverIndex] : undefined;
 
   return (
     <div
@@ -100,17 +127,54 @@ export function ChartSvg({
             <p className="text-muted-foreground mt-0.5 text-xs">{subtitle}</p>
           )}
         </div>
-        {hoverIndex !== null && points[hoverIndex] && (
+        {hovered && (
           <div className="text-right">
             <span className="text-muted-foreground text-xs">
-              {points[hoverIndex].data.label}:{" "}
+              {hovered.data.label}:{" "}
             </span>
-            <span className="text-primary text-sm font-bold">
-              {formatDisplayValue(points[hoverIndex].data.value)}
-            </span>
+            {twoSeries ? (
+              <>
+                <span className="text-muted-foreground text-xs">
+                  {seriesLabels[0]}{" "}
+                </span>
+                <span className="text-primary text-sm font-bold">
+                  {formatDisplayValue(hovered.data.value)}
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  {" · "}
+                  {seriesLabels[1]}{" "}
+                </span>
+                <span className="text-chart-3 text-sm font-bold">
+                  {formatDisplayValue(hovered.data.secondaryValue ?? 0)}
+                </span>
+              </>
+            ) : (
+              <span className="text-primary text-sm font-bold">
+                {formatDisplayValue(hovered.data.value)}
+              </span>
+            )}
           </div>
         )}
       </div>
+
+      {twoSeries ? (
+        <ul className="text-muted-foreground mb-2 flex flex-wrap gap-4 text-xs font-medium">
+          <li className="flex items-center gap-1.5">
+            <span
+              aria-hidden="true"
+              className="bg-primary inline-block h-0.5 w-4 rounded-full"
+            />
+            {seriesLabels[0]}
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span
+              aria-hidden="true"
+              className="bg-chart-3 inline-block h-0.5 w-4 rounded-full"
+            />
+            {seriesLabels[1]}
+          </li>
+        </ul>
+      ) : null}
 
       <div className="relative w-full overflow-hidden">
         <svg
@@ -150,6 +214,7 @@ export function ChartSvg({
 
           {/* Smooth Line */}
           <path
+            data-series={twoSeries ? "primary" : undefined}
             d={pathD}
             fill="none"
             stroke="var(--primary)"
@@ -157,6 +222,18 @@ export function ChartSvg({
             strokeLinecap="round"
             strokeLinejoin="round"
           />
+
+          {twoSeries ? (
+            <path
+              data-series="secondary"
+              d={secondaryPathD}
+              fill="none"
+              stroke="var(--chart-3)"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          ) : null}
 
           {/* Data Points */}
           {points.map((point, index) => {
@@ -173,6 +250,25 @@ export function ChartSvg({
                   cy={point.y}
                   r={isHovered ? "6" : "4"}
                   className="fill-background stroke-primary transition-[r,stroke-width]"
+                  strokeWidth={isHovered ? "3" : "2"}
+                />
+              </g>
+            );
+          })}
+          {secondaryPoints.map((point, index) => {
+            const isHovered = hoverIndex === index;
+            return (
+              <g
+                key={`secondary-${index}`}
+                className="cursor-pointer"
+                onMouseEnter={() => setHoverIndex(index)}
+                onMouseLeave={() => setHoverIndex(null)}
+              >
+                <circle
+                  cx={point.x}
+                  cy={point.y}
+                  r={isHovered ? "6" : "4"}
+                  className="fill-background stroke-chart-3 transition-[r,stroke-width]"
                   strokeWidth={isHovered ? "3" : "2"}
                 />
               </g>
@@ -195,7 +291,9 @@ export function ChartSvg({
                 hoverIndex === index ? "text-primary font-bold" : ""
               }`}
             >
-              {d.label}
+              {index % labelStep === 0 || index === data.length - 1
+                ? d.label
+                : null}
             </span>
           ))}
         </div>

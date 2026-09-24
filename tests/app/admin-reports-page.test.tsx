@@ -56,4 +56,37 @@ describe("ReportsPage Server Component", () => {
     await ReportsPage({ searchParams: Promise.resolve({ days: "99" }) });
     expect(spy).toHaveBeenLastCalledWith(14);
   });
+
+  it("biểu đồ tách POS/online theo từng ngày của kỳ và chỉ lấy top 5", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-14T05:00:00Z"));
+    try {
+      vi.spyOn(dailyRevenueModule, "getDailyRevenue").mockResolvedValue([
+        {
+          date: "2026-09-14",
+          revenue: 300_000,
+          orderCount: 2,
+          byChannel: { pos: 100_000, online: 200_000 },
+        },
+      ]);
+      const top = vi
+        .spyOn(dailyRevenueModule, "getTopProducts")
+        .mockResolvedValue([]);
+      vi.spyOn(dailyRevenueModule, "getLowStockProducts").mockResolvedValue([]);
+
+      const { container } = render(
+        await ReportsPage({ searchParams: Promise.resolve({ days: "7" }) }),
+      );
+
+      expect(top).toHaveBeenLastCalledWith(5);
+      expect(screen.getByText("Top 5 bán chạy")).toBeInTheDocument();
+      expect(container.querySelectorAll("[data-series]")).toHaveLength(2);
+      // 7 ngay x 2 series, ngay khong ban van co diem 0.
+      expect(container.querySelectorAll("circle")).toHaveLength(14);
+      expect(screen.getByText("08/09")).toBeInTheDocument();
+      expect(screen.getByText("14/09")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
