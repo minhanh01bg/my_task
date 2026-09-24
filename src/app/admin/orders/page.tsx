@@ -85,7 +85,9 @@ function OrderBadges({ order }: { order: AdminOrderListItem }) {
 }
 
 function CancelOrder({ order }: { order: AdminOrderListItem }) {
-  if (order.status === "cancelled") return null;
+  if (order.status === "cancelled" || order.fulfillmentStatus === "completed") {
+    return null;
+  }
   return (
     <ConfirmAction
       action={cancelOrderAction.bind(null, order.id)}

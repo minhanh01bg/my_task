@@ -37,9 +37,18 @@ export async function cancelOrder(
       return { cancelled: false, voucherCode: null };
     }
 
+    if (order.fulfillmentStatus === "completed") {
+      throw new Error("Không thể hủy đơn hàng đã hoàn tất");
+    }
+
     await tx.order.update({
       where: { id: orderId },
-      data: { status: "cancelled" },
+      data: {
+        status: "cancelled",
+        ...(order.channel === "online"
+          ? { fulfillmentStatus: "cancelled" }
+          : {}),
+      },
     });
 
     for (const item of order.items) {
