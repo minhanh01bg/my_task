@@ -6,5 +6,6 @@ export const CACHE_TAGS = {
   catalog: "catalog",
   settings: "settings",
   promotions: "promotions",
+  vouchers: "vouchers",
   product: (id: string) => `product:${id}`,
 } as const;

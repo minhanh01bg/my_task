@@ -15,6 +15,7 @@ import {
   SquaresFour,
   Storefront,
   TextAlignLeft,
+  Ticket,
   Users,
   X,
 } from "@phosphor-icons/react";
@@ -65,6 +66,13 @@ const NAV = [
     icon: Megaphone,
   },
   {
+    href: "/admin/promotions/vouchers",
+    label: "Mã giảm giá",
+    shortLabel: "Mã giảm giá",
+    icon: Ticket,
+    nested: true,
+  },
+  {
     href: "/admin/orders",
     label: "Đơn hàng",
     shortLabel: "Đơn hàng",
@@ -109,10 +117,19 @@ const MOBILE_PRIMARY_HREFS = new Set([
   "/admin/reports",
 ]);
 
-function isActive(pathname: string, href: string) {
+type NavItem = (typeof NAV)[number];
+
+function matches(pathname: string, href: string) {
   return href === "/pos"
     ? pathname === href
     : pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/** Muc khop dai nhat thang: o /admin/promotions/vouchers chi "Mã giảm giá" sang. */
+function activeHref(pathname: string): string | undefined {
+  return NAV.filter((item) => matches(pathname, item.href)).sort(
+    (a, b) => b.href.length - a.href.length,
+  )[0]?.href;
 }
 
 function NavLink({
@@ -120,7 +137,7 @@ function NavLink({
   active,
   onNavigate,
 }: {
-  item: (typeof NAV)[number];
+  item: NavItem;
   active: boolean;
   onNavigate?: () => void;
 }) {
@@ -129,7 +146,10 @@ function NavLink({
       href={item.href}
       aria-current={active ? "page" : undefined}
       onClick={onNavigate}
-      className="hover:bg-accent/12 focus-visible:ring-ring aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground flex min-h-12 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-colors focus-visible:ring-3 focus-visible:outline-none"
+      className={cn(
+        "hover:bg-accent/12 focus-visible:ring-ring aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground flex min-h-12 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-colors focus-visible:ring-3 focus-visible:outline-none",
+        "nested" in item && item.nested && "pl-8",
+      )}
     >
       <item.icon
         aria-hidden="true"
@@ -144,7 +164,8 @@ function NavLink({
 export function AdminNav() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const current = NAV.find((item) => isActive(pathname, item.href));
+  const currentHref = activeHref(pathname);
+  const current = NAV.find((item) => item.href === currentHref);
   const primaryItems = NAV.filter((item) =>
     MOBILE_PRIMARY_HREFS.has(item.href),
   );
@@ -196,7 +217,7 @@ export function AdminNav() {
           <ul className="flex flex-col gap-1.5">
             {NAV.map((item) => (
               <li key={item.href}>
-                <NavLink item={item} active={isActive(pathname, item.href)} />
+                <NavLink item={item} active={item.href === currentHref} />
               </li>
             ))}
           </ul>
@@ -211,7 +232,7 @@ export function AdminNav() {
         >
           <ul className="grid grid-cols-5">
             {primaryItems.map((item) => {
-              const active = isActive(pathname, item.href);
+              const active = item.href === currentHref;
               return (
                 <li key={item.href}>
                   <Link
@@ -272,7 +293,7 @@ export function AdminNav() {
                 <li key={item.href}>
                   <NavLink
                     item={item}
-                    active={isActive(pathname, item.href)}
+                    active={item.href === currentHref}
                     onNavigate={() => setMenuOpen(false)}
                   />
                 </li>
