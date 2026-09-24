@@ -67,4 +67,17 @@ export const POLICIES = {
       { name: "subnet-misses", limit: 150, windowSeconds: 300 },
     ],
   },
+  /**
+   * Gui danh gia san pham: 5 lan/tai khoan/24h + chan burst theo IP. Fail-open:
+   * da bat buoc dang nhap, limiter loi khong nen chan khach that.
+   */
+  productReview: {
+    name: "product-review",
+    failClosed: false,
+    timeoutMs: 1000,
+    buckets: [
+      { name: "account-daily", limit: 5, windowSeconds: 86_400 },
+      { name: "ip-burst", limit: 10, windowSeconds: 60 },
+    ],
+  },
 } as const satisfies Record<string, RateLimitPolicy>;

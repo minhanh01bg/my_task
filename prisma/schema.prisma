@@ -19,34 +19,38 @@ model Category {
 }
 
 model Product {
-  id         String    @id @default(cuid())
-  name       String
+  id          String    @id @default(cuid())
+  name        String
   /// URL SEO /shop/p/<slug>; sinh boi saveProduct tu ten
-  slug       String?   @unique
-  sku        String?   @unique
-  categoryId String?
-  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  unit       String    @default("cái")
+  slug        String?   @unique
+  sku         String?   @unique
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  unit        String    @default("cái")
   /// Tien: so nguyen VND
-  price      Int       @default(0)
-  costPrice  Int       @default(0)
+  price       Int       @default(0)
+  costPrice   Int       @default(0)
   /// So luong: so thuc (kg, met)
-  stock      Float     @default(0)
+  stock       Float     @default(0)
   /// Ten goi khac, ngan cach bang dau phay
-  aliases    String?
+  aliases     String?
   /// Chuoi da chuan hoa, sinh boi buildSearchText luc luu
-  searchText String    @default("")
-  imageUrl   String?
-  isActive   Boolean   @default(true)
-  isService  Boolean   @default(false)
+  searchText  String    @default("")
+  imageUrl    String?
+  isActive    Boolean   @default(true)
+  isService   Boolean   @default(false)
   /// Phuc vu xep hang tim kiem
-  soldCount  Int       @default(0)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  deletedAt  DateTime?
+  soldCount   Int       @default(0)
+  /// Diem danh gia trung binh (chi tinh review published); cap nhat boi createReview/moderation
+  ratingAvg   Float     @default(0)
+  ratingCount Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 
   orderItems     OrderItem[]
   stockMovements StockMovement[]
+  reviews        ProductReview[]
 
   @@index([isActive])
   @@index([categoryId])
@@ -78,6 +82,7 @@ model CustomerAccount {
   sessions      CustomerSession[]
   orders        Order[]
   notifications CustomerNotification[]
+  reviews       ProductReview[]
 }
 
 model CustomerSession {
@@ -357,4 +362,22 @@ model Voucher {
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+/// Danh gia san pham tu khach da dang nhap. `status`: published | hidden
+model ProductReview {
+  id                 String           @id @default(cuid())
+  productId          String
+  product            Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  accountId          String?
+  account            CustomerAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  authorName         String
+  /// 1..5
+  rating             Int
+  content            String
+  isVerifiedPurchase Boolean          @default(false)
+  status             String           @default("published")
+  createdAt          DateTime         @default(now())
+
+  @@index([productId, status, createdAt])
 }
