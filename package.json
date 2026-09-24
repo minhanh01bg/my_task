@@ -21,6 +21,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma db push --force-reset && pnpm db:seed",
     "prepare": "husky",
+    "postinstall": "prisma generate",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
     "changeset": "changeset",
     "version-packages": "changeset version",
