@@ -46,6 +46,34 @@ test.describe("Bán hàng tiền mặt", () => {
     await expect(page.getByTestId("last-sale-change")).toHaveText("100.000");
     await expect(page.getByText(/DH\d+/)).toBeVisible();
 
+    await page.getByRole("button", { name: "In hoá đơn", exact: true }).click();
+    await page.evaluate(() => {
+      window.print = () =>
+        document.body.setAttribute("data-test-printed", "true");
+    });
+    await page.getByRole("button", { name: "In hóa đơn (K80)" }).click();
+    await expect(page.locator("body")).toHaveAttribute(
+      "data-test-printed",
+      "true",
+    );
+    const printCopy = page.locator("body > [data-print-receipt]");
+    await expect(printCopy).toHaveCount(1);
+    await page.emulateMedia({ media: "print" });
+    await expect(printCopy).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    const width = await printCopy.evaluate(
+      (node) => node.getBoundingClientRect().width,
+    );
+    expect(width).toBeCloseTo((80 * 96) / 25.4, 0);
+    await page.pdf({
+      path: "e2e/screenshots/receipt-k80.pdf",
+      preferCSSPageSize: true,
+    });
+    await page.evaluate(() => window.dispatchEvent(new Event("afterprint")));
+    await expect(printCopy).toHaveCount(0);
+    await page.emulateMedia({ media: "screen" });
+    await page.keyboard.press("Escape");
+
     await page.getByRole("button", { name: /đơn mới/i }).click();
     await expect(page.getByText(/chưa có sản phẩm/i)).toBeVisible();
   });

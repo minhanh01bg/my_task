@@ -1,4 +1,10 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import OrderDetailPage from "@/app/admin/orders/[id]/page";
@@ -93,6 +99,28 @@ describe("/admin/orders/[id] — in hoá đơn K80", () => {
     expect(
       screen.getByRole("button", { name: "In hoá đơn" }),
     ).toBeInTheDocument();
+    cleanup();
+  });
+
+  it("hoá đơn đơn online có phí giao hàng: tạm tính − giảm + phí ship = tổng", async () => {
+    mockOnlineOrder("new", {
+      subtotal: 150_000,
+      discount: 10_000,
+      voucherCode: "GIAM10",
+      voucherDiscount: 10_000,
+      shippingFee: 20_000,
+      total: 160_000,
+    });
+    render(await OrderDetailPage({ params: Promise.resolve({ id: "o1" }) }));
+    fireEvent.click(screen.getByRole("button", { name: "In hoá đơn" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText("Phí giao hàng:").parentElement,
+    ).toHaveTextContent("20.000");
+    expect(within(dialog).getByText(/GIAM10/)).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("THANH TOÁN:").parentElement,
+    ).toHaveTextContent("160.000");
     cleanup();
   });
 });

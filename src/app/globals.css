@@ -529,21 +529,51 @@
   }
 }
 
-/* In hoa don K80: khi co hoa don tren trang (hop thoai In hoa don dang mo),
-   chi in hoa don — an moi thu khac nhung giu bo cuc de khong nhay trang. */
+/* In hoa don K80: bam "In hoá đơn (K80)" portal mot ban sao hoa don thang vao
+   <body> ([data-print-receipt]). Tren man hinh ban sao nam ngoai khung nhin
+   (de do chieu dai trang); khi in chi con ban sao, kho giay cuon 80mm (vung in
+   72mm), khong le — khong bi transform/max-height/overflow cua hop thoai cat. */
+body > [data-print-receipt] {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  box-sizing: border-box;
+  width: 80mm;
+  padding: 0 4mm;
+  background: #fff;
+  color: #000;
+  color-scheme: light;
+  visibility: hidden;
+  pointer-events: none;
+  page: receipt-k80;
+}
+
+@page receipt-k80 {
+  margin: 0;
+}
+
 @media print {
-  body:has([data-print-receipt]) * {
-    visibility: hidden;
+  body:has(> [data-print-receipt]) > *:not([data-print-receipt]) {
+    display: none !important;
   }
 
-  body:has([data-print-receipt]) [data-print-receipt],
-  body:has([data-print-receipt]) [data-print-receipt] * {
+  /* Khoa cuon cua hop thoai (overflow/height/position) khong duoc cat ban in. */
+  html:has(> body > [data-print-receipt]),
+  body:has(> [data-print-receipt]) {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    position: static !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  body > [data-print-receipt] {
+    position: static;
+    left: auto;
     visibility: visible;
-  }
-
-  body:has([data-print-receipt]) [data-print-receipt] {
-    position: fixed;
-    top: 0;
-    left: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

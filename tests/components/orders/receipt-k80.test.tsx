@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { PrintReceiptButton } from "@/features/orders/print-receipt-button";
@@ -63,14 +63,14 @@ describe("ReceiptK80 component", () => {
     ).toBeInTheDocument();
   });
 
-  it("gọi hàm window.print khi bấm nút In hóa đơn", () => {
+  it("gọi hàm window.print khi bấm nút In hóa đơn", async () => {
     const printSpy = vi.spyOn(window, "print").mockImplementation(() => {});
     render(<ReceiptK80 storeName="Tạp Hóa Việt" order={sampleOrder} />);
 
     const printButton = screen.getByRole("button", { name: /in hóa đơn/i });
     fireEvent.click(printButton);
 
-    expect(printSpy).toHaveBeenCalled();
+    await vi.waitFor(() => expect(printSpy).toHaveBeenCalled());
     printSpy.mockRestore();
   });
 
@@ -130,6 +130,83 @@ describe("ReceiptK80 component", () => {
       />,
     );
     expect(screen.getByTestId("receipt-vietqr")).toBeInTheDocument();
+  });
+
+  it("in từ một bản sao nằm ngay dưới body (portal), gọi print sau khi portal mount", async () => {
+    let printedCopy: Element | null = null;
+    const printSpy = vi.spyOn(window, "print").mockImplementation(() => {
+      printedCopy = document.body.querySelector(
+        ":scope > [data-print-receipt]",
+      );
+    });
+    render(<PrintReceiptButton storeName="Tạp Hóa Việt" order={sampleOrder} />);
+    fireEvent.click(screen.getByRole("button", { name: "In hoá đơn" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /in hóa đơn \(k80\)/i }),
+    );
+
+    await vi.waitFor(() => expect(printSpy).toHaveBeenCalledTimes(1));
+    expect(printedCopy).not.toBeNull();
+    const copy = printedCopy as unknown as HTMLElement;
+    expect(copy.parentElement).toBe(document.body);
+    expect(within(copy).getByText("TẠP HÓA VIỆT")).toBeInTheDocument();
+    // Ban xem truoc trong hop thoai khong mang dau in.
+    expect(
+      screen.getByRole("dialog").querySelector("[data-print-receipt]"),
+    ).toBeNull();
+
+    // In xong thi go ban sao.
+    fireEvent(window, new Event("afterprint"));
+    await vi.waitFor(() =>
+      expect(document.body.querySelector("[data-print-receipt]")).toBeNull(),
+    );
+    printSpy.mockRestore();
+  });
+
+  it("đơn online in dòng phí giao hàng và mã ưu đãi, cộng khớp tổng", () => {
+    render(
+      <ReceiptK80
+        storeName="Tạp Hóa Việt"
+        order={{
+          ...sampleOrder,
+          shippingFee: 15_000,
+          voucherCode: "GIAM20K",
+          total: 137_000,
+        }}
+      />,
+    );
+    const shippingRow = screen.getByText("Phí giao hàng:").parentElement;
+    expect(shippingRow).toHaveTextContent("15.000");
+    expect(screen.getByText(/GIAM20K/)).toBeInTheDocument();
+    expect(screen.getByText("THANH TOÁN:").parentElement).toHaveTextContent(
+      "137.000",
+    );
+  });
+
+  it("không in dòng phí giao hàng khi phí bằng 0", () => {
+    render(
+      <ReceiptK80
+        storeName="Tạp Hóa Việt"
+        order={{ ...sampleOrder, shippingFee: 0 }}
+      />,
+    );
+    expect(screen.queryByText("Phí giao hàng:")).not.toBeInTheDocument();
+  });
+
+  it("đơn đã huỷ không bao giờ in VietQR", () => {
+    render(
+      <ReceiptK80
+        storeName="Tạp Hóa Việt"
+        order={{
+          ...sampleOrder,
+          status: "cancelled",
+          amountDue: 122_000,
+          payments: [{ method: "transfer", amount: 122_000 }],
+        }}
+        bankAccount={bankAccount}
+      />,
+    );
+    expect(screen.queryByTestId("receipt-vietqr")).not.toBeInTheDocument();
   });
 
   it("PrintReceiptButton mở xem trước hóa đơn K80", async () => {

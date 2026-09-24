@@ -24,7 +24,8 @@ interface PrintReceiptButtonProps extends Omit<
 
 /**
  * Mo xem truoc hoa don K80 trong hop thoai; nut "In hoa don (K80)" ben trong
- * goi window.print(). CSS in (globals.css) chi giu lai phan hoa don.
+ * portal ban in ra ngoai hop thoai (duoi `body`) roi goi window.print() — xem
+ * `ReceiptK80` va CSS in trong globals.css.
  */
 export function PrintReceiptButton({
   label = "In hoá đơn",

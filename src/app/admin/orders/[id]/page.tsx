@@ -81,7 +81,11 @@ export default async function OrderDetailPage({
     })),
     subtotal: order.subtotal,
     discount: order.discount,
+    voucherCode: order.voucherCode ?? undefined,
+    // Phi ship luu SAU voucher: subtotal - discount + shippingFee = total.
+    shippingFee: order.channel === "online" ? order.shippingFee : undefined,
     total: order.total,
+    status: order.status,
     payments: order.payments.map((payment) => ({
       method: payment.method,
       amount: payment.amount,
