@@ -92,4 +92,31 @@ describe("PosScreen — in hoá đơn sau khi thanh toán", () => {
     expect(screen.queryByText("Tiền thối lại")).not.toBeInTheDocument();
     expect(screen.getByText(/còn phải thu/i)).toHaveTextContent("84.000");
   });
+
+  it("server từ chối đơn thì báo rõ, không nói là sẽ tự đồng bộ", async () => {
+    vi.mocked(submitOrder).mockResolvedValue({
+      synced: false,
+      order: null,
+      rejected: "Dữ liệu đơn hàng không hợp lệ",
+    });
+    render(<PosScreen catalog={CATALOG} bankAccount={null} storeName="Tiệm" />);
+
+    fireEvent.click(screen.getByRole("button", { name: /thanh toán/i }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Đúng số tiền" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Xác nhận" }));
+
+    expect(
+      await screen.findByText(
+        /máy chủ từ chối đơn: dữ liệu đơn hàng không hợp lệ/i,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/sẽ đồng bộ khi có mạng/i),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /xem đơn chưa gửi/i }),
+    ).toHaveAttribute("href", "/admin/offline");
+  });
 });

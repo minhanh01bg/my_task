@@ -1,6 +1,15 @@
 import { enqueueOrder, markQueuedFailure } from "./queue";
 import type { OrderPayload, SubmitResult } from "./types";
 
+/** Het phien (401/403), timeout hay bi gioi han toc do thi gui lai la duoc. */
+const RETRYABLE_CLIENT_STATUSES = new Set([401, 403, 408, 429]);
+
+function isPermanentRejection(status: number): boolean {
+  return (
+    status >= 400 && status < 500 && !RETRYABLE_CLIENT_STATUSES.has(status)
+  );
+}
+
 /**
  * Duong DUY NHAT ma UI ban hang gui don.
  *
@@ -35,7 +44,9 @@ export async function submitOrder(
     await enqueueOrder(payload);
     await markQueuedFailure(payload.clientId, message);
 
-    return { synced: false, order: null };
+    return isPermanentRejection(response.status)
+      ? { synced: false, order: null, rejected: message }
+      : { synced: false, order: null };
   } catch (error) {
     await enqueueOrder(payload);
     await markQueuedFailure(

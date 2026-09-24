@@ -58,6 +58,7 @@ interface LastSale {
   received: number;
   change: number;
   synced: boolean;
+  rejected?: string;
   receipt: ReceiptOrder;
 }
 
@@ -239,6 +240,7 @@ export function PosScreen({
       received: result.received,
       change: Math.max(0, result.received - totals.total),
       synced: outcome.synced,
+      rejected: outcome.rejected,
       receipt: buildPosReceipt(code ?? pendingCode, totals, result),
     });
     setSaleOpen(true);
@@ -394,8 +396,18 @@ export function PosScreen({
               <DialogDescription className="text-base">
                 {lastSale.synced
                   ? `Đã lưu đơn ${lastSale.code}`
-                  : "Đã lưu tạm — sẽ đồng bộ khi có mạng"}
+                  : lastSale.rejected
+                    ? `Máy chủ từ chối đơn: ${lastSale.rejected}. Đơn vẫn được giữ trong máy để xử lý.`
+                    : "Đã lưu tạm — sẽ đồng bộ khi có mạng"}
               </DialogDescription>
+              {lastSale.rejected ? (
+                <Link
+                  href="/admin/offline"
+                  className="text-destructive inline-flex min-h-11 items-center justify-center font-bold underline underline-offset-4"
+                >
+                  Xem đơn chưa gửi
+                </Link>
+              ) : null}
               {lastSale.receipt.amountDue ? (
                 <p className="text-lg">
                   Còn phải thu{" "}
