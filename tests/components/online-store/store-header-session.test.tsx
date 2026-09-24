@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CustomerNotificationButton } from "@/features/customer-notifications/notification-button";
 import { OnlineCartProvider } from "@/features/online-store/cart-context";
 import { StoreHeader } from "@/features/online-store/store-header";
+import { DEFAULT_SHIPPING_SETTINGS } from "@/lib/shipping/shipping-fee";
 import {
   invalidateStorefrontSession,
   STOREFRONT_SESSION_ENDPOINT,
@@ -44,7 +45,10 @@ function notificationCalls(fetchMock: ReturnType<typeof vi.fn>) {
 function renderHeader() {
   return render(
     <OnlineCartProvider>
-      <StoreHeader storeName="Cửa Hàng Xanh" />
+      <StoreHeader
+        storeName="Cửa Hàng Xanh"
+        shipping={DEFAULT_SHIPPING_SETTINGS}
+      />
     </OnlineCartProvider>,
   );
 }

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { StoreFooter } from "@/features/online-store/store-footer";
@@ -15,6 +15,10 @@ vi.mock("@/server/settings/store-settings", () => ({
     hotline: "0901234567",
     address: "123 Lê Lợi, Quận 1, TP. Hồ Chí Minh",
     openingHours: "07:30 - 21:30",
+  }),
+  getShippingSettings: vi.fn().mockResolvedValue({
+    shippingFee: 25_000,
+    freeShippingThreshold: 500_000,
   }),
 }));
 
@@ -81,6 +85,33 @@ describe("Policy Pages & Customer Trust (Task 12)", () => {
         screen.getByRole("heading", { level: 2, name: /thời gian giao hàng/i }),
       ).toBeInTheDocument();
       expect(screen.getAllByText(/đồng kiểm/i).length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("Giỏ hàng trên trang chính sách", () => {
+    it("dùng phí ship/ngưỡng freeship từ cài đặt cửa hàng", async () => {
+      localStorage.setItem(
+        "online-cart-v1",
+        JSON.stringify([
+          {
+            id: "p1",
+            name: "Cà phê Robusta",
+            price: 50_000,
+            quantity: 1,
+            stock: 10,
+            unit: "gói",
+            imageUrl: null,
+            categoryId: null,
+            searchText: "ca phe",
+          },
+        ]),
+      );
+      render(await DeliveryPolicyPage());
+      fireEvent.click(screen.getByRole("button", { name: /mở giỏ hàng/i }));
+      expect(
+        screen.getByText(/mua thêm/i).closest("span")?.textContent,
+      ).toContain("450.000");
+      localStorage.clear();
     });
   });
 

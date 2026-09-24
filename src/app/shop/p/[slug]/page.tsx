@@ -6,7 +6,10 @@ import {
   productPageMetadata,
 } from "@/features/online-store/product-page";
 import { getOnlineProductDetailBySlug } from "@/server/catalog/get-product-detail";
-import { getPublicStoreProfile } from "@/server/settings/store-settings";
+import {
+  getPublicStoreProfile,
+  getShippingSettings,
+} from "@/server/settings/store-settings";
 
 /** ISR như trang theo id; slug đổi (đổi tên) → tag `catalog` làm mới. */
 export const revalidate = 60;
@@ -36,14 +39,21 @@ export default async function ProductBySlugPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [detail, storeProfile] = await Promise.all([
+  const [detail, storeProfile, shipping] = await Promise.all([
     getOnlineProductDetailBySlug(slug),
     getPublicStoreProfile(),
+    getShippingSettings(),
   ]);
 
   if (!detail) {
     notFound();
   }
 
-  return <ProductPage detail={detail} storeProfile={storeProfile} />;
+  return (
+    <ProductPage
+      detail={detail}
+      storeProfile={storeProfile}
+      shipping={shipping}
+    />
+  );
 }

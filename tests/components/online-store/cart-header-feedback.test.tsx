@@ -6,6 +6,7 @@ import {
   useOnlineCart,
 } from "@/features/online-store/cart-context";
 import { StoreHeader } from "@/features/online-store/store-header";
+import { DEFAULT_SHIPPING_SETTINGS } from "@/lib/shipping/shipping-fee";
 import type { OnlineProduct } from "@/features/online-store/types";
 
 const mockProduct: OnlineProduct = {
@@ -23,7 +24,10 @@ function TestWrapper() {
   const { add } = useOnlineCart();
   return (
     <div>
-      <StoreHeader storeName="Cửa Hàng Test" />
+      <StoreHeader
+        storeName="Cửa Hàng Test"
+        shipping={DEFAULT_SHIPPING_SETTINGS}
+      />
       <button onClick={() => add(mockProduct)}>Thêm vào giỏ</button>
     </div>
   );

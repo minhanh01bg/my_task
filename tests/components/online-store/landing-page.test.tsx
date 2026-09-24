@@ -8,6 +8,7 @@ import { HeroSection } from "@/features/online-store/landing/hero-section";
 import { ProductRail } from "@/features/online-store/landing/product-rail";
 import { TrustSection } from "@/features/online-store/landing/trust-section";
 import { StoreHeader } from "@/features/online-store/store-header";
+import { DEFAULT_SHIPPING_SETTINGS } from "@/lib/shipping/shipping-fee";
 import { invalidateStorefrontSession } from "@/features/online-store/storefront-session";
 import type {
   OnlineCategory,
@@ -68,7 +69,10 @@ describe("Storefront Landing Page Components", () => {
       stubSession({ isAdmin: true, isCustomer: false });
       render(
         <OnlineCartProvider>
-          <StoreHeader storeName="Cửa Hàng Xanh" />
+          <StoreHeader
+            storeName="Cửa Hàng Xanh"
+            shipping={DEFAULT_SHIPPING_SETTINGS}
+          />
         </OnlineCartProvider>,
       );
 
@@ -84,7 +88,10 @@ describe("Storefront Landing Page Components", () => {
       stubSession({ isAdmin: false, isCustomer: true });
       render(
         <OnlineCartProvider>
-          <StoreHeader storeName="Cửa Hàng Xanh" />
+          <StoreHeader
+            storeName="Cửa Hàng Xanh"
+            shipping={DEFAULT_SHIPPING_SETTINGS}
+          />
         </OnlineCartProvider>,
       );
 

@@ -6,10 +6,13 @@ import { StoreFooter } from "@/features/online-store/store-footer";
 import { StoreHeader } from "@/features/online-store/store-header";
 import { storefrontCrumbs, toBreadcrumbItems } from "@/lib/seo/breadcrumbs";
 import { breadcrumbJsonLd } from "@/lib/seo/json-ld";
+import type { ShippingSettings } from "@/lib/shipping/shipping-fee";
 import type { PublicStoreProfile } from "@/types/storefront";
 
 export interface PolicyLayoutProps {
   storeProfile: PublicStoreProfile;
+  /** `getShippingSettings()` — phí ship/ngưỡng freeship cho giỏ hàng ở header. */
+  shipping: ShippingSettings;
   /** Đường dẫn canonical của trang, dùng cho breadcrumb. */
   path: string;
   title: string;
@@ -19,6 +22,7 @@ export interface PolicyLayoutProps {
 
 export function PolicyLayout({
   storeProfile,
+  shipping,
   path,
   title,
   description,
@@ -31,7 +35,7 @@ export function PolicyLayout({
       <JsonLdScript
         data={breadcrumbJsonLd(toBreadcrumbItems(crumbs, siteConfig.url))}
       />
-      <StoreHeader storeName={storeProfile.name} />
+      <StoreHeader storeName={storeProfile.name} shipping={shipping} />
 
       <main className="mx-auto min-h-[60vh] max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
         <StoreBreadcrumbs crumbs={crumbs} className="mb-6" />

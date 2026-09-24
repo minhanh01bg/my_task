@@ -1,4 +1,11 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { describe, expect, it, beforeEach, vi } from "vitest";
 
 import {
@@ -37,9 +44,12 @@ function TestContainer({
 }: {
   shipping?: { shippingFee: number; freeShippingThreshold: number };
 }) {
-  const { add, openDrawer } = useOnlineCart();
+  const { add, openDrawer, feedback } = useOnlineCart();
   return (
     <div>
+      <output data-testid="feedback">
+        {feedback ? `${feedback.status}:${feedback.productId}` : "none"}
+      </output>
       <button onClick={openDrawer}>Mở giỏ hàng</button>
       <button onClick={() => add(mockProductA)}>Thêm A</button>
       <button onClick={() => add(mockProductB)}>Thêm B</button>
@@ -258,7 +268,7 @@ describe("CartDrawer", () => {
     expect(screen.queryByTestId("free-shipping-bar")).not.toBeInTheDocument();
   });
 
-  it("xoá dòng hiện toast Hoàn tác; bấm Hoàn tác trả lại đúng số lượng", async () => {
+  it("xoá dòng hiện Hoàn tác ngay trong ngăn giỏ; hoàn tác trả đúng vị trí và số lượng, không báo 'đã thêm'", () => {
     render(
       <OnlineCartProvider>
         <TestContainer />
@@ -266,18 +276,63 @@ describe("CartDrawer", () => {
     );
     fireEvent.click(screen.getByText("Thêm A"));
     fireEvent.click(screen.getByText("Thêm A"));
+    fireEvent.click(screen.getByText("Thêm B"));
     fireEvent.click(screen.getByText("Mở giỏ hàng"));
+    expect(screen.getByTestId("feedback")).toHaveTextContent("added:p2");
 
+    const dialog = screen.getByRole("dialog", { name: "Giỏ hàng của bạn" });
     fireEvent.click(
-      screen.getByRole("button", { name: /xóa.*cà phê robusta/i }),
+      within(dialog).getByRole("button", { name: /xóa.*cà phê robusta/i }),
     );
     expect(screen.queryByTestId("quantity-p1")).not.toBeInTheDocument();
-    expect(
-      await screen.findByText("Đã xoá Cà phê Robusta khỏi giỏ hàng"),
-    ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Hoàn tác" }));
-    expect(await screen.findByTestId("quantity-p1")).toHaveTextContent("2");
+    const status = within(dialog).getByTestId("cart-undo");
+    expect(status).toHaveAttribute("role", "status");
+    expect(status).toHaveTextContent("Đã xoá Cà phê Robusta.");
+    // Nut xoa bien mat cung dong — focus chuyen sang Hoàn tác.
+    expect(
+      within(status).getByRole("button", { name: "Hoàn tác" }),
+    ).toHaveFocus();
+    fireEvent.click(within(status).getByRole("button", { name: "Hoàn tác" }));
+
+    expect(screen.getByTestId("quantity-p1")).toHaveTextContent("2");
+    // Dong A tro ve vi tri dau tien (truoc B).
+    const names = within(dialog)
+      .getAllByRole("heading", { level: 3 })
+      .map((heading) => heading.textContent);
+    expect(names).toEqual(["Cà phê Robusta", "Trà lài"]);
+    expect(
+      within(dialog).queryByText("Đã xoá Cà phê Robusta."),
+    ).not.toBeInTheDocument();
+    // Hoan tac khong phat lai phan hoi "đã thêm" cho A.
+    expect(screen.getByTestId("feedback")).toHaveTextContent("added:p2");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("thông báo Hoàn tác tự ẩn sau 5 giây", () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <OnlineCartProvider>
+          <TestContainer />
+        </OnlineCartProvider>,
+      );
+      fireEvent.click(screen.getByText("Thêm A"));
+      fireEvent.click(screen.getByText("Mở giỏ hàng"));
+      fireEvent.click(
+        screen.getByRole("button", { name: /xóa.*cà phê robusta/i }),
+      );
+      expect(screen.getByText("Đã xoá Cà phê Robusta.")).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(5000);
+      });
+      expect(
+        screen.queryByText("Đã xoá Cà phê Robusta."),
+      ).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("nhập mã giảm giá trong giỏ gọi API validate và lưu mã cho trang thanh toán", async () => {

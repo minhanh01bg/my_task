@@ -5,7 +5,10 @@ import {
   policyMetadata,
   type PolicyPageMeta,
 } from "@/features/online-store/policy-metadata";
-import { getPublicStoreProfile } from "@/server/settings/store-settings";
+import {
+  getPublicStoreProfile,
+  getShippingSettings,
+} from "@/server/settings/store-settings";
 
 /** URL tuyệt đối (canonical/OG/JSON-LD) làm mới sau deploy đổi CANONICAL_ORIGIN. */
 export const revalidate = 3600;
@@ -22,11 +25,15 @@ export function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function PrivacyPolicyPage() {
-  const storeProfile = await getPublicStoreProfile();
+  const [storeProfile, shipping] = await Promise.all([
+    getPublicStoreProfile(),
+    getShippingSettings(),
+  ]);
 
   return (
     <PolicyLayout
       storeProfile={storeProfile}
+      shipping={shipping}
       path={PAGE.path}
       title={PAGE.title}
       description="Cam kết bảo vệ dữ liệu cá nhân, quyền riêng tư và tuân thủ các quy chuẩn bảo mật kỹ thuật số."

@@ -6,6 +6,7 @@ import { productCrumbs, toBreadcrumbItems } from "@/lib/seo/breadcrumbs";
 import { breadcrumbJsonLd, productJsonLd } from "@/lib/seo/json-ld";
 import { storefrontOpenGraph } from "@/lib/seo/open-graph";
 import { productHref } from "@/lib/seo/product-href";
+import type { ShippingSettings } from "@/lib/shipping/shipping-fee";
 import type { OnlineProductDetail } from "@/server/catalog/get-product-detail";
 import type { PublicStoreProfile } from "@/types/storefront";
 
@@ -56,9 +57,12 @@ export function productPageMetadata(
 export function ProductPage({
   detail,
   storeProfile,
+  shipping,
 }: {
   detail: OnlineProductDetail;
   storeProfile: PublicStoreProfile;
+  /** `getShippingSettings()` — gio hang tren trang san pham dung dung phi ship. */
+  shipping: ShippingSettings;
 }) {
   const { product } = detail;
   const url = `${siteConfig.url}${productHref(product)}`;
@@ -70,7 +74,7 @@ export function ProductPage({
   return (
     <OnlineCartProvider>
       <JsonLdScript data={jsonLd} />
-      <StoreHeader storeName={storeProfile.name} />
+      <StoreHeader storeName={storeProfile.name} shipping={shipping} />
       <main className="min-h-[70vh]">
         <ProductDetailView detail={detail} />
       </main>

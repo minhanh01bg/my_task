@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -20,11 +20,9 @@ import {
   SheetContent,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { ToastProvider, useToast } from "@/components/ui/toast";
 import { formatVnd } from "@/lib/money";
 import {
   computeShippingFee,
-  DEFAULT_SHIPPING_SETTINGS,
   type ShippingSettings,
 } from "@/lib/shipping/shipping-fee";
 
@@ -36,25 +34,25 @@ import { VoucherField } from "./voucher-field";
 const UNDO_TIMEOUT_MS = 5000;
 
 interface CartDrawerProps {
-  /** Tu cai dat `store.shippingFee`/`store.freeShippingThreshold`. */
-  shipping?: ShippingSettings;
+  /**
+   * Tu cai dat `store.shippingFee`/`store.freeShippingThreshold`
+   * (`getShippingSettings()`). Bat buoc — khong co gia tri mac dinh ngam.
+   */
+  shipping: ShippingSettings;
 }
 
-/** Tu boc ToastProvider cho toast "Hoàn tác" khi xoa dong. */
-export function CartDrawer({
-  shipping = DEFAULT_SHIPPING_SETTINGS,
-}: CartDrawerProps) {
-  return (
-    <ToastProvider>
-      <CartDrawerContent shipping={shipping} />
-    </ToastProvider>
-  );
+interface RemovedLine {
+  line: OnlineCartLine;
+  /** Vi tri cu trong gio — Hoàn tác tra dong ve dung cho nay. */
+  index: number;
 }
 
-function CartDrawerContent({ shipping }: { shipping: ShippingSettings }) {
-  const { lines, isDrawerOpen, closeDrawer, setQuantity, remove, add } =
+export function CartDrawer({ shipping }: CartDrawerProps) {
+  const { lines, isDrawerOpen, closeDrawer, setQuantity, remove, restore } =
     useOnlineCart();
-  const toast = useToast();
+  const [removed, setRemoved] = useState<RemovedLine | null>(null);
+  const undoButtonRef = useRef<HTMLButtonElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const threshold = shipping.freeShippingThreshold;
   // Khong thu phi ship thi thanh "mua them de freeship" la sai su that.
   const showShippingProgress = shipping.shippingFee > 0;
@@ -71,16 +69,34 @@ function CartDrawerContent({ shipping }: { shipping: ShippingSettings }) {
   );
   const voucherDiscount = voucher.applied?.discount ?? 0;
 
-  /** Xoa ngay, cho 5 giay de hoan tac thay vi hoi xac nhan. */
-  function removeWithUndo(line: OnlineCartLine) {
+  /**
+   * Xoa ngay, cho 5 giay de hoan tac thay vi hoi xac nhan. Nut Hoàn tác nam
+   * ngay trong ngan (sheet modal bay focus, toast ben ngoai khong bam duoc).
+   */
+  function removeWithUndo(line: OnlineCartLine, index: number) {
     remove(line.id);
-    toast.add({
-      title: `Đã xoá ${line.name} khỏi giỏ hàng`,
-      type: "info",
-      timeout: UNDO_TIMEOUT_MS,
-      action: { label: "Hoàn tác", onClick: () => add(line, line.quantity) },
-    });
+    setRemoved({ line, index });
   }
+
+  function undoRemove() {
+    if (!removed) return;
+    restore(removed.line, removed.index);
+    setRemoved(null);
+    contentRef.current?.focus();
+  }
+
+  useEffect(() => {
+    if (!removed) return;
+    // Nut xoa vua bien mat cung dong — dua focus toi Hoàn tác.
+    undoButtonRef.current?.focus();
+    const timer = window.setTimeout(() => {
+      if (document.activeElement === undoButtonRef.current) {
+        contentRef.current?.focus();
+      }
+      setRemoved(null);
+    }, UNDO_TIMEOUT_MS);
+    return () => window.clearTimeout(timer);
+  }, [removed]);
 
   const totalItems = useMemo(
     () => lines.reduce((sum, line) => sum + line.quantity, 0),
@@ -159,7 +175,28 @@ function CartDrawerContent({ shipping }: { shipping: ShippingSettings }) {
         )}
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div
+          ref={contentRef}
+          tabIndex={-1}
+          className="flex-1 overflow-y-auto p-6 outline-none"
+        >
+          <div data-testid="cart-undo" role="status">
+            {removed ? (
+              <div className="border-border bg-muted/40 mb-4 flex items-center justify-between gap-3 rounded-xl border px-4 py-2.5 text-sm">
+                <span className="min-w-0 truncate">
+                  Đã xoá {removed.line.name}.
+                </span>
+                <button
+                  ref={undoButtonRef}
+                  type="button"
+                  onClick={undoRemove}
+                  className="text-primary hover:bg-primary/10 focus-visible:ring-ring inline-flex min-h-11 shrink-0 items-center rounded-lg px-3 font-bold transition-colors outline-none focus-visible:ring-2"
+                >
+                  Hoàn tác
+                </button>
+              </div>
+            ) : null}
+          </div>
           {lines.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center">
               <PackageX
@@ -183,7 +220,7 @@ function CartDrawerContent({ shipping }: { shipping: ShippingSettings }) {
             </div>
           ) : (
             <ul className="divide-border divide-y">
-              {lines.map((line) => {
+              {lines.map((line, index) => {
                 const lineTotal = line.price * line.quantity;
                 const isMaxStock = line.quantity >= line.stock;
                 const isMinQuantity = line.quantity <= 1;
@@ -221,7 +258,7 @@ function CartDrawerContent({ shipping }: { shipping: ShippingSettings }) {
                         </div>
                         <button
                           type="button"
-                          onClick={() => removeWithUndo(line)}
+                          onClick={() => removeWithUndo(line, index)}
                           aria-label={`Xóa ${line.name} khỏi giỏ hàng`}
                           className="text-muted-foreground hover:text-destructive inline-flex size-7 items-center justify-center rounded-lg transition-colors"
                         >

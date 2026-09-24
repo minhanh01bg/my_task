@@ -4,6 +4,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import ProductBySlugPage from "@/app/shop/p/[slug]/page";
 import ProductDetailPage from "@/app/shop/products/[id]/page";
 import { prisma } from "@/server/db/prisma";
+import { getShippingSettings } from "@/server/settings/store-settings";
 
 const SLUG_ID = "test-route-slug-01";
 const LEGACY_ID = "test-route-legacy-01";
@@ -78,6 +79,10 @@ describe("/shop/p/[slug]", () => {
       params: Promise.resolve({ slug: "test-route-nuoc-mam" }),
     });
     expect(isValidElement(element)).toBe(true);
+    // Gio hang tren trang san pham dung cai dat phi ship cua cua hang.
+    expect(
+      (element as { props: { shipping?: unknown } }).props.shipping,
+    ).toEqual(await getShippingSettings());
   });
 
   it("404 khi slug không tồn tại hoặc sản phẩm đã ẩn", async () => {

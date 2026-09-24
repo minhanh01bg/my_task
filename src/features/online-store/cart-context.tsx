@@ -30,6 +30,11 @@ interface CartContextValue {
   add: (product: OnlineProduct, quantity?: number) => CartMutationResult;
   setQuantity: (id: string, quantity: number) => void;
   remove: (id: string) => void;
+  /**
+   * Tra lai dong vua xoa (Hoàn tác) dung vi tri cu, khong phat phan hoi
+   * "đã thêm". Dong da duoc them lai trong luc cho thi giu so luong lon hon.
+   */
+  restore: (line: OnlineCartLine, index: number) => void;
   clear: () => void;
 }
 
@@ -168,6 +173,27 @@ export function OnlineCartProvider({
     setLines((current) => current.filter((line) => line.id !== id));
   }, []);
 
+  const restore = useCallback((line: OnlineCartLine, index: number) => {
+    setLines((current) => {
+      const existing = current.find((item) => item.id === line.id);
+      if (existing) {
+        return current.map((item) =>
+          item.id === line.id
+            ? {
+                ...item,
+                quantity: Math.min(
+                  item.stock,
+                  Math.max(item.quantity, line.quantity),
+                ),
+              }
+            : item,
+        );
+      }
+      const at = Math.max(0, Math.min(index, current.length));
+      return [...current.slice(0, at), line, ...current.slice(at)];
+    });
+  }, []);
+
   const clear = useCallback(() => {
     setLines([]);
   }, []);
@@ -184,6 +210,7 @@ export function OnlineCartProvider({
       add,
       setQuantity,
       remove,
+      restore,
       clear,
     }),
     [
@@ -197,6 +224,7 @@ export function OnlineCartProvider({
       add,
       setQuantity,
       remove,
+      restore,
       clear,
     ],
   );

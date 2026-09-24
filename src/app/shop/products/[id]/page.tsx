@@ -7,7 +7,10 @@ import {
 } from "@/features/online-store/product-page";
 import { productHref } from "@/lib/seo/product-href";
 import { getOnlineProductDetail } from "@/server/catalog/get-product-detail";
-import { getPublicStoreProfile } from "@/server/settings/store-settings";
+import {
+  getPublicStoreProfile,
+  getShippingSettings,
+} from "@/server/settings/store-settings";
 
 /** ISR: HTML không phụ thuộc cookie; tag cache (Task 4) lo invalidation. */
 export const revalidate = 60;
@@ -41,9 +44,10 @@ export default async function ProductDetailPage({
 }) {
   const { id } = await params;
   // Cùng loader `cache()` với generateMetadata → một truy vấn mỗi request.
-  const [detail, storeProfile] = await Promise.all([
+  const [detail, storeProfile, shipping] = await Promise.all([
     getOnlineProductDetail(id),
     getPublicStoreProfile(),
+    getShippingSettings(),
   ]);
 
   if (!detail) {
@@ -53,5 +57,11 @@ export default async function ProductDetailPage({
     permanentRedirect(productHref(detail.product));
   }
 
-  return <ProductPage detail={detail} storeProfile={storeProfile} />;
+  return (
+    <ProductPage
+      detail={detail}
+      storeProfile={storeProfile}
+      shipping={shipping}
+    />
+  );
 }

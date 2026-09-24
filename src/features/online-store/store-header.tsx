@@ -21,8 +21,11 @@ export function StoreHeader({
   shipping,
 }: {
   storeName: string;
-  /** Phi ship/nguong freeship cho gio hang; thieu thi dung mac dinh. */
-  shipping?: ShippingSettings;
+  /**
+   * Phi ship/nguong freeship cho gio hang (`getShippingSettings()`). Bat buoc
+   * de trang nao quen truyen thi typecheck bao loi, khong lang le dung mac dinh.
+   */
+  shipping: ShippingSettings;
 }) {
   const { lines, hydrated, openDrawer } = useOnlineCart();
   const { count: wishlistCount } = useWishlist();
