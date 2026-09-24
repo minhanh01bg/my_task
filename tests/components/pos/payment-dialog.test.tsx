@@ -257,4 +257,57 @@ describe("PaymentDialog", () => {
       ),
     );
   });
+
+  it("mo lai cho don moi thi xoa tien, tab va khach cua lan truoc", async () => {
+    const user = userEvent.setup();
+    const props = {
+      total: 25000,
+      orderCode: "DH0002",
+      bankAccount: account,
+      onCancel: vi.fn(),
+      onConfirm: vi.fn(),
+    };
+    const { rerender } = render(<PaymentDialog open {...props} />);
+
+    await user.type(screen.getByLabelText(/tiền khách đưa/i), "500000");
+    await user.click(screen.getByRole("tab", { name: /ghi nợ/i }));
+
+    rerender(<PaymentDialog open={false} {...props} />);
+    rerender(<PaymentDialog open {...props} />);
+
+    expect(screen.getByRole("tab", { name: /tiền mặt/i })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByLabelText(/tiền khách đưa/i)).toHaveValue(null);
+    expect(screen.getByRole("button", { name: /^xác nhận/i })).toBeDisabled();
+  });
+
+  it("Enter trong o tien khach dua xac nhan khi da du tien", async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn();
+    renderDialog({ total: 25000, onConfirm });
+
+    const input = screen.getByLabelText(/tiền khách đưa/i);
+    await user.type(input, "20000{Enter}");
+    expect(onConfirm).not.toHaveBeenCalled();
+
+    await user.clear(input);
+    await user.type(input, "50000{Enter}");
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onConfirm.mock.calls[0]![0].received).toBe(50000);
+  });
+
+  it("chuyen khoan chua nhan tien thi khong ghi la khach da dua tien", async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn();
+    renderDialog({ onConfirm });
+
+    await user.click(screen.getByRole("tab", { name: /chuyển khoản/i }));
+    await user.click(
+      screen.getByRole("button", { name: /chưa nhận được tiền/i }),
+    );
+
+    expect(onConfirm.mock.calls[0]![0].received).toBe(0);
+  });
 });

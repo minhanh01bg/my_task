@@ -46,6 +46,15 @@ describe("cart store", () => {
     expect(useCartStore.getState().lines[0]?.quantity).toBe(2.5);
   });
 
+  it("bo qua so luong khong duong de gio khong co dong 0", () => {
+    useCartStore.getState().addProduct(sugar);
+    const lineId = useCartStore.getState().lines[0]!.id;
+    useCartStore.getState().updateQuantity(lineId, 0);
+    useCartStore.getState().updateQuantity(lineId, -1);
+    useCartStore.getState().updateQuantity(lineId, Number.NaN);
+    expect(useCartStore.getState().lines[0]?.quantity).toBe(1);
+  });
+
   it("de gia van giu originalPrice", () => {
     useCartStore.getState().addProduct(sugar);
     const lineId = useCartStore.getState().lines[0]!.id;

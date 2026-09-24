@@ -36,6 +36,7 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     env: {
       DATABASE_URL,
+      CANONICAL_ORIGIN: BASE_URL,
       SESSION_SECRET:
         process.env.SESSION_SECRET ??
         "playwright-only-session-secret-at-least-32-chars",

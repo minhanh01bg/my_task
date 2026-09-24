@@ -61,6 +61,18 @@ export function PaymentDialog({
   const [customer, setCustomer] = useState<CustomerOption | null>(null);
   const cashInputRef = useRef<HTMLInputElement>(null);
 
+  // Dialog luon duoc mount san: moi lan mo cho don moi phai bat dau lai tu
+  // tien mat trong, neu khong tien/khach cua don truoc bi xac nhan nham.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setMethod("cash");
+      setReceived("");
+      setCustomer(null);
+    }
+  }
+
   const receivedValue = Math.round(Number(received) || 0);
   const change = Math.max(0, receivedValue - total);
   const cashEnough = receivedValue >= total;
@@ -87,7 +99,7 @@ export function PaymentDialog({
         },
       ],
       customerId: null,
-      received: total,
+      received: receivedNow ? total : 0,
     });
   }
 
@@ -183,6 +195,11 @@ export function PaymentDialog({
                   min="0"
                   value={received}
                   onChange={(event) => setReceived(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter") return;
+                    event.preventDefault();
+                    if (cashEnough && !submitting) confirmCash();
+                  }}
                   inputMode="numeric"
                   className="border-primary/30 bg-primary/5 h-16 rounded-2xl text-right text-3xl font-black tabular-nums"
                 />
@@ -263,7 +280,8 @@ export function PaymentDialog({
           ) : null}
         </div>
 
-        <div className="flex gap-2">
+        {/* Dinh o day hop thoai de nut xac nhan luon thay tren man hinh thap. */}
+        <div className="bg-background border-border sticky -bottom-4 -mx-4 grid grid-cols-2 gap-2 border-t px-4 py-3 sm:-bottom-6 sm:-mx-6 sm:flex sm:px-6">
           <DialogClose
             disabled={submitting}
             render={
@@ -282,7 +300,7 @@ export function PaymentDialog({
               <TouchButton
                 type="button"
                 variant="outline"
-                className="h-14 flex-1"
+                className="h-14 flex-1 leading-tight whitespace-normal"
                 disabled={submitting}
                 onClick={() => confirmTransfer(false)}
               >
@@ -290,7 +308,7 @@ export function PaymentDialog({
               </TouchButton>
               <TouchButton
                 type="button"
-                className="h-14 flex-1 text-lg"
+                className="col-span-2 h-14 flex-1 text-lg"
                 disabled={submitting}
                 onClick={() => confirmTransfer(true)}
               >

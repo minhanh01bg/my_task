@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Minus, Plus, Trash } from "@phosphor-icons/react";
 
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,14 @@ const stepperClass =
 const stepperInputClass =
   "h-full min-w-0 flex-1 appearance-none rounded-none border-0 bg-transparent px-1 text-center text-base font-bold tabular-nums shadow-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
+/** Chi cho phep chu so va MOT dau thap phan ("." hoac "," kieu Viet Nam). */
+const QUANTITY_DRAFT_PATTERN = /^\d*(?:[.,]\d*)?$/;
+
+function parseQuantity(draft: string): number | null {
+  const value = Number(draft.replace(",", "."));
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
 interface CartLineRowProps {
   line: CartLine;
   lineTotal: number;
@@ -24,6 +33,21 @@ export function CartLineRow({ line, lineTotal }: CartLineRowProps) {
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const updateUnitPrice = useCartStore((state) => state.updateUnitPrice);
   const removeLine = useCartStore((state) => state.removeLine);
+
+  // Ban nhap tam: cho phep o trong / "1," trong luc go ma khong ghi 0 vao gio.
+  const [draft, setDraft] = useState(String(line.quantity));
+  const [syncedQuantity, setSyncedQuantity] = useState(line.quantity);
+  if (line.quantity !== syncedQuantity) {
+    setSyncedQuantity(line.quantity);
+    if (parseQuantity(draft) !== line.quantity) setDraft(String(line.quantity));
+  }
+
+  function handleQuantityChange(next: string) {
+    if (!QUANTITY_DRAFT_PATTERN.test(next)) return;
+    setDraft(next);
+    const value = parseQuantity(next);
+    if (value !== null) updateQuantity(line.id, value);
+  }
 
   return (
     <li className="flex flex-col gap-2 border-b py-3">
@@ -56,23 +80,24 @@ export function CartLineRow({ line, lineTotal }: CartLineRowProps) {
             <button
               type="button"
               aria-label={`Bớt một ${line.unit} ${line.name}`}
-              onClick={() =>
-                updateQuantity(line.id, Math.max(0, line.quantity - 1))
-              }
-              className={`${stepperButtonClass} border-border border-r`}
+              disabled={line.quantity <= 1}
+              onClick={() => updateQuantity(line.id, line.quantity - 1)}
+              className={`${stepperButtonClass} border-border border-r disabled:pointer-events-none disabled:opacity-40`}
             >
               <Minus aria-hidden="true" weight="bold" className="size-4" />
             </button>
             <Input
               aria-label={`Số lượng ${line.name}`}
-              type="number"
+              type="text"
               inputMode="decimal"
-              step="any"
-              min="0"
-              value={line.quantity}
-              onChange={(event) =>
-                updateQuantity(line.id, Number(event.target.value) || 0)
-              }
+              autoComplete="off"
+              value={draft}
+              onChange={(event) => handleQuantityChange(event.target.value)}
+              onBlur={() => {
+                if (parseQuantity(draft) === null) {
+                  setDraft(String(line.quantity));
+                }
+              }}
               className={stepperInputClass}
             />
             <button

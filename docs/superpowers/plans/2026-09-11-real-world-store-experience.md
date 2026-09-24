@@ -2,6 +2,12 @@
 
 > **Quy chuẩn kỹ thuật:** Thực hiện theo TDD (Test-Driven Development), Next.js 16 App Router, React 19, Tailwind CSS 4, Prisma 6 SQLite, Zod 4. Mỗi nhiệm vụ đi kèm unit test, tuân thủ strict typing và commit riêng biệt theo chuẩn Conventional Commits.
 
+## Execution status — 2026-09-24
+
+Các phần triển khai còn thiếu đã hoàn tất và được xác minh trong [kế hoạch production readiness](2026-09-24-production-readiness.md): voucher và đánh giá thật, quick view, wishlist drawer, phí giao hàng từ cấu hình, hoàn tác giỏ hàng, hoá đơn K80, báo cáo và badge tồn kho.
+
+Cổng kiểm tra: 1.288 unit/integration test, 39 E2E test, lint/typecheck và production build đều đạt. Ảnh hai theme và PDF K80 lưu tại `e2e/screenshots/` (gitignored). Các quyết định mới về slug ổn định, motion và bảo vệ lịch sử voucher tuân theo kế hoạch 2026-09-24.
+
 ---
 
 ## 1. Mục tiêu và Tầm nhìn

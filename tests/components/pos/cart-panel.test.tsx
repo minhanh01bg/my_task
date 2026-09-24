@@ -86,6 +86,50 @@ describe("CartPanel", () => {
     expect(screen.getByTestId("cart-total")).toHaveTextContent("37.500");
   });
 
+  it("so luong nhan dau phay thap phan kieu Viet Nam", async () => {
+    const user = userEvent.setup();
+    useCartStore.getState().addProduct(sugar);
+    render(<CartPanel onCheckout={vi.fn()} />);
+
+    const quantityInput = screen.getByLabelText(/số lượng/i);
+    await user.clear(quantityInput);
+    await user.type(quantityInput, "1,5");
+
+    expect(quantityInput).toHaveValue("1,5");
+    expect(useCartStore.getState().lines[0]?.quantity).toBe(1.5);
+    expect(screen.getByTestId("cart-total")).toHaveTextContent("22.500");
+  });
+
+  it("xoa trang o so luong khong bien dong thanh 0, roi khoi o thi tra ve so cu", async () => {
+    const user = userEvent.setup();
+    useCartStore.getState().addProduct(sugar);
+    render(<CartPanel onCheckout={vi.fn()} />);
+
+    const quantityInput = screen.getByLabelText(/số lượng/i);
+    await user.clear(quantityInput);
+
+    expect(quantityInput).toHaveValue("");
+    expect(useCartStore.getState().lines[0]?.quantity).toBe(1);
+
+    await user.type(quantityInput, "-2");
+    expect(useCartStore.getState().lines[0]?.quantity).toBe(2);
+
+    await user.clear(quantityInput);
+    await user.tab();
+    expect(quantityInput).toHaveValue("2");
+  });
+
+  it("nut bot khong ha so luong xuong 0", async () => {
+    const user = userEvent.setup();
+    useCartStore.getState().addProduct(sugar);
+    render(<CartPanel onCheckout={vi.fn()} />);
+
+    const minus = screen.getByRole("button", { name: /bớt một/i });
+    expect(minus).toBeDisabled();
+    await user.click(minus);
+    expect(useCartStore.getState().lines[0]?.quantity).toBe(1);
+  });
+
   it("de gia cap nhat thanh tien", async () => {
     const user = userEvent.setup();
     useCartStore.getState().addProduct(sugar);

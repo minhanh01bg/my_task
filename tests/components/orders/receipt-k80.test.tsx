@@ -74,6 +74,26 @@ describe("ReceiptK80 component", () => {
     printSpy.mockRestore();
   });
 
+  it("đơn ghi nợ in nhãn tiếng Việt và số tiền còn phải thu", () => {
+    render(
+      <ReceiptK80
+        storeName="Tạp Hóa Việt"
+        order={{
+          ...sampleOrder,
+          payments: [{ method: "debt", amount: 122_000 }],
+          amountDue: 122_000,
+        }}
+      />,
+    );
+
+    expect(screen.queryByText(/debt/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/tiền khách đưa/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Ghi nợ:")).toBeInTheDocument();
+    expect(screen.getByText("CÒN PHẢI THU:").parentElement).toHaveTextContent(
+      "122.000",
+    );
+  });
+
   it("không in VietQR khi đơn tiền mặt đã trả đủ", () => {
     render(
       <ReceiptK80

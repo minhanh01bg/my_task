@@ -62,9 +62,9 @@ test("receipt enumeration: sequential code returns 404 while invalid nonce is no
   if (response?.status() === 404) {
     expect(response.status()).toBe(404);
   } else {
-    await expect(page.getByRole("heading", { name: /not found/i })).toBeVisible(
-      { timeout: 15000 },
-    );
+    await expect(
+      page.getByRole("heading", { name: "Không tìm thấy trang" }),
+    ).toBeVisible({ timeout: 15000 });
   }
 });
 
@@ -115,7 +115,7 @@ test("admin session lifecycle: unauthenticated redirect and logout cookie revoca
 
   await page.getByRole("textbox", { name: "Mật khẩu cửa hàng" }).fill("123456");
   await page.getByRole("button", { name: /vào bán hàng/i }).click();
-  await expect(page).toHaveURL(/.*\/pos/);
+  await expect(page).toHaveURL(/\/admin\/orders$/);
 
   // Admin can move to the public shop and return through an identity-aware link.
   await page.goto("/admin/orders");
@@ -138,10 +138,11 @@ test("admin session lifecycle: unauthenticated redirect and logout cookie revoca
 
 test("guest claim and guest revoke: access controls and unauthenticated protection", async ({
   request,
+  baseURL,
 }) => {
   // 1. Unauthenticated claim attempt returns 401
   const unauthClaim = await request.post("/api/customer/orders/claim", {
-    headers: { origin: "http://localhost:3000" },
+    headers: { origin: baseURL! },
     data: { token: "sample-guest-token-12345" },
   });
   expect(unauthClaim.status()).toBe(401);
@@ -160,7 +161,7 @@ test("guest claim and guest revoke: access controls and unauthenticated protecti
   const unauthRevoke = await request.post(
     "/api/customer/orders/guest-access/revoke",
     {
-      headers: { origin: "http://localhost:3000" },
+      headers: { origin: baseURL! },
       data: { orderId: "sample-order-id-12345" },
     },
   );
@@ -307,4 +308,53 @@ test("featured: hiển thị danh sách sản phẩm nổi bật trên landing p
   await page.goto("/shop");
   const railHeading = page.getByRole("heading", { name: "Sản phẩm nổi bật" });
   await expect(railHeading).toBeVisible();
+});
+
+test("mobile: header cửa hàng không làm trang tràn ngang", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await page.goto("/shop");
+  const productHref = await page
+    .locator('a[href^="/shop/p/"]')
+    .first()
+    .getAttribute("href");
+
+  for (const path of ["/shop", productHref!, "/shop/privacy"]) {
+    await page.goto(path);
+    await expect(
+      page.getByRole("button", { name: /mở giỏ hàng/i }),
+    ).toBeInViewport({ ratio: 1 });
+    const overflow = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth,
+    );
+    expect(overflow, `${path} tràn ngang`).toBeLessThanOrEqual(0);
+  }
+});
+
+test("ảnh sản phẩm dạng fill luôn nằm trong khung đã định vị", async ({
+  page,
+}) => {
+  const staticFillParents = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll('img[data-nimg="fill"]')]
+        .filter(
+          (img) => getComputedStyle(img.parentElement!).position === "static",
+        )
+        .map((img) => img.getAttribute("alt")),
+    );
+
+  await page.goto("/shop");
+  await page.waitForLoadState("networkidle");
+  expect(await staticFillParents()).toEqual([]);
+
+  await page.locator('a[href^="/shop/p/"]').first().click();
+  await page.waitForURL(/\/shop\/p\//);
+  await page.waitForLoadState("networkidle");
+  expect(await staticFillParents()).toEqual([]);
+
+  // Quay lại /shop để mục "đã xem gần đây" hiện ảnh vừa xem.
+  await page.goto("/shop");
+  await page.waitForLoadState("networkidle");
+  expect(await staticFillParents()).toEqual([]);
 });

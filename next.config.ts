@@ -49,6 +49,12 @@ const nextConfig: NextConfig = {
     formats: ["image/avif", "image/webp"],
     // 30 ngày: ảnh sản phẩm đổi thì đổi tên file (UUID) nên không sợ ảnh cũ.
     minimumCacheTTL: 2592000,
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+    ],
   },
   async redirects() {
     return [

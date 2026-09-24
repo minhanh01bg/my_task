@@ -36,25 +36,28 @@ export function StoreHeader({
   const prevCountRef = useRef(count);
 
   useEffect(() => {
-    if (count > prevCountRef.current) {
-      setIsBouncing(true);
-      const timer = setTimeout(() => setIsBouncing(false), 400);
-      return () => clearTimeout(timer);
-    }
+    const increased = count > prevCountRef.current;
     prevCountRef.current = count;
+    if (!increased) {
+      setIsBouncing(false);
+      return;
+    }
+    setIsBouncing(true);
+    const timer = setTimeout(() => setIsBouncing(false), 400);
+    return () => clearTimeout(timer);
   }, [count]);
 
   return (
     <>
       <header className="border-border bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-0 z-40 border-b backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
           <Link
             href="/shop"
-            className="font-heading text-foreground hover:text-primary text-xl font-bold tracking-tight transition-colors"
+            className="font-heading text-foreground hover:text-primary min-w-0 truncate text-lg font-bold tracking-tight transition-colors sm:text-xl"
           >
             {storeName}
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <SessionAwareActions />
             <ThemeToggle />
             <button
@@ -83,7 +86,7 @@ export function StoreHeader({
               className="min-h-11 font-bold"
             >
               <ShoppingBag aria-hidden="true" className="size-5" />
-              <span>Giỏ hàng</span>
+              <span className="hidden sm:inline">Giỏ hàng</span>
               <Badge
                 variant="secondary"
                 className={cn(

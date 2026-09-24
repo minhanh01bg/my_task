@@ -57,6 +57,10 @@ export function PromotionBanner({
                 fill
                 className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 384px"
+                unoptimized={
+                  promo.imageUrl.startsWith("http://") ||
+                  promo.imageUrl.startsWith("https://")
+                }
               />
             </div>
           ) : null}

@@ -75,4 +75,13 @@ describe("giu don", () => {
 
     expect(useHeldOrdersStore.getState().held).toHaveLength(0);
   });
+
+  it("luu don dang giu vao localStorage de tai lai trang khong mat", () => {
+    useHeldOrdersStore.getState().hold([line()], 0);
+
+    const saved = JSON.parse(
+      localStorage.getItem("an-phat-pos-held-orders") ?? "null",
+    ) as { state: { held: unknown[] } } | null;
+    expect(saved?.state.held).toHaveLength(1);
+  });
 });

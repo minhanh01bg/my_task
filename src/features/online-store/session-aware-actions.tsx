@@ -43,13 +43,16 @@ export function useStorefrontSession(): StorefrontSession {
  */
 const SESSION_BUTTON_CLASS = "min-h-11 font-bold sm:min-w-36";
 
-/** Giữ đúng khung của `CustomerNotificationButton` để không layout shift. */
+/**
+ * Giữ đúng khung của `CustomerNotificationButton` để không layout shift. Dưới
+ * `sm` bỏ ô trống này: header mobile không đủ chỗ cho một nút vô hình.
+ */
 function NotificationSlotPlaceholder() {
   return (
     <div
       aria-hidden="true"
       data-testid="customer-notification-placeholder"
-      className="relative inline-block"
+      className="relative hidden sm:inline-block"
     >
       <span className="inline-flex min-h-11 items-center justify-center rounded-xl border border-transparent px-3 font-bold">
         <span className="size-5" />

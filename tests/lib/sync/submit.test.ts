@@ -81,6 +81,7 @@ describe("submitOrder", () => {
     const result = await submitOrder(payload());
 
     expect(result.synced).toBe(false);
+    expect(result.rejected).toBeUndefined();
     expect(await countQueuedOrders()).toBe(1);
   });
 
@@ -97,6 +98,7 @@ describe("submitOrder", () => {
     const result = await submitOrder(payload());
 
     expect(result.synced).toBe(false);
+    expect(result.rejected).toBe("Sản phẩm đã xoá");
     const queued = await listQueuedOrders();
     expect(queued[0]?.lastError).toContain("Sản phẩm đã xoá");
   });

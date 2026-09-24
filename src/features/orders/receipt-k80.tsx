@@ -49,6 +49,16 @@ export interface ReceiptK80Props {
   showPrintButton?: boolean;
 }
 
+const PAYMENT_LABELS: Record<string, string> = {
+  cash: "Tiền khách đưa (Tiền mặt):",
+  transfer: "Chuyển khoản:",
+  debt: "Ghi nợ:",
+};
+
+function paymentLabel(method: string): string {
+  return PAYMENT_LABELS[method] ?? "Thanh toán khác:";
+}
+
 /**
  * Can QR khi con tien phai thu, hoac khach tra bang chuyen khoan (in lai QR de
  * doi chieu). So tien tren QR: phan con thieu, neu da du thi tong don.
@@ -257,6 +267,10 @@ function ReceiptPaper({
   qrSvg: string | null;
 }) {
   const shippingFee = Math.max(0, order.shippingFee ?? 0);
+  const due =
+    order.status === "cancelled"
+      ? 0
+      : Math.max(0, Math.round(order.amountDue ?? 0));
 
   return (
     <div className="w-full font-mono text-[11px] leading-tight text-black">
@@ -366,15 +380,7 @@ function ReceiptPaper({
             {order.payments.map((p, idx) => (
               <div key={idx}>
                 <div className="flex justify-between">
-                  <span>
-                    Tiền khách đưa (
-                    {p.method === "cash"
-                      ? "Tiền mặt"
-                      : p.method === "transfer"
-                        ? "Chuyển khoản"
-                        : p.method}
-                    ):
-                  </span>
+                  <span>{paymentLabel(p.method)}</span>
                   <span>{formatVnd(p.amount)} ₫</span>
                 </div>
                 {p.change !== undefined && p.change > 0 && (
@@ -385,6 +391,13 @@ function ReceiptPaper({
                 )}
               </div>
             ))}
+          </div>
+        ) : null}
+
+        {due > 0 ? (
+          <div className="flex justify-between pt-1 text-xs font-black">
+            <span>CÒN PHẢI THU:</span>
+            <span>{formatVnd(due)} ₫</span>
           </div>
         ) : null}
       </div>

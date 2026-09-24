@@ -40,4 +40,9 @@ export interface SubmitResult {
   /** true khi server da nhan don; false khi don nam trong hang doi. */
   synced: boolean;
   order: { code: string; total: number } | null;
+  /**
+   * Ly do server tu choi han (4xx do du lieu don). Don van nam trong hang doi
+   * nhung gui lai se khong tu het loi — UI phai bao nguoi dung xu ly tay.
+   */
+  rejected?: string;
 }

@@ -299,7 +299,7 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
                       href={productHref(rel)}
                       tabIndex={-1}
                       aria-hidden="true"
-                      className="block h-full w-full"
+                      className="relative block h-full w-full"
                     >
                       {rel.imageUrl ? (
                         <Image

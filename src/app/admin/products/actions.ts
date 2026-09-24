@@ -78,17 +78,21 @@ export async function saveProductAction(formData: FormData) {
   }
 
   const image = formData.get("image");
-  let imageUrl: string | undefined;
+  let effectiveImageUrl: string | null = parsed.data.imageUrl || null;
 
   if (image instanceof File && image.size > 0) {
     const saved = await saveProductImage(image);
     if (!saved.ok) {
       return { ok: false as const, message: saved.message };
     }
-    imageUrl = saved.imageUrl;
+    effectiveImageUrl = saved.imageUrl;
   }
 
-  await saveProduct({ ...parsed.data, isActive: true, imageUrl });
+  await saveProduct({
+    ...parsed.data,
+    isActive: true,
+    imageUrl: effectiveImageUrl,
+  });
 
   revalidatePath("/admin/products");
   revalidatePath("/pos");

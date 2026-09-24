@@ -88,6 +88,39 @@ describe("Admin Promotion Management Actions", () => {
         }).success,
       ).toBe(false);
     });
+
+    it("chấp nhận đường dẫn nội bộ hoặc URL HTTPS hợp lệ cho imageUrl, từ chối URL cục bộ hoặc không an toàn", () => {
+      // Nội bộ
+      expect(
+        promotionActionSchema.safeParse({
+          title: "Ảnh nội bộ",
+          imageUrl: "/uploads/promo.jpg",
+        }).success,
+      ).toBe(true);
+
+      // HTTPS hợp lệ
+      expect(
+        promotionActionSchema.safeParse({
+          title: "Ảnh HTTPS",
+          imageUrl: "https://images.unsplash.com/photo-test",
+        }).success,
+      ).toBe(true);
+
+      // Không cho phép localhost / 127.0.0.1
+      expect(
+        promotionActionSchema.safeParse({
+          title: "Ảnh localhost",
+          imageUrl: "http://127.0.0.1:3000/bad.png",
+        }).success,
+      ).toBe(false);
+
+      expect(
+        promotionActionSchema.safeParse({
+          title: "Ảnh http không an toàn",
+          imageUrl: "http://example.com/bad.png",
+        }).success,
+      ).toBe(false);
+    });
   });
 
   describe("Thao tác CRUD với quyền admin", () => {
