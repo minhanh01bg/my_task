@@ -13,7 +13,8 @@ import { CartFeedback } from "./cart-feedback";
 import { CatalogFilters } from "./catalog-filters";
 import { filterAndSortProducts } from "./filter-products";
 import { ProductCard } from "./product-card";
-import type { OnlineCatalog } from "./types";
+import { QuickViewModal } from "./quick-view-modal";
+import type { OnlineCatalog, OnlineProduct } from "./types";
 
 const defaultFilter: CatalogFilter = {
   q: "",
@@ -88,6 +89,7 @@ function CatalogBrowserView({
     setFilter(parseFilterFromParams(searchParams));
   }
 
+  const [quickView, setQuickView] = useState<OnlineProduct | null>(null);
   const { has: hasWishlist } = useWishlist();
   const isWishlistOnly = searchParams?.get("wishlist") === "true";
 
@@ -146,7 +148,11 @@ function CatalogBrowserView({
       {products.length > 0 ? (
         <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
           {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              onQuickView={setQuickView}
+            />
           ))}
         </div>
       ) : (
@@ -168,6 +174,7 @@ function CatalogBrowserView({
         </div>
       )}
 
+      <QuickViewModal product={quickView} onClose={() => setQuickView(null)} />
       <CartFeedback />
     </section>
   );

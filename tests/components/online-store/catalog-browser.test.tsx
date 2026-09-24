@@ -143,4 +143,22 @@ describe("CatalogBrowser", () => {
       scroll: false,
     });
   });
+
+  it("nút Xem nhanh mở QuickViewModal của đúng sản phẩm", async () => {
+    const user = userEvent.setup();
+    render(
+      <OnlineCartProvider>
+        <CatalogBrowser catalog={catalog} />
+      </OnlineCartProvider>,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Xem nhanh Cà phê sữa" }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("Cà phê sữa");
+    expect(dialog).toHaveTextContent("Đơn vị tính: chai");
+    await user.click(screen.getByRole("button", { name: "Đóng xem nhanh" }));
+  });
 });
