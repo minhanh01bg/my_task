@@ -61,6 +61,14 @@ interface LastSale {
   receipt: ReceiptOrder;
 }
 
+/** Chi don tra du moi la "thanh toan thanh cong"; ghi no/chuyen khoan chua nhan thi noi dung. */
+function saleTitle(receipt: ReceiptOrder): string {
+  if (!receipt.amountDue) return "Thanh toán thành công";
+  return receipt.payments?.some((payment) => payment.method === "debt")
+    ? "Đã ghi nợ cho khách"
+    : "Đơn chờ nhận chuyển khoản";
+}
+
 /** Chup lai gio hang TRUOC khi xoa de van in duoc hoa don sau khi ban xong. */
 function buildPosReceipt(
   code: string,
@@ -381,23 +389,34 @@ export function PosScreen({
                 />
               </div>
               <DialogTitle className="text-2xl leading-tight font-bold">
-                Thanh toán thành công
+                {saleTitle(lastSale.receipt)}
               </DialogTitle>
               <DialogDescription className="text-base">
                 {lastSale.synced
                   ? `Đã lưu đơn ${lastSale.code}`
                   : "Đã lưu tạm — sẽ đồng bộ khi có mạng"}
               </DialogDescription>
-              <p className="text-lg">
-                Khách đưa {formatVnd(lastSale.received)}
-              </p>
-              <p className="text-muted-foreground text-sm">Tiền thối lại</p>
-              <p
-                data-testid="last-sale-change"
-                className="text-7xl font-bold tabular-nums"
-              >
-                {formatVnd(lastSale.change)}
-              </p>
+              {lastSale.receipt.amountDue ? (
+                <p className="text-lg">
+                  Còn phải thu{" "}
+                  <span className="font-bold tabular-nums">
+                    {formatVnd(lastSale.receipt.amountDue)}
+                  </span>
+                </p>
+              ) : (
+                <>
+                  <p className="text-lg">
+                    Khách đưa {formatVnd(lastSale.received)}
+                  </p>
+                  <p className="text-muted-foreground text-sm">Tiền thối lại</p>
+                  <p
+                    data-testid="last-sale-change"
+                    className="text-7xl font-bold tabular-nums"
+                  >
+                    {formatVnd(lastSale.change)}
+                  </p>
+                </>
+              )}
               <PrintReceiptButton
                 className="h-12 w-full"
                 storeName={storeName}

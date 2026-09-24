@@ -74,4 +74,22 @@ describe("PosScreen — in hoá đơn sau khi thanh toán", () => {
     expect(within(dialog!).getByText("Nước mắm Nam Ngư")).toBeInTheDocument();
     expect(within(dialog!).getByText("TIỆM")).toBeInTheDocument();
   });
+
+  it("chuyển khoản chưa nhận tiền không báo là đã thanh toán", async () => {
+    render(<PosScreen catalog={CATALOG} bankAccount={null} storeName="Tiệm" />);
+
+    fireEvent.click(screen.getByRole("button", { name: /thanh toán/i }));
+    fireEvent.click(await screen.findByRole("tab", { name: "Chuyển khoản" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Chưa nhận được tiền" }),
+    );
+
+    expect(
+      await screen.findByText("Đơn chờ nhận chuyển khoản"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Thanh toán thành công")).not.toBeInTheDocument();
+    expect(screen.queryByText(/khách đưa/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Tiền thối lại")).not.toBeInTheDocument();
+    expect(screen.getByText(/còn phải thu/i)).toHaveTextContent("84.000");
+  });
 });
