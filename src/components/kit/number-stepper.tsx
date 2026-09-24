@@ -16,6 +16,7 @@ export interface NumberStepperProps {
   max?: number;
   step?: number | "any";
   allowDecimal?: boolean;
+  allowNegative?: boolean;
   quickSteps?: readonly number[];
   unit?: string;
   isCurrency?: boolean;
@@ -41,10 +42,11 @@ export function NumberStepper({
   defaultValue = 0,
   value,
   onChange,
-  min = 0,
+  min,
   max,
   step = 1,
   allowDecimal = false,
+  allowNegative = false,
   quickSteps,
   unit,
   isCurrency = false,
@@ -99,6 +101,7 @@ export function NumberStepper({
   }, []);
 
   const numericStep = typeof step === "number" ? step : 1;
+  const effectiveMin = allowNegative ? min : min !== undefined ? min : 0;
 
   const handleStep = (delta: number) => {
     const input = inputRef.current;
@@ -106,7 +109,8 @@ export function NumberStepper({
 
     const currentVal = parseFloat(input.value) || 0;
     let nextVal = currentVal + delta;
-    if (min !== undefined && nextVal < min) nextVal = min;
+    if (effectiveMin !== undefined && nextVal < effectiveMin)
+      nextVal = effectiveMin;
     if (max !== undefined && nextVal > max) nextVal = max;
 
     // Lam tron tranh loi so thuc JavaScript (vi du 0.1 + 0.2 = 0.30000000000000004)
@@ -176,7 +180,10 @@ export function NumberStepper({
         <button
           type="button"
           onClick={() => handleStep(-numericStep)}
-          disabled={disabled || (min !== undefined && displayValue <= min)}
+          disabled={
+            disabled ||
+            (effectiveMin !== undefined && displayValue <= effectiveMin)
+          }
           aria-label={`Giảm ${labelPrefix}${stepFormatted}`}
           className="hover:bg-muted active:bg-muted/80 border-input/60 text-muted-foreground hover:text-foreground inline-flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center border-r transition-colors select-none disabled:pointer-events-none disabled:opacity-30 sm:w-14"
         >
@@ -189,9 +196,9 @@ export function NumberStepper({
           name={name}
           type="number"
           inputMode={isCurrency ? "numeric" : "decimal"}
-          min={min}
+          min={effectiveMin}
           max={max}
-          step={allowDecimal ? "any" : step}
+          step={allowDecimal || isCurrency ? "any" : step}
           defaultValue={defaultValue}
           value={value}
           required={required}

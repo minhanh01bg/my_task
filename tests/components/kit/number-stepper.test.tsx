@@ -20,7 +20,7 @@ describe("NumberStepper (Kit)", () => {
     const input = screen.getByLabelText("Giá bán") as HTMLInputElement;
     expect(input).toBeInTheDocument();
     expect(input.value).toBe("25000");
-    expect(input.step).toBe("1000");
+    expect(input.step).toBe("any");
 
     // Hiển thị định dạng tiền tệ VND
     expect(screen.getByText(/25\.000 ₫/)).toBeInTheDocument();

@@ -86,7 +86,8 @@ export function QuickProductEdit({ product }: QuickProductEditProps) {
             <span className="text-sm font-bold">Tồn kho ({product.unit})</span>
             <NumberStepper
               name="stock"
-              min={0}
+              allowNegative
+              allowDecimal
               step={1}
               quickSteps={[1, 5, 10, 50]}
               defaultValue={product.stock}

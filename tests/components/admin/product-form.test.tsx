@@ -36,7 +36,7 @@ describe("ProductForm (Admin)", () => {
     )!;
     expect(priceInput).toBeInTheDocument();
     expect(priceInput.value).toBe("12000");
-    expect(priceInput.step).toBe("1000");
+    expect(priceInput.step).toBe("any");
 
     // Kiểm tra trường Tồn kho hỗ trợ số thập phân (step="any")
     const stockInput = container.querySelector<HTMLInputElement>(
@@ -52,7 +52,7 @@ describe("ProductForm (Admin)", () => {
     )!;
     expect(costPriceInput).toBeInTheDocument();
     expect(costPriceInput.value).toBe("9000");
-    expect(costPriceInput.step).toBe("1000");
+    expect(costPriceInput.step).toBe("any");
   });
 
   it("cho phép tăng giảm giá bán theo từng nghìn đồng qua nút stepper", async () => {
@@ -203,5 +203,65 @@ describe("ProductForm (Admin)", () => {
     });
     await user.click(chip10kCost);
     expect(costPriceInput.value).toBe("116000");
+  });
+
+  it("chấp nhận giá bán và giá vốn lẻ 4.500 (như Mì Hảo Hảo) mà không gây lỗi stepMismatch", () => {
+    const { container } = render(
+      <ProductForm
+        categories={mockCategories}
+        product={{
+          id: "prod-hao-hao",
+          name: "Mì Hảo Hảo Tôm Chua Cay",
+          aliases: "mi goi",
+          sku: "HH-01",
+          categoryId: "cat-2",
+          unit: "gói",
+          stock: 100,
+          price: 4500,
+          costPrice: 3800,
+          imageUrl: null,
+        }}
+      />,
+    );
+
+    const priceInput = container.querySelector<HTMLInputElement>(
+      'input[name="price"]',
+    )!;
+    const costPriceInput = container.querySelector<HTMLInputElement>(
+      'input[name="costPrice"]',
+    )!;
+
+    expect(priceInput.value).toBe("4500");
+    expect(priceInput.validity.stepMismatch).toBe(false);
+
+    expect(costPriceInput.value).toBe("3800");
+    expect(costPriceInput.validity.stepMismatch).toBe(false);
+  });
+
+  it("hỗ trợ hiển thị và chỉnh sửa sản phẩm có tồn kho âm từ POS", () => {
+    const { container } = render(
+      <ProductForm
+        categories={mockCategories}
+        product={{
+          id: "prod-neg-stock",
+          name: "Sản phẩm âm kho",
+          aliases: null,
+          sku: "NEG-01",
+          categoryId: "cat-1",
+          unit: "cái",
+          stock: -4.5,
+          price: 15000,
+          costPrice: 10000,
+          imageUrl: null,
+        }}
+      />,
+    );
+
+    const stockInput = container.querySelector<HTMLInputElement>(
+      'input[name="stock"]',
+    )!;
+
+    expect(stockInput.value).toBe("-4.5");
+    expect(stockInput.validity.rangeUnderflow).toBe(false);
   });
 });
