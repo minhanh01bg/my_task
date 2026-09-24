@@ -109,6 +109,38 @@ export function ChartSvg({
   // Generate SVG path for area fill
   const areaD = `${pathD} L ${points[points.length - 1].x},${height - paddingY} L ${points[0].x},${height - paddingY} Z`;
 
+  const summarize = (name: string, values: number[]): string => {
+    let maxIndex = 0;
+    let minIndex = 0;
+    values.forEach((value, index) => {
+      if (value > values[maxIndex]) maxIndex = index;
+      if (value < values[minIndex]) minIndex = index;
+    });
+    const total = values.reduce((sum, value) => sum + value, 0);
+    return `${name}: tổng ${formatDisplayValue(total)}, cao nhất ${formatDisplayValue(values[maxIndex])} (${data[maxIndex].label}), thấp nhất ${formatDisplayValue(values[minIndex])} (${data[minIndex].label})`;
+  };
+  const range =
+    data.length > 1
+      ? `${data.length} điểm từ ${data[0].label} đến ${data[data.length - 1].label}`
+      : `1 điểm (${data[0].label})`;
+  const seriesSummary = twoSeries
+    ? [
+        summarize(
+          seriesLabels[0],
+          data.map((d) => d.value),
+        ),
+        summarize(
+          seriesLabels[1],
+          data.map((d) => d.secondaryValue ?? 0),
+        ),
+      ].join("; ")
+    : summarize(
+        "Giá trị",
+        data.map((d) => d.value),
+      );
+  /** Tom tat cho trinh doc man hinh; nhan ngay ben duoi van la phan chi tiet. */
+  const ariaLabel = `${title ?? "Biểu đồ"}: ${range}. ${seriesSummary}.`;
+
   const labelStep =
     data.length > MAX_AXIS_LABELS ? Math.ceil(data.length / 10) : 1;
   const hovered = hoverIndex !== null ? points[hoverIndex] : undefined;
@@ -178,6 +210,8 @@ export function ChartSvg({
 
       <div className="relative w-full overflow-hidden">
         <svg
+          role="img"
+          aria-label={ariaLabel}
           viewBox={`0 0 ${width} ${height}`}
           className="h-auto w-full overflow-visible"
         >

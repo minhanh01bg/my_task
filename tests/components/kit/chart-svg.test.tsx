@@ -72,6 +72,38 @@ describe("ChartSvg component", () => {
     expect(screen.getByText(/50k ₫/)).toBeInTheDocument();
   });
 
+  it("SVG có role img và aria-label tóm tắt series bằng tiếng Việt", () => {
+    render(
+      <ChartSvg data={sampleData} title="Doanh thu tuần" valueFormat="vnd" />,
+    );
+    const img = screen.getByRole("img", { name: /Doanh thu tuần/ });
+    expect(img.tagName.toLowerCase()).toBe("svg");
+    const label = img.getAttribute("aria-label") ?? "";
+    expect(label).toContain("7 điểm");
+    expect(label).toContain("T2");
+    expect(label).toContain("CN");
+    expect(label).toMatch(/cao nhất 6\.000\.000 ₫ \(T7\)/);
+    expect(label).toMatch(/thấp nhất 1\.200\.000 ₫ \(T2\)/);
+    // Danh sach nhan ngay van giu lam phan chi tiet.
+    expect(screen.getByText("T4")).toBeInTheDocument();
+  });
+
+  it("aria-label tóm tắt cả hai series", () => {
+    render(
+      <ChartSvg
+        data={[
+          { label: "01", value: 100_000, secondaryValue: 50_000 },
+          { label: "02", value: 200_000, secondaryValue: 300_000 },
+        ]}
+        seriesLabels={["Tại quầy", "Online"]}
+        valueFormat="vnd"
+      />,
+    );
+    const label = screen.getByRole("img").getAttribute("aria-label") ?? "";
+    expect(label).toMatch(/Tại quầy: tổng 300\.000 ₫/);
+    expect(label).toMatch(/Online: tổng 350\.000 ₫/);
+  });
+
   it("thưa nhãn trục ngang khi nhiều điểm (30 ngày)", () => {
     const data = Array.from({ length: 30 }, (_, i) => ({
       label: String(i + 1).padStart(2, "0"),

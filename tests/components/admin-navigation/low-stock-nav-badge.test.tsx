@@ -12,7 +12,17 @@ describe("LowStockNavBadge", () => {
     render(await LowStockNavBadge());
 
     const badge = screen.getByText("4");
-    expect(badge).toHaveAttribute("aria-label", "4 sản phẩm sắp hết hàng");
+    // Ten doc cho trinh doc man hinh nam trong chu sr-only, khong dung aria-label tren span.
+    expect(badge.closest("[data-slot=low-stock-badge]")).not.toHaveAttribute(
+      "aria-label",
+    );
+    expect(
+      screen.getByText("4 sản phẩm sắp hết hàng", { selector: ".sr-only" }),
+    ).toBeInTheDocument();
+    expect(badge.closest("[data-slot=low-stock-badge]")).toHaveAttribute(
+      "title",
+      "4 sản phẩm sắp hết hàng",
+    );
   });
 
   it("gộp số lớn thành 99+", async () => {

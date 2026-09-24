@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, HeartOff, ShoppingCart, X } from "lucide-react";
+import { z } from "zod";
 
 import { EmptyState } from "@/components/kit/empty-state";
 import { Skeleton } from "@/components/kit/skeleton-loader";
@@ -29,16 +30,35 @@ interface WishlistDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
+/** Hinh dang `GET /api/online/wishlist` — sai dang thi coi nhu loi tai. */
+const wishlistProductSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string().nullable().optional(),
+  price: z.number().int().nonnegative(),
+  unit: z.string(),
+  stock: z.number(),
+  imageUrl: z.string().nullable(),
+  categoryId: z.string().nullable(),
+  searchText: z.string(),
+  soldCount: z.number().optional(),
+  ratingAvg: z.number().optional(),
+  ratingCount: z.number().optional(),
+}) satisfies z.ZodType<OnlineProduct>;
+
+const wishlistResponseSchema = z.object({
+  data: z.object({ products: z.array(wishlistProductSchema) }),
+});
+
 async function fetchWishlistProducts(ids: string[]): Promise<OnlineProduct[]> {
   const response = await fetch(
     `${WISHLIST_URL}?ids=${encodeURIComponent(ids.join(","))}`,
     { cache: "no-store" },
   );
   if (!response.ok) throw new Error("wishlist_fetch_failed");
-  const body = (await response.json()) as {
-    data?: { products?: OnlineProduct[] };
-  };
-  return body.data?.products ?? [];
+  const parsed = wishlistResponseSchema.safeParse(await response.json());
+  if (!parsed.success) throw new Error("wishlist_response_invalid");
+  return parsed.data.data.products;
 }
 
 /**
@@ -51,11 +71,25 @@ export function WishlistDrawer({ open, onOpenChange }: WishlistDrawerProps) {
   const [loaded, setLoaded] = useState<Map<string, OnlineProduct>>(
     () => new Map(),
   );
-  /** Id da hoi server (ke ca id khong con ban) — tranh goi lai lien tuc. */
+  /**
+   * Id da hoi server TRONG LAN MO NAY (ke ca id khong con ban) — tranh goi lai
+   * lien tuc. Moi lan mo ngan xoa di de tai lai gia/ton kho moi.
+   */
   const [requested, setRequested] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
   const [failed, setFailed] = useState(false);
+  const [wasOpen, setWasOpen] = useState(open);
+
+  // Moi lan mo ngan: hoi lai server (gia/ton kho co the da doi), van hien du
+  // lieu cu trong luc tai. Dieu chinh state ngay khi render thay vi effect.
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setRequested(new Set());
+      setFailed(false);
+    }
+  }
 
   const missing = useMemo(
     () => items.filter((id) => !requested.has(id)),
@@ -71,6 +105,7 @@ export function WishlistDrawer({ open, onOpenChange }: WishlistDrawerProps) {
         if (cancelled) return;
         setLoaded((current) => {
           const next = new Map(current);
+          for (const id of missing) next.delete(id);
           for (const product of products) next.set(product.id, product);
           return next;
         });
@@ -84,19 +119,16 @@ export function WishlistDrawer({ open, onOpenChange }: WishlistDrawerProps) {
     };
   }, [open, missing, failed]);
 
+  /** Chi ve khung cho san pham chua co du lieu cu — tai lai thi giu ban cu. */
+  const skeletonCount = missing.filter((id) => !loaded.has(id)).length;
+
   const products = items.flatMap((id) => {
     const product = loaded.get(id);
     return product ? [product] : [];
   });
 
   return (
-    <Sheet
-      open={open}
-      onOpenChange={(next) => {
-        if (next) setFailed(false);
-        onOpenChange(next);
-      }}
-    >
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
         showCloseButton={false}
@@ -213,7 +245,7 @@ export function WishlistDrawer({ open, onOpenChange }: WishlistDrawerProps) {
               })}
               {loading
                 ? Array.from(
-                    { length: Math.min(missing.length, 3) },
+                    { length: Math.min(skeletonCount, 3) },
                     (_, index) => (
                       <li
                         key={`skeleton-${index}`}

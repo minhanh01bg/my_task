@@ -7,6 +7,7 @@ import {
   useOnlineCart,
 } from "@/features/online-store/cart-context";
 import { StoreHeader } from "@/features/online-store/store-header";
+import { DEFAULT_SHIPPING_SETTINGS } from "@/lib/shipping/shipping-fee";
 
 const PRODUCTS = [
   {
@@ -41,7 +42,7 @@ function CartCount() {
 function renderHeader() {
   return render(
     <OnlineCartProvider>
-      <StoreHeader storeName="Tiệm" />
+      <StoreHeader storeName="Tiệm" shipping={DEFAULT_SHIPPING_SETTINGS} />
       <CartCount />
     </OnlineCartProvider>,
   );
@@ -136,6 +137,73 @@ describe("WishlistDrawer", () => {
       ).toBeInTheDocument(),
     );
     expect(localStorage.getItem("online-wishlist-v1")).toBe("[]");
+  });
+
+  it("phản hồi API sai dạng thì báo lỗi thay vì hiển thị dữ liệu hỏng", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem("online-wishlist-v1", JSON.stringify(["p1"]));
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.startsWith("/api/online/wishlist")) {
+        return {
+          ok: true,
+          json: async () => ({
+            data: { products: [{ id: "p1", price: "x" }] },
+          }),
+        } as Response;
+      }
+      return {
+        ok: true,
+        json: async () => ({ isAdmin: false, isCustomer: false }),
+      } as Response;
+    });
+    renderHeader();
+
+    await user.click(
+      screen.getByRole("button", { name: /danh sách yêu thích/i }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Sản phẩm yêu thích",
+    });
+    expect(
+      await within(dialog).findByText("Không tải được danh sách yêu thích."),
+    ).toBeInTheDocument();
+  });
+
+  it("mỗi lần mở ngăn tải lại giá/tồn kho mới", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem("online-wishlist-v1", JSON.stringify(["p1"]));
+    const fetchSpy = mockFetch();
+    renderHeader();
+    const wishlistCalls = () =>
+      fetchSpy.mock.calls.filter(([url]) =>
+        String(url).startsWith("/api/online/wishlist"),
+      ).length;
+
+    const trigger = screen.getByRole("button", {
+      name: /danh sách yêu thích/i,
+    });
+    await user.click(trigger);
+    let dialog = await screen.findByRole("dialog", {
+      name: "Sản phẩm yêu thích",
+    });
+    await within(dialog).findByRole("link", { name: "Gạo ST25" });
+    expect(wishlistCalls()).toBe(1);
+
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: "Đóng danh sách yêu thích",
+      }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Sản phẩm yêu thích" }),
+      ).not.toBeInTheDocument(),
+    );
+
+    await user.click(trigger);
+    dialog = await screen.findByRole("dialog", { name: "Sản phẩm yêu thích" });
+    await waitFor(() => expect(wishlistCalls()).toBe(2));
   });
 
   it("danh sách rỗng hiện trạng thái trống, không gọi API", async () => {

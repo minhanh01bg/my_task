@@ -9,14 +9,16 @@ export async function LowStockNavBadge() {
   const count = await countLowStock();
   if (count <= 0) return null;
 
+  const label = `${count} sản phẩm sắp hết hàng`;
   return (
     <span
       data-slot="low-stock-badge"
-      aria-label={`${count} sản phẩm sắp hết hàng`}
-      title={`${count} sản phẩm sắp hết hàng`}
+      title={label}
       className="bg-warning text-warning-foreground ml-auto inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] leading-5 font-bold tabular-nums"
     >
-      {count > 99 ? "99+" : count}
+      {/* aria-label tren span khong duoc doc on dinh — dung chu sr-only. */}
+      <span aria-hidden="true">{count > 99 ? "99+" : count}</span>
+      <span className="sr-only">{label}</span>
     </span>
   );
 }
