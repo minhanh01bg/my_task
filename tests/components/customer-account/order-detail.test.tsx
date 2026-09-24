@@ -32,7 +32,12 @@ const mockOrder = {
 
 describe("CustomerOrderDetail", () => {
   it("hiển thị nhãn trạng thái tiếng Việt thân thiện và thanh tiến trình đơn hàng", () => {
-    render(<CustomerOrderDetail order={mockOrder} />);
+    render(
+      <CustomerOrderDetail
+        order={mockOrder}
+        timeline={<ol aria-label="timeline-slot" />}
+      />,
+    );
 
     expect(screen.getByText("Đơn DH-ONLINE-001")).toBeInTheDocument();
     expect(screen.getByText("Đang đóng gói hàng")).toBeInTheDocument();
@@ -48,10 +53,10 @@ describe("CustomerOrderDetail", () => {
     ).toBeInTheDocument();
     expect(screen.getAllByText("180.000 ₫").length).toBe(2);
 
-    // Stepper checks
-    expect(screen.getByText("Đặt hàng")).toBeInTheDocument();
-    expect(screen.getByText("Xác nhận")).toBeInTheDocument();
-    expect(screen.getByText("Đóng gói")).toBeInTheDocument();
+    // Timeline do trang truyen vao qua slot
+    expect(
+      screen.getByRole("list", { name: "timeline-slot" }),
+    ).toBeInTheDocument();
   });
 
   it("hiển thị cảnh báo đơn đã hủy rõ ràng", () => {
@@ -60,9 +65,17 @@ describe("CustomerOrderDetail", () => {
       status: "cancelled",
       fulfillmentStatus: "cancelled",
     };
-    render(<CustomerOrderDetail order={cancelledOrder} />);
+    render(
+      <CustomerOrderDetail
+        order={cancelledOrder}
+        timeline={<ol aria-label="timeline-slot" />}
+      />,
+    );
 
     expect(screen.getByText("Đơn hàng đã bị hủy")).toBeInTheDocument();
+    expect(
+      screen.getByRole("list", { name: "timeline-slot" }),
+    ).toBeInTheDocument();
   });
 
   it("có nút in đơn hàng và gọi window.print khi bấm", async () => {

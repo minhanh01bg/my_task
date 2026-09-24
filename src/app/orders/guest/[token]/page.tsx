@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
+
 import { ClaimOrderButton } from "@/features/customer-account/claim-order-button";
 import { CustomerOrderDetail } from "@/features/customer-account/order-detail";
+import { OrderTimeline } from "@/features/customer-account/order-timeline";
 import { findGuestOrder } from "@/server/orders/order-access";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +22,10 @@ export default async function GuestOrderPage({
 
   return (
     <div className="mx-auto max-w-3xl">
-      <CustomerOrderDetail order={access.order} />
+      <CustomerOrderDetail
+        order={access.order}
+        timeline={<OrderTimeline order={access.order} />}
+      />
       <div className="px-4">
         <ClaimOrderButton guestToken={token} />
       </div>
