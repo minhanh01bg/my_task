@@ -7,12 +7,14 @@ import {
   ArrowsClockwise,
   ChartBar,
   CreditCard,
+  Gauge,
   Gear,
   List,
   Megaphone,
   Package,
   ShoppingCart,
   SquaresFour,
+  Star,
   Storefront,
   TextAlignLeft,
   Ticket,
@@ -32,9 +34,16 @@ import {
 } from "@/components/ui/sheet";
 import { AdminLogoutButton } from "@/features/admin-navigation/admin-logout-button";
 import { NotificationButton } from "@/features/admin-notifications/notification-button";
+import { AdminSearchButton } from "@/features/admin-search/admin-search-button";
 import { cn } from "@/lib/utils";
 
 const NAV = [
+  {
+    href: "/admin",
+    label: "Tổng quan",
+    shortLabel: "Tổng quan",
+    icon: Gauge,
+  },
   {
     href: "/pos",
     label: "Quầy bán hàng",
@@ -71,6 +80,12 @@ const NAV = [
     shortLabel: "Mã giảm giá",
     icon: Ticket,
     nested: true,
+  },
+  {
+    href: "/admin/reviews",
+    label: "Đánh giá",
+    shortLabel: "Đánh giá",
+    icon: Star,
   },
   {
     href: "/admin/orders",
@@ -119,8 +134,11 @@ const MOBILE_PRIMARY_HREFS = new Set([
 
 type NavItem = (typeof NAV)[number];
 
+/** /pos va /admin (Tong quan) chi sang khi khop chinh xac. */
+const EXACT_MATCH_HREFS = new Set(["/pos", "/admin"]);
+
 function matches(pathname: string, href: string) {
-  return href === "/pos"
+  return EXACT_MATCH_HREFS.has(href)
     ? pathname === href
     : pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -193,6 +211,7 @@ export function AdminNav() {
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          <AdminSearchButton placement="mobile" />
           <NotificationButton placement="mobile" />
         </div>
       </header>
@@ -212,6 +231,7 @@ export function AdminNav() {
           </div>
           <ThemeToggle />
         </div>
+        <AdminSearchButton placement="desktop" />
         <NotificationButton placement="desktop" />
         <nav aria-label="Điều hướng quản lý">
           <ul className="flex flex-col gap-1.5">

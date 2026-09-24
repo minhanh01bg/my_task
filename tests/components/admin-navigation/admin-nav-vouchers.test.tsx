@@ -8,6 +8,9 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }),
 }));
 
+vi.mock("@/features/admin-search/admin-search-button", () => ({
+  AdminSearchButton: () => null,
+}));
 vi.mock("@/features/admin-notifications/notification-button", () => ({
   NotificationButton: () => <button type="button">Thông báo</button>,
 }));

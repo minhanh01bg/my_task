@@ -14,6 +14,9 @@ describe("resolvePostLoginPath", () => {
       "/admin/orders?channel=online",
     );
     expect(resolvePostLoginPath("/admin?tab=1")).toBe("/admin?tab=1");
+    expect(resolvePostLoginPath("/admin/orders#top")).toBe("/admin/orders#top");
+    // Doan "." vo hai duoc chuan hoa ve dang trinh duyet se dieu huong.
+    expect(resolvePostLoginPath("/admin/./orders")).toBe("/admin/orders");
   });
 
   it("tu choi moi dich khac de khong thanh open redirect", () => {
@@ -27,6 +30,10 @@ describe("resolvePostLoginPath", () => {
       "/shop",
       "admin",
       " /admin",
+      "/admin/../x",
+      "/admin/%2e%2e/pos",
+      "/admin/.%2e/x",
+      "/admin/\t.\t./x",
     ]) {
       expect(resolvePostLoginPath(value)).toBe("/pos");
     }

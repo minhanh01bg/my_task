@@ -17,6 +17,9 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace, refresh }),
 }));
 
+vi.mock("@/features/admin-search/admin-search-button", () => ({
+  AdminSearchButton: () => null,
+}));
 vi.mock("@/features/admin-notifications/notification-button", () => ({
   NotificationButton: ({ placement }: { placement?: string }) => (
     <button type="button">Thông báo {placement}</button>
