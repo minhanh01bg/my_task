@@ -74,6 +74,10 @@ export default async function ProductsPage({
   const { items: products, total, page, pageSize, counts } = productPage;
   // Thống kê tồn kho theo các nhóm (đếm theo từ khóa tìm kiếm)
   const lowStockCount = counts.low;
+  // counts.all da bi loc theo tu khoa: chi coi la "cua hang trong" khi
+  // khong co tim kiem/bo loc nao dang ap dung.
+  const hasFilters = Boolean(q || categoryId || effectiveStatus !== "all");
+  const isStoreEmpty = counts.all === 0 && !hasFilters;
 
   return (
     <div className="space-y-6">
@@ -158,12 +162,12 @@ export default async function ProductsPage({
             <EmptyState
               icon={SearchX}
               title={
-                counts.all === 0
+                isStoreEmpty
                   ? "Chưa có sản phẩm nào"
                   : "Không tìm thấy sản phẩm nào khớp với điều kiện lọc."
               }
               description={
-                counts.all === 0
+                isStoreEmpty
                   ? "Bấm “Thêm sản phẩm” để bắt đầu bán tại quầy."
                   : "Thử bỏ bớt bộ lọc hoặc tìm bằng tên gọi khác."
               }

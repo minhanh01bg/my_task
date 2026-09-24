@@ -230,6 +230,23 @@ describe("/admin/products", () => {
     expect(screen.getByText("Danh mục hàng hóa")).toHaveClass("eyebrow");
     emptyState(container, "Chưa có sản phẩm nào");
   });
+
+  it("bao khong tim thay (khong phai cua hang trong) khi tim kiem khong khop", async () => {
+    vi.mocked(listProductCategories).mockResolvedValue([]);
+    vi.mocked(findEditableProduct).mockResolvedValue(null);
+    vi.mocked(listProducts).mockResolvedValue({
+      ...EMPTY_PAGE,
+      counts: { all: 0, low: 0, out: 0, negative: 0 },
+    } as unknown as Awaited<ReturnType<typeof listProducts>>);
+    const { container } = render(
+      await ProductsPage({ searchParams: Promise.resolve({ q: "khong-co" }) }),
+    );
+    emptyState(
+      container,
+      "Không tìm thấy sản phẩm nào khớp với điều kiện lọc.",
+    );
+    expect(screen.queryByText("Chưa có sản phẩm nào")).not.toBeInTheDocument();
+  });
 });
 
 describe("/admin/categories", () => {
