@@ -56,11 +56,9 @@ test("chưa đăng nhập truy cập trang quản lý hoặc /admin/login sẽ �
 }) => {
   // Khi chưa đăng nhập, truy cập trang quản trị phải chuyển hướng về /login chứ không phải /admin/login (404)
   await page.goto("/admin/products");
-  await page.waitForURL(/\/login$/);
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login\?next=%2Fadmin%2Fproducts$/);
 
   // Truy cập trực tiếp /admin/login cũng được chuyển hướng về /login
   await page.goto("/admin/login");
-  await page.waitForURL(/\/login$/);
   await expect(page).toHaveURL(/\/login$/);
 });
