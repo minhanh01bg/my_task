@@ -11,6 +11,8 @@ const PUBLIC_API = [
   "/api/auth/logout",
   "/api/health",
   "/api/online/orders",
+  "/api/online/wishlist",
+  "/api/online/vouchers/validate",
   "/api/customer-auth/register",
   "/api/customer-auth/login",
   "/api/customer-auth/logout",
@@ -23,6 +25,9 @@ export function isPublicPath(pathname: string): boolean {
     PUBLIC_PAGES.some(
       (path) =>
         pathname === path || (path !== "/" && pathname.startsWith(`${path}/`)),
-    ) || PUBLIC_API.includes(pathname)
+    ) ||
+    PUBLIC_API.includes(pathname) ||
+    // GET công khai; POST tự kiểm tra phiên khách hàng trong route handler.
+    /^\/api\/online\/products\/[^/]+\/reviews$/.test(pathname)
   );
 }
