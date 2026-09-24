@@ -141,17 +141,40 @@ export function buildCspHeader(options?: CspOptions): CspHeaderResult {
   };
 }
 
+const CSP_SPECIAL_KEYWORDS = new Set([
+  "eval",
+  "inline",
+  "self",
+  "data",
+  "blob",
+  "wasm-eval",
+  "wasm-unsafe-eval",
+  "'self'",
+  "'unsafe-eval'",
+  "'unsafe-inline'",
+]);
+
 /**
- * Strips URL search parameters and fragments from a URL string.
+ * Strips URL search parameters and fragments from a URL string without corrupting
+ * CSP keywords (e.g., "eval", "inline") or prepending placeholder domains to relative paths.
  */
 function stripQueryAndHash(urlStr: string): string {
   if (typeof urlStr !== "string") return urlStr;
+  const trimmed = urlStr.trim();
+  if (!trimmed) return trimmed;
+
+  if (CSP_SPECIAL_KEYWORDS.has(trimmed.toLowerCase())) {
+    return trimmed;
+  }
+
   try {
-    const parsed = new URL(urlStr, "https://placeholder.internal");
-    const clean = `${parsed.protocol === "https:" || parsed.protocol === "http:" ? `${parsed.protocol}//${parsed.host}` : ""}${parsed.pathname}`;
-    return clean;
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return `${parsed.origin}${parsed.pathname}`;
+    }
+    return `${parsed.protocol}${parsed.pathname}`;
   } catch {
-    return urlStr.split("?")[0].split("#")[0];
+    return trimmed.split("?")[0].split("#")[0];
   }
 }
 

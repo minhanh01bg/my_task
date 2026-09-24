@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+z.config({ jitless: true });
+
 export const catalogSortEnum = z.enum([
   "relevance",
   "best-selling",

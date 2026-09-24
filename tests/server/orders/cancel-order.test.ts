@@ -285,4 +285,45 @@ describe("cancelOrder", () => {
     expect(await usedCountOf("GIAM10")).toBe(0);
     expect(revalidatePublic).not.toHaveBeenCalled();
   });
+
+  it("ném lỗi khi cố hủy đơn online đã hoàn tất (completed)", async () => {
+    const order = await prisma.order.create({
+      data: {
+        code: "DH-COMPLETED",
+        clientId: "comp-1",
+        channel: "online",
+        status: "paid",
+        fulfillmentStatus: "completed",
+        subtotal: 50_000,
+        total: 50_000,
+      },
+    });
+
+    await expect(cancelOrder(order.id)).rejects.toThrow(
+      "Không thể hủy đơn hàng đã hoàn tất",
+    );
+  });
+
+  it("cập nhật fulfillmentStatus sang cancelled khi hủy đơn online chưa hoàn tất", async () => {
+    const order = await prisma.order.create({
+      data: {
+        code: "DH-ONLINE-CONFIRMED",
+        clientId: "onl-conf-1",
+        channel: "online",
+        status: "pending",
+        fulfillmentStatus: "confirmed",
+        subtotal: 50_000,
+        total: 50_000,
+      },
+    });
+
+    const result = await cancelOrder(order.id);
+    expect(result.cancelled).toBe(true);
+
+    const updated = await prisma.order.findUniqueOrThrow({
+      where: { id: order.id },
+    });
+    expect(updated.status).toBe("cancelled");
+    expect(updated.fulfillmentStatus).toBe("cancelled");
+  });
 });

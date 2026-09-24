@@ -50,15 +50,32 @@ export function buildOrderSearchWhere(
   };
 }
 
+function parseValidDate(
+  value: string | undefined,
+  endOfDay = false,
+): Date | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const iso = endOfDay ? `${trimmed}T23:59:59.999` : `${trimmed}T00:00:00`;
+  const date = new Date(iso);
+  if (!isNaN(date.getTime())) {
+    return date;
+  }
+  const fallback = new Date(trimmed);
+  if (!isNaN(fallback.getTime())) {
+    return fallback;
+  }
+  return null;
+}
+
 export function buildOrdersWhere(
   params: OrderListFilters & { q?: string },
 ): Prisma.OrderWhereInput {
   const status = params.status ?? "";
   const channel = params.channel ?? "";
-  const from = params.from ?? "";
-  const to = params.to ?? "";
-  const start = from ? new Date(`${from}T00:00:00`) : null;
-  const end = to ? new Date(`${to}T23:59:59.999`) : null;
+  const start = parseValidDate(params.from, false);
+  const end = parseValidDate(params.to, true);
 
   return {
     ...(channel ? { channel } : {}),

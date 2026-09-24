@@ -185,5 +185,49 @@ describe("Content Security Policy (Task 14)", () => {
         "https://shop.example.com/static/js/main.js",
       );
     });
+
+    it("preserves CSP special keywords like 'eval' and 'inline' without placeholder domains", () => {
+      const rawReport = {
+        "csp-report": {
+          "document-uri": "http://160.250.247.137:3000/admin/products",
+          "blocked-uri": "eval",
+          "violated-directive": "script-src",
+          disposition: "report",
+        },
+      };
+
+      const sanitized = sanitizeCspReport(rawReport);
+      expect(sanitized["blocked-uri"]).toBe("eval");
+      expect(sanitized["blocked-uri"]).not.toContain("placeholder.internal");
+      expect(sanitized["document-uri"]).toBe(
+        "http://160.250.247.137:3000/admin/products",
+      );
+    });
+
+    it("preserves 'inline' keyword without placeholder domains", () => {
+      const rawReport = {
+        "csp-report": {
+          "document-uri": "https://shop.example.com/admin/products",
+          "blocked-uri": "inline",
+          "violated-directive": "script-src",
+        },
+      };
+
+      const sanitized = sanitizeCspReport(rawReport);
+      expect(sanitized["blocked-uri"]).toBe("inline");
+      expect(sanitized["blocked-uri"]).not.toContain("placeholder.internal");
+    });
+
+    it("handles relative source-file paths without prepending placeholder domain", () => {
+      const rawReport = {
+        "csp-report": {
+          "source-file": "/_next/static/chunks/app.js?v=abc123#frag",
+        },
+      };
+
+      const sanitized = sanitizeCspReport(rawReport);
+      expect(sanitized["source-file"]).toBe("/_next/static/chunks/app.js");
+      expect(sanitized["source-file"]).not.toContain("placeholder.internal");
+    });
   });
 });

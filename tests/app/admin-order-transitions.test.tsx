@@ -143,4 +143,24 @@ describe("/admin/orders/[id] — dòng voucher", () => {
     );
     cleanup();
   });
+
+  it("đơn online COD chưa thanh toán hiển thị nhãn Thu hộ (COD) (Chưa thu) trong khối thanh toán", async () => {
+    mockOnlineOrder("new", {
+      channel: "online",
+      paymentMethod: "cod",
+      status: "pending",
+      payments: [
+        {
+          id: "pay-1",
+          method: "cash",
+          amount: 150_000,
+          receivedAt: null,
+        },
+      ],
+    });
+    render(await OrderDetailPage({ params: Promise.resolve({ id: "o1" }) }));
+    expect(screen.getByText(/Thu hộ \(COD\)/)).toBeInTheDocument();
+    expect(screen.getByText(/\(Chưa thu\)/)).toBeInTheDocument();
+    cleanup();
+  });
 });

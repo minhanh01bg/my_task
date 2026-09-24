@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+z.config({ jitless: true });
+
 export const notificationCursorSchema = z
   .object({
     createdAt: z.iso.datetime(),

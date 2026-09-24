@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+z.config({ jitless: true });
+
 /** Tien VND so nguyen >= 0; o trong = giu nguyen gia tri dang luu. */
 export const optionalMoney = (label: string) =>
   z

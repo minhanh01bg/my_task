@@ -68,6 +68,12 @@ describe("AdminNav", () => {
     expect(aside).toHaveClass("md:z-40");
   });
 
+  it("sidebar desktop có md:overflow-y-auto để cuộn được trên màn hình chiều cao nhỏ", () => {
+    const { container } = render(<AdminNav />);
+    const aside = container.querySelector("aside");
+    expect(aside).toHaveClass("md:overflow-y-auto");
+  });
+
   it("có liên kết sang cửa hàng online", () => {
     render(<AdminNav />);
 

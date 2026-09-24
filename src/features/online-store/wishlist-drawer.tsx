@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Heart, HeartOff, ShoppingCart, X } from "lucide-react";
 import { z } from "zod";
 
+z.config({ jitless: true });
+
 import { EmptyState } from "@/components/kit/empty-state";
 import { Skeleton } from "@/components/kit/skeleton-loader";
 import { Button } from "@/components/ui/button";

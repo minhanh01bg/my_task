@@ -17,6 +17,14 @@ export interface ReceiptLine {
   total: number;
 }
 
+export interface ReceiptPayment {
+  method: string;
+  amount: number;
+  change?: number;
+  receivedAt?: string | null;
+  isCod?: boolean;
+}
+
 export interface ReceiptOrder {
   code: string;
   createdAt: string;
@@ -33,7 +41,7 @@ export interface ReceiptOrder {
   total: number;
   /** Trang thai don; "cancelled" thi khong in VietQR. */
   status?: string;
-  payments?: Array<{ method: string; amount: number; change?: number }>;
+  payments?: ReceiptPayment[];
   /** So tien con phai thu (VND). > 0 nghia la don chua thanh toan du. */
   amountDue?: number;
   note?: string;
@@ -55,8 +63,14 @@ const PAYMENT_LABELS: Record<string, string> = {
   debt: "Ghi nợ:",
 };
 
-function paymentLabel(method: string): string {
-  return PAYMENT_LABELS[method] ?? "Thanh toán khác:";
+function paymentLabel(payment: ReceiptPayment): string {
+  if (payment.isCod && !payment.receivedAt) {
+    return "Thu hộ (COD):";
+  }
+  if (payment.method === "cash" && payment.receivedAt === null) {
+    return "Tiền mặt (chưa thu):";
+  }
+  return PAYMENT_LABELS[payment.method] ?? "Thanh toán khác:";
 }
 
 /**
@@ -380,7 +394,7 @@ function ReceiptPaper({
             {order.payments.map((p, idx) => (
               <div key={idx}>
                 <div className="flex justify-between">
-                  <span>{paymentLabel(p.method)}</span>
+                  <span>{paymentLabel(p)}</span>
                   <span>{formatVnd(p.amount)} ₫</span>
                 </div>
                 {p.change !== undefined && p.change > 0 && (

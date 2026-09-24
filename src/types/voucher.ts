@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+z.config({ jitless: true });
+
 import { VOUCHER_TYPES } from "@/lib/vouchers/validate-voucher";
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;

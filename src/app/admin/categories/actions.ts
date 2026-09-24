@@ -13,7 +13,7 @@ import { buildSearchText } from "@/lib/search/search-text";
 
 const schema = z.object({
   id: z.string().optional(),
-  name: z.string().min(1),
+  name: z.string().trim().min(1),
   sortOrder: z.coerce.number().int().default(0),
 });
 

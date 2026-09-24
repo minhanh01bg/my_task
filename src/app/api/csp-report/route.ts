@@ -10,12 +10,26 @@ export async function POST(request: NextRequest) {
     const rawBody = await request.json().catch(() => ({}));
     const sanitized = sanitizeCspReport(rawBody);
 
-    logger.warn("CSP Violation reported", {
+    const disposition = sanitized["disposition"] as string | undefined;
+    const isEnforce =
+      disposition === "enforce" ||
+      (!disposition && process.env.CSP_MODE === "enforce");
+
+    const payload = {
       category: "csp.violation",
-      directive: sanitized["violated-directive"],
-      blockedUri: sanitized["blocked-uri"],
-      documentUri: sanitized["document-uri"],
-    });
+      directive:
+        (sanitized["violated-directive"] as string | undefined) ||
+        (sanitized["effective-directive"] as string | undefined),
+      blockedUri: sanitized["blocked-uri"] as string | undefined,
+      documentUri: sanitized["document-uri"] as string | undefined,
+      disposition: disposition || (isEnforce ? "enforce" : "report"),
+    };
+
+    if (isEnforce) {
+      logger.warn("CSP Violation reported", payload);
+    } else {
+      logger.info("CSP Violation reported", payload);
+    }
 
     return new NextResponse(null, { status: 204 });
   } catch {

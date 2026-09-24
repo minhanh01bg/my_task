@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+z.config({ jitless: true });
+
 import { revalidatePublic } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
@@ -21,10 +23,10 @@ const quickUpdateSchema = z.object({
 
 const schema = z.object({
   id: z.string().optional(),
-  name: z.string().min(1, "Tên sản phẩm không được để trống"),
+  name: z.string().trim().min(1, "Tên sản phẩm không được để trống"),
   sku: z.string().nullable(),
   categoryId: z.string().nullable(),
-  unit: z.string().min(1),
+  unit: z.string().trim().min(1, "Đơn vị tính không được để trống"),
   price: z.coerce.number().int().min(0),
   costPrice: z.coerce.number().int().min(0),
   stock: z.coerce.number(),
