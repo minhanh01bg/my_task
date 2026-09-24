@@ -141,7 +141,37 @@ export const promotionActionSchema = z
       .trim()
       .max(500)
       .optional()
-      .transform((v) => v || null),
+      .transform((v) => v || null)
+      .refine(
+        (url) => {
+          if (!url) return true;
+          if (url.startsWith("/")) return true;
+          if (url.startsWith("https://")) {
+            try {
+              const parsed = new URL(url);
+              const host = parsed.hostname.toLowerCase();
+              if (
+                host === "localhost" ||
+                host === "127.0.0.1" ||
+                host === "::1" ||
+                host.startsWith("192.168.") ||
+                host.startsWith("10.") ||
+                host.endsWith(".local")
+              ) {
+                return false;
+              }
+              return true;
+            } catch {
+              return false;
+            }
+          }
+          return false;
+        },
+        {
+          message:
+            "Đường dẫn hình ảnh phải là đường dẫn nội bộ (bắt đầu bằng /) hoặc URL HTTPS công khai",
+        },
+      ),
     ctaLabel: z
       .string()
       .trim()
