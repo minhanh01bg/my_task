@@ -40,6 +40,8 @@ async function loadOnlineCatalog(): Promise<OnlineCatalog> {
         categoryId: true,
         searchText: true,
         soldCount: true,
+        ratingAvg: true,
+        ratingCount: true,
       },
     }),
   ]);

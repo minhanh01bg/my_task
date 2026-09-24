@@ -4,6 +4,8 @@ import type { OnlineProduct } from "@/features/online-store/types";
 import { cachedPublic } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
+import { listProductReviews } from "@/server/reviews/list-reviews";
+import type { PublicReviewPage } from "@/types/review";
 
 export interface OnlineProductDetail {
   product: OnlineProduct & {
@@ -11,6 +13,8 @@ export interface OnlineProductDetail {
     category: { id: string; name: string; slug?: string | null } | null;
   };
   relatedProducts: OnlineProduct[];
+  /** Trang 1 đánh giá đã đăng — cùng cache với trang sản phẩm. */
+  reviews: PublicReviewPage;
 }
 
 const ONLINE_PRODUCT_SELECT = {
@@ -24,6 +28,8 @@ const ONLINE_PRODUCT_SELECT = {
   categoryId: true,
   searchText: true,
   soldCount: true,
+  ratingAvg: true,
+  ratingCount: true,
 } as const;
 
 type ProductLookup = { id: string } | { slug: string };
@@ -53,32 +59,35 @@ async function loadOnlineProductDetail(
 
   if (!product) return null;
 
-  let relatedProducts: OnlineProduct[] = [];
-  if (product.categoryId) {
-    relatedProducts = await prisma.product.findMany({
-      where: {
-        categoryId: product.categoryId,
-        id: { not: product.id },
-        isActive: true,
-        isService: false,
-        deletedAt: null,
-      },
-      orderBy: [{ soldCount: "desc" }, { name: "asc" }],
-      take: 4,
-      select: ONLINE_PRODUCT_SELECT,
-    });
-  }
+  const [relatedProducts, reviews] = await Promise.all([
+    product.categoryId
+      ? prisma.product.findMany({
+          where: {
+            categoryId: product.categoryId,
+            id: { not: product.id },
+            isActive: true,
+            isService: false,
+            deletedAt: null,
+          },
+          orderBy: [{ soldCount: "desc" }, { name: "asc" }],
+          take: 4,
+          select: ONLINE_PRODUCT_SELECT,
+        })
+      : Promise.resolve<OnlineProduct[]>([]),
+    listProductReviews(product.id, 1),
+  ]);
 
   return {
     product,
     relatedProducts,
+    reviews,
   };
 }
 
 /**
  * generateMetadata va page cung goi — cache() gom lai mot lan trong request.
  * Tag `product:<id>` cho lan sua san pham nay, `catalog` cho thay doi chung
- * (ton kho, san pham lien quan, slug).
+ * (ton kho, san pham lien quan, slug). Tao/an/xoa danh gia revalidate ca hai.
  */
 export const getOnlineProductDetail = cache(
   (id: string): Promise<OnlineProductDetail | null> =>

@@ -10,6 +10,10 @@ export interface OnlineProduct {
   categoryId: string | null;
   searchText: string;
   soldCount?: number;
+  /** Điểm trung bình của đánh giá đã đăng (0 khi chưa có). */
+  ratingAvg?: number;
+  /** Số đánh giá đã đăng — 0 thì ẩn sao, không hiển thị số liệu giả. */
+  ratingCount?: number;
 }
 
 export interface OnlineCategory {

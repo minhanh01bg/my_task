@@ -212,6 +212,23 @@ describe("Storefront Landing Page Components", () => {
       expect(fallback).toBeInTheDocument();
       expect(fallback.closest('[data-slot="empty-state"]')).not.toBeNull();
     });
+
+    it("chỉ hiển thị sao khi sản phẩm có đánh giá thật", () => {
+      render(
+        <OnlineCartProvider>
+          <ProductRail
+            products={[
+              { ...mockProducts[0]!, ratingAvg: 4.3, ratingCount: 7 },
+              { ...mockProducts[1]!, ratingAvg: 0, ratingCount: 0 },
+            ]}
+          />
+        </OnlineCartProvider>,
+      );
+
+      expect(screen.getAllByLabelText(/trên 5 sao/)).toHaveLength(1);
+      expect(screen.getByText("(7 đánh giá)")).toBeInTheDocument();
+      expect(screen.queryByText("4.8")).not.toBeInTheDocument();
+    });
   });
 
   describe("TrustSection", () => {

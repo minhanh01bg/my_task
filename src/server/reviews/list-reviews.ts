@@ -1,8 +1,6 @@
 import type { Prisma } from "@prisma/client";
 
 import { paginate } from "@/server/admin/pagination";
-import { cachedPublic } from "@/server/cache/public-cache";
-import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
 import {
   REVIEW_PAGE_SIZE,
@@ -49,27 +47,4 @@ export async function listProductReviews(
       }),
   );
   return { ...result, items: result.items.map(toPublicReview) };
-}
-
-/**
- * Trang 1 cho HTML san pham (ISR): cache theo tag `product:<id>` — moi lan
- * tao/an/xoa review deu revalidate tag nay.
- */
-export function getInitialProductReviews(
-  productId: string,
-): Promise<PublicReviewPage> {
-  return cachedPublic(
-    () => listProductReviews(productId, 1),
-    ["product-reviews", productId],
-    {
-      tags: [CACHE_TAGS.product(productId)],
-      revalidate: 60,
-      fallback: () => ({
-        items: [],
-        total: 0,
-        page: 1,
-        pageSize: REVIEW_PAGE_SIZE,
-      }),
-    },
-  );
 }

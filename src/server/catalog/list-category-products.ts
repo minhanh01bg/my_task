@@ -50,6 +50,8 @@ async function loadCategoryProducts(
         categoryId: true,
         searchText: true,
         soldCount: true,
+        ratingAvg: true,
+        ratingCount: true,
       },
     }),
     prisma.product.count({ where }),

@@ -19,6 +19,8 @@ export interface JsonLdProduct {
   stock: number;
   imageUrl: string | null;
   category?: { id: string; name: string } | null;
+  ratingAvg?: number;
+  ratingCount?: number;
 }
 
 export interface BreadcrumbItem {
@@ -96,7 +98,8 @@ export function localBusinessJsonLd(
 
 /**
  * `url` là URL canonical tuyệt đối của trang sản phẩm; ảnh tương đối được
- * ghép theo origin của nó. Chưa có `aggregateRating` cho tới khi có đánh giá thật.
+ * ghép theo origin của nó. `aggregateRating` chỉ có khi sản phẩm đã có đánh
+ * giá thật (`ratingCount > 0`) — không bao giờ phát số liệu giả.
  */
 export function productJsonLd(
   product: JsonLdProduct,
@@ -115,6 +118,17 @@ export function productJsonLd(
     ...(product.sku ? { sku: product.sku } : {}),
     ...(product.category ? { category: product.category.name } : {}),
     brand: { "@type": "Brand", name: profile.name },
+    ...(product.ratingCount && product.ratingCount > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: Math.round((product.ratingAvg ?? 0) * 10) / 10,
+            reviewCount: product.ratingCount,
+            bestRating: 5,
+            worstRating: 1,
+          },
+        }
+      : {}),
     offers: {
       "@type": "Offer",
       price: product.price,

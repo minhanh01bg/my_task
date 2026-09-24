@@ -92,8 +92,8 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
     visual: {
       tag: "Bảo đảm uy tín",
       subtitle: "Chính hãng & Minh bạch nguồn gốc",
-      metricValue: "4.9★",
-      metricLabel: "2.800+ đánh giá tin cậy",
+      metricValue: "48h",
+      metricLabel: "Đổi trả miễn phí nếu lỗi",
       highlightPill: "BẢO VỆ 100%",
       accentIcon: "shield",
     },

@@ -124,9 +124,15 @@ export function ProductRail({
                         {product.name}
                       </h3>
                     </Link>
-                    <div className="mt-1">
-                      <StarRating rating={4.8} size="xs" />
-                    </div>
+                    {product.ratingCount ? (
+                      <div className="mt-1">
+                        <StarRating
+                          rating={product.ratingAvg ?? 0}
+                          reviewCount={product.ratingCount}
+                          size="xs"
+                        />
+                      </div>
+                    ) : null}
                     <div className="mt-2 flex items-baseline justify-between">
                       <span className="text-primary text-base font-bold sm:text-lg">
                         {formatVnd(product.price)} ₫

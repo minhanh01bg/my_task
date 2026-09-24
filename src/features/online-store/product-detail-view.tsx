@@ -33,7 +33,8 @@ import { RecentlyViewedSection } from "./recently-viewed";
 import { StoreBreadcrumbs } from "./store-breadcrumbs";
 
 export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
-  const { product, relatedProducts } = detail;
+  const { product, relatedProducts, reviews } = detail;
+  const ratingCount = product.ratingCount ?? 0;
   const { add } = useOnlineCart();
   const router = useRouter();
 
@@ -115,7 +116,19 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
             </h1>
 
             <div className="mt-2 flex items-center gap-3">
-              <StarRating rating={4.8} reviewCount={28} size="sm" />
+              {ratingCount > 0 ? (
+                <a
+                  href="#product-reviews"
+                  className="rounded-md hover:underline"
+                  aria-label={`Xem ${ratingCount} đánh giá`}
+                >
+                  <StarRating
+                    rating={product.ratingAvg ?? 0}
+                    reviewCount={ratingCount}
+                    size="sm"
+                  />
+                </a>
+              ) : null}
               {product.sku ? (
                 <span className="text-muted-foreground text-xs sm:text-sm">
                   Mã SP:{" "}
@@ -342,7 +355,13 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
         </section>
       ) : null}
 
-      <ProductReviews productId={product.id} productName={product.name} />
+      <ProductReviews
+        key={product.id}
+        productId={product.id}
+        productName={product.name}
+        initialReviews={reviews}
+        summary={{ avg: product.ratingAvg ?? 0, count: ratingCount }}
+      />
 
       <RecentlyViewedSection />
     </div>

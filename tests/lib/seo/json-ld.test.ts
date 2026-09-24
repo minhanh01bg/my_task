@@ -157,6 +157,28 @@ describe("productJsonLd", () => {
     expect(data).not.toHaveProperty("sku");
     expect(data).not.toHaveProperty("category");
   });
+
+  it("thêm aggregateRating chỉ khi có đánh giá thật (ratingCount > 0)", () => {
+    const rated = productJsonLd(
+      { ...product, ratingAvg: 4.67, ratingCount: 3 },
+      url,
+      fullProfile,
+    );
+    expect(rated.aggregateRating).toEqual({
+      "@type": "AggregateRating",
+      ratingValue: 4.7,
+      reviewCount: 3,
+      bestRating: 5,
+      worstRating: 1,
+    });
+
+    const unrated = productJsonLd(
+      { ...product, ratingAvg: 0, ratingCount: 0 },
+      url,
+      fullProfile,
+    );
+    expect(unrated).not.toHaveProperty("aggregateRating");
+  });
 });
 
 describe("breadcrumbJsonLd", () => {
