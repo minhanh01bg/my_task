@@ -12,7 +12,7 @@ import {
   saveStoreName,
   saveStoreProfile,
 } from "@/server/settings/store-settings";
-import { adminSettingsSchema } from "@/app/admin/settings/actions";
+import { adminSettingsSchema } from "@/types/settings";
 
 vi.mock("@/server/cache/public-cache", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/server/cache/public-cache")>()),
