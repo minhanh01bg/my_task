@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+z.config({ jitless: true });
+
 export const customerNotificationSchema = z.object({
   id: z.string(),
   accountId: z.string(),

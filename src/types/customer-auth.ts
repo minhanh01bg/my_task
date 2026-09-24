@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+z.config({ jitless: true });
+
 export function canonicalizeVietnamesePhone(value: string): string {
   const compact = value.trim().replace(/[\s.()-]/g, "");
   if (compact.startsWith("0")) return `+84${compact.slice(1)}`;

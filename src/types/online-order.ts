@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+z.config({ jitless: true });
+
 import { validateAddressHierarchy } from "@/lib/address/vietnam-address";
 
 export const fulfillmentTypeSchema = z.enum(["delivery", "pickup"]);

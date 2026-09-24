@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+z.config({ jitless: true });
+
 export const REVIEW_PAGE_SIZE = 10;
 export const REVIEW_CONTENT_MIN = 10;
 export const REVIEW_CONTENT_MAX = 1000;
