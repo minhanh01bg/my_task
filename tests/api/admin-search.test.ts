@@ -91,6 +91,22 @@ describe("GET /api/admin/search", () => {
     expect(JSON.stringify(body)).not.toContain("passwordHash");
   });
 
+  it("401 khi không có cookie, dùng hasAdminSession thật (không mock)", async () => {
+    vi.resetModules();
+    vi.doUnmock("@/server/auth/require-admin-session");
+    try {
+      const { GET: GetUnmocked } = await import("@/app/api/admin/search/route");
+      const response = await GetUnmocked(
+        new Request("http://localhost/api/admin/search?q=oc"),
+      );
+      expect(response.status).toBe(401);
+    } finally {
+      vi.doMock("@/server/auth/require-admin-session", () => ({
+        hasAdminSession: vi.fn(),
+      }));
+    }
+  });
+
   it("thiếu q trả nhóm rỗng", async () => {
     mockedAuth.mockResolvedValue(true);
     mockedSearch.mockResolvedValue({ products: [], orders: [], customers: [] });

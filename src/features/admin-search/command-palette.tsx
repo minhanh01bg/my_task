@@ -200,6 +200,9 @@ function CommandPaletteBody({ inputRef, onNavigate }: CommandPaletteBodyProps) {
       setActiveIndex((active - 1 + options.length) % options.length);
     } else if (event.key === "Enter") {
       event.preventDefault();
+      // Ket qua dang hien co the la cua truy van truoc; chi mo khi da khop
+      // truy van hien tai va khong con dang tai (tranh mo nham ket qua cu).
+      if (!isFresh || loading) return;
       navigate(options[active]);
     }
   }

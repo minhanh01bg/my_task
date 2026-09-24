@@ -85,6 +85,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("Admin command palette", () => {
@@ -139,6 +140,29 @@ describe("Admin command palette", () => {
       screen.getByRole("group", { name: "Khách hàng" }),
     ).toBeInTheDocument();
     expect(screen.getAllByRole("option")).toHaveLength(4);
+  });
+
+  it("debounce đúng 200ms với fake timers: chưa đủ giờ chưa gọi, đủ giờ gọi đúng 1 lần", () => {
+    vi.useFakeTimers();
+    renderPalette();
+    act(() => pressCtrlK());
+    const input = screen.getByRole("combobox");
+    act(() => {
+      fireEvent.change(input, { target: { value: "o" } });
+      fireEvent.change(input, { target: { value: "oc" } });
+      fireEvent.change(input, { target: { value: "oc v" } });
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(199);
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("huỷ request cũ khi gõ tiếp", async () => {
@@ -216,6 +240,32 @@ describe("Admin command palette", () => {
     await openAndType("oc");
     fireEvent.click(await screen.findByText("DH1001"));
     expect(push).toHaveBeenCalledWith("/admin/orders/o1");
+  });
+
+  it("Enter bị bỏ qua khi kết quả đang hiện chưa khớp truy vấn hiện tại (đang tải)", async () => {
+    let resolveSecond: (value: unknown) => void = () => {};
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(results))
+      .mockImplementationOnce(
+        () =>
+          new Promise((r) => (resolveSecond = r as (value: unknown) => void)),
+      );
+    renderPalette();
+    const input = await openAndType("oc");
+    await screen.findByText("Ốc vít 5 ly");
+
+    fireEvent.change(input, { target: { value: "oc v" } });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+
+    // Ket qua cua "oc" van con hien nhung khong con khop truy van "oc v".
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(push).not.toHaveBeenCalled();
+
+    await act(async () => resolveSecond(jsonResponse(results)));
+    await waitFor(() => expect(input).toHaveAttribute("aria-expanded", "true"));
+
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(push).toHaveBeenCalledWith("/admin/products?q=%E1%BB%90c&edit=p1");
   });
 
   it("Escape đóng palette và mở lại thì ô tìm trống", async () => {
