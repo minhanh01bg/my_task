@@ -16,6 +16,7 @@ import { generateMetadata as paymentPolicyMetadata } from "@/app/shop/payment-po
 import { generateMetadata as privacyPolicyMetadata } from "@/app/shop/privacy/page";
 import { generateMetadata as productMetadata } from "@/app/shop/products/[id]/page";
 import { generateMetadata as productSlugMetadata } from "@/app/shop/p/[slug]/page";
+import { generateMetadata as categoryMetadata } from "@/app/shop/c/[slug]/page";
 import * as deliveryPolicyModule from "@/app/shop/delivery-policy/page";
 import * as paymentPolicyModule from "@/app/shop/payment-policy/page";
 import * as privacyPolicyModule from "@/app/shop/privacy/page";
@@ -412,6 +413,58 @@ describe("Storefront SEO & Metadata (Task 13)", () => {
         params: Promise.resolve({ slug: "khong-ton-tai" }),
       });
       expect(missing.title).toBe("Sản phẩm không tồn tại");
+    });
+  });
+
+  describe("Category page metadata", () => {
+    beforeEach(cleanSeoFixtures);
+    afterEach(cleanSeoFixtures);
+
+    it("tiêu đề, canonical tự tham chiếu theo trang và OpenGraph", async () => {
+      await prisma.category.create({
+        data: {
+          id: SEO_CATEGORY_ID,
+          name: "Nước chấm SEO",
+          slug: "nuoc-cham-seo",
+        },
+      });
+      await prisma.product.create({
+        data: {
+          id: SEO_PRODUCT_ID,
+          name: "Nước mắm SEO",
+          categoryId: SEO_CATEGORY_ID,
+        },
+      });
+
+      const first = await categoryMetadata({
+        params: Promise.resolve({ slug: "nuoc-cham-seo" }),
+        searchParams: Promise.resolve({}),
+      });
+      expect(first.title).toBe("Nước chấm SEO");
+      expect(first.alternates?.canonical).toBe("/shop/c/nuoc-cham-seo");
+      expect(first.description).toContain("1 sản phẩm");
+      expect(first.openGraph?.url).toBe(
+        `${siteConfig.url}/shop/c/nuoc-cham-seo`,
+      );
+      expect(ogImageUrls(first)).toEqual(["/opengraph-image"]);
+
+      const explicitFirst = await categoryMetadata({
+        params: Promise.resolve({ slug: "nuoc-cham-seo" }),
+        searchParams: Promise.resolve({ page: "1" }),
+      });
+      expect(explicitFirst.alternates?.canonical).toBe("/shop/c/nuoc-cham-seo");
+
+      const beyond = await categoryMetadata({
+        params: Promise.resolve({ slug: "nuoc-cham-seo" }),
+        searchParams: Promise.resolve({ page: "9" }),
+      });
+      expect(beyond.title).toBe("Danh mục không tồn tại");
+
+      const missing = await categoryMetadata({
+        params: Promise.resolve({ slug: "khong-ton-tai" }),
+        searchParams: Promise.resolve({}),
+      });
+      expect(missing.title).toBe("Danh mục không tồn tại");
     });
   });
 
