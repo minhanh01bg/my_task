@@ -1,14 +1,26 @@
 import Link from "next/link";
 import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
+import { ReceiptText, SearchX } from "lucide-react";
 
-import { Money, PageHeader, Pagination } from "@/components/kit";
+import { EmptyState, Money, PageHeader, Pagination } from "@/components/kit";
+import { DateField } from "@/components/kit/date-field";
+import { DropdownField } from "@/components/kit/dropdown-field";
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DateField } from "@/components/kit/date-field";
-import { DropdownField } from "@/components/kit/dropdown-field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { listOrders } from "@/server/admin/list-orders";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  listOrders,
+  type AdminOrderListItem,
+} from "@/server/admin/list-orders";
 import { parsePageParam } from "@/server/admin/pagination";
 import { requireAdminSession } from "@/server/auth/require-admin-session";
 
@@ -28,6 +40,63 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline"> = {
   debt: "outline",
   cancelled: "outline",
 };
+
+function itemSummary(order: AdminOrderListItem): string {
+  return order.items
+    .map((item) => `${item.nameSnapshot} ×${item.quantity}`)
+    .join(", ");
+}
+
+function customerLabel(order: AdminOrderListItem): string {
+  if (!order.customer) return "Khách lẻ";
+  return order.customer.phone
+    ? `${order.customer.name} · ${order.customer.phone}`
+    : order.customer.name;
+}
+
+function OrderCodeLink({ order }: { order: AdminOrderListItem }) {
+  return (
+    <Link
+      href={`/admin/orders/${order.id}`}
+      className="hover:text-primary focus-visible:ring-ring rounded font-bold break-all underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+    >
+      {order.code}
+    </Link>
+  );
+}
+
+function OrderBadges({ order }: { order: AdminOrderListItem }) {
+  return (
+    <>
+      <Badge variant={STATUS_VARIANT[order.status] ?? "outline"}>
+        {STATUS_LABEL[order.status] ?? order.status}
+      </Badge>
+      <Badge variant="outline">
+        {order.channel === "online" ? "Online" : "Tại quầy"}
+      </Badge>
+      {order.fulfillmentStatus ? (
+        <Badge variant="secondary">{order.fulfillmentStatus}</Badge>
+      ) : null}
+      {order.hasStockWarning ? (
+        <Badge variant="destructive">Tồn âm</Badge>
+      ) : null}
+    </>
+  );
+}
+
+function CancelOrder({ order }: { order: AdminOrderListItem }) {
+  if (order.status === "cancelled") return null;
+  return (
+    <ConfirmAction
+      action={cancelOrderAction.bind(null, order.id)}
+      triggerLabel="Hủy đơn"
+      title={`Hủy đơn ${order.code}?`}
+      description="Tồn kho của các sản phẩm trong đơn sẽ được hoàn lại. Thao tác này không thể hoàn tác."
+      confirmLabel="Xác nhận hủy đơn"
+      triggerClassName="text-destructive text-sm"
+    />
+  );
+}
 
 interface OrdersSearchParams {
   status?: string;
@@ -61,6 +130,8 @@ export default async function OrdersPage({
     q,
     filters: { status, channel, from, to },
   });
+  const hasFilters = Boolean(q || status || channel || from || to);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -134,7 +205,7 @@ export default async function OrdersPage({
           <Button type="submit" className="min-h-12 flex-1 sm:flex-initial">
             Tìm đơn
           </Button>
-          {q || status || channel || from || to ? (
+          {hasFilters ? (
             <Button
               variant="ghost"
               className="min-h-12 flex-1 sm:flex-initial"
@@ -153,71 +224,92 @@ export default async function OrdersPage({
         </CardHeader>
         <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
           {orders.length === 0 ? (
-            <p className="text-muted-foreground py-10 text-center">
-              Không tìm thấy đơn phù hợp
-            </p>
+            hasFilters ? (
+              <EmptyState
+                icon={SearchX}
+                title="Không tìm thấy đơn phù hợp"
+                description="Thử bỏ bớt bộ lọc hoặc tìm bằng số điện thoại khách."
+              />
+            ) : (
+              <EmptyState
+                icon={ReceiptText}
+                title="Chưa có đơn hàng nào"
+                description="Đơn bán tại quầy và đơn online sẽ hiện ở đây."
+              />
+            )
           ) : (
-            <ul className="divide-y">
-              {orders.map((order) => (
-                <li
-                  key={order.id}
-                  className="grid gap-3 py-4 sm:gap-4 lg:grid-cols-[1fr_auto] lg:items-start"
-                >
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-1.5 font-medium sm:gap-2">
-                      <Link
-                        href={`/admin/orders/${order.id}`}
-                        className="hover:text-primary focus-visible:ring-ring rounded font-bold break-all underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-                      >
-                        {order.code}
-                      </Link>
-                      <Badge
-                        variant={STATUS_VARIANT[order.status] ?? "outline"}
-                      >
-                        {STATUS_LABEL[order.status] ?? order.status}
-                      </Badge>
-                      <Badge variant="outline">
-                        {order.channel === "online" ? "Online" : "Tại quầy"}
-                      </Badge>
-                      {order.fulfillmentStatus ? (
-                        <Badge variant="secondary">
-                          {order.fulfillmentStatus}
-                        </Badge>
-                      ) : null}
-                      {order.hasStockWarning ? (
-                        <Badge variant="destructive">Tồn âm</Badge>
-                      ) : null}
+            <>
+              {/* Dien thoai: moi don mot the. */}
+              <ul data-layout="cards" className="divide-y sm:hidden">
+                {orders.map((order) => (
+                  <li key={order.id} className="grid gap-3 py-4">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5 font-medium">
+                        <OrderCodeLink order={order} />
+                        <OrderBadges order={order} />
+                      </div>
+                      <p className="text-muted-foreground mt-1.5 truncate text-sm">
+                        {itemSummary(order)}
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-sm break-words">
+                        {order.createdAt.toLocaleString("vi-VN")} ·{" "}
+                        {customerLabel(order)}
+                      </p>
                     </div>
-                    <p className="text-muted-foreground mt-1.5 truncate text-sm">
-                      {order.items
-                        .map((item) => `${item.nameSnapshot} ×${item.quantity}`)
-                        .join(", ")}
-                    </p>
-                    <p className="text-muted-foreground mt-1 text-sm break-words">
-                      {order.createdAt.toLocaleString("vi-VN")}
-                      {order.customer
-                        ? ` · ${order.customer.name}${order.customer.phone ? ` · ${order.customer.phone}` : ""}`
-                        : " · Khách lẻ"}
-                    </p>
-                  </div>
-                  <div className="border-border/50 flex items-center justify-between gap-3 border-t pt-2.5 sm:pt-3 lg:justify-end lg:border-t-0 lg:pt-0">
-                    <span className="text-base font-bold tabular-nums sm:text-lg">
-                      <Money amount={order.total} />
-                    </span>
-                    {order.status !== "cancelled" ? (
-                      <ConfirmAction
-                        action={cancelOrderAction.bind(null, order.id)}
-                        triggerLabel="Hủy đơn"
-                        title={`Hủy đơn ${order.code}?`}
-                        description="Tồn kho của các sản phẩm trong đơn sẽ được hoàn lại. Thao tác này không thể hoàn tác."
-                        confirmLabel="Xác nhận hủy đơn"
-                        triggerClassName="text-destructive text-sm"
-                      />
-                    ) : null}
-                  </div>
-                </li>
-              ))}
-            </ul>
+                    <div className="border-border/50 flex items-center justify-between gap-3 border-t pt-2.5">
+                      <span className="text-base font-bold tabular-nums">
+                        <Money amount={order.total} />
+                      </span>
+                      <CancelOrder order={order} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Tu sm tro len: bang, cung mot mang du lieu. */}
+              <div data-layout="table" className="hidden sm:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Đơn hàng</TableHead>
+                      <TableHead>Khách hàng</TableHead>
+                      <TableHead>Thời gian</TableHead>
+                      <TableHead className="text-right">Tổng tiền</TableHead>
+                      <TableHead className="text-right">
+                        <span className="sr-only">Thao tác</span>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orders.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell className="max-w-80 whitespace-normal">
+                          <div className="flex flex-wrap items-center gap-1.5 font-medium">
+                            <OrderCodeLink order={order} />
+                            <OrderBadges order={order} />
+                          </div>
+                          <p className="text-muted-foreground mt-1 truncate text-sm">
+                            {itemSummary(order)}
+                          </p>
+                        </TableCell>
+                        <TableCell className="whitespace-normal">
+                          {customerLabel(order)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {order.createdAt.toLocaleString("vi-VN")}
+                        </TableCell>
+                        <TableCell className="text-right font-bold tabular-nums">
+                          <Money amount={order.total} />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <CancelOrder order={order} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
           <Pagination
             pathname="/admin/orders"

@@ -6,19 +6,105 @@ import {
   ShoppingBag,
   User,
 } from "@phosphor-icons/react/dist/ssr";
+import { SearchX, Users } from "lucide-react";
 
-import { PageHeader, Pagination } from "@/components/kit";
+import {
+  DataTableShell,
+  EmptyState,
+  PageHeader,
+  Pagination,
+} from "@/components/kit";
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { listCustomers } from "@/server/admin/list-customers";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  listCustomers,
+  type AdminCustomerListItem,
+} from "@/server/admin/list-customers";
 import { parsePageParam } from "@/server/admin/pagination";
 
 import { toggleCustomerAccountAction } from "./actions";
 
 export const dynamic = "force-dynamic";
+
+function CustomerName({ name }: { name: string }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2.5 font-semibold">
+      <span className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-full font-bold">
+        <User aria-hidden="true" className="size-4" />
+      </span>
+      <span className="text-foreground truncate">{name}</span>
+    </div>
+  );
+}
+
+function AccountStatus({ disabled }: { disabled: boolean }) {
+  return disabled ? (
+    <Badge variant="destructive" className="font-bold">
+      Đã khóa
+    </Badge>
+  ) : (
+    <Badge className="bg-success/12 text-success font-bold">
+      Đang hoạt động
+    </Badge>
+  );
+}
+
+function OrdersLink({ account }: { account: AdminCustomerListItem }) {
+  return (
+    <Link
+      href={`/admin/orders?q=${encodeURIComponent(account.phoneNormalized)}`}
+      className="text-primary inline-flex min-h-11 items-center gap-1 text-sm font-bold hover:underline"
+    >
+      <ShoppingBag aria-hidden="true" className="size-4" />
+      <span>{account._count.orders} đơn</span>
+    </Link>
+  );
+}
+
+function ToggleAccount({ account }: { account: AdminCustomerListItem }) {
+  const isDisabled = Boolean(account.disabledAt);
+  return (
+    <ConfirmAction
+      action={toggleCustomerAccountAction.bind(null, account.id)}
+      triggerLabel={isDisabled ? "Mở khóa" : "Khóa tài khoản"}
+      triggerVariant={isDisabled ? "outline" : "destructive"}
+      title={
+        isDisabled
+          ? `Mở khóa tài khoản “${account.displayName}”?`
+          : `Khóa tài khoản “${account.displayName}”?`
+      }
+      description={
+        isDisabled
+          ? "Khách hàng sẽ có thể đăng nhập lại và tiếp tục đặt hàng trên cửa hàng online."
+          : "Khách hàng sẽ bị thu hồi phiên đăng nhập hiện tại và không thể đăng nhập cho đến khi được mở khóa."
+      }
+      confirmLabel={isDisabled ? "Mở khóa tài khoản" : "Khóa ngay"}
+      triggerIcon={
+        isDisabled ? (
+          <LockOpen aria-hidden="true" className="size-4" />
+        ) : (
+          <Lock aria-hidden="true" className="size-4" />
+        )
+      }
+      triggerAriaLabel={
+        isDisabled
+          ? `Mở khóa tài khoản ${account.displayName}`
+          : `Khóa tài khoản ${account.displayName}`
+      }
+    />
+  );
+}
 
 interface CustomersPageProps {
   searchParams?: Promise<{ q?: string; page?: string }>;
@@ -75,139 +161,102 @@ export default async function CustomersPage({
       </Card>
 
       {/* Danh sách tài khoản */}
-      <Card>
-        <CardHeader className="flex-row items-center justify-between gap-4">
-          <CardTitle>Danh sách tài khoản ({total})</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0 sm:p-6 sm:pt-0">
-          {accounts.length === 0 ? (
-            <div className="text-muted-foreground p-8 text-center text-sm">
-              {q
-                ? "Không tìm thấy tài khoản phù hợp với từ khóa."
-                : "Chưa có tài khoản khách hàng nào đăng ký trên hệ thống."}
-            </div>
+      <DataTableShell
+        title="Danh sách tài khoản"
+        count={total}
+        isEmpty={accounts.length === 0}
+        empty={
+          q ? (
+            <EmptyState
+              icon={SearchX}
+              title="Không tìm thấy tài khoản phù hợp"
+              description="Thử tìm bằng số điện thoại hoặc một phần tên khách."
+            />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-border text-muted-foreground border-b text-xs font-bold uppercase">
-                    <th className="p-4 pl-6">Khách hàng</th>
-                    <th className="p-4">Số điện thoại</th>
-                    <th className="p-4">Đơn hàng</th>
-                    <th className="p-4">Ngày đăng ký</th>
-                    <th className="p-4">Trạng thái</th>
-                    <th className="p-4 pr-6 text-right">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-border divide-y">
-                  {accounts.map((account) => {
-                    const isDisabled = Boolean(account.disabledAt);
+            <EmptyState
+              icon={Users}
+              title="Chưa có tài khoản khách hàng nào"
+              description="Khách đăng ký trên cửa hàng online sẽ hiện ở đây."
+            />
+          )
+        }
+      >
+        {/* Dien thoai: moi tai khoan mot the. */}
+        <ul data-layout="cards" className="divide-border divide-y sm:hidden">
+          {accounts.map((account) => (
+            <li key={account.id} className="space-y-3 px-4 py-4">
+              <div className="flex items-start justify-between gap-3">
+                <CustomerName name={account.displayName} />
+                <AccountStatus disabled={Boolean(account.disabledAt)} />
+              </div>
+              <dl className="text-muted-foreground grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                <dt className="sr-only">Số điện thoại</dt>
+                <dd className="font-mono font-medium">
+                  {account.phoneNormalized}
+                </dd>
+                <dt className="sr-only">Ngày đăng ký</dt>
+                <dd className="text-right">
+                  {new Date(account.createdAt).toLocaleDateString("vi-VN")}
+                </dd>
+              </dl>
+              <div className="flex items-center justify-between gap-3">
+                <OrdersLink account={account} />
+                <ToggleAccount account={account} />
+              </div>
+            </li>
+          ))}
+        </ul>
 
-                    return (
-                      <tr
-                        key={account.id}
-                        className="hover:bg-muted/40 transition-colors"
-                      >
-                        <td className="p-4 pl-6 font-semibold">
-                          <div className="flex items-center gap-2.5">
-                            <span className="bg-primary/10 text-primary flex size-8 items-center justify-center rounded-full font-bold">
-                              <User className="size-4" />
-                            </span>
-                            <span className="text-foreground">
-                              {account.displayName}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="text-muted-foreground p-4 font-mono font-medium">
-                          {account.phoneNormalized}
-                        </td>
-                        <td className="p-4">
-                          <Link
-                            href={`/admin/orders?q=${encodeURIComponent(account.phoneNormalized)}`}
-                            className="text-primary inline-flex items-center gap-1 font-bold hover:underline"
-                          >
-                            <ShoppingBag className="size-4" />
-                            <span>{account._count.orders} đơn</span>
-                          </Link>
-                        </td>
-                        <td className="text-muted-foreground p-4 text-xs">
-                          {new Date(account.createdAt).toLocaleDateString(
-                            "vi-VN",
-                          )}
-                        </td>
-                        <td className="p-4">
-                          {isDisabled ? (
-                            <Badge variant="destructive" className="font-bold">
-                              Đã khóa
-                            </Badge>
-                          ) : (
-                            <Badge
-                              variant="default"
-                              className="bg-emerald-600 font-bold hover:bg-emerald-600"
-                            >
-                              Đang hoạt động
-                            </Badge>
-                          )}
-                        </td>
-                        <td className="p-4 pr-6 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <ConfirmAction
-                              action={toggleCustomerAccountAction.bind(
-                                null,
-                                account.id,
-                              )}
-                              triggerLabel={
-                                isDisabled ? "Mở khóa" : "Khóa tài khoản"
-                              }
-                              triggerVariant={
-                                isDisabled ? "outline" : "destructive"
-                              }
-                              title={
-                                isDisabled
-                                  ? `Mở khóa tài khoản “${account.displayName}”?`
-                                  : `Khóa tài khoản “${account.displayName}”?`
-                              }
-                              description={
-                                isDisabled
-                                  ? "Khách hàng sẽ có thể đăng nhập lại và tiếp tục đặt hàng trên cửa hàng online."
-                                  : "Khách hàng sẽ bị thu hồi phiên đăng nhập hiện tại và không thể đăng nhập cho đến khi được mở khóa."
-                              }
-                              confirmLabel={
-                                isDisabled ? "Mở khóa tài khoản" : "Khóa ngay"
-                              }
-                              triggerIcon={
-                                isDisabled ? (
-                                  <LockOpen className="size-4" />
-                                ) : (
-                                  <Lock className="size-4" />
-                                )
-                              }
-                              triggerAriaLabel={
-                                isDisabled
-                                  ? `Mở khóa tài khoản ${account.displayName}`
-                                  : `Khóa tài khoản ${account.displayName}`
-                              }
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <Pagination
-            pathname="/admin/customers"
-            label="Phân trang khách hàng"
-            page={page}
-            pageSize={pageSize}
-            total={total}
-            searchParams={{ q }}
-            className="px-4 pb-4 sm:px-0 sm:pb-0"
-          />
-        </CardContent>
-      </Card>
+        {/* Tu sm tro len: bang, cung mot mang du lieu. */}
+        <div data-layout="table" className="hidden sm:block">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="pl-6">Khách hàng</TableHead>
+                <TableHead>Số điện thoại</TableHead>
+                <TableHead>Đơn hàng</TableHead>
+                <TableHead>Ngày đăng ký</TableHead>
+                <TableHead>Trạng thái</TableHead>
+                <TableHead className="pr-6 text-right">Thao tác</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {accounts.map((account) => (
+                <TableRow key={account.id}>
+                  <TableCell className="pl-6">
+                    <CustomerName name={account.displayName} />
+                  </TableCell>
+                  <TableCell className="text-muted-foreground font-mono font-medium">
+                    {account.phoneNormalized}
+                  </TableCell>
+                  <TableCell>
+                    <OrdersLink account={account} />
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-xs">
+                    {new Date(account.createdAt).toLocaleDateString("vi-VN")}
+                  </TableCell>
+                  <TableCell>
+                    <AccountStatus disabled={Boolean(account.disabledAt)} />
+                  </TableCell>
+                  <TableCell className="pr-6 text-right">
+                    <ToggleAccount account={account} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+
+        <Pagination
+          pathname="/admin/customers"
+          label="Phân trang khách hàng"
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          searchParams={{ q }}
+          className="px-4 pb-4 sm:px-6"
+        />
+      </DataTableShell>
     </div>
   );
 }
