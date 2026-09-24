@@ -2,6 +2,20 @@
 
 Spec: `docs/superpowers/specs/2026-09-24-production-readiness-design.md`. Nhánh `feat/pos-core`.
 
+## Execution status — 2026-09-24
+
+Hoàn tất Task 1–20 trên `feat/pos-core`.
+
+- `pnpm check`: lint/typecheck đạt; 196 file, 1.288 test đạt. Các sửa đổi cuối được kiểm tra lại bằng lint/typecheck và test liên quan.
+- `pnpm build`: đạt; `/shop`, sản phẩm và chính sách vẫn static/ISR.
+- `DATABASE_URL=file:./codex-e2e.db PLAYWRIGHT_PORT=3194 pnpm test:e2e --workers=2 --reporter=line`: 39/39 đạt, dùng database riêng.
+- Prisma migration diff so với schema: rỗng.
+- Đã chụp và xem ảnh light/dark tại `e2e/screenshots/`; PDF `receipt-k80.pdf` một trang rộng khoảng 80 mm, không bị cắt bởi dialog. Chưa kiểm tra máy in nhiệt vật lý.
+- Review cuối bổ sung: mở đúng API wishlist/voucher/review cho khách; giữ mã voucher có lịch sử đơn hàng; sửa bước nhập tiền trả nợ; cập nhật test browser theo dialog sản phẩm, tiếng Việt và redirect `next`.
+- `.env.example` và `AGENTS.md` đã cập nhật cấu hình, cache/slug/voucher invariants. Không cài thêm dependency.
+
+Ghi chú kiểm thử: Next dev vẫn phát cảnh báo ảnh `fill` có parent static và cảnh báo hydration do screenshot tạm ẩn caret; các ca kiểm thử đều đạt. Đây không phải xác nhận triển khai production hoặc CI trên remote.
+
 ## Global Constraints (áp dụng cho MỌI task)
 
 1. **KHÔNG cài đặt gì mới**: không `pnpm add`, không sửa `package.json`/`pnpm-lock.yaml`, không cài binary/dịch vụ. Chỉ dùng gói đã có: next 16.2.4, react 19, prisma 6 (SQLite), zod, @base-ui/react, @tanstack/react-query, @upstash/redis, idb, sharp, qrcode, lucide-react, @phosphor-icons/react, tw-animate-css, class-variance-authority, vitest, @testing-library/\*, playwright.
