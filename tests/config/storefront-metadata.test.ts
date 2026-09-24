@@ -16,6 +16,10 @@ import { generateMetadata as paymentPolicyMetadata } from "@/app/shop/payment-po
 import { generateMetadata as privacyPolicyMetadata } from "@/app/shop/privacy/page";
 import { generateMetadata as productMetadata } from "@/app/shop/products/[id]/page";
 import { generateMetadata as productSlugMetadata } from "@/app/shop/p/[slug]/page";
+import * as deliveryPolicyModule from "@/app/shop/delivery-policy/page";
+import * as paymentPolicyModule from "@/app/shop/payment-policy/page";
+import * as privacyPolicyModule from "@/app/shop/privacy/page";
+import * as returnPolicyModule from "@/app/shop/return-policy/page";
 import { generateMetadata as returnPolicyMetadata } from "@/app/shop/return-policy/page";
 import * as robotsModule from "@/app/robots";
 import * as sitemapModule from "@/app/sitemap";
@@ -172,6 +176,17 @@ describe("Storefront SEO & Metadata (Task 13)", () => {
           expect(ogImageUrls(metadata)).toEqual(["/opengraph-image"]);
         }
       });
+    });
+
+    it("trang chính sách ISR 1 giờ để URL tuyệt đối làm mới sau deploy", () => {
+      for (const policyModule of [
+        deliveryPolicyModule,
+        paymentPolicyModule,
+        returnPolicyModule,
+        privacyPolicyModule,
+      ]) {
+        expect(policyModule.revalidate).toBe(3600);
+      }
     });
 
     it("OpenGraph của /shop dùng ảnh OG mặc định", async () => {

@@ -1,3 +1,4 @@
+import { BRAND_COLORS } from "@/config/brand";
 import { siteConfig } from "@/config/site";
 import { getPublicStoreProfile } from "@/server/settings/store-settings";
 
@@ -22,9 +23,10 @@ export async function GET(): Promise<Response> {
     scope: "/shop",
     display: "standalone",
     lang: "vi",
-    // Khớp token nền sáng (`viewport.themeColor`) và màu thương hiệu.
+    // Nền khớp token nền sáng (`viewport.themeColor`); theme_color là màu
+    // thương hiệu, cùng giá trị với ảnh OG.
     background_color: "#faf7f2",
-    theme_color: "#059669",
+    theme_color: BRAND_COLORS.primary,
     icons: ICONS,
   };
 

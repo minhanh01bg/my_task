@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 
+import { BRAND_COLORS as BRAND } from "@/config/brand";
 import { siteConfig } from "@/config/site";
 import { getPublicStoreProfile } from "@/server/settings/store-settings";
 
@@ -14,16 +15,8 @@ export const contentType = "image/png";
 /**
  * Font mặc định của next/og (Geist Regular) có đủ dấu tiếng Việt. Không in
  * host: ảnh prerender lúc build có thể mang host dummy tới 1 giờ.
- *
- * Satori không đọc được CSS variable: giá trị hex quy đổi từ token trong
- * globals.css (light) — `--primary` oklch(0.38 0.075 153), `--primary-foreground`
- * oklch(0.985 0.005 82), `--accent` oklch(0.72 0.115 73).
+ * Satori không đọc được CSS variable: màu hex lấy từ `BRAND_COLORS`.
  */
-const BRAND = {
-  primary: "#1d4e2f",
-  primaryForeground: "#fcfaf6",
-  accent: "#d0994c",
-} as const;
 
 export default async function OpengraphImage() {
   const { name } = await getPublicStoreProfile();

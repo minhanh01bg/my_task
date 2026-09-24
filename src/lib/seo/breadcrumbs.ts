@@ -7,12 +7,15 @@ export interface StoreCrumb {
   path: string;
 }
 
-const HOME_CRUMB: StoreCrumb = { name: "Trang chủ", path: "/" };
+/**
+ * Gốc là /shop: `/` chỉ chuyển hướng 308 sang /shop nên không làm một cấp
+ * riêng (trùng URL, lãng phí một cấp trong BreadcrumbList).
+ */
 const SHOP_CRUMB: StoreCrumb = { name: "Cửa hàng", path: "/shop" };
 
-/** Trang chủ → Cửa hàng → ...`tail`. Dùng chung cho breadcrumb hiển thị và JSON-LD. */
+/** Cửa hàng → ...`tail`. Dùng chung cho breadcrumb hiển thị và JSON-LD. */
 export function storefrontCrumbs(...tail: StoreCrumb[]): StoreCrumb[] {
-  return [HOME_CRUMB, SHOP_CRUMB, ...tail];
+  return [SHOP_CRUMB, ...tail];
 }
 
 export interface CrumbCategory extends HrefCategory {
@@ -30,12 +33,12 @@ function categoryCrumb(category: CrumbCategory): StoreCrumb {
   return { name: category.name, path: categoryHref(category) };
 }
 
-/** Trang chủ → Cửa hàng → Danh mục. */
+/** Cửa hàng → Danh mục. */
 export function categoryCrumbs(category: CrumbCategory): StoreCrumb[] {
   return storefrontCrumbs(categoryCrumb(category));
 }
 
-/** Trang chủ → Cửa hàng → Danh mục (nếu có) → Sản phẩm. */
+/** Cửa hàng → Danh mục (nếu có) → Sản phẩm. */
 export function productCrumbs(product: CrumbProduct): StoreCrumb[] {
   return storefrontCrumbs(
     ...(product.category ? [categoryCrumb(product.category)] : []),

@@ -41,7 +41,8 @@ export function organizationJsonLd(
     "@type": "Organization",
     "@id": `${url}/#organization`,
     name: profile.name,
-    url,
+    // `/` chuyển hướng 308 sang /shop: khai báo URL đích để không trỏ vào redirect.
+    url: `${url}/shop`,
     logo: toAbsoluteUrl(LOGO_PATH, url),
     ...(profile.hotline ? { telephone: profile.hotline } : {}),
   };

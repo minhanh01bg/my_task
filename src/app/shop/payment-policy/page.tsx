@@ -7,6 +7,9 @@ import {
 } from "@/features/online-store/policy-metadata";
 import { getPublicStoreProfile } from "@/server/settings/store-settings";
 
+/** URL tuyệt đối (canonical/OG/JSON-LD) làm mới sau deploy đổi CANONICAL_ORIGIN. */
+export const revalidate = 3600;
+
 const PAGE: PolicyPageMeta = {
   path: "/shop/payment-policy",
   title: "Chính sách thanh toán",

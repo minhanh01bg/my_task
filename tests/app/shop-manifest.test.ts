@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import * as manifestRoute from "@/app/shop.webmanifest/route";
+import { BRAND_COLORS } from "@/config/brand";
 
 vi.mock("@/server/settings/store-settings", () => ({
   getPublicStoreProfile: vi.fn().mockResolvedValue({ name: "Tạp Hóa Xanh" }),
@@ -25,7 +26,10 @@ describe("/shop.webmanifest", () => {
       scope: "/shop",
       display: "standalone",
       lang: "vi",
+      // Cùng màu thương hiệu với ảnh OG (src/app/opengraph-image.tsx).
+      theme_color: "#1d4e2f",
     });
+    expect(manifest.theme_color).toBe(BRAND_COLORS.primary);
     expect(manifest.icons).toEqual([
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },

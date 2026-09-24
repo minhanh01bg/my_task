@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { productCrumbs, toBreadcrumbItems } from "@/lib/seo/breadcrumbs";
+import {
+  categoryCrumbs,
+  productCrumbs,
+  storefrontCrumbs,
+  toBreadcrumbItems,
+} from "@/lib/seo/breadcrumbs";
 import {
   breadcrumbJsonLd,
   localBusinessJsonLd,
@@ -39,7 +44,8 @@ describe("organizationJsonLd", () => {
       "@context": "https://schema.org",
       "@type": "Organization",
       name: "Tạp hoá Minh An",
-      url: SITE,
+      // Gốc `/` chuyển hướng 308 → dùng thẳng /shop.
+      url: `${SITE}/shop`,
       telephone: "0901234567",
     });
     expect(String(data.logo)).toMatch(/^https:\/\/shop\.example\.com\//);
@@ -156,7 +162,6 @@ describe("productJsonLd", () => {
 describe("breadcrumbJsonLd", () => {
   it("đánh số position từ 1 theo thứ tự và giữ URL tuyệt đối", () => {
     const data = breadcrumbJsonLd([
-      { name: "Trang chủ", url: `${SITE}/` },
       { name: "Cửa hàng", url: `${SITE}/shop` },
       { name: "Chính sách giao hàng", url: `${SITE}/shop/delivery-policy` },
     ]);
@@ -167,18 +172,12 @@ describe("breadcrumbJsonLd", () => {
         {
           "@type": "ListItem",
           position: 1,
-          name: "Trang chủ",
-          item: `${SITE}/`,
-        },
-        {
-          "@type": "ListItem",
-          position: 2,
           name: "Cửa hàng",
           item: `${SITE}/shop`,
         },
         {
           "@type": "ListItem",
-          position: 3,
+          position: 2,
           name: "Chính sách giao hàng",
           item: `${SITE}/shop/delivery-policy`,
         },
@@ -196,9 +195,8 @@ describe("serializeJsonLd", () => {
 });
 
 describe("breadcrumbs helpers", () => {
-  it("productCrumbs: Trang chủ → Cửa hàng → Danh mục → Sản phẩm", () => {
+  it("productCrumbs: Cửa hàng → Danh mục → Sản phẩm (không có cấp /)", () => {
     expect(productCrumbs(product)).toEqual([
-      { name: "Trang chủ", path: "/" },
       { name: "Cửa hàng", path: "/shop" },
       { name: "Mì gói", path: "/shop?category=cat-01#catalog" },
       { name: "Mì Hảo Hảo tôm chua cay", path: "/shop/products/prod-01" },
@@ -211,8 +209,9 @@ describe("breadcrumbs helpers", () => {
         ...product,
         slug: "mi-hao-hao-tom-chua-cay",
         category: { id: "cat-01", name: "Mì gói", slug: "mi-goi" },
-      }).slice(-2),
+      }),
     ).toEqual([
+      { name: "Cửa hàng", path: "/shop" },
       { name: "Mì gói", path: "/shop/c/mi-goi" },
       {
         name: "Mì Hảo Hảo tôm chua cay",
@@ -224,12 +223,26 @@ describe("breadcrumbs helpers", () => {
   it("productCrumbs: bỏ cấp danh mục khi sản phẩm không có danh mục", () => {
     expect(
       productCrumbs({ ...product, category: null }).map((c) => c.name),
-    ).toEqual(["Trang chủ", "Cửa hàng", "Mì Hảo Hảo tôm chua cay"]);
+    ).toEqual(["Cửa hàng", "Mì Hảo Hảo tôm chua cay"]);
+  });
+
+  it("categoryCrumbs và storefrontCrumbs: Cửa hàng → trang", () => {
+    expect(
+      categoryCrumbs({ id: "c1", name: "Mì gói", slug: "mi-goi" }),
+    ).toEqual([
+      { name: "Cửa hàng", path: "/shop" },
+      { name: "Mì gói", path: "/shop/c/mi-goi" },
+    ]);
+    expect(
+      storefrontCrumbs({
+        name: "Chính sách giao hàng",
+        path: "/shop/delivery-policy",
+      }).map((c) => c.path),
+    ).toEqual(["/shop", "/shop/delivery-policy"]);
   });
 
   it("toBreadcrumbItems: URL tuyệt đối, bỏ #hash", () => {
     expect(toBreadcrumbItems(productCrumbs(product), SITE)).toEqual([
-      { name: "Trang chủ", url: `${SITE}/` },
       { name: "Cửa hàng", url: `${SITE}/shop` },
       { name: "Mì gói", url: `${SITE}/shop?category=cat-01` },
       {
