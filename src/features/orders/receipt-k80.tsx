@@ -1,8 +1,12 @@
 "use client";
 
 import { Printer } from "lucide-react";
+import QRCode from "qrcode";
+import { useEffect, useState } from "react";
 
 import { formatVnd } from "@/lib/money";
+import { buildVietQrPayload } from "@/lib/vietqr/build";
+import type { BankAccount } from "@/lib/vietqr/types";
 
 export interface ReceiptLine {
   name: string;
@@ -23,6 +27,8 @@ export interface ReceiptOrder {
   discount?: number;
   total: number;
   payments?: Array<{ method: string; amount: number; change?: number }>;
+  /** So tien con phai thu (VND). > 0 nghia la don chua thanh toan du. */
+  amountDue?: number;
   note?: string;
 }
 
@@ -31,7 +37,78 @@ export interface ReceiptK80Props {
   storeAddress?: string;
   storeHotline?: string;
   order: ReceiptOrder;
+  /** Co tai khoan thi in VietQR khi don con no hoac tra bang chuyen khoan. */
+  bankAccount?: BankAccount | null;
   showPrintButton?: boolean;
+}
+
+/**
+ * Can QR khi con tien phai thu, hoac khach tra bang chuyen khoan (in lai QR de
+ * doi chieu). So tien tren QR: phan con thieu, neu da du thi tong don.
+ */
+export function resolveReceiptQrAmount(order: ReceiptOrder): number | null {
+  const due = Math.max(0, Math.round(order.amountDue ?? 0));
+  if (due > 0) return due;
+  const paidByTransfer = order.payments?.some((p) => p.method === "transfer");
+  return paidByTransfer ? order.total : null;
+}
+
+function ReceiptVietQr({
+  bankAccount,
+  amount,
+  description,
+}: {
+  bankAccount: BankAccount;
+  amount: number;
+  description: string;
+}) {
+  const [svg, setSvg] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const payload = buildVietQrPayload({
+      account: bankAccount,
+      amount,
+      description,
+    });
+    QRCode.toString(payload, { type: "svg", margin: 1, width: 160 })
+      .then((markup) => {
+        if (!cancelled) setSvg(markup);
+      })
+      .catch(() => {
+        // QR loi thi van in hoa don, chi thieu ma — thong tin TK van hien.
+        if (!cancelled) setSvg(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bankAccount, amount, description]);
+
+  return (
+    <div
+      data-testid="receipt-vietqr"
+      className="flex flex-col items-center gap-1 border-b border-dashed border-black py-2 text-center text-[10px]"
+    >
+      <p className="font-bold uppercase">Quét mã để chuyển khoản</p>
+      {svg ? (
+        // eslint-disable-next-line @next/next/no-img-element -- data URI, khong can toi uu anh
+        <img
+          src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}
+          alt={`Mã VietQR chuyển khoản ${formatVnd(amount)} ₫`}
+          width={160}
+          height={160}
+        />
+      ) : (
+        <div className="size-40" aria-hidden="true" />
+      )}
+      <p>
+        {bankAccount.accountName} — {bankAccount.accountNumber}
+      </p>
+      <p className="font-bold">
+        {formatVnd(amount)} ₫ · ND: {description}
+      </p>
+    </div>
+  );
 }
 
 export function ReceiptK80({
@@ -39,8 +116,11 @@ export function ReceiptK80({
   storeAddress,
   storeHotline,
   order,
+  bankAccount,
   showPrintButton = true,
 }: ReceiptK80Props) {
+  const qrAmount = bankAccount ? resolveReceiptQrAmount(order) : null;
+
   function handlePrint() {
     if (typeof window !== "undefined") {
       window.print();
@@ -64,6 +144,7 @@ export function ReceiptK80({
 
       {/* K80 Thermal Receipt Container */}
       <div
+        data-print-receipt=""
         className="w-[80mm] max-w-full border border-dashed border-gray-300 bg-white p-3 font-mono text-[11px] leading-tight text-black shadow-sm print:m-0 print:border-none print:p-0 print:shadow-none"
         style={{ colorScheme: "light" }}
       >
@@ -181,6 +262,14 @@ export function ReceiptK80({
             </div>
           ) : null}
         </div>
+
+        {bankAccount && qrAmount !== null ? (
+          <ReceiptVietQr
+            bankAccount={bankAccount}
+            amount={qrAmount}
+            description={order.code}
+          />
+        ) : null}
 
         {/* Note */}
         {order.note ? (

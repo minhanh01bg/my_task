@@ -21,6 +21,10 @@ vi.mock("@/app/admin/orders/actions", () => ({
   markOnlineOrderPaidAction: vi.fn(),
   transitionOnlineOrderAction: vi.fn(),
 }));
+vi.mock("@/server/settings/store-settings", () => ({
+  getPublicStoreProfile: vi.fn().mockResolvedValue({ name: "Tiệm Test" }),
+  getStoreBankAccount: vi.fn().mockResolvedValue(null),
+}));
 vi.mock("@/server/db/prisma", () => ({
   prisma: { order: { findUnique: vi.fn() } },
 }));
@@ -73,4 +77,15 @@ describe("/admin/orders/[id] — nút chuyển trạng thái đơn online", () =
       cleanup();
     },
   );
+});
+
+describe("/admin/orders/[id] — in hoá đơn K80", () => {
+  it("có nút In hoá đơn", async () => {
+    mockOnlineOrder("new");
+    render(await OrderDetailPage({ params: Promise.resolve({ id: "o1" }) }));
+    expect(
+      screen.getByRole("button", { name: "In hoá đơn" }),
+    ).toBeInTheDocument();
+    cleanup();
+  });
 });

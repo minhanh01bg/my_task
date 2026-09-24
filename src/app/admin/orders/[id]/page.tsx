@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/kit";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PrintReceiptButton } from "@/features/orders/print-receipt-button";
+import type { ReceiptOrder } from "@/features/orders/receipt-k80";
 import { formatVnd } from "@/lib/money";
 import { prisma } from "@/server/db/prisma";
 import {
@@ -17,6 +19,10 @@ import {
   transitionOnlineOrderAction,
 } from "../actions";
 import { requireAdminSession } from "@/server/auth/require-admin-session";
+import {
+  getPublicStoreProfile,
+  getStoreBankAccount,
+} from "@/server/settings/store-settings";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
@@ -35,16 +41,51 @@ export default async function OrderDetailPage({
   await requireAdminSession({ redirectToLogin: true });
 
   const { id } = await params;
-  const order = await prisma.order.findUnique({
-    where: { id },
-    include: {
-      customer: true,
-      items: true,
-      payments: { orderBy: { createdAt: "asc" } },
-    },
-  });
+  const [order, storeProfile, bankAccount] = await Promise.all([
+    prisma.order.findUnique({
+      where: { id },
+      include: {
+        customer: true,
+        items: true,
+        payments: { orderBy: { createdAt: "asc" } },
+      },
+    }),
+    getPublicStoreProfile(),
+    getStoreBankAccount(),
+  ]);
 
   if (!order) notFound();
+
+  // Tien da thu that: bo ghi no va chuyen khoan chua xac nhan nhan tien.
+  const received = order.payments
+    .filter((payment) => payment.method !== "debt" && payment.receivedAt)
+    .reduce((sum, payment) => sum + payment.amount, 0);
+  const receiptOrder: ReceiptOrder = {
+    code: order.code,
+    createdAt: new Intl.DateTimeFormat("vi-VN", {
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(order.createdAt),
+    customerName: order.customer?.name ?? order.contactName ?? undefined,
+    customerPhone: order.customer?.phone ?? order.contactPhone ?? undefined,
+    lines: order.items.map((item) => ({
+      name: item.nameSnapshot,
+      quantity: item.quantity,
+      unit: item.unit,
+      unitPrice: item.unitPrice,
+      total: item.lineTotal,
+    })),
+    subtotal: order.subtotal,
+    discount: order.discount,
+    total: order.total,
+    payments: order.payments.map((payment) => ({
+      method: payment.method,
+      amount: payment.amount,
+    })),
+    amountDue:
+      order.status === "cancelled" ? 0 : Math.max(0, order.total - received),
+    note: order.note ?? undefined,
+  };
   const onlineStatus =
     order.fulfillmentStatus && isOnlineOrderStatus(order.fulfillmentStatus)
       ? order.fulfillmentStatus
@@ -69,18 +110,24 @@ export default async function OrderDetailPage({
           }).format(order.createdAt)}
           className="min-w-0 flex-1"
         />
-        <Badge
-          className="shrink-0"
-          variant={order.status === "cancelled" ? "outline" : "default"}
-        >
-          {order.status === "paid"
-            ? "Đã thanh toán"
-            : order.status === "debt"
-              ? "Ghi nợ"
-              : order.status === "cancelled"
-                ? "Đã hủy"
-                : order.status}
-        </Badge>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <PrintReceiptButton
+            storeName={storeProfile.name}
+            storeAddress={storeProfile.address}
+            storeHotline={storeProfile.hotline}
+            order={receiptOrder}
+            bankAccount={bankAccount}
+          />
+          <Badge variant={order.status === "cancelled" ? "outline" : "default"}>
+            {order.status === "paid"
+              ? "Đã thanh toán"
+              : order.status === "debt"
+                ? "Ghi nợ"
+                : order.status === "cancelled"
+                  ? "Đã hủy"
+                  : order.status}
+          </Badge>
+        </div>
       </div>
 
       <Card>

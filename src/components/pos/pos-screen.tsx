@@ -30,6 +30,8 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { PrintReceiptButton } from "@/features/orders/print-receipt-button";
+import type { ReceiptOrder } from "@/features/orders/receipt-k80";
 import { reportClientError } from "@/lib/client-log";
 import { formatVnd } from "@/lib/money";
 import { calculateCart } from "@/lib/pricing/calculate";
@@ -56,6 +58,48 @@ interface LastSale {
   received: number;
   change: number;
   synced: boolean;
+  receipt: ReceiptOrder;
+}
+
+/** Chup lai gio hang TRUOC khi xoa de van in duoc hoa don sau khi ban xong. */
+function buildPosReceipt(
+  code: string,
+  totals: ReturnType<typeof calculateCart>,
+  result: PaymentResult,
+): ReceiptOrder {
+  const change = Math.max(0, result.received - totals.total);
+  // Tien chua thu: ghi no, hoac chuyen khoan chua xac nhan nhan tien.
+  const amountDue = result.payments
+    .filter(
+      (payment) =>
+        payment.method === "debt" ||
+        (payment.method === "transfer" && !payment.receivedAt),
+    )
+    .reduce((sum, payment) => sum + payment.amount, 0);
+
+  return {
+    code,
+    createdAt: new Intl.DateTimeFormat("vi-VN", {
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(new Date()),
+    lines: totals.lines.map((line) => ({
+      name: line.name,
+      quantity: line.quantity,
+      unit: line.unit,
+      unitPrice: line.unitPrice,
+      total: line.lineTotal,
+    })),
+    subtotal: totals.subtotal,
+    discount: totals.discount,
+    total: totals.total,
+    payments: result.payments.map((payment) => ({
+      method: payment.method,
+      amount: payment.method === "cash" ? result.received : payment.amount,
+      change: payment.method === "cash" ? change : undefined,
+    })),
+    amountDue,
+  };
 }
 
 export function PosScreen({
@@ -180,12 +224,14 @@ export function PosScreen({
       customerId: result.customerId,
     });
 
+    const code = outcome.order?.code ?? null;
     setLastSale({
-      code: outcome.order?.code ?? null,
+      code,
       total: totals.total,
       received: result.received,
       change: Math.max(0, result.received - totals.total),
       synced: outcome.synced,
+      receipt: buildPosReceipt(code ?? pendingCode, totals, result),
     });
     setSaleOpen(true);
 
@@ -352,6 +398,12 @@ export function PosScreen({
               >
                 {formatVnd(lastSale.change)}
               </p>
+              <PrintReceiptButton
+                className="h-12 w-full"
+                storeName={storeName}
+                order={lastSale.receipt}
+                bankAccount={bankAccount}
+              />
               <Button
                 ref={newOrderRef}
                 className="h-16 w-full text-xl"

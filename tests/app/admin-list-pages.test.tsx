@@ -52,6 +52,10 @@ vi.mock("@/server/admin/list-products", () => ({
   listProductCategories: vi.fn(),
   listProducts: vi.fn(),
 }));
+vi.mock("@/server/settings/store-settings", () => ({
+  getPublicStoreProfile: vi.fn().mockResolvedValue({ name: "Tiệm Test" }),
+  getStoreBankAccount: vi.fn().mockResolvedValue(null),
+}));
 vi.mock("@/server/db/prisma", () => ({
   prisma: {
     category: { findMany: vi.fn() },

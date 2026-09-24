@@ -528,3 +528,22 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* In hoa don K80: khi co hoa don tren trang (hop thoai In hoa don dang mo),
+   chi in hoa don — an moi thu khac nhung giu bo cuc de khong nhay trang. */
+@media print {
+  body:has([data-print-receipt]) * {
+    visibility: hidden;
+  }
+
+  body:has([data-print-receipt]) [data-print-receipt],
+  body:has([data-print-receipt]) [data-print-receipt] * {
+    visibility: visible;
+  }
+
+  body:has([data-print-receipt]) [data-print-receipt] {
+    position: fixed;
+    top: 0;
+    left: 0;
+  }
+}
