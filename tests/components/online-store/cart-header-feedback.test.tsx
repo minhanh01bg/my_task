@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   OnlineCartProvider,
@@ -21,7 +21,7 @@ const mockProduct: OnlineProduct = {
 };
 
 function TestWrapper() {
-  const { add } = useOnlineCart();
+  const { add, setQuantity } = useOnlineCart();
   return (
     <div>
       <StoreHeader
@@ -29,11 +29,16 @@ function TestWrapper() {
         shipping={DEFAULT_SHIPPING_SETTINGS}
       />
       <button onClick={() => add(mockProduct)}>Thêm vào giỏ</button>
+      <button onClick={() => setQuantity(mockProduct.id, 1)}>Giảm về 1</button>
     </div>
   );
 }
 
 describe("StoreHeader Cart Badge Feedback", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("hiển thị số lượng giỏ hàng ban đầu bằng 0", () => {
     render(
       <OnlineCartProvider>
@@ -56,5 +61,24 @@ describe("StoreHeader Cart Badge Feedback", () => {
     fireEvent.click(addBtn);
 
     expect(screen.getByText("1")).toBeInTheDocument();
+  });
+
+  it("không nhún badge khi số lượng giảm sau các lần thêm", () => {
+    vi.useFakeTimers();
+    render(
+      <OnlineCartProvider>
+        <TestWrapper />
+      </OnlineCartProvider>,
+    );
+
+    fireEvent.click(screen.getByText("Thêm vào giỏ"));
+    act(() => vi.advanceTimersByTime(500));
+    fireEvent.click(screen.getByText("Thêm vào giỏ"));
+    act(() => vi.advanceTimersByTime(500));
+
+    fireEvent.click(screen.getByText("Giảm về 1"));
+
+    const badge = screen.getByText("1");
+    expect(badge).not.toHaveClass("animate-badge-bounce");
   });
 });

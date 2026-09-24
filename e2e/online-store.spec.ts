@@ -309,3 +309,25 @@ test("featured: hiển thị danh sách sản phẩm nổi bật trên landing p
   const railHeading = page.getByRole("heading", { name: "Sản phẩm nổi bật" });
   await expect(railHeading).toBeVisible();
 });
+
+test("mobile: header cửa hàng không làm trang tràn ngang", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await page.goto("/shop");
+  const productHref = await page
+    .locator('a[href^="/shop/p/"]')
+    .first()
+    .getAttribute("href");
+
+  for (const path of ["/shop", productHref!, "/shop/privacy"]) {
+    await page.goto(path);
+    await expect(
+      page.getByRole("button", { name: /mở giỏ hàng/i }),
+    ).toBeInViewport({ ratio: 1 });
+    const overflow = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth,
+    );
+    expect(overflow, `${path} tràn ngang`).toBeLessThanOrEqual(0);
+  }
+});
