@@ -2,32 +2,37 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Heart, LayoutDashboard, ShoppingBag, UserRound } from "lucide-react";
+import { Heart, ShoppingBag } from "lucide-react";
 
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CustomerNotificationButton } from "@/features/customer-notifications/notification-button";
+import type { ShippingSettings } from "@/lib/shipping/shipping-fee";
 import { useWishlist } from "@/lib/storage/wishlist";
 import { cn } from "@/lib/utils";
 
 import { useOnlineCart } from "./cart-context";
 import { CartDrawer } from "./cart-drawer";
+import { SessionAwareActions } from "./session-aware-actions";
+import { WishlistDrawer } from "./wishlist-drawer";
 
 export function StoreHeader({
   storeName,
-  isAdmin = false,
-  isCustomer = false,
+  shipping,
 }: {
   storeName: string;
-  isAdmin?: boolean;
-  isCustomer?: boolean;
+  /**
+   * Phi ship/nguong freeship cho gio hang (`getShippingSettings()`). Bat buoc
+   * de trang nao quen truyen thi typecheck bao loi, khong lang le dung mac dinh.
+   */
+  shipping: ShippingSettings;
 }) {
   const { lines, hydrated, openDrawer } = useOnlineCart();
   const { count: wishlistCount } = useWishlist();
   const count = lines.reduce((sum, line) => sum + line.quantity, 0);
 
   const [isBouncing, setIsBouncing] = useState(false);
+  const [wishlistOpen, setWishlistOpen] = useState(false);
   const prevCountRef = useRef(count);
 
   useEffect(() => {
@@ -50,37 +55,13 @@ export function StoreHeader({
             {storeName}
           </Link>
           <div className="flex items-center gap-2">
-            {isAdmin ? (
-              <Button
-                variant="outline"
-                className="min-h-11 font-bold"
-                nativeButton={false}
-                aria-label="Quay lại trang quản trị"
-                render={<Link href="/admin/orders" />}
-              >
-                <LayoutDashboard aria-hidden="true" className="size-5" />
-                <span className="ml-1.5 hidden sm:inline">Quản trị</span>
-              </Button>
-            ) : (
-              <>
-                <CustomerNotificationButton />
-                <Button
-                  variant="outline"
-                  className="min-h-11 font-bold"
-                  nativeButton={false}
-                  aria-label="Tài khoản khách hàng"
-                  render={<Link href="/account/orders" />}
-                >
-                  <UserRound aria-hidden="true" className="size-5" />
-                  <span className="ml-1.5 hidden sm:inline">Tài khoản</span>
-                </Button>
-              </>
-            )}
+            <SessionAwareActions />
             <ThemeToggle />
-            <Link
-              href="/shop?wishlist=true"
+            <button
+              type="button"
+              onClick={() => setWishlistOpen(true)}
               aria-label={`Danh sách yêu thích (${wishlistCount} sản phẩm)`}
-              className="border-input bg-background text-muted-foreground hover:text-foreground hover:bg-muted relative inline-flex h-11 w-11 items-center justify-center rounded-xl border transition-colors"
+              className="border-input bg-background text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:ring-ring relative inline-flex h-11 w-11 items-center justify-center rounded-xl border transition-colors outline-none focus-visible:ring-2"
             >
               <Heart
                 aria-hidden="true"
@@ -94,7 +75,7 @@ export function StoreHeader({
                   {wishlistCount}
                 </span>
               ) : null}
-            </Link>
+            </button>
             <Button
               type="button"
               onClick={openDrawer}
@@ -117,7 +98,8 @@ export function StoreHeader({
           </div>
         </div>
       </header>
-      <CartDrawer />
+      <CartDrawer shipping={shipping} />
+      <WishlistDrawer open={wishlistOpen} onOpenChange={setWishlistOpen} />
     </>
   );
 }

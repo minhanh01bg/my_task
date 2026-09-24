@@ -29,6 +29,12 @@ describe("CartPanel", () => {
     expect(screen.getByText(/chưa có sản phẩm/i)).toBeInTheDocument();
   });
 
+  it("gio rong dung EmptyState chung cua kit", () => {
+    const { container } = render(<CartPanel onCheckout={vi.fn()} />);
+    const empty = container.querySelector('[data-slot="empty-state"]');
+    expect(empty).toHaveTextContent("Chưa có sản phẩm nào");
+  });
+
   it("hien dong hang va thanh tien", () => {
     useCartStore.getState().addProduct(sugar);
     render(<CartPanel onCheckout={vi.fn()} />);

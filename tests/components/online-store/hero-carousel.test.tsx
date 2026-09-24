@@ -110,4 +110,68 @@ describe("HeroCarousel Component", () => {
     expect(screen.getByText("Tồn kho chuẩn xác 100%")).toBeInTheDocument();
     expect(screen.getByText("Độ tươi mới trong ngày")).toBeInTheDocument();
   });
+
+  it("kéo thả chỉ cập nhật vị trí tối đa một lần mỗi khung hình (rAF)", () => {
+    const frames: FrameRequestCallback[] = [];
+    const raf = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        frames.push(callback);
+        return frames.length;
+      });
+    const cancel = vi.spyOn(window, "cancelAnimationFrame");
+
+    render(<HeroCarousel slides={DEFAULT_HERO_SLIDES} />);
+    const region = screen.getByRole("region", { name: "Khuyến mãi nổi bật" });
+
+    fireEvent.touchStart(region, { touches: [{ clientX: 200 }] });
+    fireEvent.touchMove(region, { touches: [{ clientX: 190 }] });
+    fireEvent.touchMove(region, { touches: [{ clientX: 170 }] });
+    fireEvent.touchMove(region, { touches: [{ clientX: 130 }] });
+    // Ba lan di chuyen trong cung mot khung hinh -> chi mot lan xin khung.
+    expect(raf).toHaveBeenCalledTimes(1);
+
+    // Buong tay truoc khi khung chay: huy khung dang cho, van tinh vuot.
+    fireEvent.touchEnd(region);
+    expect(cancel).toHaveBeenCalledWith(1);
+    expect(screen.getByText("02 / 03")).toBeInTheDocument();
+
+    raf.mockRestore();
+    cancel.mockRestore();
+  });
+
+  it("touchcancel kết thúc kéo và hủy khung hình đang chờ", () => {
+    const raf = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation(() => 7);
+    const cancel = vi.spyOn(window, "cancelAnimationFrame");
+
+    render(<HeroCarousel slides={DEFAULT_HERO_SLIDES} />);
+    const region = screen.getByRole("region", { name: "Khuyến mãi nổi bật" });
+
+    fireEvent.touchStart(region, { touches: [{ clientX: 200 }] });
+    fireEvent.touchMove(region, { touches: [{ clientX: 180 }] });
+    fireEvent.touchCancel(region);
+    expect(cancel).toHaveBeenCalledWith(7);
+
+    raf.mockRestore();
+    cancel.mockRestore();
+  });
+
+  it("gỡ component thì hủy khung hình đang chờ", () => {
+    const raf = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation(() => 9);
+    const cancel = vi.spyOn(window, "cancelAnimationFrame");
+
+    const { unmount } = render(<HeroCarousel slides={DEFAULT_HERO_SLIDES} />);
+    const region = screen.getByRole("region", { name: "Khuyến mãi nổi bật" });
+    fireEvent.touchStart(region, { touches: [{ clientX: 200 }] });
+    fireEvent.touchMove(region, { touches: [{ clientX: 180 }] });
+    unmount();
+    expect(cancel).toHaveBeenCalledWith(9);
+
+    raf.mockRestore();
+    cancel.mockRestore();
+  });
 });

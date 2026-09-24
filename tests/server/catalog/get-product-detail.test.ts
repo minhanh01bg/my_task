@@ -84,6 +84,34 @@ describe("getOnlineProductDetail", () => {
     expect(result?.relatedProducts[0].id).toBe(testProd2Id);
   });
 
+  it("kèm điểm đánh giá và trang đầu đánh giá đã đăng", async () => {
+    await prisma.product.create({
+      data: {
+        id: testProd1Id,
+        name: "Nước Cam Ép Tươi",
+        price: 35_000,
+        ratingAvg: 4,
+        ratingCount: 1,
+        reviews: {
+          create: [
+            { authorName: "Lan", rating: 4, content: "Cam ngọt, tươi" },
+            {
+              authorName: "Ẩn",
+              rating: 1,
+              content: "Bị ẩn",
+              status: "hidden",
+            },
+          ],
+        },
+      },
+    });
+
+    const result = await getOnlineProductDetail(testProd1Id);
+    expect(result?.product).toMatchObject({ ratingAvg: 4, ratingCount: 1 });
+    expect(result?.reviews.total).toBe(1);
+    expect(result?.reviews.items.map((r) => r.authorName)).toEqual(["Lan"]);
+  });
+
   it("trả về null nếu sản phẩm bị ẩn (isActive = false) hoặc đã bị xóa", async () => {
     await prisma.product.create({
       data: {

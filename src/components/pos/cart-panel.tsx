@@ -2,7 +2,9 @@
 
 import { useMemo } from "react";
 import { ArrowRight, Basket } from "@phosphor-icons/react";
+import { ShoppingBasket } from "lucide-react";
 
+import { EmptyState } from "@/components/kit/empty-state";
 import { CartLineRow } from "@/components/pos/cart-line-row";
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Button } from "@/components/ui/button";
@@ -52,15 +54,12 @@ export function CartPanel({ onCheckout }: CartPanelProps) {
       </div>
 
       {lines.length === 0 ? (
-        <div className="text-muted-foreground flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-          <span className="bg-muted flex size-16 items-center justify-center rounded-full">
-            <Basket aria-hidden="true" weight="duotone" className="size-8" />
-          </span>
-          <p className="text-foreground font-bold">Chưa có sản phẩm nào</p>
-          <p className="max-w-60 text-sm">
-            Tìm sản phẩm hoặc chọn theo danh mục bên trái để thêm vào đơn.
-          </p>
-        </div>
+        <EmptyState
+          icon={ShoppingBasket}
+          title="Chưa có sản phẩm nào"
+          description="Tìm sản phẩm hoặc chọn theo danh mục bên trái để thêm vào đơn."
+          className="flex-1 justify-center"
+        />
       ) : (
         <ul className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2 pr-1 [scrollbar-gutter:stable]">
           {totals.lines.map((line) => (

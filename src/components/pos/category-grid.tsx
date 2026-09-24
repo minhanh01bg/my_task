@@ -1,7 +1,7 @@
 "use client";
 
+import { ProductImage } from "@/components/kit/product-image";
 import { formatVnd } from "@/lib/money";
-import { ProductImage } from "@/components/shared/product-image";
 import type { SearchableProduct } from "@/lib/search/types";
 import { cn } from "@/lib/utils";
 import type { CatalogCategory } from "@/types/catalog";
@@ -36,6 +36,7 @@ export function CategoryGrid({
           <button
             key={category.id}
             type="button"
+            aria-pressed={activeCategoryId === category.id}
             onClick={() =>
               onCategoryChange(
                 activeCategoryId === category.id ? null : category.id,
@@ -69,8 +70,9 @@ export function CategoryGrid({
           >
             <ProductImage
               src={product.imageUrl}
+              name={product.name}
               alt={`Ảnh ${product.name}`}
-              className="mb-3 aspect-[4/3] w-full"
+              className="mb-3 aspect-[4/3] w-full rounded-xl text-2xl"
             />
             <span className="line-clamp-2 font-bold">{product.name}</span>
             <span className="mt-1 font-semibold tabular-nums">

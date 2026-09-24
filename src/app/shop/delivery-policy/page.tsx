@@ -1,29 +1,41 @@
+import type { Metadata } from "next";
+
 import { PolicyLayout } from "@/features/online-store/policy-layout";
-import { hasAdminSession } from "@/server/auth/require-admin-session";
-import { getOptionalCustomerSession } from "@/server/customer-auth/session";
-import { getPublicStoreProfile } from "@/server/settings/store-settings";
+import {
+  policyMetadata,
+  type PolicyPageMeta,
+} from "@/features/online-store/policy-metadata";
+import {
+  getPublicStoreProfile,
+  getShippingSettings,
+} from "@/server/settings/store-settings";
 
-export const dynamic = "force-dynamic";
+/** URL tuyệt đối (canonical/OG/JSON-LD) làm mới sau deploy đổi CANONICAL_ORIGIN. */
+export const revalidate = 3600;
 
-export const metadata = {
+const PAGE: PolicyPageMeta = {
+  path: "/shop/delivery-policy",
   title: "Chính sách giao hàng",
   description:
     "Thông tin về phương thức, thời gian và quy trình giao nhận hàng",
 };
 
+export function generateMetadata(): Promise<Metadata> {
+  return policyMetadata(PAGE);
+}
+
 export default async function DeliveryPolicyPage() {
-  const [storeProfile, isAdmin, customerSession] = await Promise.all([
+  const [storeProfile, shipping] = await Promise.all([
     getPublicStoreProfile(),
-    hasAdminSession(),
-    getOptionalCustomerSession(),
+    getShippingSettings(),
   ]);
 
   return (
     <PolicyLayout
       storeProfile={storeProfile}
-      isAdmin={isAdmin}
-      isCustomer={Boolean(customerSession)}
-      title="Chính sách giao hàng"
+      shipping={shipping}
+      path={PAGE.path}
+      title={PAGE.title}
       description="Quy định và hướng dẫn chi tiết về phương thức, thời gian giao hàng và đồng kiểm khi nhận hàng."
     >
       <section className="space-y-3">

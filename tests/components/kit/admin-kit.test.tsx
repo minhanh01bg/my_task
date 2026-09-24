@@ -177,3 +177,13 @@ describe("CollapsibleFormCard", () => {
     expect(screen.getByText("Nội dung form")).toBeVisible();
   });
 });
+
+describe("PageHeader eyebrow", () => {
+  it("hien dong nho phia tren tieu de", () => {
+    render(<PageHeader eyebrow="Danh mục hàng hóa" title="Sản phẩm" />);
+    expect(screen.getByText("Danh mục hàng hóa")).toHaveClass("eyebrow");
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Sản phẩm" }),
+    ).toBeInTheDocument();
+  });
+});

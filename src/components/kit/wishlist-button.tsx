@@ -54,7 +54,7 @@ export function WishlistButton({
       aria-label={ariaLabel}
       aria-pressed={wishlisted}
       onClick={handleClick}
-      className={`focus-visible:ring-primary inline-flex items-center justify-center rounded-full transition-all focus-visible:ring-2 focus-visible:outline-none ${
+      className={`focus-visible:ring-primary inline-flex items-center justify-center rounded-full transition-[background-color,border-color,color] focus-visible:ring-2 focus-visible:outline-none ${
         showText ? "gap-2 px-3" : SIZES[size]
       } ${
         wishlisted
@@ -63,7 +63,7 @@ export function WishlistButton({
       } ${bouncing ? "animate-badge-bounce" : ""} ${className}`}
     >
       <Heart
-        className={`${ICON_SIZES[size]} transition-all ${
+        className={`${ICON_SIZES[size]} transition-[color,fill,transform] ${
           wishlisted ? "scale-110 fill-rose-500 text-rose-500" : ""
         }`}
       />

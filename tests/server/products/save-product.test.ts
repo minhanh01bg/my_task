@@ -150,6 +150,85 @@ describe("saveProduct", () => {
   });
 });
 
+const BASE_INPUT = {
+  unit: "cái",
+  price: 35000,
+  costPrice: 24000,
+  stock: 20,
+  isActive: true,
+};
+
+async function slugOf(id: string): Promise<string | null> {
+  const row = await prisma.product.findUniqueOrThrow({
+    where: { id },
+    select: { slug: true },
+  });
+  return row.slug;
+}
+
+describe("saveProduct — slug SEO", () => {
+  it("sinh slug bỏ dấu từ tên khi tạo", async () => {
+    const { id } = await saveProduct({
+      ...BASE_INPUT,
+      name: "Cà phê Robusta 500g",
+    });
+    expect(await slugOf(id)).toBe("ca-phe-robusta-500g");
+  });
+
+  it("trùng tên thì thêm hậu tố -2, -3", async () => {
+    const first = await saveProduct({ ...BASE_INPUT, name: "Bugi NGK" });
+    const second = await saveProduct({ ...BASE_INPUT, name: "Bugi  NGK!" });
+    const third = await saveProduct({ ...BASE_INPUT, name: "bugi ngk" });
+
+    expect(await slugOf(first.id)).toBe("bugi-ngk");
+    expect(await slugOf(second.id)).toBe("bugi-ngk-2");
+    expect(await slugOf(third.id)).toBe("bugi-ngk-3");
+  });
+
+  it("giữ nguyên slug khi sửa mà không đổi tên (URL ổn định)", async () => {
+    const { id } = await saveProduct({ ...BASE_INPUT, name: "Bugi NGK" });
+    await saveProduct({ ...BASE_INPUT, id, name: "Bugi NGK", price: 40000 });
+
+    expect(await slugOf(id)).toBe("bugi-ngk");
+  });
+
+  it("đổi tên không làm đổi slug đã có (URL ổn định)", async () => {
+    const { id } = await saveProduct({ ...BASE_INPUT, name: "Bugi NGK" });
+
+    await saveProduct({ ...BASE_INPUT, id, name: "BUGI ngk" });
+    expect(await slugOf(id)).toBe("bugi-ngk");
+
+    await saveProduct({ ...BASE_INPUT, id, name: "Bugi Denso" });
+    expect(await slugOf(id)).toBe("bugi-ngk");
+  });
+
+  it("bản ghi cũ chưa có slug đổi tên thành tên đã bị chiếm slug thì nhận hậu tố -2", async () => {
+    await saveProduct({ ...BASE_INPUT, name: "Bugi Denso" });
+    const legacy = await prisma.product.create({
+      data: { name: "Bugi NGK", price: 1000 },
+    });
+    expect(legacy.slug).toBeNull();
+
+    await saveProduct({ ...BASE_INPUT, id: legacy.id, name: "Bugi Denso" });
+    expect(await slugOf(legacy.id)).toBe("bugi-denso-2");
+  });
+
+  it("sản phẩm cũ chưa có slug được gán slug ở lần sửa kế tiếp", async () => {
+    const legacy = await prisma.product.create({
+      data: { name: "Nhớt Castrol", price: 1000 },
+    });
+    expect(legacy.slug).toBeNull();
+
+    await saveProduct({ ...BASE_INPUT, id: legacy.id, name: "Nhớt Castrol" });
+    expect(await slugOf(legacy.id)).toBe("nhot-castrol");
+  });
+
+  it("tên không có chữ/số dùng slug dự phòng", async () => {
+    const { id } = await saveProduct({ ...BASE_INPUT, name: "!!!" });
+    expect(await slugOf(id)).toBe("san-pham");
+  });
+});
+
 describe("softDeleteProduct", () => {
   it("xoa mem — van con ban ghi nhung khong hien o POS", async () => {
     const { id } = await saveProduct({

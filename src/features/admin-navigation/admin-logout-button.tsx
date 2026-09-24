@@ -4,6 +4,7 @@ import { SignOut } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { invalidateStorefrontSession } from "@/features/online-store/storefront-session";
 import { cn } from "@/lib/utils";
 
 export function AdminLogoutButton({
@@ -29,6 +30,7 @@ export function AdminLogoutButton({
         throw new Error("Logout request failed");
       }
 
+      invalidateStorefrontSession();
       onLogout?.();
       router.replace("/login");
       router.refresh();

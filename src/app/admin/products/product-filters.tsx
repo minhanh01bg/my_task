@@ -73,6 +73,8 @@ export function ProductFilters({
       // Xoa params cu lien quan
       params.delete("lowStock");
       params.delete("edit");
+      // Doi bo loc thi quay ve trang 1
+      params.delete("page");
 
       for (const [key, value] of Object.entries(updates)) {
         if (!value || value === "all" || value === "") {
@@ -189,7 +191,7 @@ export function ProductFilters({
               type="button"
               aria-selected={isActive}
               onClick={() => handleStatusChange(tab.id)}
-              className={`flex shrink-0 cursor-pointer items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs font-bold transition-all duration-200 ease-out select-none hover:scale-[1.02] active:scale-[0.96] ${
+              className={`flex shrink-0 cursor-pointer items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs font-bold transition-[background-color,border-color,color,box-shadow,transform] duration-200 ease-out select-none active:scale-[0.96] ${
                 isActive
                   ? tab.activeClass ||
                     "border-primary bg-primary text-primary-foreground shadow-xs"
@@ -230,7 +232,7 @@ export function ProductFilters({
             onChange={(e) => setSearchVal(e.target.value)}
             aria-label="Tìm sản phẩm"
             placeholder="Tìm theo tên sản phẩm, mã SKU hoặc tên gọi khác..."
-            className="border-input bg-background focus-visible:ring-primary/20 focus-visible:border-primary h-11 w-full rounded-xl border pr-9 pl-10 text-sm transition-all outline-none focus-visible:ring-3"
+            className="border-input bg-background focus-visible:ring-primary/20 focus-visible:border-primary h-11 w-full rounded-xl border pr-9 pl-10 text-sm transition-[border-color,box-shadow] outline-none focus-visible:ring-3"
           />
           {searchVal ? (
             <button

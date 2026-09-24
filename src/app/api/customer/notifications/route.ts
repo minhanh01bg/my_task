@@ -1,8 +1,23 @@
+import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/server/db/prisma";
 import { resolveCustomerSessionToken } from "@/server/customer-auth/session";
 import { customerNotificationsQuerySchema } from "@/types/customer-notification";
+
+/** Dung cac truong cua `CustomerNotificationDTO`. */
+const customerNotificationListSelect = {
+  id: true,
+  accountId: true,
+  eventKey: true,
+  kind: true,
+  title: true,
+  body: true,
+  orderId: true,
+  href: true,
+  createdAt: true,
+  readAt: true,
+} satisfies Prisma.CustomerNotificationSelect;
 
 export async function GET(request: Request) {
   const cookie = request.headers
@@ -44,6 +59,7 @@ export async function GET(request: Request) {
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      select: customerNotificationListSelect,
     }),
   ]);
 

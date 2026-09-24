@@ -1,3 +1,5 @@
+import { cachedPublic } from "@/server/cache/public-cache";
+import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
 import {
   publicPromotionSchema,
@@ -11,16 +13,36 @@ export interface GetActivePromotionsOptions {
   limit?: number;
 }
 
+/**
+ * Khuyen mai dang chay, cache theo tag promotions (60s). Truyen `now` tuong
+ * minh (test, xem truoc) thi doc thang DB de khong sinh khoa cache theo thoi diem.
+ * Voi cache, moc bat dau/ket thuc co the tre toi da `revalidate` giay.
+ */
 export async function getActivePromotions(
   options: GetActivePromotionsOptions = {},
 ): Promise<PublicPromotion[]> {
-  const now = options.now ?? new Date();
   const limit = options.limit ?? 10;
 
+  if (options.now) {
+    return loadActivePromotions(options.placement, limit, options.now);
+  }
+
+  return cachedPublic(
+    () => loadActivePromotions(options.placement, limit, new Date()),
+    ["active-promotions", options.placement ?? "all", String(limit)],
+    { tags: [CACHE_TAGS.promotions], revalidate: 60, fallback: () => [] },
+  );
+}
+
+async function loadActivePromotions(
+  placement: PromotionPlacement | undefined,
+  limit: number,
+  now: Date,
+): Promise<PublicPromotion[]> {
   const rows = await prisma.storefrontPromotion.findMany({
     where: {
       isActive: true,
-      ...(options.placement ? { placement: options.placement } : {}),
+      ...(placement ? { placement } : {}),
       AND: [
         {
           OR: [{ startsAt: null }, { startsAt: { lte: now } }],

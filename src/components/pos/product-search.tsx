@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { MagnifyingGlass, MagnifyingGlassMinus } from "@phosphor-icons/react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { MagnifyingGlass } from "@phosphor-icons/react";
+import { SearchX } from "lucide-react";
 
+import { EmptyState } from "@/components/kit/empty-state";
+import { ProductImage } from "@/components/kit/product-image";
 import { Input } from "@/components/ui/input";
-import { ProductImage } from "@/components/shared/product-image";
 import { formatVnd } from "@/lib/money";
 import { searchProducts } from "@/lib/search/match";
 import type { SearchableProduct } from "@/lib/search/types";
@@ -16,6 +18,11 @@ interface ProductSearchProps {
 }
 
 const RESULT_LIMIT = 20;
+const LISTBOX_ID = "pos-search-results";
+
+function optionId(index: number): string {
+  return `${LISTBOX_ID}-option-${index}`;
+}
 
 /**
  * O tim kiem la duong vao chinh cua moi giao dich — cua hang chua co barcode.
@@ -25,11 +32,24 @@ export function ProductSearch({ products, onSelect }: ProductSearchProps) {
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
 
   const results = useMemo(
     () => searchProducts(products, query, RESULT_LIMIT),
     [products, query],
   );
+  const activeResult = results[activeIndex];
+
+  // Giu option dang chon trong tam nhin khi di chuyen bang mui ten. Chi theo
+  // activeIndex: danh sach doi (go phim, lam moi danh muc) khong duoc giat cuon;
+  // option dau tien luon o dinh danh sach nen bo qua.
+  useEffect(() => {
+    if (activeIndex === 0) return;
+    const option = listRef.current?.querySelector<HTMLElement>(
+      `#${optionId(activeIndex)}`,
+    );
+    option?.scrollIntoView?.({ block: "nearest" });
+  }, [activeIndex]);
 
   function reset() {
     setQuery("");
@@ -89,8 +109,11 @@ export function ProductSearch({ products, onSelect }: ProductSearchProps) {
           ref={inputRef}
           role="combobox"
           aria-expanded={query.trim().length > 0 && results.length > 0}
-          aria-controls="pos-search-results"
+          aria-controls={LISTBOX_ID}
           aria-autocomplete="list"
+          aria-activedescendant={
+            activeResult ? optionId(activeIndex) : undefined
+          }
           value={query}
           autoFocus
           placeholder="Nhập tên, mã hoặc loại sản phẩm..."
@@ -107,29 +130,29 @@ export function ProductSearch({ products, onSelect }: ProductSearchProps) {
       </div>
 
       {showEmpty ? (
-        <p
-          className="text-muted-foreground flex flex-col items-center gap-2 px-4 py-7 text-center"
+        <EmptyState
           role="status"
-        >
-          <MagnifyingGlassMinus
-            aria-hidden="true"
-            weight="duotone"
-            className="size-8"
-          />
-          Không tìm thấy sản phẩm. Thử nhập tên ngắn hơn.
-        </p>
+          size="compact"
+          icon={SearchX}
+          title="Không tìm thấy sản phẩm"
+          description="Thử nhập tên ngắn hơn hoặc tên gọi khác."
+        />
       ) : null}
 
       <ul
-        id="pos-search-results"
+        ref={listRef}
+        id={LISTBOX_ID}
         role="listbox"
+        aria-label="Kết quả tìm sản phẩm"
         className="flex max-h-72 flex-col gap-1 overflow-y-auto"
       >
         {results.map((product, index) => (
           <li key={product.id}>
             <button
               type="button"
+              id={optionId(index)}
               role="option"
+              tabIndex={-1}
               aria-selected={index === activeIndex}
               onClick={() => choose(product)}
               className={cn(
@@ -142,8 +165,10 @@ export function ProductSearch({ products, onSelect }: ProductSearchProps) {
               <span className="flex min-w-0 items-center gap-3">
                 <ProductImage
                   src={product.imageUrl}
+                  name={product.name}
                   alt={`Ảnh ${product.name}`}
-                  className="size-12"
+                  size={48}
+                  className="rounded-xl"
                 />
                 <span className="flex min-w-0 flex-col">
                   <span className="font-medium">{product.name}</span>

@@ -54,7 +54,7 @@ describe("CustomerNotificationButton", () => {
   });
 
   it("hiển thị badge số lượng chưa đọc và mở panel thông báo", async () => {
-    render(<CustomerNotificationButton />);
+    render(<CustomerNotificationButton enabled />);
 
     // Kiểm tra badge hiển thị đúng 1
     const badge = await screen.findByTestId("customer-notification-badge");
@@ -86,14 +86,14 @@ describe("CustomerNotificationButton", () => {
       }),
     );
 
-    render(<CustomerNotificationButton />);
+    render(<CustomerNotificationButton enabled />);
 
     const badge = await screen.findByTestId("customer-notification-badge");
     expect(badge).toHaveTextContent("99+");
   });
 
   it("gọi API mark-read khi bấm đánh dấu một tin đã đọc", async () => {
-    render(<CustomerNotificationButton />);
+    render(<CustomerNotificationButton enabled />);
 
     const button = await screen.findByRole("button", { name: /thông báo/i });
     fireEvent.click(button);
@@ -115,7 +115,7 @@ describe("CustomerNotificationButton", () => {
   });
 
   it("gọi API mark-read khi bấm đọc tất cả", async () => {
-    render(<CustomerNotificationButton />);
+    render(<CustomerNotificationButton enabled />);
 
     const button = await screen.findByRole("button", { name: /thông báo/i });
     fireEvent.click(button);
@@ -149,11 +149,12 @@ describe("CustomerNotificationButton", () => {
       }),
     );
 
-    render(<CustomerNotificationButton />);
+    render(<CustomerNotificationButton enabled />);
 
     const button = await screen.findByRole("button", { name: /thông báo/i });
     fireEvent.click(button);
 
-    expect(await screen.findByText("Chưa có thông báo")).toBeInTheDocument();
+    const title = await screen.findByText("Chưa có thông báo");
+    expect(title.closest('[data-slot="empty-state"]')).not.toBeNull();
   });
 });

@@ -3,6 +3,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell, CheckCircle, X } from "@phosphor-icons/react";
+import { BellOff } from "lucide-react";
+
+import { EmptyState } from "@/components/kit/empty-state";
 
 import { useAdminNotifications } from "./notification-provider";
 
@@ -14,6 +17,8 @@ export function NotificationButton({
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const { items, unreadCount, loading, error, refresh, markOne, markAll } =
     useAdminNotifications();
 
@@ -21,8 +26,40 @@ export function NotificationButton({
     if (open) closeRef.current?.focus();
   }, [open]);
 
+  // Escape va bam ra ngoai dong panel, giong hanh vi popover chuan.
+  useEffect(() => {
+    if (!open) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      triggerRef.current?.focus();
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+      if (target instanceof Node && containerRef.current?.contains(target)) {
+        return;
+      }
+      setOpen(false);
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [open]);
+
+  function close() {
+    setOpen(false);
+    triggerRef.current?.focus();
+  }
+
   return (
     <div
+      ref={containerRef}
       className={
         placement === "desktop"
           ? `relative mb-4 ${open ? "z-[100]" : ""}`
@@ -30,6 +67,7 @@ export function NotificationButton({
       }
     >
       <button
+        ref={triggerRef}
         type="button"
         aria-label={`Thông báo${unreadCount ? `, ${unreadCount} chưa đọc` : ""}`}
         aria-expanded={open}
@@ -66,8 +104,8 @@ export function NotificationButton({
           aria-label="Thông báo quản trị"
           className={
             placement === "desktop"
-              ? "bg-popover text-popover-foreground animate-in absolute top-0 left-full z-[100] ml-3 max-h-[75dvh] w-96 overflow-auto rounded-2xl border p-3 shadow-xl"
-              : "bg-popover text-popover-foreground animate-in fixed inset-x-3 top-18 z-[100] max-h-[calc(100dvh-6rem)] overflow-auto rounded-2xl border p-3 shadow-xl"
+              ? "bg-popover text-popover-foreground animate-popover-enter absolute top-0 left-full z-[100] ml-3 max-h-[75dvh] w-96 overflow-auto rounded-2xl border p-3 shadow-xl"
+              : "bg-popover text-popover-foreground animate-popover-enter fixed inset-x-3 top-18 z-[100] max-h-[calc(100dvh-6rem)] overflow-auto rounded-2xl border p-3 shadow-xl"
           }
         >
           <header className="mb-2 flex items-center justify-between gap-2">
@@ -86,7 +124,7 @@ export function NotificationButton({
                 ref={closeRef}
                 type="button"
                 aria-label="Đóng thông báo"
-                onClick={() => setOpen(false)}
+                onClick={close}
                 className="hover:bg-muted flex size-11 items-center justify-center rounded-lg"
               >
                 <X aria-hidden="true" />
@@ -109,9 +147,12 @@ export function NotificationButton({
               </button>
             </div>
           ) : items.length === 0 ? (
-            <p className="text-muted-foreground p-4 text-sm">
-              Chưa có thông báo.
-            </p>
+            <EmptyState
+              size="compact"
+              icon={BellOff}
+              title="Chưa có thông báo"
+              description="Đơn online mới và cảnh báo tồn kho sẽ hiện ở đây."
+            />
           ) : (
             <ul className="space-y-1">
               {items.map((item) => (

@@ -1,8 +1,14 @@
 import Link from "next/link";
 import { NotePencil, Trash, Warning } from "@phosphor-icons/react/dist/ssr";
+import { SearchX } from "lucide-react";
 
+import {
+  EmptyState,
+  PageHeader,
+  Pagination,
+  ProductImage,
+} from "@/components/kit";
 import { ConfirmAction } from "@/components/shared/confirm-action";
-import { ProductImage } from "@/components/shared/product-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +21,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatVnd } from "@/lib/money";
-import { prisma } from "@/server/db/prisma";
+import {
+  findEditableProduct,
+  isProductStockStatus,
+  listProductCategories,
+  listProducts,
+} from "@/server/admin/list-products";
+import { parsePageParam } from "@/server/admin/pagination";
 
 import { ProductDialog } from "./product-dialog";
 import { ProductFilters } from "./product-filters";
@@ -33,89 +45,55 @@ export default async function ProductsPage({
     lowStock?: string;
     status?: string;
     categoryId?: string;
+    page?: string;
   }>;
 }) {
-  const { q = "", edit, lowStock, status, categoryId } = await searchParams;
-
-  const [categories, allProducts] = await Promise.all([
-    prisma.category.findMany({
-      orderBy: { sortOrder: "asc" },
-      select: { id: true, name: true, sortOrder: true },
-    }),
-    prisma.product.findMany({
-      where: {
-        deletedAt: null,
-        ...(q.trim()
-          ? {
-              OR: [
-                { name: { contains: q.trim() } },
-                { sku: { contains: q.trim() } },
-                { aliases: { contains: q.trim() } },
-              ],
-            }
-          : {}),
-      },
-      orderBy: { name: "asc" },
-      include: { category: { select: { name: true } } },
-    }),
-  ]);
-
-  // Thống kê tồn kho theo các nhóm
-  const counts = {
-    all: allProducts.length,
-    low: allProducts.filter((p) => !p.isService && p.stock <= 5).length,
-    out: allProducts.filter((p) => !p.isService && p.stock === 0).length,
-    negative: allProducts.filter((p) => !p.isService && p.stock < 0).length,
-    available: allProducts.filter((p) => !p.isService && p.stock > 5).length,
-  };
-
-  const lowStockCount = counts.low;
+  const {
+    q = "",
+    edit,
+    lowStock,
+    status,
+    categoryId,
+    page: pageParam,
+  } = await searchParams;
 
   // Xử lý trạng thái lọc
   const effectiveStatus =
-    lowStock === "true" ? "low" : status && status !== "all" ? status : "all";
+    lowStock === "true" ? "low" : isProductStockStatus(status) ? status : "all";
 
-  let products = allProducts;
+  const [categories, productPage, editingProduct] = await Promise.all([
+    listProductCategories(),
+    listProducts({
+      page: parsePageParam(pageParam),
+      q,
+      filters: { categoryId, status: effectiveStatus },
+    }),
+    edit ? findEditableProduct(edit) : null,
+  ]);
 
-  // Lọc theo danh mục
-  if (categoryId && categoryId !== "all") {
-    products = products.filter((p) => p.categoryId === categoryId);
-  }
-
-  // Lọc theo trạng thái tồn kho
-  if (effectiveStatus === "low") {
-    products = products.filter((p) => !p.isService && p.stock <= 5);
-  } else if (effectiveStatus === "out") {
-    products = products.filter((p) => !p.isService && p.stock === 0);
-  } else if (effectiveStatus === "negative") {
-    products = products.filter((p) => !p.isService && p.stock < 0);
-  } else if (effectiveStatus === "available") {
-    products = products.filter((p) => !p.isService && p.stock > 5);
-  }
-
-  const editingProduct = edit
-    ? await prisma.product.findFirst({ where: { id: edit, deletedAt: null } })
-    : null;
+  const { items: products, total, page, pageSize, counts } = productPage;
+  // Thống kê tồn kho theo các nhóm (đếm theo từ khóa tìm kiếm)
+  const lowStockCount = counts.low;
+  // counts.all da bi loc theo tu khoa: chi coi la "cua hang trong" khi
+  // khong co tim kiem/bo loc nao dang ap dung.
+  const hasFilters = Boolean(q || categoryId || effectiveStatus !== "all");
+  const isStoreEmpty = counts.all === 0 && !hasFilters;
 
   return (
     <div className="space-y-6">
-      {/* Header with Title and Add Product Button */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="eyebrow">Danh mục hàng hóa</p>
-          <h1 className="font-heading mt-1 text-3xl font-bold">Sản phẩm</h1>
-          <p className="text-muted-foreground mt-1">
-            Quản lý giá, tồn kho, phân loại danh mục và cảnh báo nhập hàng.
-          </p>
-        </div>
-
-        {/* Modal Thêm / Sửa sản phẩm */}
-        <ProductDialog
-          categories={categories}
-          product={editingProduct ?? undefined}
-          defaultOpen={Boolean(editingProduct)}
-        />
-      </div>
+      <PageHeader
+        eyebrow="Danh mục hàng hóa"
+        title="Sản phẩm"
+        description="Quản lý giá, tồn kho, phân loại danh mục và cảnh báo nhập hàng."
+        action={
+          // Modal Thêm / Sửa sản phẩm
+          <ProductDialog
+            categories={categories}
+            product={editingProduct ?? undefined}
+            defaultOpen={Boolean(editingProduct)}
+          />
+        }
+      />
 
       {/* Low stock alert banner */}
       {lowStockCount > 0 ? (
@@ -143,7 +121,7 @@ export default async function ProductsPage({
                 href={`/admin/products${q ? `?q=${encodeURIComponent(q)}` : ""}`}
                 className="text-primary bg-background rounded-lg border px-3 py-1.5 text-xs font-bold hover:underline"
               >
-                Hiện tất cả ({allProducts.length})
+                Hiện tất cả ({counts.all})
               </Link>
             ) : (
               <Link
@@ -170,50 +148,54 @@ export default async function ProductsPage({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>
-            Danh sách ({products.length}
-            {products.length !== allProducts.length
-              ? ` / ${allProducts.length}`
-              : ""}
-            )
+            Danh sách ({total}
+            {total !== counts.all ? ` / ${counts.all}` : ""})
           </CardTitle>
-          {products.length !== allProducts.length ? (
+          {total !== counts.all ? (
             <span className="text-muted-foreground text-xs font-medium">
               Đang áp dụng bộ lọc
             </span>
           ) : null}
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Sản phẩm</TableHead>
-                <TableHead>Danh mục</TableHead>
-                <TableHead className="text-right">Giá bán</TableHead>
-                <TableHead className="text-right">Tồn</TableHead>
-                <TableHead className="text-right">
-                  <span className="sr-only">Thao tác</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.length === 0 ? (
+          {products.length === 0 ? (
+            <EmptyState
+              icon={SearchX}
+              title={
+                isStoreEmpty
+                  ? "Chưa có sản phẩm nào"
+                  : "Không tìm thấy sản phẩm nào khớp với điều kiện lọc."
+              }
+              description={
+                isStoreEmpty
+                  ? "Bấm “Thêm sản phẩm” để bắt đầu bán tại quầy."
+                  : "Thử bỏ bớt bộ lọc hoặc tìm bằng tên gọi khác."
+              }
+            />
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-muted-foreground py-8 text-center text-sm"
-                  >
-                    Không tìm thấy sản phẩm nào khớp với điều kiện lọc.
-                  </TableCell>
+                  <TableHead>Sản phẩm</TableHead>
+                  <TableHead>Danh mục</TableHead>
+                  <TableHead className="text-right">Giá bán</TableHead>
+                  <TableHead className="text-right">Tồn</TableHead>
+                  <TableHead className="text-right">
+                    <span className="sr-only">Thao tác</span>
+                  </TableHead>
                 </TableRow>
-              ) : (
-                products.map((product) => (
+              </TableHeader>
+              <TableBody>
+                {products.map((product) => (
                   <TableRow key={product.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <ProductImage
                           src={product.imageUrl}
+                          name={product.name}
                           alt={`Ảnh ${product.name}`}
-                          className="size-12"
+                          size={48}
+                          className="rounded-xl"
                         />
                         <div className="min-w-0">
                           <p className="font-bold">{product.name}</p>
@@ -292,10 +274,18 @@ export default async function ProductsPage({
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+          <Pagination
+            pathname="/admin/products"
+            label="Phân trang sản phẩm"
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            searchParams={{ q, status, lowStock, categoryId }}
+          />
         </CardContent>
       </Card>
     </div>

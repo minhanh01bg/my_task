@@ -9,6 +9,8 @@ export { EmptyState } from "./empty-state";
 export { ImagePicker } from "./image-picker";
 export { Money } from "./money";
 export { PageHeader } from "./page-header";
+export { Pagination } from "./pagination";
+export type { PaginationProps } from "./pagination";
 export { ProductImage } from "./product-image";
 export { ProductTile } from "./product-tile";
 export { ResultList, ResultRow } from "./result-list";

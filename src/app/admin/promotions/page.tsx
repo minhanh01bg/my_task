@@ -1,4 +1,6 @@
-import { PageHeader } from "@/components/kit";
+import { Megaphone } from "lucide-react";
+
+import { EmptyState, PageHeader } from "@/components/kit";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PromotionForm } from "@/features/admin-promotions/promotion-form";
@@ -134,10 +136,11 @@ export default async function AdminPromotionsPage() {
               ))}
             </div>
           ) : (
-            <div className="text-muted-foreground py-8 text-center text-sm">
-              Chưa có chiến dịch khuyến mãi nào. Hãy tạo chiến dịch đầu tiên ở
-              trên!
-            </div>
+            <EmptyState
+              icon={Megaphone}
+              title="Chưa có chiến dịch khuyến mãi nào"
+              description="Hãy tạo chiến dịch đầu tiên ở khung phía trên."
+            />
           )}
         </CardContent>
       </Card>

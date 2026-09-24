@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { revalidatePublic } from "@/server/cache/public-cache";
+import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
 import {
   AdminUnauthorizedError,
@@ -121,6 +123,7 @@ export async function quickUpdateProductAction(formData: FormData) {
     where: { id: parsed.data.id, deletedAt: null },
     data: { price: parsed.data.price, stock: parsed.data.stock },
   });
+  revalidatePublic(CACHE_TAGS.catalog, CACHE_TAGS.product(parsed.data.id));
 
   revalidatePath("/admin/products");
   revalidatePath("/pos");

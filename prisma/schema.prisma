@@ -10,6 +10,8 @@ datasource db {
 model Category {
   id        String    @id @default(cuid())
   name      String
+  /// URL SEO /shop/c/<slug>; sinh tu ten luc luu (src/server/categories/category-slug.ts)
+  slug      String?   @unique
   sortOrder Int       @default(0)
   products  Product[]
 
@@ -17,35 +19,45 @@ model Category {
 }
 
 model Product {
-  id         String    @id @default(cuid())
-  name       String
-  sku        String?   @unique
-  categoryId String?
-  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  unit       String    @default("cái")
+  id          String    @id @default(cuid())
+  name        String
+  /// URL SEO /shop/p/<slug>; sinh boi saveProduct tu ten
+  slug        String?   @unique
+  sku         String?   @unique
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  unit        String    @default("cái")
   /// Tien: so nguyen VND
-  price      Int       @default(0)
-  costPrice  Int       @default(0)
+  price       Int       @default(0)
+  costPrice   Int       @default(0)
   /// So luong: so thuc (kg, met)
-  stock      Float     @default(0)
+  stock       Float     @default(0)
   /// Ten goi khac, ngan cach bang dau phay
-  aliases    String?
+  aliases     String?
   /// Chuoi da chuan hoa, sinh boi buildSearchText luc luu
-  searchText String    @default("")
-  imageUrl   String?
-  isActive   Boolean   @default(true)
-  isService  Boolean   @default(false)
+  searchText  String    @default("")
+  imageUrl    String?
+  isActive    Boolean   @default(true)
+  isService   Boolean   @default(false)
   /// Phuc vu xep hang tim kiem
-  soldCount  Int       @default(0)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  deletedAt  DateTime?
+  soldCount   Int       @default(0)
+  /// Diem danh gia trung binh (chi tinh review published); cap nhat boi createReview/moderation
+  ratingAvg   Float     @default(0)
+  ratingCount Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 
   orderItems     OrderItem[]
   stockMovements StockMovement[]
+  reviews        ProductReview[]
 
   @@index([isActive])
   @@index([categoryId])
+  @@index([isActive, deletedAt, isService, soldCount])
+  @@index([isActive, deletedAt, name])
+  @@index([categoryId, isActive, soldCount])
+  @@index([deletedAt, isService, stock])
 }
 
 model Customer {
@@ -70,6 +82,7 @@ model CustomerAccount {
   sessions      CustomerSession[]
   orders        Order[]
   notifications CustomerNotification[]
+  reviews       ProductReview[]
 }
 
 model CustomerSession {
@@ -83,6 +96,7 @@ model CustomerSession {
   revokedAt  DateTime?
 
   @@index([accountId, expiresAt])
+  @@index([expiresAt])
 }
 
 model Order {
@@ -117,6 +131,12 @@ model Order {
   deliveryDistrict  String?
   deliveryProvince  String?
   shippingFee       Int              @default(0)
+  /// Ma voucher da ap dung (UPPER); null khi khong dung voucher
+  voucherCode       String?
+  /// Phan giam tien hang cua voucher — da nam trong `discount`
+  voucherDiscount   Int              @default(0)
+  /// Khung gio giao hang khach chon (don giao tan noi)
+  deliverySlot      String?
   /// Nonce SHA-256 digest for non-enumerable public receipt lookup
   receiptNonceHash  String?          @unique
   anonymizedAt      DateTime?
@@ -132,6 +152,10 @@ model Order {
   @@index([channel])
   @@index([fulfillmentStatus])
   @@index([customerAccountId])
+  @@index([status, createdAt])
+  @@index([channel, createdAt])
+  @@index([customerAccountId, channel, createdAt])
+  @@index([anonymizedAt, legalHold, createdAt])
 }
 
 model GuestOrderAccess {
@@ -142,6 +166,8 @@ model GuestOrderAccess {
   expiresAt DateTime
   createdAt DateTime  @default(now())
   revokedAt DateTime?
+
+  @@index([expiresAt])
 }
 
 model CheckoutIdempotency {
@@ -192,6 +218,7 @@ model CustomerNotification {
 
   @@index([accountId, readAt, createdAt])
   @@index([accountId, createdAt, id])
+  @@index([createdAt])
 }
 
 model OrderItem {
@@ -225,6 +252,7 @@ model Payment {
   createdAt  DateTime  @default(now())
 
   @@index([orderId])
+  @@index([orderId, method])
 }
 
 model StockMovement {
@@ -278,6 +306,7 @@ model AdminSession {
 
   @@index([identityId, expiresAt])
   @@index([tokenHash, revokedAt])
+  @@index([expiresAt])
 }
 
 model AdminAuditEvent {
@@ -313,4 +342,44 @@ model StorefrontPromotion {
 
   @@index([placement, isActive, priority])
   @@index([isActive, startsAt, endsAt])
+}
+
+/// Ma giam gia nhap khi dat hang online. `code` luon UPPER.
+model Voucher {
+  id            String    @id @default(cuid())
+  code          String    @unique
+  /// percent | fixed | freeship
+  type          String
+  /// percent: 1-100; fixed: so tien VND; freeship: 0 (khong dung)
+  value         Int
+  /// Tran giam (percent) hoac tran giam phi ship (freeship)
+  maxDiscount   Int?
+  minOrderTotal Int       @default(0)
+  maxUses       Int?
+  usedCount     Int       @default(0)
+  startsAt      DateTime?
+  endsAt        DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+/// Danh gia san pham tu khach da dang nhap. `status`: published | hidden
+model ProductReview {
+  id                 String           @id @default(cuid())
+  productId          String
+  product            Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  accountId          String?
+  account            CustomerAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  authorName         String
+  /// 1..5
+  rating             Int
+  content            String
+  isVerifiedPurchase Boolean          @default(false)
+  status             String           @default("published")
+  createdAt          DateTime         @default(now())
+
+  /// Mỗi tài khoản một đánh giá / sản phẩm (accountId NULL không bị ràng buộc).
+  @@unique([productId, accountId])
+  @@index([productId, status, createdAt])
 }

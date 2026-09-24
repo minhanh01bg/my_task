@@ -1,5 +1,13 @@
 import { PrismaClient } from "@prisma/client";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import {
   getDailyRevenue,
@@ -21,12 +29,18 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-async function createOrderAt(total: number, createdAt: Date, status = "paid") {
+async function createOrderAt(
+  total: number,
+  createdAt: Date,
+  status = "paid",
+  channel: "pos" | "online" = "pos",
+) {
   await prisma.order.create({
     data: {
       code: `DH${Math.random().toString().slice(2, 8)}`,
       clientId: crypto.randomUUID(),
       status,
+      channel,
       subtotal: total,
       total,
       createdAt,
@@ -75,6 +89,92 @@ describe("getDailyRevenue", () => {
     await createOrderAt(100000, longAgo);
 
     expect(await getDailyRevenue(7)).toEqual([]);
+  });
+});
+
+describe("getDailyRevenue — gio Viet Nam (Asia/Ho_Chi_Minh, +7)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    // 12:00 ngay 20/09 gio VN
+    vi.setSystemTime(new Date("2026-09-20T05:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("don luc 02:00 UTC ngay N thuoc ngay N theo gio VN (09:00)", async () => {
+    await createOrderAt(100000, new Date("2026-09-18T02:00:00Z"));
+
+    const rows = await getDailyRevenue(7);
+    expect(rows.map((row) => row.date)).toEqual(["2026-09-18"]);
+  });
+
+  it("don luc 18:00 UTC ngay N thuoc ngay N+1 theo gio VN (01:00)", async () => {
+    await createOrderAt(100000, new Date("2026-09-18T18:00:00Z"));
+
+    const rows = await getDailyRevenue(7);
+    expect(rows.map((row) => row.date)).toEqual(["2026-09-19"]);
+  });
+
+  it("tach doanh thu theo kenh pos/online cho moi ngay", async () => {
+    await createOrderAt(
+      100000,
+      new Date("2026-09-19T03:00:00Z"),
+      "paid",
+      "pos",
+    );
+    await createOrderAt(40000, new Date("2026-09-19T04:00:00Z"), "paid", "pos");
+    await createOrderAt(
+      70000,
+      new Date("2026-09-19T05:00:00Z"),
+      "pending",
+      "online",
+    );
+    await createOrderAt(
+      999000,
+      new Date("2026-09-19T06:00:00Z"),
+      "cancelled",
+      "online",
+    );
+
+    const rows = await getDailyRevenue(7);
+    expect(rows).toEqual([
+      {
+        date: "2026-09-19",
+        orderCount: 3,
+        revenue: 210000,
+        byChannel: { pos: 140000, online: 70000 },
+      },
+    ]);
+  });
+
+  it("khoang ngay bat dau tu 00:00 gio VN cua ngay dau tien", async () => {
+    // days=7, hom nay 20/09 => tu 00:00 VN 14/09 = 17:00 UTC 13/09
+    await createOrderAt(10000, new Date("2026-09-13T17:30:00Z"));
+    await createOrderAt(20000, new Date("2026-09-13T16:30:00Z"));
+
+    const rows = await getDailyRevenue(7);
+    expect(rows.map((row) => [row.date, row.revenue])).toEqual([
+      ["2026-09-14", 10000],
+    ]);
+  });
+
+  it("mac dinh lay 14 ngay", async () => {
+    // 00:00 VN 07/09 = 17:00 UTC 06/09
+    await createOrderAt(10000, new Date("2026-09-06T17:30:00Z"));
+    await createOrderAt(20000, new Date("2026-09-06T16:30:00Z"));
+
+    const rows = await getDailyRevenue();
+    expect(rows.map((row) => row.date)).toEqual(["2026-09-07"]);
+  });
+
+  it("ho tro 30 ngay", async () => {
+    await createOrderAt(10000, new Date("2026-08-22T03:00:00Z"));
+    await createOrderAt(20000, new Date("2026-08-20T03:00:00Z"));
+
+    const rows = await getDailyRevenue(30);
+    expect(rows.map((row) => row.date)).toEqual(["2026-08-22"]);
   });
 });
 

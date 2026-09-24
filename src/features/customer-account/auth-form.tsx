@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { invalidateStorefrontSession } from "@/features/online-store/storefront-session";
+
 export function CustomerAuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -47,6 +49,7 @@ export function CustomerAuthForm({ mode }: { mode: "login" | "register" }) {
       return;
     }
 
+    invalidateStorefrontSession();
     router.replace("/account/orders");
     router.refresh();
   }

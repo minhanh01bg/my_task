@@ -65,4 +65,69 @@ describe("NotificationButton", () => {
     const panel = screen.getByRole("region", { name: "Thông báo quản trị" });
     expect(panel).toHaveClass("z-[100]");
   });
+
+  it("Escape đóng panel và trả focus về nút chuông", async () => {
+    render(
+      <NotificationProvider>
+        <NotificationButton />
+      </NotificationProvider>,
+    );
+    const trigger = screen.getByRole("button", { name: /Thông báo/ });
+    fireEvent.click(trigger);
+    expect(
+      screen.getByRole("region", { name: "Thông báo quản trị" }),
+    ).toHaveClass("animate-popover-enter");
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(
+      screen.queryByRole("region", { name: "Thông báo quản trị" }),
+    ).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("bấm ra ngoài panel thì đóng, bấm trong panel thì không", async () => {
+    render(
+      <>
+        <NotificationProvider>
+          <NotificationButton />
+        </NotificationProvider>
+        <main>Nội dung trang</main>
+      </>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Thông báo/ }));
+    const panel = screen.getByRole("region", { name: "Thông báo quản trị" });
+
+    fireEvent.pointerDown(panel);
+    expect(
+      screen.getByRole("region", { name: "Thông báo quản trị" }),
+    ).toBeInTheDocument();
+
+    fireEvent.pointerDown(screen.getByText("Nội dung trang"));
+    expect(
+      screen.queryByRole("region", { name: "Thông báo quản trị" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("không có thông báo thì hiện EmptyState chung của kit", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          data: { ...response.data, items: [], unreadCount: 0 },
+        }),
+      }),
+    );
+    render(
+      <NotificationProvider>
+        <NotificationButton />
+      </NotificationProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Thông báo/ }));
+
+    const title = await screen.findByText("Chưa có thông báo");
+    expect(title.closest('[data-slot="empty-state"]')).not.toBeNull();
+  });
 });

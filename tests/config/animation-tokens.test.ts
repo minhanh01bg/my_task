@@ -24,9 +24,10 @@ describe("animation tokens and micro-interactions in globals.css", () => {
     expect(css).toContain(".animate-pulse-subtle");
   });
 
-  it("định nghĩa utility class card-interactive với hiệu ứng nâng thẻ mượt mà và bóng đổ", () => {
+  it("định nghĩa utility class card-interactive chỉ đổi bóng/viền, không nâng thẻ", () => {
     expect(css).toContain(".card-interactive");
-    expect(css).toContain("translateY(-4px)");
+    expect(css).toMatch(/\.card-interactive\s*\{[^}]*box-shadow 300ms/);
+    expect(css).not.toContain("translateY(-4px)");
   });
 
   it("định nghĩa utility class btn-press cho phản hồi xúc giác khi bấm nút", () => {

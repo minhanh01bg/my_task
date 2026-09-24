@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OnlineCartProvider } from "@/features/online-store/cart-context";
 import { CategorySection } from "@/features/online-store/landing/category-section";
@@ -8,6 +8,8 @@ import { HeroSection } from "@/features/online-store/landing/hero-section";
 import { ProductRail } from "@/features/online-store/landing/product-rail";
 import { TrustSection } from "@/features/online-store/landing/trust-section";
 import { StoreHeader } from "@/features/online-store/store-header";
+import { DEFAULT_SHIPPING_SETTINGS } from "@/lib/shipping/shipping-fee";
+import { invalidateStorefrontSession } from "@/features/online-store/storefront-session";
 import type {
   OnlineCategory,
   OnlineProduct,
@@ -47,36 +49,55 @@ const mockProducts: OnlineProduct[] = [
 
 describe("Storefront Landing Page Components", () => {
   describe("StoreHeader", () => {
-    it("hiển thị nút Quản trị và ẩn nút Tài khoản khách lẻ khi isAdmin là true", () => {
+    function stubSession(body: { isAdmin: boolean; isCustomer: boolean }) {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({ ok: true, json: async () => body }),
+      );
+    }
+
+    beforeEach(() => {
+      invalidateStorefrontSession();
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      invalidateStorefrontSession();
+    });
+
+    it("hiển thị nút Quản trị và ẩn nút Tài khoản khách lẻ khi phiên là admin", async () => {
+      stubSession({ isAdmin: true, isCustomer: false });
       render(
         <OnlineCartProvider>
           <StoreHeader
             storeName="Cửa Hàng Xanh"
-            isAdmin={true}
-            isCustomer={false}
+            shipping={DEFAULT_SHIPPING_SETTINGS}
           />
         </OnlineCartProvider>,
       );
 
       expect(
-        screen.getByRole("button", { name: /quản trị/i }),
+        await screen.findByRole("button", { name: /quản trị/i }),
       ).toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: /tài khoản/i }),
       ).not.toBeInTheDocument();
     });
 
-    it("hiển thị nút Tài khoản khách hàng khi không phải là admin", () => {
+    it("hiển thị nút Tài khoản khách hàng khi không phải là admin", async () => {
+      stubSession({ isAdmin: false, isCustomer: true });
       render(
         <OnlineCartProvider>
           <StoreHeader
             storeName="Cửa Hàng Xanh"
-            isAdmin={false}
-            isCustomer={true}
+            shipping={DEFAULT_SHIPPING_SETTINGS}
           />
         </OnlineCartProvider>,
       );
 
+      expect(
+        await screen.findByRole("button", { name: /thông báo/i }),
+      ).toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: /quản trị/i }),
       ).not.toBeInTheDocument();
@@ -118,6 +139,20 @@ describe("Storefront Landing Page Components", () => {
         "href",
         expect.stringContaining("category=c1"),
       );
+    });
+
+    it("link tới trang danh mục /shop/c/<slug> khi danh mục có slug", () => {
+      render(
+        <CategorySection
+          categories={[
+            { id: "c1", name: "Đồ uống & Cà phê", slug: "do-uong-ca-phe" },
+          ]}
+        />,
+      );
+
+      expect(
+        screen.getByRole("link", { name: /đồ uống & cà phê/i }),
+      ).toHaveAttribute("href", "/shop/c/do-uong-ca-phe");
     });
 
     it("hiển thị số lượng sản phẩm khi có productCount và nút xem toàn bộ danh mục", () => {
@@ -178,11 +213,28 @@ describe("Storefront Landing Page Components", () => {
         </OnlineCartProvider>,
       );
 
-      expect(
-        screen.getByText(
-          /chưa có sản phẩm nổi bật|sản phẩm sẽ sớm được cập nhật/i,
-        ),
-      ).toBeInTheDocument();
+      const fallback = screen.getByText(
+        /chưa có sản phẩm nổi bật|sản phẩm sẽ sớm được cập nhật/i,
+      );
+      expect(fallback).toBeInTheDocument();
+      expect(fallback.closest('[data-slot="empty-state"]')).not.toBeNull();
+    });
+
+    it("chỉ hiển thị sao khi sản phẩm có đánh giá thật", () => {
+      render(
+        <OnlineCartProvider>
+          <ProductRail
+            products={[
+              { ...mockProducts[0]!, ratingAvg: 4.3, ratingCount: 7 },
+              { ...mockProducts[1]!, ratingAvg: 0, ratingCount: 0 },
+            ]}
+          />
+        </OnlineCartProvider>,
+      );
+
+      expect(screen.getAllByLabelText(/trên 5 sao/)).toHaveLength(1);
+      expect(screen.getByText("(7 đánh giá)")).toBeInTheDocument();
+      expect(screen.queryByText("4.8")).not.toBeInTheDocument();
     });
   });
 

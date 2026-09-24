@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { JsonLdScript } from "@/components/seo/json-ld-script";
 import { siteConfig } from "@/config/site";
 import { OnlineCartProvider } from "@/features/online-store/cart-context";
 import { CatalogBrowser } from "@/features/online-store/catalog-browser";
@@ -12,78 +13,96 @@ import { TrustSection } from "@/features/online-store/landing/trust-section";
 import { PromotionBanner } from "@/features/online-store/promotion-banner";
 import { StoreFooter } from "@/features/online-store/store-footer";
 import { StoreHeader } from "@/features/online-store/store-header";
-import { hasAdminSession } from "@/server/auth/require-admin-session";
+import type { OnlineProduct } from "@/features/online-store/types";
+import {
+  localBusinessJsonLd,
+  organizationJsonLd,
+  webSiteJsonLd,
+} from "@/lib/seo/json-ld";
+import { storefrontOpenGraph } from "@/lib/seo/open-graph";
 import { getOnlineCatalog } from "@/server/catalog/get-online-catalog";
-import { getOptionalCustomerSession } from "@/server/customer-auth/session";
-import { getPublicStoreProfile } from "@/server/settings/store-settings";
+import {
+  getPublicStoreProfile,
+  getShippingSettings,
+} from "@/server/settings/store-settings";
 import { getActivePromotions } from "@/server/storefront/promotions";
 
-export const dynamic = "force-dynamic";
+/** ISR: HTML không đọc cookie; phần phụ thuộc phiên nằm ở client island của header. */
+export const revalidate = 60;
+
+const FLASH_SALE_LIMIT = 4;
+const FEATURED_LIMIT = 8;
+
+/** DTO tối thiểu gửi xuống client — không để field thừa lọt vào RSC payload. */
+function toCatalogProductDto(product: OnlineProduct): OnlineProduct {
+  return {
+    id: product.id,
+    name: product.name,
+    slug: product.slug ?? null,
+    price: product.price,
+    unit: product.unit,
+    stock: product.stock,
+    imageUrl: product.imageUrl,
+    categoryId: product.categoryId,
+    soldCount: product.soldCount ?? 0,
+    // Giữ: CatalogBrowser lọc/tìm kiếm bỏ dấu phía client.
+    searchText: product.searchText,
+  };
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const storeProfile = await getPublicStoreProfile();
-  const title = `Cửa hàng trực tuyến | ${storeProfile.name}`;
+  const pageTitle = "Cửa hàng trực tuyến";
   const description = `Mua sắm nhu yếu phẩm, thực phẩm và đồ tiêu dùng chính hãng tại ${storeProfile.name}. Đặt nhanh trực tuyến, giao hàng tận nơi.`;
+  const title = `${pageTitle} | ${storeProfile.name}`;
 
   return {
-    title,
+    // Cùng segment với shop/layout nên template của layout không áp dụng:
+    // đặt absolute để tên cửa hàng (từ DB) xuất hiện đúng một lần.
+    title: { absolute: title },
     description,
     alternates: {
       canonical: "/shop",
     },
-    openGraph: {
+    openGraph: storefrontOpenGraph({
       title,
       description,
       url: `${siteConfig.url}/shop`,
       siteName: storeProfile.name,
-      locale: "vi_VN",
-      type: "website",
-    },
+    }),
   };
 }
 
 export default async function ShopPage() {
-  const [
-    catalog,
-    storeProfile,
-    isAdmin,
-    announcements,
-    heroPromotions,
-    customerSession,
-  ] = await Promise.all([
-    getOnlineCatalog(),
-    getPublicStoreProfile(),
-    hasAdminSession(),
-    getActivePromotions({ placement: "announcement", limit: 3 }),
-    getActivePromotions({ placement: "hero", limit: 1 }),
-    getOptionalCustomerSession(),
-  ]);
+  const [catalog, storeProfile, announcements, heroPromotions, shipping] =
+    await Promise.all([
+      getOnlineCatalog(),
+      getPublicStoreProfile(),
+      getActivePromotions({ placement: "announcement", limit: 3 }),
+      getActivePromotions({ placement: "hero", limit: 1 }),
+      getShippingSettings(),
+    ]);
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Store",
-    name: storeProfile.name,
-    description: "Cửa hàng bán lẻ trực tuyến chính hãng",
-    url: `${siteConfig.url}/shop`,
-    ...(storeProfile.hotline ? { telephone: storeProfile.hotline } : {}),
-    ...(storeProfile.address ? { address: storeProfile.address } : {}),
-    ...(storeProfile.openingHours
-      ? { openingHours: storeProfile.openingHours }
-      : {}),
-  };
+  const products = catalog.products.map(toCatalogProductDto);
+  const flashSaleProducts = products
+    .filter((p) => p.stock > 0)
+    .slice(0, FLASH_SALE_LIMIT);
+  const featuredProducts = products
+    .filter((p) => p.stock > 0)
+    .sort((a, b) => (b.soldCount ?? 0) - (a.soldCount ?? 0))
+    .slice(0, FEATURED_LIMIT);
+
+  const jsonLd = [
+    organizationJsonLd(storeProfile, siteConfig.url),
+    webSiteJsonLd(siteConfig.url, storeProfile.name),
+    localBusinessJsonLd(storeProfile, siteConfig.url),
+  ];
 
   return (
     <OnlineCartProvider>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <JsonLdScript data={jsonLd} />
       <PromotionBanner promotions={announcements} placement="announcement" />
-      <StoreHeader
-        storeName={storeProfile.name}
-        isAdmin={isAdmin}
-        isCustomer={Boolean(customerSession)}
-      />
+      <StoreHeader storeName={storeProfile.name} shipping={shipping} />
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <PromotionBanner promotions={heroPromotions} placement="hero" />
       </div>
@@ -93,18 +112,15 @@ export default async function ShopPage() {
         hotline={storeProfile.hotline}
       />
       <CategorySection categories={catalog.categories} />
-      <FlashSaleSection products={catalog.products} />
-      {catalog.products.length > 0 ? (
+      <FlashSaleSection products={flashSaleProducts} />
+      {products.length > 0 ? (
         <ProductRail
           title="Sản phẩm nổi bật"
           subtitle="Lựa chọn phổ biến được nhiều khách hàng tin tưởng"
-          products={[...catalog.products]
-            .filter((p) => p.stock > 0)
-            .sort((a, b) => (b.soldCount ?? 0) - (a.soldCount ?? 0))
-            .slice(0, 8)}
+          products={featuredProducts}
         />
       ) : null}
-      <CatalogBrowser catalog={catalog} />
+      <CatalogBrowser catalog={{ categories: catalog.categories, products }} />
       <RecentlyViewedSection />
       <TrustSection
         storeName={storeProfile.name}

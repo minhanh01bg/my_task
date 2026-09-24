@@ -2,8 +2,11 @@ import Link from "next/link";
 import { ArrowLeft, ReceiptText } from "lucide-react";
 import { notFound } from "next/navigation";
 
+import { PageHeader } from "@/components/kit";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PrintReceiptButton } from "@/features/orders/print-receipt-button";
+import type { ReceiptOrder } from "@/features/orders/receipt-k80";
 import { formatVnd } from "@/lib/money";
 import { prisma } from "@/server/db/prisma";
 import {
@@ -16,6 +19,10 @@ import {
   transitionOnlineOrderAction,
 } from "../actions";
 import { requireAdminSession } from "@/server/auth/require-admin-session";
+import {
+  getPublicStoreProfile,
+  getStoreBankAccount,
+} from "@/server/settings/store-settings";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
@@ -34,16 +41,59 @@ export default async function OrderDetailPage({
   await requireAdminSession({ redirectToLogin: true });
 
   const { id } = await params;
-  const order = await prisma.order.findUnique({
-    where: { id },
-    include: {
-      customer: true,
-      items: true,
-      payments: { orderBy: { createdAt: "asc" } },
-    },
-  });
+  const [order, storeProfile, bankAccount] = await Promise.all([
+    prisma.order.findUnique({
+      where: { id },
+      include: {
+        customer: true,
+        items: true,
+        payments: { orderBy: { createdAt: "asc" } },
+      },
+    }),
+    getPublicStoreProfile(),
+    getStoreBankAccount(),
+  ]);
 
   if (!order) notFound();
+
+  // Voucher khong giam tien hang (freeship) thi phan giam nam o phi ship.
+  const freeshipCode =
+    order.voucherCode && order.voucherDiscount === 0 ? order.voucherCode : null;
+
+  // Tien da thu that: bo ghi no va chuyen khoan chua xac nhan nhan tien.
+  const received = order.payments
+    .filter((payment) => payment.method !== "debt" && payment.receivedAt)
+    .reduce((sum, payment) => sum + payment.amount, 0);
+  const receiptOrder: ReceiptOrder = {
+    code: order.code,
+    createdAt: new Intl.DateTimeFormat("vi-VN", {
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(order.createdAt),
+    customerName: order.customer?.name ?? order.contactName ?? undefined,
+    customerPhone: order.customer?.phone ?? order.contactPhone ?? undefined,
+    lines: order.items.map((item) => ({
+      name: item.nameSnapshot,
+      quantity: item.quantity,
+      unit: item.unit,
+      unitPrice: item.unitPrice,
+      total: item.lineTotal,
+    })),
+    subtotal: order.subtotal,
+    discount: order.discount,
+    voucherCode: order.voucherCode ?? undefined,
+    // Phi ship luu SAU voucher: subtotal - discount + shippingFee = total.
+    shippingFee: order.channel === "online" ? order.shippingFee : undefined,
+    total: order.total,
+    status: order.status,
+    payments: order.payments.map((payment) => ({
+      method: payment.method,
+      amount: payment.amount,
+    })),
+    amountDue:
+      order.status === "cancelled" ? 0 : Math.max(0, order.total - received),
+    note: order.note ?? undefined,
+  };
   const onlineStatus =
     order.fulfillmentStatus && isOnlineOrderStatus(order.fulfillmentStatus)
       ? order.fulfillmentStatus
@@ -59,30 +109,33 @@ export default async function OrderDetailPage({
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
-        <div className="min-w-0 flex-1">
-          <p className="eyebrow">Chi tiết đơn hàng</p>
-          <h1 className="font-heading mt-1 text-2xl font-bold break-all sm:text-3xl">
-            {order.code}
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-            {new Intl.DateTimeFormat("vi-VN", {
-              dateStyle: "long",
-              timeStyle: "short",
-            }).format(order.createdAt)}
-          </p>
+        <PageHeader
+          eyebrow="Chi tiết đơn hàng"
+          title={order.code}
+          description={new Intl.DateTimeFormat("vi-VN", {
+            dateStyle: "long",
+            timeStyle: "short",
+          }).format(order.createdAt)}
+          className="min-w-0 flex-1"
+        />
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <PrintReceiptButton
+            storeName={storeProfile.name}
+            storeAddress={storeProfile.address}
+            storeHotline={storeProfile.hotline}
+            order={receiptOrder}
+            bankAccount={bankAccount}
+          />
+          <Badge variant={order.status === "cancelled" ? "outline" : "default"}>
+            {order.status === "paid"
+              ? "Đã thanh toán"
+              : order.status === "debt"
+                ? "Ghi nợ"
+                : order.status === "cancelled"
+                  ? "Đã hủy"
+                  : order.status}
+          </Badge>
         </div>
-        <Badge
-          className="shrink-0"
-          variant={order.status === "cancelled" ? "outline" : "default"}
-        >
-          {order.status === "paid"
-            ? "Đã thanh toán"
-            : order.status === "debt"
-              ? "Ghi nợ"
-              : order.status === "cancelled"
-                ? "Đã hủy"
-                : order.status}
-        </Badge>
       </div>
 
       <Card>
@@ -123,6 +176,32 @@ export default async function OrderDetailPage({
                 -{formatVnd(order.discount)}
               </dd>
             </div>
+            {order.voucherCode && order.voucherDiscount > 0 ? (
+              <div className="mt-2 flex justify-between gap-2 text-sm">
+                <dt className="text-muted-foreground">
+                  Trong đó mã {order.voucherCode}
+                </dt>
+                <dd className="shrink-0 font-medium">
+                  -{formatVnd(order.voucherDiscount)}
+                </dd>
+              </div>
+            ) : null}
+            {order.channel === "online" ? (
+              <div className="mt-2 flex justify-between gap-2">
+                <dt className="text-muted-foreground">
+                  Phí giao hàng
+                  {freeshipCode ? (
+                    <span data-testid="freeship-code">
+                      {" "}
+                      (mã {freeshipCode})
+                    </span>
+                  ) : null}
+                </dt>
+                <dd className="shrink-0 font-medium">
+                  {formatVnd(order.shippingFee)}
+                </dd>
+              </div>
+            ) : null}
             <div className="mt-4 flex items-baseline justify-between gap-2 border-t pt-4">
               <dt className="font-bold">Tổng cộng</dt>
               <dd className="font-heading shrink-0 text-xl font-bold sm:text-2xl">
@@ -205,6 +284,20 @@ export default async function OrderDetailPage({
                       .filter(Boolean)
                       .join(", ")}
                   </dd>
+                </div>
+              ) : null}
+              {order.deliverySlot ? (
+                <div>
+                  <dt className="text-muted-foreground text-sm">
+                    Khung giờ giao
+                  </dt>
+                  <dd className="font-medium">{order.deliverySlot}</dd>
+                </div>
+              ) : null}
+              {order.note ? (
+                <div className="sm:col-span-2">
+                  <dt className="text-muted-foreground text-sm">Ghi chú</dt>
+                  <dd className="font-medium break-words">{order.note}</dd>
                 </div>
               ) : null}
               <div>

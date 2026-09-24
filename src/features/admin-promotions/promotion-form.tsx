@@ -2,8 +2,17 @@
 
 import { useActionState, useState } from "react";
 import Image from "next/image";
-import { ArrowRight, Eye, Monitor, Smartphone, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  Eye,
+  Monitor,
+  Smartphone,
+  Sparkles,
+  X,
+} from "lucide-react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -71,19 +80,15 @@ export function PromotionForm({ initialData, onSuccess }: PromotionFormProps) {
 
         {state ? (
           state.ok ? (
-            <div
-              role="status"
-              className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm font-medium text-emerald-700 dark:text-emerald-300"
-            >
-              ✓ {state.message}
-            </div>
+            <Alert variant="success" role="status" className="p-4">
+              <Check aria-hidden="true" />
+              <AlertDescription>{state.message}</AlertDescription>
+            </Alert>
           ) : (
-            <div
-              role="alert"
-              className="border-destructive/30 bg-destructive/10 text-destructive rounded-xl border p-4 text-sm font-medium"
-            >
-              ✕ {state.error}
-            </div>
+            <Alert variant="destructive" className="p-4">
+              <X aria-hidden="true" />
+              <AlertDescription>{state.error}</AlertDescription>
+            </Alert>
           )
         ) : null}
 
@@ -291,7 +296,7 @@ export function PromotionForm({ initialData, onSuccess }: PromotionFormProps) {
         </div>
 
         <div
-          className={`border-border bg-muted/20 mx-auto overflow-hidden rounded-2xl border p-4 transition-all ${
+          className={`border-border bg-muted/20 mx-auto overflow-hidden rounded-2xl border p-4 ${
             previewDevice === "mobile" ? "max-w-sm" : "w-full"
           }`}
         >

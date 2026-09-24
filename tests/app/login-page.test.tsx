@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import LoginPage, { generateMetadata } from "@/app/login/page";
@@ -24,7 +24,9 @@ describe("LoginPage & LoginForm (Dynamic Store Name)", () => {
     );
     const metadata = await generateMetadata();
 
-    expect(metadata.title).toBe("Đăng nhập - Tiệm Bách Hóa ABC");
+    expect(metadata.title).toEqual({
+      absolute: "Đăng nhập | Tiệm Bách Hóa ABC",
+    });
     expect(metadata.description).toContain("Tiệm Bách Hóa ABC");
   });
 
@@ -62,5 +64,62 @@ describe("LoginPage & LoginForm (Dynamic Store Name)", () => {
         delete process.env.NEXT_PUBLIC_STORE_NAME;
       }
     }
+  });
+
+  it("LoginForm: mặc định vào /pos sau khi đăng nhập", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+    render(<LoginForm storeName="Cửa Hàng Xanh" />);
+
+    fireEvent.change(screen.getByLabelText("Mật khẩu cửa hàng"), {
+      target: { value: "123456" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Vào bán hàng" }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/pos"));
+  });
+
+  it("LoginForm: quay lại trang admin khi đến từ ?next=/admin...", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+    render(<LoginForm storeName="Cửa Hàng Xanh" next="/admin/orders" />);
+
+    fireEvent.change(screen.getByLabelText("Mật khẩu cửa hàng"), {
+      target: { value: "123456" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Vào bán hàng" }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/admin/orders"));
+  });
+
+  it("LoginPage: chuyển tiếp ?next= an toàn xuống form", async () => {
+    vi.spyOn(storeSettings, "getStoreName").mockResolvedValue("Cửa Hàng Xanh");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+
+    render(
+      await LoginPage({
+        searchParams: Promise.resolve({ next: "//evil.example/admin" }),
+      }),
+    );
+    fireEvent.change(screen.getByLabelText("Mật khẩu cửa hàng"), {
+      target: { value: "123456" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Vào bán hàng" }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/pos"));
+  });
+
+  it("LoginForm: có nút đổi giao diện sáng/tối ở góc trên thẻ đăng nhập", () => {
+    render(<LoginForm storeName="Cửa Hàng Xanh" />);
+
+    expect(
+      screen.getByRole("button", {
+        name: /chuyển sang giao diện (tối|sáng)|đổi giao diện/i,
+      }),
+    ).toBeInTheDocument();
   });
 });

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { ShieldCheck, Store } from "lucide-react";
 
+import { storeTitle } from "@/config/site";
+import { resolvePostLoginPath } from "@/lib/auth/post-login-path";
 import { getStoreName } from "@/server/settings/store-settings";
 import { LoginForm } from "./login-form";
 
@@ -9,13 +11,24 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   const storeName = await getStoreName();
   return {
-    title: `Đăng nhập - ${storeName}`,
+    title: storeTitle("Đăng nhập", storeName),
     description: `Đăng nhập hệ thống quản lý và bán hàng ${storeName}`,
+    robots: { index: false, follow: false },
   };
 }
 
-export default async function LoginPage() {
-  const storeName = await getStoreName();
+interface LoginPageProps {
+  searchParams?: Promise<{ next?: string | string[] }>;
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps = {}) {
+  const [storeName, params] = await Promise.all([
+    getStoreName(),
+    searchParams ?? Promise.resolve<{ next?: string | string[] }>({}),
+  ]);
+  const next = resolvePostLoginPath(
+    typeof params.next === "string" ? params.next : undefined,
+  );
 
   return (
     <main className="grid min-h-dvh lg:grid-cols-[1fr_1.1fr]">
@@ -53,7 +66,7 @@ export default async function LoginPage() {
       </section>
 
       <section className="relative flex items-center justify-center p-5 sm:p-8">
-        <LoginForm storeName={storeName} />
+        <LoginForm storeName={storeName} next={next} />
       </section>
     </main>
   );

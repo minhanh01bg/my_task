@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProductSearch } from "@/components/pos/product-search";
 import { buildSearchText } from "@/lib/search/search-text";
@@ -134,5 +134,99 @@ describe("ProductSearch", () => {
     await user.keyboard("{Escape}");
 
     expect(input).toHaveValue("");
+  });
+
+  it("combobox tro toi option dang chon qua aria-activedescendant", async () => {
+    const user = userEvent.setup();
+    render(<ProductSearch products={PRODUCTS} onSelect={vi.fn()} />);
+
+    const input = screen.getByRole("combobox");
+    expect(input).not.toHaveAttribute("aria-activedescendant");
+
+    await user.type(input, "u");
+    const options = screen.getAllByRole("option");
+    expect(options.length).toBeGreaterThanOrEqual(2);
+    for (const option of options) expect(option.id).not.toBe("");
+    expect(input).toHaveAttribute("aria-activedescendant", options[0]!.id);
+
+    await user.keyboard("{ArrowDown}");
+    expect(input).toHaveAttribute("aria-activedescendant", options[1]!.id);
+    expect(options[1]).toHaveAttribute("aria-selected", "true");
+  });
+
+  describe("cuon option dang chon vao tam nhin", () => {
+    // jsdom khong co scrollIntoView: tao tam de spyOn duoc, don sach sau moi test.
+    const hadNative = "scrollIntoView" in Element.prototype;
+    let scrollIntoView: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      if (!hadNative) {
+        Object.defineProperty(Element.prototype, "scrollIntoView", {
+          configurable: true,
+          writable: true,
+          value: () => {},
+        });
+      }
+      scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView");
+    });
+
+    afterEach(() => {
+      scrollIntoView.mockRestore();
+      if (!hadNative) {
+        delete (Element.prototype as Partial<Element>).scrollIntoView;
+      }
+    });
+
+    it("cuon khi di chuyen bang mui ten", async () => {
+      const user = userEvent.setup();
+      render(<ProductSearch products={PRODUCTS} onSelect={vi.fn()} />);
+
+      await user.type(screen.getByRole("combobox"), "u");
+      await user.keyboard("{ArrowDown}");
+
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest" });
+    });
+
+    it("khong cuon khi option dau tien dang chon (vua go xong)", async () => {
+      const user = userEvent.setup();
+      render(<ProductSearch products={PRODUCTS} onSelect={vi.fn()} />);
+
+      await user.type(screen.getByRole("combobox"), "u");
+
+      expect(scrollIntoView).not.toHaveBeenCalled();
+    });
+
+    it("khong cuon lai khi chi danh sach ket qua thay doi", async () => {
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <ProductSearch products={PRODUCTS} onSelect={vi.fn()} />,
+      );
+
+      await user.type(screen.getByRole("combobox"), "u");
+      await user.keyboard("{ArrowDown}");
+      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+
+      // Danh muc duoc lam moi (cung noi dung, object moi) — khong cuon them.
+      rerender(
+        <ProductSearch
+          products={PRODUCTS.map((item) => ({ ...item }))}
+          onSelect={vi.fn()}
+        />,
+      );
+      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("khong tim thay thi hien EmptyState chung cua kit", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <ProductSearch products={PRODUCTS} onSelect={vi.fn()} />,
+    );
+
+    await user.type(screen.getByRole("combobox"), "khongcogi");
+
+    const empty = container.querySelector('[data-slot="empty-state"]');
+    expect(empty).toHaveAttribute("role", "status");
+    expect(empty).toHaveTextContent("Không tìm thấy sản phẩm");
   });
 });

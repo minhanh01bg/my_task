@@ -2,13 +2,12 @@
 
 import { PropsWithChildren } from "react";
 
-import { QueryProvider } from "./query-provider";
 import { ThemeProvider } from "./theme-provider";
 
+/**
+ * Provider dùng chung cho mọi khu vực. `QueryProvider` chỉ bọc layout
+ * admin/POS để bundle storefront không kéo theo React Query.
+ */
 export function Providers({ children }: PropsWithChildren) {
-  return (
-    <ThemeProvider>
-      <QueryProvider>{children}</QueryProvider>
-    </ThemeProvider>
-  );
+  return <ThemeProvider>{children}</ThemeProvider>;
 }

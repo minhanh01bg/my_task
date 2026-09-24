@@ -1,5 +1,10 @@
 import { buildSearchText } from "@/lib/search/search-text";
+import { revalidatePublic } from "@/server/cache/public-cache";
+import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
+import { retryOnSlugConflict } from "@/server/seo/slug-conflict";
+
+import { resolveProductSlug } from "./product-slug";
 
 export interface SaveProductInput {
   id?: string;
@@ -16,8 +21,10 @@ export interface SaveProductInput {
 }
 
 /**
- * Noi duy nhat duoc phep ghi san pham — vi searchText PHAI duoc sinh lai
- * moi lan luu. Sua san pham bang duong khac se lam tim kiem sai.
+ * Noi duy nhat duoc phep ghi san pham — vi searchText phai duoc sinh lai moi
+ * lan luu, con slug thi giu nguyen khi da co (chi sinh moi cho ban ghi chua
+ * tung co slug) de URL on dinh khi doi ten. Sua san pham bang duong khac se
+ * lam tim kiem sai va co the lam sai quy tac giu slug.
  */
 export async function saveProduct(
   input: SaveProductInput,
@@ -52,20 +59,24 @@ export async function saveProduct(
       ? data
       : { ...data, imageUrl: input.imageUrl || null };
 
-  if (input.id) {
-    const updated = await prisma.product.update({
-      where: { id: input.id },
-      data: dataWithImage,
-      select: { id: true },
+  // Hai lan luu cung luc co the chon cung slug: chon lai (unique index chan).
+  const saved = await retryOnSlugConflict(async () => {
+    const slug = await resolveProductSlug(prisma, {
+      id: input.id,
+      name: input.name,
     });
-    return updated;
-  }
-
-  const created = await prisma.product.create({
-    data: dataWithImage,
-    select: { id: true },
+    const withSlug = { ...dataWithImage, slug };
+    return input.id
+      ? prisma.product.update({
+          where: { id: input.id },
+          data: withSlug,
+          select: { id: true },
+        })
+      : prisma.product.create({ data: withSlug, select: { id: true } });
   });
-  return created;
+
+  revalidatePublic(CACHE_TAGS.catalog, CACHE_TAGS.product(saved.id));
+  return saved;
 }
 
 /**
@@ -76,4 +87,5 @@ export async function softDeleteProduct(id: string): Promise<void> {
     where: { id },
     data: { deletedAt: new Date(), isActive: false },
   });
+  revalidatePublic(CACHE_TAGS.catalog, CACHE_TAGS.product(id));
 }

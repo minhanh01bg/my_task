@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CheckCircle2, ShoppingBag } from "lucide-react";
 
+import { OrderTimeline } from "@/features/customer-account/order-timeline";
 import { PrintReceiptButton } from "@/features/online-store/print-receipt-button";
 import { formatVnd } from "@/lib/money";
 import { getPublicReceipt } from "@/server/orders/public-receipt";
@@ -79,6 +80,15 @@ export default async function OrderSuccessPage({
             </strong>
           </div>
         </div>
+
+        {order.fulfillmentStatus ? (
+          <div className="mt-5 border-t pt-4">
+            <p className="text-muted-foreground mb-3 text-xs font-semibold tracking-wider uppercase">
+              Trạng thái đơn hàng
+            </p>
+            <OrderTimeline order={order} />
+          </div>
+        ) : null}
 
         <div className="border-border bg-muted/40 text-muted-foreground mt-5 rounded-xl p-3.5 text-xs leading-relaxed">
           {order.paymentMethod === "bank_transfer" ? (

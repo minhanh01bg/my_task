@@ -1,14 +1,7 @@
 "use client";
 
-import {
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  PackageCheck,
-  Printer,
-  ShoppingBag,
-  Truck,
-} from "lucide-react";
+import type { ReactNode } from "react";
+import { AlertCircle, Printer } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -81,17 +74,12 @@ export function resolveFulfillmentStatus(
   }
 }
 
-const STEPS = [
-  { label: "Đặt hàng", icon: ShoppingBag },
-  { label: "Xác nhận", icon: Clock },
-  { label: "Đóng gói", icon: PackageCheck },
-  { label: "Giao hàng", icon: Truck },
-  { label: "Hoàn thành", icon: CheckCircle2 },
-];
-
 export function CustomerOrderDetail({
   order,
+  timeline,
 }: {
+  /** Dong thoi gian trang thai (Server Component) do trang truyen vao. */
+  timeline?: ReactNode;
   order: {
     code: string;
     total: number;
@@ -162,7 +150,7 @@ export function CustomerOrderDetail({
         </div>
       </div>
 
-      {/* Status Progress Stepper */}
+      {/* Status Progress */}
       {isCancelled ? (
         <div className="border-destructive/30 bg-destructive/10 text-destructive mt-8 flex items-center gap-3 rounded-2xl border p-5">
           <AlertCircle className="size-6 shrink-0" />
@@ -174,72 +162,36 @@ export function CustomerOrderDetail({
             </p>
           </div>
         </div>
-      ) : (
-        <div className="border-border bg-card/60 mt-8 rounded-2xl border p-5 shadow-xs sm:p-6">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-sm font-medium">
-              Tiến trình xử lý
-            </span>
-            <Badge
-              variant={statusInfo.badgeVariant}
-              className="px-3 py-1 font-bold"
-            >
-              {statusInfo.label}
-            </Badge>
-          </div>
-
-          <p className="text-muted-foreground mt-2 text-sm">
-            {statusInfo.description}
-          </p>
-
-          {/* Stepper Bar */}
-          <div className="mt-6">
-            <ol className="relative grid grid-cols-5 gap-2">
-              {STEPS.map((step, idx) => {
-                const Icon = step.icon;
-                const isPassed = statusInfo.stepIndex >= idx;
-                const isCurrent = statusInfo.stepIndex === idx;
-
-                const stepLabel =
-                  idx === 3 && order.fulfillmentType === "pickup"
-                    ? "Sẵn sàng"
-                    : step.label;
-
-                return (
-                  <li
-                    key={step.label}
-                    aria-current={isCurrent ? "step" : undefined}
-                    className="flex flex-col items-center text-center"
-                  >
-                    <div
-                      className={`flex size-9 items-center justify-center rounded-full transition-colors sm:size-10 ${
-                        isCurrent
-                          ? "bg-primary text-primary-foreground ring-primary/20 font-bold ring-4"
-                          : isPassed
-                            ? "bg-primary/20 text-primary font-semibold"
-                            : "bg-muted text-muted-foreground/50"
-                      }`}
-                    >
-                      <Icon className="size-4 sm:size-5" />
-                    </div>
-                    <span
-                      className={`mt-2 text-[11px] leading-tight sm:text-xs ${
-                        isCurrent
-                          ? "text-foreground font-bold"
-                          : isPassed
-                            ? "text-foreground font-medium"
-                            : "text-muted-foreground"
-                      }`}
-                    >
-                      {stepLabel}
-                    </span>
-                  </li>
-                );
-              })}
-            </ol>
-          </div>
+      ) : null}
+      {!isCancelled || timeline ? (
+        <div
+          className={`border-border bg-card/60 rounded-2xl border p-5 shadow-xs sm:p-6 ${
+            isCancelled ? "mt-4" : "mt-8"
+          }`}
+        >
+          {isCancelled ? null : (
+            <>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground text-sm font-medium">
+                  Tiến trình xử lý
+                </span>
+                <Badge
+                  variant={statusInfo.badgeVariant}
+                  className="px-3 py-1 font-bold"
+                >
+                  {statusInfo.label}
+                </Badge>
+              </div>
+              <p className="text-muted-foreground mt-2 text-sm">
+                {statusInfo.description}
+              </p>
+            </>
+          )}
+          {timeline ? (
+            <div className={isCancelled ? undefined : "mt-6"}>{timeline}</div>
+          ) : null}
         </div>
-      )}
+      ) : null}
 
       {/* Recipient & Delivery Info */}
       <div className="border-border bg-card mt-6 space-y-4 rounded-2xl border p-6 shadow-xs">

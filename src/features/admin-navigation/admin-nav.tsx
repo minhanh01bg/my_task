@@ -7,33 +7,43 @@ import {
   ArrowsClockwise,
   ChartBar,
   CreditCard,
+  Gauge,
   Gear,
   List,
   Megaphone,
   Package,
   ShoppingCart,
   SquaresFour,
+  Star,
   Storefront,
   TextAlignLeft,
+  Ticket,
   Users,
   X,
 } from "@phosphor-icons/react";
 
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { AdminLogoutButton } from "@/features/admin-navigation/admin-logout-button";
 import { NotificationButton } from "@/features/admin-notifications/notification-button";
-import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { AdminSearchButton } from "@/features/admin-search/admin-search-button";
 import { cn } from "@/lib/utils";
 
 const NAV = [
+  {
+    href: "/admin",
+    label: "Tổng quan",
+    shortLabel: "Tổng quan",
+    icon: Gauge,
+  },
   {
     href: "/pos",
     label: "Quầy bán hàng",
@@ -63,6 +73,19 @@ const NAV = [
     label: "Khuyến mãi",
     shortLabel: "Khuyến mãi",
     icon: Megaphone,
+  },
+  {
+    href: "/admin/promotions/vouchers",
+    label: "Mã giảm giá",
+    shortLabel: "Mã giảm giá",
+    icon: Ticket,
+    nested: true,
+  },
+  {
+    href: "/admin/reviews",
+    label: "Đánh giá",
+    shortLabel: "Đánh giá",
+    icon: Star,
   },
   {
     href: "/admin/orders",
@@ -109,27 +132,44 @@ const MOBILE_PRIMARY_HREFS = new Set([
   "/admin/reports",
 ]);
 
-function isActive(pathname: string, href: string) {
-  return href === "/pos"
+type NavItem = (typeof NAV)[number];
+
+/** /pos va /admin (Tong quan) chi sang khi khop chinh xac. */
+const EXACT_MATCH_HREFS = new Set(["/pos", "/admin"]);
+
+function matches(pathname: string, href: string) {
+  return EXACT_MATCH_HREFS.has(href)
     ? pathname === href
     : pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/** Muc khop dai nhat thang: o /admin/promotions/vouchers chi "Mã giảm giá" sang. */
+function activeHref(pathname: string): string | undefined {
+  return NAV.filter((item) => matches(pathname, item.href)).sort(
+    (a, b) => b.href.length - a.href.length,
+  )[0]?.href;
 }
 
 function NavLink({
   item,
   active,
   onNavigate,
+  badge,
 }: {
-  item: (typeof NAV)[number];
+  item: NavItem;
   active: boolean;
   onNavigate?: () => void;
+  badge?: React.ReactNode;
 }) {
   return (
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
       onClick={onNavigate}
-      className="hover:bg-accent/12 focus-visible:ring-ring aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground flex min-h-12 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-colors focus-visible:ring-3 focus-visible:outline-none"
+      className={cn(
+        "hover:bg-accent/12 focus-visible:ring-ring aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground flex min-h-12 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-colors focus-visible:ring-3 focus-visible:outline-none",
+        "nested" in item && item.nested && "pl-8",
+      )}
     >
       <item.icon
         aria-hidden="true"
@@ -137,14 +177,21 @@ function NavLink({
         className="size-5 shrink-0"
       />
       {item.label}
+      {badge}
     </Link>
   );
 }
 
-export function AdminNav() {
+export function AdminNav({
+  productsBadge,
+}: {
+  /** Huy hieu (vi du so hang sap het) gan muc "Sản phẩm" — server truyen vao. */
+  productsBadge?: React.ReactNode;
+} = {}) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const current = NAV.find((item) => isActive(pathname, item.href));
+  const currentHref = activeHref(pathname);
+  const current = NAV.find((item) => item.href === currentHref);
   const primaryItems = NAV.filter((item) =>
     MOBILE_PRIMARY_HREFS.has(item.href),
   );
@@ -172,6 +219,7 @@ export function AdminNav() {
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          <AdminSearchButton placement="mobile" />
           <NotificationButton placement="mobile" />
         </div>
       </header>
@@ -191,12 +239,17 @@ export function AdminNav() {
           </div>
           <ThemeToggle />
         </div>
+        <AdminSearchButton placement="desktop" />
         <NotificationButton placement="desktop" />
         <nav aria-label="Điều hướng quản lý">
           <ul className="flex flex-col gap-1.5">
             {NAV.map((item) => (
               <li key={item.href}>
-                <NavLink item={item} active={isActive(pathname, item.href)} />
+                <NavLink
+                  item={item}
+                  active={item.href === currentHref}
+                  badge={item.href === "/admin/products" ? productsBadge : null}
+                />
               </li>
             ))}
           </ul>
@@ -204,14 +257,14 @@ export function AdminNav() {
         <AdminLogoutButton className="border-border mt-5 border-t pt-3" />
       </aside>
 
-      <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
+      <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
         <nav
           aria-label="Điều hướng quản lý trên điện thoại"
           className="bg-card/95 border-border fixed inset-x-0 bottom-0 z-40 border-t px-2 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] shadow-[0_-10px_30px_-20px_oklch(0.15_0.02_70/0.5)] backdrop-blur-xl md:hidden"
         >
           <ul className="grid grid-cols-5">
             {primaryItems.map((item) => {
-              const active = isActive(pathname, item.href);
+              const active = item.href === currentHref;
               return (
                 <li key={item.href}>
                   <Link
@@ -230,7 +283,7 @@ export function AdminNav() {
               );
             })}
             <li>
-              <DialogTrigger
+              <SheetTrigger
                 aria-label="Mở toàn bộ menu quản lý"
                 render={<button type="button" />}
                 className={cn(
@@ -244,38 +297,39 @@ export function AdminNav() {
                   className="size-5"
                 />
                 Thêm
-              </DialogTrigger>
+              </SheetTrigger>
             </li>
           </ul>
         </nav>
-        <DialogContent
-          id="mobile-admin-menu"
+        <SheetContent
+          side="bottom"
           showCloseButton={false}
-          className="top-auto right-0 bottom-0 left-0 z-[60] max-h-[85dvh] max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-t-3xl rounded-b-none px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:hidden"
+          className="gap-0 overflow-y-auto px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:hidden"
         >
-          <DialogHeader className="mb-3 flex-row items-center justify-between text-left">
+          <SheetHeader className="mb-3 flex-row items-center justify-between p-0 text-left">
             <div>
-              <DialogTitle className="text-lg font-bold">
-                Menu quản lý
-              </DialogTitle>
-              <DialogDescription>Tất cả chức năng cửa hàng</DialogDescription>
+              <SheetTitle>Menu quản lý</SheetTitle>
+              <SheetDescription>Tất cả chức năng cửa hàng</SheetDescription>
             </div>
-            <DialogClose
+            <SheetClose
               aria-label="Đóng menu"
               render={<button type="button" />}
               className="hover:bg-muted focus-visible:ring-ring flex size-11 shrink-0 items-center justify-center rounded-xl focus-visible:ring-2 focus-visible:outline-none"
             >
               <X aria-hidden="true" className="size-5" />
-            </DialogClose>
-          </DialogHeader>
+            </SheetClose>
+          </SheetHeader>
           <nav aria-label="Toàn bộ chức năng quản lý">
             <ul className="grid grid-cols-1 gap-1 min-[420px]:grid-cols-2">
               {NAV.map((item) => (
                 <li key={item.href}>
                   <NavLink
                     item={item}
-                    active={isActive(pathname, item.href)}
+                    active={item.href === currentHref}
                     onNavigate={() => setMenuOpen(false)}
+                    badge={
+                      item.href === "/admin/products" ? productsBadge : null
+                    }
                   />
                 </li>
               ))}
@@ -291,8 +345,8 @@ export function AdminNav() {
             className="border-border mt-2 border-t pt-3"
             onLogout={() => setMenuOpen(false)}
           />
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

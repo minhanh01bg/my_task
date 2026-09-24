@@ -1,3 +1,8 @@
+import {
+  applyVoucher,
+  normalizeVoucherCode,
+  voucherReasonMessage,
+} from "@/lib/vouchers/validate-voucher";
 import { prisma } from "@/server/db/prisma";
 import {
   computeCheckoutFingerprint,
@@ -8,13 +13,18 @@ import {
   verifyRecoverySecret,
 } from "@/server/orders/checkout-idempotency";
 import { createReceiptNonce } from "@/server/orders/public-receipt";
+import { findVoucherByCode } from "@/server/vouchers/get-voucher";
 import {
   OnlineOrderError,
   type OnlineCheckoutInput,
 } from "@/types/online-order";
-import { validateVoucher } from "@/server/vouchers/validate-voucher";
 
-import { createOrder, type CreateOrderResult } from "./create-order";
+import {
+  createOrder,
+  type CreateOrderResult,
+  type CreateOrderVoucher,
+} from "./create-order";
+import { resolveShippingFee } from "./shipping-fee";
 
 export interface OnlineOrderAccessContext {
   customerAccountId?: string | null;
@@ -116,6 +126,34 @@ async function replayIdempotentOrder(
   };
 }
 
+/**
+ * Kiem tra voucher bang du lieu DB moi nhat (khong cache). Ma khong hop le thi
+ * tu choi don thay vi am tham bo giam — khach da thay so tien sau giam.
+ * `usedCount` duoc kiem tra lai nguyen tu trong transaction cua createOrder.
+ */
+async function resolveVoucher(
+  rawCode: string | undefined,
+  subtotal: number,
+  shippingFee: number,
+): Promise<CreateOrderVoucher | null> {
+  const code = rawCode ? normalizeVoucherCode(rawCode) : "";
+  if (!code) return null;
+
+  const rule = await findVoucherByCode(code);
+  const result = applyVoucher(rule, { subtotal, shippingFee, now: new Date() });
+  if (!rule || !result.ok) {
+    throw new OnlineOrderError(
+      "VOUCHER_INVALID",
+      voucherReasonMessage(result.reason ?? "not_found", rule),
+    );
+  }
+  return {
+    code: rule.code,
+    discount: result.discount,
+    shippingDiscount: result.shippingDiscount,
+  };
+}
+
 export async function createOnlineOrder(
   input: OnlineCheckoutInput,
   access: OnlineOrderAccessContext = {},
@@ -207,27 +245,24 @@ export async function createOnlineOrder(
       isService: false,
     };
   });
-  const total = lines.reduce(
+  const subtotal = lines.reduce(
     (sum, line) => sum + Math.round(line.unitPrice * line.quantity),
     0,
   );
-
-  let voucherDiscount = 0;
-  if (input.voucherCode) {
-    const voucherRes = validateVoucher(input.voucherCode, total);
-    if (voucherRes.valid) {
-      voucherDiscount = voucherRes.discount;
-    }
-  }
-  const finalTotal = Math.max(0, total - voucherDiscount);
-
-  const noteParts = [
-    input.deliverySlot ? `[Khung giờ: ${input.deliverySlot}]` : null,
-    input.voucherCode ? `[Voucher: ${input.voucherCode.toUpperCase()}]` : null,
-    input.note,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const shippingFee =
+    input.fulfillmentType === "delivery"
+      ? await resolveShippingFee(subtotal)
+      : 0;
+  const voucher = await resolveVoucher(
+    input.voucherCode,
+    subtotal,
+    shippingFee,
+  );
+  const finalTotal =
+    subtotal -
+    (voucher?.discount ?? 0) +
+    shippingFee -
+    (voucher?.shippingDiscount ?? 0);
 
   let recoveryDigest: string | null = null;
   let encryptedGuestToken: string | null = null;
@@ -259,14 +294,14 @@ export async function createOnlineOrder(
       clientId: input.clientId,
       channel: "online",
       lines,
-      orderDiscount: voucherDiscount,
+      voucher,
       payments: [
         {
           method: input.paymentMethod === "cod" ? "cash" : "transfer",
           amount: finalTotal,
         },
       ],
-      note: noteParts || undefined,
+      note: input.note || undefined,
       customerAccountId: access.customerAccountId,
       guestAccess: access.customerAccountId ? undefined : access.guestAccess,
       receiptNonceHash,
@@ -289,7 +324,11 @@ export async function createOnlineOrder(
         deliveryWard: input.deliveryWard || null,
         deliveryDistrict: input.deliveryDistrict || null,
         deliveryProvince: input.deliveryProvince || null,
-        shippingFee: 0,
+        deliverySlot:
+          input.fulfillmentType === "delivery"
+            ? input.deliverySlot || null
+            : null,
+        shippingFee,
       },
     });
 

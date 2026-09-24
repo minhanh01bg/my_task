@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
   Minus,
   PackageX,
+  PartyPopper,
   Plus,
   ShoppingBag,
   Trash2,
@@ -13,104 +14,144 @@ import {
   X,
 } from "lucide-react";
 
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { formatVnd } from "@/lib/money";
+import {
+  computeShippingFee,
+  type ShippingSettings,
+} from "@/lib/shipping/shipping-fee";
 
 import { useOnlineCart } from "./cart-context";
+import type { OnlineCartLine } from "./types";
+import { useVoucher } from "./use-voucher";
+import { VoucherField } from "./voucher-field";
 
-const FREE_SHIPPING_THRESHOLD = 200_000;
+const UNDO_TIMEOUT_MS = 5000;
 
-export function CartDrawer() {
-  const { lines, isDrawerOpen, closeDrawer, setQuantity, remove } =
+interface CartDrawerProps {
+  /**
+   * Tu cai dat `store.shippingFee`/`store.freeShippingThreshold`
+   * (`getShippingSettings()`). Bat buoc — khong co gia tri mac dinh ngam.
+   */
+  shipping: ShippingSettings;
+}
+
+interface RemovedLine {
+  line: OnlineCartLine;
+  /** Vi tri cu trong gio — Hoàn tác tra dong ve dung cho nay. */
+  index: number;
+}
+
+export function CartDrawer({ shipping }: CartDrawerProps) {
+  const { lines, isDrawerOpen, closeDrawer, setQuantity, remove, restore } =
     useOnlineCart();
-
-  const drawerRef = useRef<HTMLDivElement>(null);
-
-  // Close on Escape key
-  useEffect(() => {
-    if (!isDrawerOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        closeDrawer();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isDrawerOpen, closeDrawer]);
+  const [removed, setRemoved] = useState<RemovedLine | null>(null);
+  const undoButtonRef = useRef<HTMLButtonElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const threshold = shipping.freeShippingThreshold;
+  // Khong thu phi ship thi thanh "mua them de freeship" la sai su that.
+  const showShippingProgress = shipping.shippingFee > 0;
 
   const subtotal = useMemo(
     () => lines.reduce((sum, line) => sum + line.price * line.quantity, 0),
     [lines],
   );
 
+  const voucher = useVoucher(
+    subtotal,
+    isDrawerOpen,
+    computeShippingFee(subtotal, shipping),
+  );
+  const voucherDiscount = voucher.applied?.discount ?? 0;
+
+  /**
+   * Xoa ngay, cho 5 giay de hoan tac thay vi hoi xac nhan. Nut Hoàn tác nam
+   * ngay trong ngan (sheet modal bay focus, toast ben ngoai khong bam duoc).
+   */
+  function removeWithUndo(line: OnlineCartLine, index: number) {
+    remove(line.id);
+    setRemoved({ line, index });
+  }
+
+  function undoRemove() {
+    if (!removed) return;
+    restore(removed.line, removed.index);
+    setRemoved(null);
+    contentRef.current?.focus();
+  }
+
+  useEffect(() => {
+    if (!removed) return;
+    // Nut xoa vua bien mat cung dong — dua focus toi Hoàn tác.
+    undoButtonRef.current?.focus();
+    const timer = window.setTimeout(() => {
+      if (document.activeElement === undoButtonRef.current) {
+        contentRef.current?.focus();
+      }
+      setRemoved(null);
+    }, UNDO_TIMEOUT_MS);
+    return () => window.clearTimeout(timer);
+  }, [removed]);
+
   const totalItems = useMemo(
     () => lines.reduce((sum, line) => sum + line.quantity, 0),
     [lines],
   );
 
-  if (!isDrawerOpen) return null;
-
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="cart-drawer-title"
-      className="fixed inset-0 z-50 flex justify-end"
+    <Sheet
+      open={isDrawerOpen}
+      onOpenChange={(open) => {
+        if (!open) closeDrawer();
+      }}
     >
-      {/* Backdrop */}
-      <div
-        onClick={closeDrawer}
-        aria-hidden="true"
-        className="animate-fade-in fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
-      />
-
-      {/* Slide-over sheet */}
-      <div
-        ref={drawerRef}
-        className="border-border bg-background animate-slide-in-right relative z-10 flex h-full w-full max-w-md flex-col border-l shadow-2xl transition-transform"
+      <SheetContent
+        side="right"
+        showCloseButton={false}
+        className="bg-background gap-0"
       >
         {/* Header */}
         <div className="border-border flex items-center justify-between border-b px-6 py-4">
           <div className="flex items-center gap-2">
             <ShoppingBag aria-hidden="true" className="text-primary size-5" />
-            <h2 id="cart-drawer-title" className="text-lg font-bold">
+            <SheetTitle className="font-sans text-lg font-bold">
               Giỏ hàng của bạn
-            </h2>
+            </SheetTitle>
             {lines.length > 0 && (
               <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs font-semibold">
                 {totalItems}
               </span>
             )}
           </div>
-          <button
-            type="button"
-            onClick={closeDrawer}
+          <SheetClose
             aria-label="Đóng giỏ hàng"
-            className="text-muted-foreground hover:text-foreground inline-flex size-9 items-center justify-center rounded-xl transition-colors outline-none focus-visible:ring-2"
+            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex size-11 items-center justify-center rounded-xl transition-colors outline-none focus-visible:ring-2"
           >
             <X aria-hidden="true" className="size-5" />
-          </button>
+          </SheetClose>
         </div>
 
         {/* Free Shipping Progress Bar */}
-        {lines.length > 0 && (
+        {lines.length > 0 && showShippingProgress && (
           <div className="border-border bg-muted/30 border-b px-6 py-3.5">
             <div className="flex items-center justify-between text-xs font-semibold">
-              {subtotal >= FREE_SHIPPING_THRESHOLD ? (
+              {subtotal >= threshold ? (
                 <span className="text-success flex items-center gap-1.5 font-bold">
-                  <Truck className="size-4" />
-                  <span>🎉 Chúc mừng! Bạn đã được Miễn phí giao hàng!</span>
+                  <PartyPopper aria-hidden="true" className="size-4" />
+                  <span>Chúc mừng! Bạn đã được Miễn phí giao hàng!</span>
                 </span>
               ) : (
                 <span className="text-muted-foreground flex items-center gap-1.5">
-                  <Truck className="text-primary size-4" />
+                  <Truck aria-hidden="true" className="text-primary size-4" />
                   <span>
                     Mua thêm{" "}
                     <strong className="text-foreground font-bold">
-                      {formatVnd(FREE_SHIPPING_THRESHOLD - subtotal)} ₫
+                      {formatVnd(threshold - subtotal)} ₫
                     </strong>{" "}
                     để được Miễn phí giao hàng
                   </span>
@@ -122,13 +163,11 @@ export function CartDrawer() {
               className="bg-muted mt-2 h-2 w-full overflow-hidden rounded-full"
             >
               <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  subtotal >= FREE_SHIPPING_THRESHOLD
-                    ? "bg-success"
-                    : "bg-primary"
+                className={`h-full rounded-full transition-[width,background-color] duration-500 ${
+                  subtotal >= threshold ? "bg-success" : "bg-primary"
                 }`}
                 style={{
-                  width: `${Math.min(100, (subtotal / FREE_SHIPPING_THRESHOLD) * 100)}%`,
+                  width: `${threshold > 0 ? Math.min(100, (subtotal / threshold) * 100) : 100}%`,
                 }}
               />
             </div>
@@ -136,7 +175,28 @@ export function CartDrawer() {
         )}
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div
+          ref={contentRef}
+          tabIndex={-1}
+          className="flex-1 overflow-y-auto p-6 outline-none"
+        >
+          <div data-testid="cart-undo" role="status">
+            {removed ? (
+              <div className="border-border bg-muted/40 mb-4 flex items-center justify-between gap-3 rounded-xl border px-4 py-2.5 text-sm">
+                <span className="min-w-0 truncate">
+                  Đã xoá {removed.line.name}.
+                </span>
+                <button
+                  ref={undoButtonRef}
+                  type="button"
+                  onClick={undoRemove}
+                  className="text-primary hover:bg-primary/10 focus-visible:ring-ring inline-flex min-h-11 shrink-0 items-center rounded-lg px-3 font-bold transition-colors outline-none focus-visible:ring-2"
+                >
+                  Hoàn tác
+                </button>
+              </div>
+            ) : null}
+          </div>
           {lines.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center">
               <PackageX
@@ -160,7 +220,7 @@ export function CartDrawer() {
             </div>
           ) : (
             <ul className="divide-border divide-y">
-              {lines.map((line) => {
+              {lines.map((line, index) => {
                 const lineTotal = line.price * line.quantity;
                 const isMaxStock = line.quantity >= line.stock;
                 const isMinQuantity = line.quantity <= 1;
@@ -198,7 +258,7 @@ export function CartDrawer() {
                         </div>
                         <button
                           type="button"
-                          onClick={() => remove(line.id)}
+                          onClick={() => removeWithUndo(line, index)}
                           aria-label={`Xóa ${line.name} khỏi giỏ hàng`}
                           className="text-muted-foreground hover:text-destructive inline-flex size-7 items-center justify-center rounded-lg transition-colors"
                         >
@@ -255,6 +315,11 @@ export function CartDrawer() {
         {/* Footer */}
         {lines.length > 0 && (
           <div className="border-border bg-muted/30 border-t p-6">
+            <VoucherField
+              id="cart-voucher"
+              voucher={voucher}
+              className="mb-4"
+            />
             <div className="flex items-center justify-between text-base font-bold">
               <span>Tạm tính</span>
               <span
@@ -264,6 +329,15 @@ export function CartDrawer() {
                 {formatVnd(subtotal)} ₫
               </span>
             </div>
+            {voucherDiscount > 0 ? (
+              <div
+                data-testid="cart-voucher-discount"
+                className="text-success mt-1 flex items-center justify-between text-sm font-semibold"
+              >
+                <span>Giảm giá ({voucher.applied?.code})</span>
+                <span>- {formatVnd(voucherDiscount)} ₫</span>
+              </div>
+            ) : null}
             <p className="text-muted-foreground mt-1 text-xs">
               Giá và tồn kho sẽ được xác nhận lại khi bạn đặt hàng.
             </p>
@@ -271,7 +345,7 @@ export function CartDrawer() {
               <Link
                 href="/checkout"
                 onClick={closeDrawer}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl font-bold shadow-md transition-all active:scale-[0.98]"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl font-bold shadow-md transition-[background-color,transform] active:scale-[0.98]"
               >
                 <ShoppingBag aria-hidden="true" className="size-5" />
                 Tiến hành đặt hàng
@@ -279,7 +353,7 @@ export function CartDrawer() {
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 }

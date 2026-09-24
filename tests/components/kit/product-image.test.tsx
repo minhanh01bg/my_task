@@ -57,3 +57,37 @@ describe("ProductImage", () => {
     expect(container.firstChild).toHaveAttribute("aria-hidden", "true");
   });
 });
+
+describe("ProductImage hop nhat", () => {
+  it("nhan alt rieng cho trinh doc man hinh", () => {
+    render(
+      <ProductImage src="/uploads/abc.webp" name="Bugi Wave" alt="Ảnh Bugi" />,
+    );
+    expect(screen.getByRole("img", { name: "Ảnh Bugi" })).toBeInTheDocument();
+  });
+
+  it("dung URL goc de service worker cua POS cache duoc khi mat mang", () => {
+    render(<ProductImage src="/uploads/abc.webp" name="Bugi Wave" />);
+    expect(screen.getByRole("img", { name: "Bugi Wave" })).toHaveStyle({
+      backgroundImage: 'url("/uploads/abc.webp")',
+    });
+  });
+
+  it("bo size thi kich thuoc do className quyet dinh", () => {
+    const { container } = render(
+      <ProductImage
+        src={null}
+        name="Bugi Wave"
+        className="aspect-[4/3] w-full"
+      />,
+    );
+    const box = container.firstChild as HTMLElement;
+    expect(box).toHaveClass("w-full");
+    expect(box.style.width).toBe("");
+  });
+
+  it("shared/product-image chi la re-export cua kit", async () => {
+    const shared = await import("@/components/shared/product-image");
+    expect(shared.ProductImage).toBe(ProductImage);
+  });
+});

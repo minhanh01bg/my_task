@@ -1,13 +1,21 @@
 import { Prisma } from "@prisma/client";
 
+import { logger } from "@/lib/logger";
+import { roundVnd } from "@/lib/money";
 import { calculateCart } from "@/lib/pricing/calculate";
 import type { CartLine } from "@/lib/pricing/types";
+import { revalidatePublic } from "@/server/cache/public-cache";
+import { CACHE_TAGS } from "@/server/cache/tags";
 import { createCustomerOrderCreatedNotification } from "@/server/customer-notifications/create-customer-notification";
 import { prisma } from "@/server/db/prisma";
 import { createOnlineOrderNotification } from "@/server/notifications/create-admin-notification";
 import { OnlineOrderError } from "@/types/online-order";
 
 import { generateOrderCode } from "./order-code";
+import { nextOrderSequence } from "./order-sequence";
+
+/** So lan chay transaction toi da khi dung unique `Order.code`. */
+const MAX_CODE_ATTEMPTS = 3;
 
 export interface CreateOrderLine {
   productId: string | null;
@@ -27,13 +35,26 @@ export interface CreateOrderPayment {
   note?: string | null;
 }
 
+/**
+ * Voucher da duoc kiem tra phia server (xem `createOnlineOrder`). `discount`
+ * giam tien hang, `shippingDiscount` giam phi ship. createOrder chan lai hai
+ * so nay theo tien hang/phi ship that va tang `usedCount` nguyen tu.
+ */
+export interface CreateOrderVoucher {
+  code: string;
+  discount: number;
+  shippingDiscount: number;
+}
+
 export interface CreateOrderInput {
   clientId: string;
   /** Ma do may ban dat truoc de gan vao noi dung QR. Trung thi server tu doi. */
   preferredCode?: string | null;
   channel?: "pos" | "online";
   lines: CreateOrderLine[];
+  /** Giam gia thu cong toan don (POS). Voucher di qua `voucher`. */
   orderDiscount?: number;
+  voucher?: CreateOrderVoucher | null;
   payments: CreateOrderPayment[];
   customerId?: string | null;
   customerAccountId?: string | null;
@@ -59,6 +80,8 @@ export interface CreateOrderInput {
     deliveryWard?: string | null;
     deliveryDistrict?: string | null;
     deliveryProvince?: string | null;
+    deliverySlot?: string | null;
+    /** Phi ship TRUOC khi ap voucher freeship. */
     shippingFee?: number;
   };
 }
@@ -87,6 +110,110 @@ function resolveStatus(payments: CreateOrderPayment[]): string {
     return "pending";
   }
   return "paid";
+}
+
+function isUniqueViolationOn(error: unknown, field: string): boolean {
+  if (
+    !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+    error.code !== "P2002"
+  ) {
+    return false;
+  }
+  const target = error.meta?.target;
+  const matches = (value: string): boolean =>
+    value === field || value.endsWith(`_${field}_key`);
+  return Array.isArray(target)
+    ? target.some((value) => typeof value === "string" && matches(value))
+    : typeof target === "string" && matches(target);
+}
+
+async function isCodeTaken(
+  tx: Prisma.TransactionClient,
+  code: string,
+): Promise<boolean> {
+  const taken = await tx.order.findUnique({
+    where: { code },
+    select: { id: true },
+  });
+  return taken !== null;
+}
+
+/**
+ * Ma dat truoc chi duoc dung neu chua ai chiem — tranh vi pham unique.
+ * Ma dat truoc cua may POS (`DH` + 6 so) co the chiem truoc so cua bo dem,
+ * nen bo qua cac so da bi dung.
+ */
+async function resolveOrderCode(
+  tx: Prisma.TransactionClient,
+  sequence: number,
+  preferredCode: string | null | undefined,
+): Promise<string> {
+  if (preferredCode && !(await isCodeTaken(tx, preferredCode))) {
+    return preferredCode;
+  }
+  let code = generateOrderCode(sequence);
+  while (await isCodeTaken(tx, code)) {
+    code = generateOrderCode(await nextOrderSequence(tx));
+  }
+  return code;
+}
+
+interface OrderMoney {
+  /** Giam thu cong + giam tien hang cua voucher. */
+  discount: number;
+  voucherCode: string | null;
+  voucherDiscount: number;
+  /** Phi ship SAU khi ap voucher. */
+  shippingFee: number;
+  /** subtotal - discount thu cong - voucherDiscount + shippingFee. */
+  total: number;
+}
+
+function applyVoucherToTotals(
+  totals: { discount: number; total: number },
+  voucher: CreateOrderVoucher | null | undefined,
+  baseShippingFee: number,
+): OrderMoney {
+  const shippingBefore = Math.max(0, roundVnd(baseShippingFee));
+  const voucherDiscount = voucher
+    ? Math.min(Math.max(0, roundVnd(voucher.discount)), totals.total)
+    : 0;
+  const shippingDiscount = voucher
+    ? Math.min(Math.max(0, roundVnd(voucher.shippingDiscount)), shippingBefore)
+    : 0;
+  const shippingFee = shippingBefore - shippingDiscount;
+
+  return {
+    discount: totals.discount + voucherDiscount,
+    voucherCode: voucher ? voucher.code : null,
+    voucherDiscount,
+    shippingFee,
+    total: totals.total - voucherDiscount + shippingFee,
+  };
+}
+
+/**
+ * Tang `usedCount` NGUYEN TU voi dieu kien con luot — hai don dong thoi dung
+ * voucher con 1 luot thi chi mot don cap nhat duoc dong nay. Prisma khong so
+ * sanh hai cot duoc nen dung `$executeRaw`.
+ */
+async function consumeVoucherUse(
+  tx: Prisma.TransactionClient,
+  code: string,
+): Promise<void> {
+  const updated = await tx.$executeRaw`
+    UPDATE "Voucher"
+    SET "usedCount" = "usedCount" + 1
+    WHERE "code" = ${code}
+      AND "isActive" = 1
+      AND ("maxUses" IS NULL OR "usedCount" < "maxUses")
+  `;
+  if (updated === 0) {
+    throw new OnlineOrderError(
+      "VOUCHER_INVALID",
+      "Mã giảm giá đã hết lượt sử dụng hoặc ngừng áp dụng",
+    );
+  }
 }
 
 /**
@@ -137,6 +264,11 @@ export async function createOrder(
   }));
 
   const totals = calculateCart(cartLines, input.orderDiscount ?? 0);
+  const money = applyVoucherToTotals(
+    totals,
+    input.voucher,
+    input.online?.shippingFee ?? 0,
+  );
   const status = input.initialStatus ?? resolveStatus(input.payments);
 
   const stockLines = input.lines.filter(
@@ -153,164 +285,180 @@ export async function createOrder(
     (line) => (stockById.get(line.productId as string) ?? 0) < line.quantity,
   );
 
-  try {
-    return await prisma.$transaction(async (tx) => {
-      const sequence = (await tx.order.count()) + 1;
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        // Lenh GHI dau tien: giu khoa ghi ngay, khong doc-roi-nang-cap khoa.
+        const sequence = await nextOrderSequence(tx);
+        const code = await resolveOrderCode(tx, sequence, input.preferredCode);
 
-      // Ma dat truoc chi duoc dung neu chua ai chiem — tranh vi pham unique.
-      let code = generateOrderCode(sequence);
-      if (input.preferredCode) {
-        const taken = await tx.order.findUnique({
-          where: { code: input.preferredCode },
-          select: { id: true },
+        if (money.voucherCode) {
+          await consumeVoucherUse(tx, money.voucherCode);
+        }
+
+        const order = await tx.order.create({
+          data: {
+            code,
+            channel: input.channel ?? "pos",
+            status,
+            subtotal: totals.subtotal,
+            discount: money.discount,
+            total: money.total,
+            voucherCode: money.voucherCode,
+            voucherDiscount: money.voucherDiscount,
+            customerId: input.customerId ?? null,
+            customerAccountId: input.customerAccountId ?? null,
+            note: input.note ?? null,
+            clientId: input.clientId,
+            syncedAt: new Date(),
+            hasStockWarning,
+            fulfillmentStatus: input.online?.fulfillmentStatus ?? null,
+            fulfillmentType: input.online?.fulfillmentType ?? null,
+            paymentMethod: input.online?.paymentMethod ?? null,
+            contactName: input.online?.contactName ?? null,
+            contactPhone: input.online?.contactPhone ?? null,
+            deliveryAddress: input.online?.deliveryAddress ?? null,
+            deliveryWard: input.online?.deliveryWard ?? null,
+            deliveryDistrict: input.online?.deliveryDistrict ?? null,
+            deliveryProvince: input.online?.deliveryProvince ?? null,
+            deliverySlot: input.online?.deliverySlot ?? null,
+            shippingFee: money.shippingFee,
+            receiptNonceHash: input.receiptNonceHash ?? null,
+            items: {
+              create: totals.lines.map((line) => ({
+                productId: line.productId,
+                nameSnapshot: line.name,
+                unitPrice: line.unitPrice,
+                originalPrice: line.originalPrice,
+                quantity: line.quantity,
+                discount: line.discount,
+                lineTotal: line.lineTotal,
+                unit: line.unit,
+                isService: line.isService,
+              })),
+            },
+            payments: {
+              create: input.payments.map((payment) => ({
+                method: payment.method,
+                amount: payment.amount,
+                receivedAt:
+                  payment.receivedAt ??
+                  (payment.method === "cash" && input.autoReceiveCash !== false
+                    ? new Date()
+                    : null),
+                note: payment.note ?? null,
+              })),
+            },
+            guestAccess: input.guestAccess
+              ? { create: input.guestAccess }
+              : undefined,
+            idempotency: input.idempotency
+              ? {
+                  create: {
+                    clientId: input.clientId,
+                    requestFingerprint: input.idempotency.requestFingerprint,
+                    recoveryDigest: input.idempotency.recoveryDigest,
+                    encryptedGuestToken: input.idempotency.encryptedGuestToken,
+                    responsePayload: input.idempotency.responsePayload,
+                    expiresAt: input.idempotency.expiresAt,
+                  },
+                }
+              : undefined,
+          },
         });
-        if (!taken) code = input.preferredCode;
-      }
 
-      const order = await tx.order.create({
-        data: {
-          code,
-          channel: input.channel ?? "pos",
-          status,
-          subtotal: totals.subtotal,
-          discount: totals.discount,
-          total: totals.total,
-          customerId: input.customerId ?? null,
-          customerAccountId: input.customerAccountId ?? null,
-          note: input.note ?? null,
-          clientId: input.clientId,
-          syncedAt: new Date(),
-          hasStockWarning,
-          fulfillmentStatus: input.online?.fulfillmentStatus ?? null,
-          fulfillmentType: input.online?.fulfillmentType ?? null,
-          paymentMethod: input.online?.paymentMethod ?? null,
-          contactName: input.online?.contactName ?? null,
-          contactPhone: input.online?.contactPhone ?? null,
-          deliveryAddress: input.online?.deliveryAddress ?? null,
-          deliveryWard: input.online?.deliveryWard ?? null,
-          deliveryDistrict: input.online?.deliveryDistrict ?? null,
-          deliveryProvince: input.online?.deliveryProvince ?? null,
-          shippingFee: input.online?.shippingFee ?? 0,
-          receiptNonceHash: input.receiptNonceHash ?? null,
-          items: {
-            create: totals.lines.map((line) => ({
-              productId: line.productId,
-              nameSnapshot: line.name,
-              unitPrice: line.unitPrice,
-              originalPrice: line.originalPrice,
-              quantity: line.quantity,
-              discount: line.discount,
-              lineTotal: line.lineTotal,
-              unit: line.unit,
-              isService: line.isService,
-            })),
-          },
-          payments: {
-            create: input.payments.map((payment) => ({
-              method: payment.method,
-              amount: payment.amount,
-              receivedAt:
-                payment.receivedAt ??
-                (payment.method === "cash" && input.autoReceiveCash !== false
-                  ? new Date()
-                  : null),
-              note: payment.note ?? null,
-            })),
-          },
-          guestAccess: input.guestAccess
-            ? { create: input.guestAccess }
-            : undefined,
-          idempotency: input.idempotency
-            ? {
-                create: {
-                  clientId: input.clientId,
-                  requestFingerprint: input.idempotency.requestFingerprint,
-                  recoveryDigest: input.idempotency.recoveryDigest,
-                  encryptedGuestToken: input.idempotency.encryptedGuestToken,
-                  responsePayload: input.idempotency.responsePayload,
-                  expiresAt: input.idempotency.expiresAt,
-                },
-              }
-            : undefined,
-        },
-      });
-
-      for (const line of stockLines) {
-        const productId = line.productId as string;
-        if (input.channel === "online") {
-          const updatedCount = await tx.$executeRaw`
+        for (const line of stockLines) {
+          const productId = line.productId as string;
+          if (input.channel === "online") {
+            const updatedCount = await tx.$executeRaw`
           UPDATE "Product"
           SET "stock" = "stock" - ${line.quantity},
               "soldCount" = "soldCount" + 1
           WHERE "id" = ${productId} AND "stock" >= ${line.quantity}
         `;
-          if (updatedCount === 0) {
-            throw new OnlineOrderError(
-              "OUT_OF_STOCK",
-              "Một số sản phẩm không đủ tồn kho",
-              [productId],
-            );
+            if (updatedCount === 0) {
+              throw new OnlineOrderError(
+                "OUT_OF_STOCK",
+                "Một số sản phẩm không đủ tồn kho",
+                [productId],
+              );
+            }
+          } else {
+            await tx.product.update({
+              where: { id: productId },
+              data: {
+                stock: { decrement: line.quantity },
+                soldCount: { increment: 1 },
+              },
+            });
           }
-        } else {
-          await tx.product.update({
-            where: { id: productId },
-            data: {
-              stock: { decrement: line.quantity },
-              soldCount: { increment: 1 },
-            },
+        }
+
+        if (stockLines.length > 0) {
+          await tx.stockMovement.createMany({
+            data: stockLines.map((line) => ({
+              productId: line.productId as string,
+              delta: -line.quantity,
+              reason: "sale",
+              refId: order.id,
+            })),
           });
         }
-        await tx.stockMovement.create({
-          data: {
-            productId,
-            delta: -line.quantity,
-            reason: "sale",
-            refId: order.id,
-          },
-        });
-      }
 
-      if (input.channel === "online") {
-        await createOnlineOrderNotification(tx, order);
-        await createCustomerOrderCreatedNotification(tx, order);
-      }
+        if (input.channel === "online") {
+          await createOnlineOrderNotification(tx, order);
+          await createCustomerOrderCreatedNotification(tx, order);
+        }
 
-      return {
-        order: {
-          id: order.id,
-          code: order.code,
-          subtotal: order.subtotal,
-          discount: order.discount,
-          total: order.total,
-          status: order.status,
-          hasStockWarning: order.hasStockWarning,
-        },
-        duplicated: false,
-      };
-    });
-  } catch (error: unknown) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
-      const existing = await prisma.order.findUnique({
-        where: { clientId: input.clientId },
-      });
-      if (existing) {
         return {
           order: {
-            id: existing.id,
-            code: existing.code,
-            subtotal: existing.subtotal,
-            discount: existing.discount,
-            total: existing.total,
-            status: existing.status,
-            hasStockWarning: existing.hasStockWarning,
+            id: order.id,
+            code: order.code,
+            subtotal: order.subtotal,
+            discount: order.discount,
+            total: order.total,
+            status: order.status,
+            hasStockWarning: order.hasStockWarning,
           },
-          duplicated: true,
+          duplicated: false,
         };
+      });
+      // Sau commit (khong trong transaction): ton kho/soldCount da doi.
+      if (stockLines.length > 0) revalidatePublic(CACHE_TAGS.catalog);
+      if (money.voucherCode) revalidatePublic(CACHE_TAGS.vouchers);
+      return result;
+    } catch (error: unknown) {
+      if (isUniqueViolationOn(error, "code")) {
+        if (attempt >= MAX_CODE_ATTEMPTS) throw error;
+        logger.warn("Trùng mã đơn, thử lại transaction", {
+          clientId: input.clientId,
+          attempt,
+        });
+        continue;
       }
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        const existing = await prisma.order.findUnique({
+          where: { clientId: input.clientId },
+        });
+        if (existing) {
+          return {
+            order: {
+              id: existing.id,
+              code: existing.code,
+              subtotal: existing.subtotal,
+              discount: existing.discount,
+              total: existing.total,
+              status: existing.status,
+              hasStockWarning: existing.hasStockWarning,
+            },
+            duplicated: true,
+          };
+        }
+      }
+      throw error;
     }
-    throw error;
   }
 }

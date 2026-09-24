@@ -73,7 +73,7 @@ export function DebtPaymentForm({
           inputMode="numeric"
           min="1"
           max={balance}
-          step="1000"
+          step="1"
           defaultValue={balance}
           className="bg-background h-12 text-lg font-bold tabular-nums"
           autoFocus

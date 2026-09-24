@@ -23,6 +23,8 @@ const mockDetail: OnlineProductDetail = {
     categoryId: "cat-drinks",
     searchText: "sua chua uong men song",
     soldCount: 42,
+    ratingAvg: 4.5,
+    ratingCount: 2,
     category: {
       id: "cat-drinks",
       name: "Sữa & Sữa Chua",
@@ -41,6 +43,21 @@ const mockDetail: OnlineProductDetail = {
       soldCount: 15,
     },
   ],
+  reviews: {
+    items: [
+      {
+        id: "rev-01",
+        authorName: "Lan Anh",
+        rating: 5,
+        content: "Sữa chua ngon, date mới",
+        isVerifiedPurchase: true,
+        createdAt: "2026-09-20T03:00:00.000Z",
+      },
+    ],
+    total: 2,
+    page: 1,
+    pageSize: 10,
+  },
 };
 
 const mockOutOfStockDetail: OnlineProductDetail = {
@@ -55,9 +72,12 @@ const mockOutOfStockDetail: OnlineProductDetail = {
     categoryId: null,
     searchText: "tra dao het hang",
     soldCount: 0,
+    ratingAvg: 0,
+    ratingCount: 0,
     category: null,
   },
   relatedProducts: [],
+  reviews: { items: [], total: 0, page: 1, pageSize: 10 },
 };
 
 describe("ProductDetailView", () => {
@@ -80,6 +100,34 @@ describe("ProductDetailView", () => {
     );
     expect(screen.getByText("Sản phẩm cùng danh mục")).toBeInTheDocument();
     expect(screen.getByText("Sữa Tươi Tiệt Trùng")).toBeInTheDocument();
+  });
+
+  it("hiển thị điểm đánh giá thật và danh sách đánh giá từ server", () => {
+    render(
+      <OnlineCartProvider>
+        <ProductDetailView detail={mockDetail} />
+      </OnlineCartProvider>,
+    );
+
+    expect(
+      screen.getByRole("link", { name: "Xem 2 đánh giá" }),
+    ).toHaveAttribute("href", "#product-reviews");
+    expect(screen.getAllByText("(2 đánh giá)").length).toBeGreaterThanOrEqual(
+      1,
+    );
+    expect(screen.getByText("Sữa chua ngon, date mới")).toBeInTheDocument();
+    expect(screen.queryByText(/28 đánh giá/)).not.toBeInTheDocument();
+  });
+
+  it("ẩn sao khi sản phẩm chưa có đánh giá", () => {
+    render(
+      <OnlineCartProvider>
+        <ProductDetailView detail={mockOutOfStockDetail} />
+      </OnlineCartProvider>,
+    );
+
+    expect(screen.queryByLabelText(/trên 5 sao/)).not.toBeInTheDocument();
+    expect(screen.getByText("Chưa có đánh giá")).toBeInTheDocument();
   });
 
   it("cho phép tăng giảm số lượng hợp lệ và thêm vào giỏ hàng", async () => {

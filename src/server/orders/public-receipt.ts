@@ -12,6 +12,11 @@ export interface PublicReceipt {
   code: string;
   total: number;
   paymentMethod: string | null;
+  /** Trang thai thanh toan, dung de nhan biet don da huy. */
+  status: string;
+  fulfillmentStatus: string | null;
+  fulfillmentType: string | null;
+  createdAt: Date;
 }
 
 let defaultReceiptLimiter: RateLimiter | null = null;
@@ -77,6 +82,10 @@ export async function getPublicReceipt(
       code: true,
       total: true,
       paymentMethod: true,
+      status: true,
+      fulfillmentStatus: true,
+      fulfillmentType: true,
+      createdAt: true,
       channel: true,
     },
   });
@@ -89,5 +98,9 @@ export async function getPublicReceipt(
     code: order.code,
     total: order.total,
     paymentMethod: order.paymentMethod,
+    status: order.status,
+    fulfillmentStatus: order.fulfillmentStatus,
+    fulfillmentType: order.fulfillmentType,
+    createdAt: order.createdAt,
   };
 }

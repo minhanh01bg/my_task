@@ -5,9 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   CheckCircle2,
-  ChevronRight,
   Minus,
   Package,
   Plus,
@@ -23,6 +21,8 @@ import { WishlistButton } from "@/components/kit/wishlist-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/lib/money";
+import { productCrumbs } from "@/lib/seo/breadcrumbs";
+import { categoryHref, productHref } from "@/lib/seo/product-href";
 import { recordRecentlyViewed } from "@/lib/storage/recently-viewed";
 import type { OnlineProductDetail } from "@/server/catalog/get-product-detail";
 
@@ -30,9 +30,11 @@ import { useOnlineCart } from "./cart-context";
 import { CartFeedback } from "./cart-feedback";
 import { ProductReviews } from "./product-reviews";
 import { RecentlyViewedSection } from "./recently-viewed";
+import { StoreBreadcrumbs } from "./store-breadcrumbs";
 
 export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
-  const { product, relatedProducts } = detail;
+  const { product, relatedProducts, reviews } = detail;
+  const ratingCount = product.ratingCount ?? 0;
   const { add } = useOnlineCart();
   const router = useRouter();
 
@@ -67,37 +69,7 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
       <CartFeedback />
 
-      {/* Breadcrumb Navigation */}
-      <nav
-        aria-label="Breadcrumb"
-        className="text-muted-foreground mb-6 flex items-center gap-2 text-xs font-medium sm:text-sm"
-      >
-        <Link
-          href="/shop"
-          className="hover:text-foreground inline-flex items-center gap-1 transition-colors"
-        >
-          <ArrowLeft className="size-3.5" />
-          <span>Cửa hàng</span>
-        </Link>
-        <ChevronRight className="text-muted-foreground/50 size-3.5" />
-        {product.category ? (
-          <>
-            <Link
-              href={`/shop?category=${encodeURIComponent(product.category.id)}#catalog`}
-              className="hover:text-foreground transition-colors"
-            >
-              {product.category.name}
-            </Link>
-            <ChevronRight className="text-muted-foreground/50 size-3.5" />
-          </>
-        ) : null}
-        <span
-          className="text-foreground truncate font-semibold"
-          aria-current="page"
-        >
-          {product.name}
-        </span>
-      </nav>
+      <StoreBreadcrumbs crumbs={productCrumbs(product)} className="mb-6" />
 
       {/* Product Details Section */}
       <div className="grid gap-8 md:grid-cols-2 lg:gap-12">
@@ -118,7 +90,7 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
               src={product.imageUrl}
               alt={product.name}
               fill
-              priority
+              preload
               className="object-cover transition-transform duration-500 hover:scale-105"
               sizes="(max-width: 768px) 100vw, 50vw"
             />
@@ -144,7 +116,19 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
             </h1>
 
             <div className="mt-2 flex items-center gap-3">
-              <StarRating rating={4.8} reviewCount={28} size="sm" />
+              {ratingCount > 0 ? (
+                <a
+                  href="#product-reviews"
+                  className="rounded-md hover:underline"
+                  aria-label={`Xem ${ratingCount} đánh giá`}
+                >
+                  <StarRating
+                    rating={product.ratingAvg ?? 0}
+                    reviewCount={ratingCount}
+                    size="sm"
+                  />
+                </a>
+              ) : null}
               {product.sku ? (
                 <span className="text-muted-foreground text-xs sm:text-sm">
                   Mã SP:{" "}
@@ -293,9 +277,9 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
                 Có thể bạn cũng quan tâm những mặt hàng này
               </p>
             </div>
-            {product.categoryId ? (
+            {product.category ? (
               <Link
-                href={`/shop?category=${encodeURIComponent(product.categoryId)}#catalog`}
+                href={categoryHref(product.category)}
                 className="text-primary text-sm font-semibold hover:underline"
               >
                 Xem thêm
@@ -307,12 +291,12 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
             {relatedProducts.map((rel) => (
               <article
                 key={rel.id}
-                className="border-border bg-card group flex flex-col justify-between overflow-hidden rounded-2xl border transition-all hover:shadow-md"
+                className="border-border bg-card group flex flex-col justify-between overflow-hidden rounded-2xl border transition-shadow hover:shadow-md"
               >
                 <div>
                   <div className="bg-muted relative aspect-square overflow-hidden">
                     <Link
-                      href={`/shop/products/${rel.id}`}
+                      href={productHref(rel)}
                       tabIndex={-1}
                       aria-hidden="true"
                       className="block h-full w-full"
@@ -334,7 +318,7 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
                   </div>
                   <div className="p-4 pb-2">
                     <Link
-                      href={`/shop/products/${rel.id}`}
+                      href={productHref(rel)}
                       className="hover:text-primary transition-colors"
                     >
                       <h3 className="line-clamp-2 min-h-10 text-sm font-bold sm:text-base">
@@ -371,7 +355,13 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
         </section>
       ) : null}
 
-      <ProductReviews productId={product.id} productName={product.name} />
+      <ProductReviews
+        key={product.id}
+        productId={product.id}
+        productName={product.name}
+        initialReviews={reviews}
+        summary={{ avg: product.ratingAvg ?? 0, count: ratingCount }}
+      />
 
       <RecentlyViewedSection />
     </div>

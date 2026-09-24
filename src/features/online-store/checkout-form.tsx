@@ -7,13 +7,19 @@ import { CheckCircle2, ShieldCheck } from "lucide-react";
 
 import { formatFullAddress } from "@/lib/address/vietnam-address";
 import { formatVnd } from "@/lib/money";
-import { validateVoucher } from "@/lib/vouchers/validate-voucher";
+import {
+  computeShippingFee,
+  DEFAULT_SHIPPING_SETTINGS,
+  type ShippingSettings,
+} from "@/lib/shipping/shipping-fee";
 import { onlineOrderResponseSchema } from "@/types/online-order";
 import type { PublicStoreProfile } from "@/types/storefront";
 
 import { DropdownField } from "@/components/kit/dropdown-field";
 import { AddressFields, type AddressState } from "./address-fields";
 import { OnlineCartProvider, useOnlineCart } from "./cart-context";
+import { clearStoredVoucher, useVoucher } from "./use-voucher";
+import { VoucherField } from "./voucher-field";
 
 const DELIVERY_SLOT_OPTIONS = [
   {
@@ -38,7 +44,23 @@ const DELIVERY_SLOT_OPTIONS = [
   },
 ] as const;
 
-function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
+/** Lỗi 409 từ API đặt hàng: `code` để biết có phải voucher bị từ chối. */
+class CheckoutRequestError extends Error {
+  constructor(
+    message: string,
+    readonly code?: string,
+  ) {
+    super(message);
+  }
+}
+
+function FormContent({
+  storeProfile,
+  shipping,
+}: {
+  storeProfile?: PublicStoreProfile;
+  shipping: ShippingSettings;
+}) {
   const { lines, hydrated, clear, setQuantity, remove } = useOnlineCart();
   const router = useRouter();
   const [fulfillment, setFulfillment] = useState<"delivery" | "pickup">(
@@ -57,13 +79,6 @@ function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
     street: "",
     isManual: false,
   });
-  const [voucherInput, setVoucherInput] = useState("");
-  const [appliedVoucher, setAppliedVoucher] = useState<{
-    code: string;
-    discount: number;
-  } | null>(null);
-  const [voucherError, setVoucherError] = useState("");
-
   const [clientId, setClientId] = useState(() => crypto.randomUUID());
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -71,28 +86,18 @@ function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
     (sum, line) => sum + Math.round(line.price * line.quantity),
     0,
   );
-  const discount = appliedVoucher ? appliedVoucher.discount : 0;
-  const finalTotal = Math.max(0, subtotal - discount);
-
-  function handleApplyVoucher() {
-    setVoucherError("");
-    const result = validateVoucher(voucherInput, subtotal);
-    if (!result.valid) {
-      setVoucherError(result.message);
-      setAppliedVoucher(null);
-      return;
-    }
-    setAppliedVoucher({
-      code: result.code!,
-      discount: result.discount,
-    });
-  }
-
-  function handleRemoveVoucher() {
-    setAppliedVoucher(null);
-    setVoucherInput("");
-    setVoucherError("");
-  }
+  // Phí ship chỉ có với giao tận nơi — nhận tại cửa hàng luôn 0 (khớp server).
+  const isDelivery = fulfillment === "delivery";
+  const shippingFee = isDelivery ? computeShippingFee(subtotal, shipping) : 0;
+  const voucher = useVoucher(subtotal, true, shippingFee);
+  const appliedVoucher = voucher.applied;
+  const discount = appliedVoucher?.discount ?? 0;
+  const shippingDiscount = Math.min(
+    shippingFee,
+    appliedVoucher?.shippingDiscount ?? 0,
+  );
+  const finalTotal =
+    Math.max(0, subtotal - discount) + shippingFee - shippingDiscount;
 
   const formattedAddress = formatFullAddress({
     street: address.street,
@@ -161,16 +166,33 @@ function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
           typeof body === "object" && body && "message" in body
             ? String(body.message)
             : "Không thể đặt hàng";
-        throw new Error(message);
+        const code =
+          typeof body === "object" && body && "code" in body
+            ? String(body.code)
+            : undefined;
+        throw new CheckoutRequestError(message, code);
       }
       const parsed = onlineOrderResponseSchema.parse(body);
       clear();
+      clearStoredVoucher();
       setClientId(crypto.randomUUID());
       router.push(
         parsed.data.order.accessUrl ?? parsed.data.order.receiptUrl ?? "/shop",
       );
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Không thể đặt hàng");
+      if (
+        caught instanceof CheckoutRequestError &&
+        caught.code === "VOUCHER_INVALID"
+      ) {
+        // Mã hết lượt/hết hạn giữa chừng: gỡ mã, báo ngay tại ô voucher để
+        // khách thấy tổng mới rồi bấm đặt lại.
+        voucher.invalidate(caught.message);
+        setError("");
+      } else {
+        setError(
+          caught instanceof Error ? caught.message : "Không thể đặt hàng",
+        );
+      }
       setPending(false);
     }
   }
@@ -420,55 +442,38 @@ function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
               <span className="font-semibold">{formatVnd(subtotal)} ₫</span>
             </div>
 
-            {appliedVoucher ? (
-              <div className="flex justify-between text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+            {appliedVoucher && appliedVoucher.discount > 0 ? (
+              <div className="text-success flex justify-between text-sm font-semibold">
                 <span>Giảm giá ({appliedVoucher.code}):</span>
                 <span>- {formatVnd(appliedVoucher.discount)} ₫</span>
               </div>
             ) : null}
-
-            <div className="mt-3 border-t border-dashed pt-3">
-              <label className="text-muted-foreground mb-1.5 block text-xs font-semibold tracking-wider uppercase">
-                Mã ưu đãi / Voucher
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Nhập mã voucher (VD: FREESHIP, GIAM20K)"
-                  value={voucherInput}
-                  onChange={(e) => setVoucherInput(e.target.value)}
-                  disabled={!!appliedVoucher}
-                  className="border-input bg-background h-10 flex-1 rounded-xl border px-3 text-xs uppercase outline-none focus-visible:ring-2"
-                />
-                {appliedVoucher ? (
-                  <button
-                    type="button"
-                    onClick={handleRemoveVoucher}
-                    className="text-destructive border-destructive/30 hover:bg-destructive/10 h-10 rounded-xl border px-3 text-xs font-semibold transition-colors"
-                  >
-                    Gỡ
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleApplyVoucher}
-                    className="bg-secondary text-secondary-foreground hover:bg-secondary/85 h-10 rounded-xl px-3.5 text-xs font-bold transition-colors"
-                  >
-                    Áp dụng
-                  </button>
-                )}
+            {isDelivery ? (
+              <div
+                data-testid="checkout-shipping-fee"
+                className="flex justify-between text-sm"
+              >
+                <span className="text-muted-foreground">Phí giao hàng:</span>
+                <span className="font-semibold">
+                  {shippingFee > 0 ? `${formatVnd(shippingFee)} ₫` : "Miễn phí"}
+                </span>
               </div>
-              {voucherError ? (
-                <p className="text-destructive mt-1.5 text-xs">
-                  {voucherError}
-                </p>
-              ) : null}
-              {appliedVoucher ? (
-                <p className="mt-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                  Đã áp dụng: Giảm {formatVnd(appliedVoucher.discount)} ₫
-                </p>
-              ) : null}
-            </div>
+            ) : null}
+            {isDelivery && shippingDiscount > 0 && appliedVoucher ? (
+              <div
+                data-testid="checkout-shipping-discount"
+                className="text-success flex justify-between text-sm font-semibold"
+              >
+                <span>Miễn phí giao hàng ({appliedVoucher.code}):</span>
+                <span>- {formatVnd(shippingDiscount)} ₫</span>
+              </div>
+            ) : null}
+
+            <VoucherField
+              id="checkout-voucher"
+              voucher={voucher}
+              className="mt-3 border-t border-dashed pt-3"
+            />
           </div>
 
           <div className="mt-4 flex justify-between border-t pt-4 text-xl font-bold">
@@ -542,12 +547,14 @@ function FormContent({ storeProfile }: { storeProfile?: PublicStoreProfile }) {
 
 export function CheckoutForm({
   storeProfile,
+  shipping = DEFAULT_SHIPPING_SETTINGS,
 }: {
   storeProfile?: PublicStoreProfile;
+  shipping?: ShippingSettings;
 } = {}) {
   return (
     <OnlineCartProvider>
-      <FormContent storeProfile={storeProfile} />
+      <FormContent storeProfile={storeProfile} shipping={shipping} />
     </OnlineCartProvider>
   );
 }

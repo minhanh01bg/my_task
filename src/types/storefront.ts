@@ -192,3 +192,13 @@ export type PromotionActionInput = z.infer<typeof promotionActionSchema>;
 export type PromotionActionResult =
   | { ok: true; message: string; promotionId?: string }
   | { ok: false; error: string };
+
+/** Phản hồi `GET /api/storefront/session` — chỉ hai cờ, không lộ danh tính. */
+export const storefrontSessionSchema = z
+  .object({
+    isAdmin: z.boolean(),
+    isCustomer: z.boolean(),
+  })
+  .strict();
+
+export type StorefrontSession = z.infer<typeof storefrontSessionSchema>;

@@ -1,24 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Image from "next/image";
+import { Suspense, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ShoppingCart } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/kit/empty-state";
-import { Money } from "@/components/kit/money";
-import { WishlistButton } from "@/components/kit/wishlist-button";
+import { ProductCardSkeleton } from "@/components/kit/skeleton-loader";
 import { useWishlist } from "@/lib/storage/wishlist";
 import { catalogFilterSchema, type CatalogFilter } from "@/types/storefront";
 
-import { useOnlineCart } from "./cart-context";
 import { CartFeedback } from "./cart-feedback";
 import { CatalogFilters } from "./catalog-filters";
 import { filterAndSortProducts } from "./filter-products";
-import type { OnlineCatalog } from "./types";
+import { ProductCard } from "./product-card";
+import { QuickViewModal } from "./quick-view-modal";
+import type { OnlineCatalog, OnlineProduct } from "./types";
 
 const defaultFilter: CatalogFilter = {
   q: "",
@@ -29,8 +26,10 @@ const defaultFilter: CatalogFilter = {
   sort: "relevance",
 };
 
+type CatalogSearchParams = ReturnType<typeof useSearchParams> | null;
+
 function parseFilterFromParams(
-  searchParams: URLSearchParams | null,
+  searchParams: CatalogSearchParams,
 ): CatalogFilter {
   if (!searchParams) return defaultFilter;
   const raw: Record<string, unknown> = {};
@@ -53,29 +52,64 @@ function parseFilterFromParams(
   return parsed.success ? parsed.data : defaultFilter;
 }
 
+/**
+ * `/shop` được render tĩnh (ISR) nên `useSearchParams` phải nằm trong Suspense.
+ * Fallback là danh mục mặc định (chưa lọc) để HTML tĩnh vẫn có lưới sản phẩm;
+ * sau hydrate, bản đọc query string (`?q=`, `?category=`, `?wishlist=`) thay thế.
+ */
 export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
-  const searchParams = useSearchParams();
-  const { add } = useOnlineCart();
+  return (
+    <Suspense
+      fallback={<CatalogBrowserView catalog={catalog} searchParams={null} />}
+    >
+      <CatalogBrowserWithParams catalog={catalog} />
+    </Suspense>
+  );
+}
 
+function CatalogBrowserWithParams({ catalog }: { catalog: OnlineCatalog }) {
+  const searchParams = useSearchParams();
+  return <CatalogBrowserView catalog={catalog} searchParams={searchParams} />;
+}
+
+function CatalogBrowserView({
+  catalog,
+  searchParams,
+}: {
+  catalog: OnlineCatalog;
+  searchParams: CatalogSearchParams;
+}) {
   const [prevParams, setPrevParams] = useState(searchParams);
   const [filter, setFilter] = useState<CatalogFilter>(() =>
     parseFilterFromParams(searchParams),
   );
+  // O loc cap nhat ngay (`filter`); luoi loc lai trong transition
+  // (`appliedFilter`) — trong luc cho thi hien skeleton thay vi dung hinh.
+  const [appliedFilter, setAppliedFilter] = useState(filter);
+  const [isFiltering, startFiltering] = useTransition();
 
   // Adjust state on searchParams change during render (React-recommended pattern)
   if (searchParams !== prevParams) {
+    const parsed = parseFilterFromParams(searchParams);
     setPrevParams(searchParams);
-    setFilter(parseFilterFromParams(searchParams));
+    setFilter(parsed);
+    setAppliedFilter(parsed);
   }
 
+  function changeFilter(next: CatalogFilter) {
+    setFilter(next);
+    startFiltering(() => setAppliedFilter(next));
+  }
+
+  const [quickView, setQuickView] = useState<OnlineProduct | null>(null);
   const { has: hasWishlist } = useWishlist();
   const isWishlistOnly = searchParams?.get("wishlist") === "true";
 
   const products = useMemo(() => {
-    const base = filterAndSortProducts(catalog.products, filter);
+    const base = filterAndSortProducts(catalog.products, appliedFilter);
     if (!isWishlistOnly) return base;
     return base.filter((p) => hasWishlist(p.id));
-  }, [catalog.products, filter, isWishlistOnly, hasWishlist]);
+  }, [catalog.products, appliedFilter, isWishlistOnly, hasWishlist]);
 
   return (
     <section
@@ -118,88 +152,32 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
         <CatalogFilters
           categories={catalog.categories}
           filter={filter}
-          onFilterChange={setFilter}
+          onFilterChange={changeFilter}
           resultCount={products.length}
         />
       </div>
 
-      {products.length > 0 ? (
+      {isFiltering ? (
+        <div
+          data-testid="catalog-skeleton"
+          aria-busy="true"
+          className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4"
+        >
+          <span role="status" className="sr-only">
+            Đang lọc sản phẩm…
+          </span>
+          {Array.from({ length: 8 }, (_, index) => (
+            <ProductCardSkeleton key={index} />
+          ))}
+        </div>
+      ) : products.length > 0 ? (
         <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
           {products.map((product) => (
-            <article
+            <ProductCard
               key={product.id}
-              className="card-interactive border-border bg-card group overflow-hidden rounded-2xl border shadow-xs"
-            >
-              <div className="bg-muted relative aspect-square overflow-hidden">
-                <div className="absolute top-2.5 left-2.5 z-10">
-                  <WishlistButton
-                    productId={product.id}
-                    productName={product.name}
-                    size="sm"
-                  />
-                </div>
-                {product.stock <= 0 ? (
-                  <div className="absolute top-2.5 right-2.5 z-10">
-                    <Badge
-                      variant="destructive"
-                      className="font-bold shadow-xs"
-                    >
-                      Hết hàng
-                    </Badge>
-                  </div>
-                ) : null}
-                <Link
-                  href={`/shop/products/${product.id}`}
-                  className="block h-full w-full"
-                  tabIndex={-1}
-                  aria-hidden="true"
-                >
-                  {product.imageUrl ? (
-                    <Image
-                      src={product.imageUrl}
-                      alt={product.name}
-                      fill
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      sizes="(max-width: 768px) 50vw, 25vw"
-                    />
-                  ) : (
-                    <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-                      Chưa có ảnh
-                    </div>
-                  )}
-                </Link>
-              </div>
-              <div className="p-4">
-                <Link
-                  href={`/shop/products/${product.id}`}
-                  className="hover:text-primary transition-colors"
-                >
-                  <h3 className="line-clamp-2 min-h-12 font-bold">
-                    {product.name}
-                  </h3>
-                </Link>
-                <p className="text-muted-foreground mt-1 text-sm">
-                  /{product.unit}
-                </p>
-                <div className="text-primary mt-2 text-lg font-bold">
-                  <Money amount={product.price} />
-                </div>
-                <Button
-                  type="button"
-                  disabled={product.stock <= 0}
-                  onClick={() => add(product)}
-                  aria-label={
-                    product.stock > 0
-                      ? `Thêm ${product.name} vào giỏ`
-                      : `${product.name} đã hết hàng`
-                  }
-                  className="mt-4 min-h-11 w-full font-bold"
-                >
-                  <ShoppingCart aria-hidden="true" className="size-4" />
-                  {product.stock > 0 ? "Thêm vào giỏ" : "Hết hàng"}
-                </Button>
-              </div>
-            </article>
+              product={product}
+              onQuickView={setQuickView}
+            />
           ))}
         </div>
       ) : (
@@ -211,7 +189,7 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setFilter(defaultFilter)}
+                onClick={() => changeFilter(defaultFilter)}
                 className="font-bold"
               >
                 Xóa tất cả bộ lọc
@@ -221,6 +199,7 @@ export function CatalogBrowser({ catalog }: { catalog: OnlineCatalog }) {
         </div>
       )}
 
+      <QuickViewModal product={quickView} onClose={() => setQuickView(null)} />
       <CartFeedback />
     </section>
   );

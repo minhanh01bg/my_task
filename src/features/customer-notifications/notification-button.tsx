@@ -4,17 +4,21 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell, Check, CheckCheck, Loader2, X } from "lucide-react";
 
+import { EmptyState } from "@/components/kit/empty-state";
 import type {
   CustomerNotificationDTO,
   CustomerNotificationsResponse,
 } from "@/types/customer-notification";
 
 export interface CustomerNotificationButtonProps {
+  /** Chỉ gọi API thông báo khi đã biết là khách hàng đăng nhập. */
+  enabled: boolean;
   className?: string;
   placement?: "header" | "page";
 }
 
 export function CustomerNotificationButton({
+  enabled,
   className = "",
   placement = "header",
 }: CustomerNotificationButtonProps) {
@@ -31,6 +35,7 @@ export function CustomerNotificationButton({
   const inFlight = useRef<Promise<void> | null>(null);
 
   const fetchNotifications = useCallback(async () => {
+    if (!enabled) return;
     if (inFlight.current) return inFlight.current;
     const task = (async () => {
       try {
@@ -63,7 +68,7 @@ export function CustomerNotificationButton({
     })();
     inFlight.current = task;
     return task;
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     void fetchNotifications();
@@ -239,13 +244,12 @@ export function CustomerNotificationButton({
               </button>
             </div>
           ) : items.length === 0 ? (
-            <div className="text-muted-foreground p-6 text-center text-sm">
-              <Bell className="mx-auto mb-2 size-8 opacity-40" />
-              <p className="font-semibold">Chưa có thông báo</p>
-              <p className="mt-1 text-xs">
-                Các cập nhật về đơn hàng của bạn sẽ hiển thị tại đây.
-              </p>
-            </div>
+            <EmptyState
+              size="compact"
+              icon={Bell}
+              title="Chưa có thông báo"
+              description="Các cập nhật về đơn hàng của bạn sẽ hiển thị tại đây."
+            />
           ) : (
             <ul className="divide-border/40 space-y-1.5 divide-y">
               {items.map((item) => {

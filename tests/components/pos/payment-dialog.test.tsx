@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { useState } from "react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -169,5 +170,91 @@ describe("PaymentDialog", () => {
   it("dong khi open la false", () => {
     renderDialog({ open: false });
     expect(screen.queryByTestId("payment-total")).not.toBeInTheDocument();
+  });
+
+  it("la dialog modal co ten tu tieu de, an phan nen khoi cay a11y", async () => {
+    const { container } = renderDialog();
+    expect(
+      screen.getByRole("dialog", { name: /thanh toán đơn hàng/i }),
+    ).toBeInTheDocument();
+    // Base UI danh dau phan ngoai dialog la aria-hidden + inert (focus trap).
+    await waitFor(() =>
+      expect(container.closest("[aria-hidden='true']")).not.toBeNull(),
+    );
+  });
+
+  it("mo ra thi focus vao o tien khach dua", async () => {
+    renderDialog();
+    await waitFor(() =>
+      expect(screen.getByLabelText(/tiền khách đưa/i)).toHaveFocus(),
+    );
+  });
+
+  it("Escape goi onCancel khi khong dang submit", async () => {
+    const user = userEvent.setup();
+    const onCancel = vi.fn();
+    renderDialog({ onCancel });
+
+    await user.keyboard("{Escape}");
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("dang submit thi Escape khong dong va nut bi khoa", async () => {
+    const user = userEvent.setup();
+    const onCancel = vi.fn();
+    renderDialog({ onCancel, submitting: true });
+
+    await user.keyboard("{Escape}");
+
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /^huỷ/i })).toBeDisabled();
+  });
+
+  it("dong bang Escape thi tra focus ve nut mo", async () => {
+    const user = userEvent.setup();
+
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Thanh toán (F4)
+          </button>
+          <PaymentDialog
+            open={open}
+            total={400000}
+            orderCode="DH0001"
+            bankAccount={account}
+            onCancel={() => setOpen(false)}
+            onConfirm={vi.fn()}
+          />
+        </>
+      );
+    }
+
+    render(<Harness />);
+    const opener = screen.getByRole("button", { name: /thanh toán \(f4\)/i });
+    await user.click(opener);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByLabelText(/tiền khách đưa/i)).toHaveFocus(),
+    );
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(opener).toHaveFocus();
+    });
+  });
+
+  it("khoa cuon trang khi mo", async () => {
+    renderDialog();
+    await waitFor(() =>
+      expect(document.documentElement).toHaveAttribute(
+        "data-base-ui-scroll-locked",
+      ),
+    );
   });
 });

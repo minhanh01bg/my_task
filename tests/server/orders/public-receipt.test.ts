@@ -121,6 +121,9 @@ describe("Public Receipt Lookup Security (Task 12)", () => {
     expect(receipt?.code).toBe("DH0099");
     expect(receipt?.total).toBe(150_000);
     expect(receipt?.paymentMethod).toBe("bank_transfer");
+    expect(receipt?.status).toBe("pending");
+    expect(receipt?.fulfillmentStatus).toBeNull();
+    expect(receipt?.createdAt).toBeInstanceOf(Date);
 
     // CRITICAL: Ensure NO PII or sensitive fields exist in receipt
     expect(receipt).not.toHaveProperty("contactName");

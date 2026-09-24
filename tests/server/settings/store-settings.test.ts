@@ -1,12 +1,23 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { revalidatePublic } from "@/server/cache/public-cache";
 import { prisma } from "@/server/db/prisma";
 import {
   getPublicStoreProfile,
+  getStoreBankAccount,
+  getShippingSettings,
   getStoreName,
+  saveShippingSettings,
+  saveStoreBankAccount,
+  saveStoreName,
   saveStoreProfile,
 } from "@/server/settings/store-settings";
 import { adminSettingsSchema } from "@/app/admin/settings/actions";
+
+vi.mock("@/server/cache/public-cache", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/server/cache/public-cache")>()),
+  revalidatePublic: vi.fn(),
+}));
 
 describe("Store Settings & Public Profile", () => {
   beforeEach(async () => {
@@ -19,6 +30,8 @@ describe("Store Settings & Public Profile", () => {
             "store.address",
             "store.openingHours",
             "store.mapUrl",
+            "store.shippingFee",
+            "store.freeShippingThreshold",
             "bank.bin",
             "bank.accountNumber",
             "bank.accountName",
@@ -26,6 +39,92 @@ describe("Store Settings & Public Profile", () => {
         },
       },
     });
+    vi.mocked(revalidatePublic).mockClear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("getPublicStoreProfile/getStoreName/getStoreBankAccount: mỗi hàm chỉ phát 1 query findMany", async () => {
+    await prisma.setting.createMany({
+      data: [
+        { key: "store.name", value: "Tạp Hóa Xanh" },
+        { key: "store.hotline", value: "0901234567" },
+        { key: "bank.bin", value: "970423" },
+        { key: "bank.accountNumber", value: "0123456789" },
+        { key: "bank.accountName", value: "NGUYEN VAN A" },
+      ],
+    });
+    const findMany = vi.spyOn(prisma.setting, "findMany");
+    const findUnique = vi.spyOn(prisma.setting, "findUnique");
+
+    const profile = await getPublicStoreProfile();
+    expect(profile).toEqual({ name: "Tạp Hóa Xanh", hotline: "0901234567" });
+    expect(findMany).toHaveBeenCalledTimes(1);
+
+    await expect(getStoreName()).resolves.toBe("Tạp Hóa Xanh");
+    expect(findMany).toHaveBeenCalledTimes(2);
+
+    await expect(getStoreBankAccount()).resolves.toEqual({
+      bankBin: "970423",
+      accountNumber: "0123456789",
+      accountName: "NGUYEN VAN A",
+    });
+    expect(findMany).toHaveBeenCalledTimes(3);
+    expect(findUnique).not.toHaveBeenCalled();
+  });
+
+  it("saveStoreProfile/saveStoreBankAccount/saveStoreName: làm mất hiệu lực tag settings sau khi ghi", async () => {
+    await saveStoreProfile({ hotline: "0912345678" });
+    expect(revalidatePublic).toHaveBeenLastCalledWith("settings");
+
+    await saveStoreBankAccount({
+      bankBin: "970423",
+      accountNumber: "0123456789",
+      accountName: "NGUYEN VAN A",
+    });
+    await saveStoreName("Tiệm Mới");
+
+    expect(revalidatePublic).toHaveBeenCalledTimes(3);
+    expect(vi.mocked(revalidatePublic).mock.calls).toEqual([
+      ["settings"],
+      ["settings"],
+      ["settings"],
+    ]);
+    await expect(getStoreName()).resolves.toBe("Tiệm Mới");
+  });
+
+  it("getShippingSettings: mặc định phí 0, ngưỡng 200.000; đọc lại giá trị đã lưu", async () => {
+    await expect(getShippingSettings()).resolves.toEqual({
+      shippingFee: 0,
+      freeShippingThreshold: 200_000,
+    });
+
+    await saveShippingSettings({
+      shippingFee: 25_000,
+      freeShippingThreshold: 300_000,
+    });
+    expect(revalidatePublic).toHaveBeenLastCalledWith("settings");
+    await expect(getShippingSettings()).resolves.toEqual({
+      shippingFee: 25_000,
+      freeShippingThreshold: 300_000,
+    });
+  });
+
+  it("getShippingSettings: giá trị hỏng trong DB thì dùng mặc định, không cùng query riêng", async () => {
+    await prisma.setting.createMany({
+      data: [
+        { key: "store.shippingFee", value: "abc" },
+        { key: "store.freeShippingThreshold", value: "-5" },
+      ],
+    });
+    const findMany = vi.spyOn(prisma.setting, "findMany");
+    await expect(getShippingSettings()).resolves.toEqual({
+      shippingFee: 0,
+      freeShippingThreshold: 200_000,
+    });
+    expect(findMany).toHaveBeenCalledTimes(1);
   });
 
   it("getPublicStoreProfile: trả về profile mặc định khi chưa có dữ liệu", async () => {

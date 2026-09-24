@@ -1,8 +1,13 @@
 "use client";
 
 import { Printer } from "lucide-react";
+import QRCode from "qrcode";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { formatVnd } from "@/lib/money";
+import { buildVietQrPayload } from "@/lib/vietqr/build";
+import type { BankAccount } from "@/lib/vietqr/types";
 
 export interface ReceiptLine {
   name: string;
@@ -21,8 +26,16 @@ export interface ReceiptOrder {
   lines: ReceiptLine[];
   subtotal: number;
   discount?: number;
+  /** Ma uu dai da ap (don online). */
+  voucherCode?: string;
+  /** Phi giao hang SAU voucher (don online): subtotal - discount + shippingFee = total. */
+  shippingFee?: number;
   total: number;
+  /** Trang thai don; "cancelled" thi khong in VietQR. */
+  status?: string;
   payments?: Array<{ method: string; amount: number; change?: number }>;
+  /** So tien con phai thu (VND). > 0 nghia la don chua thanh toan du. */
+  amountDue?: number;
   note?: string;
 }
 
@@ -31,21 +44,170 @@ export interface ReceiptK80Props {
   storeAddress?: string;
   storeHotline?: string;
   order: ReceiptOrder;
+  /** Co tai khoan thi in VietQR khi don con no hoac tra bang chuyen khoan. */
+  bankAccount?: BankAccount | null;
   showPrintButton?: boolean;
 }
 
+/**
+ * Can QR khi con tien phai thu, hoac khach tra bang chuyen khoan (in lai QR de
+ * doi chieu). So tien tren QR: phan con thieu, neu da du thi tong don.
+ */
+export function resolveReceiptQrAmount(order: ReceiptOrder): number | null {
+  // Don da huy khong thu tien — khong bao gio in ma chuyen khoan.
+  if (order.status === "cancelled") return null;
+  const due = Math.max(0, Math.round(order.amountDue ?? 0));
+  if (due > 0) return due;
+  const paidByTransfer = order.payments?.some((p) => p.method === "transfer");
+  return paidByTransfer ? order.total : null;
+}
+
+/** Tao SVG VietQR mot lan cho ca ban xem truoc lan ban in (khong cho lai khi in). */
+function useVietQrSvg(
+  bankAccount: BankAccount | null | undefined,
+  amount: number | null,
+  description: string,
+): string | null {
+  const [result, setResult] = useState<{ key: string; svg: string } | null>(
+    null,
+  );
+  const key =
+    bankAccount && amount !== null
+      ? `${bankAccount.bankBin}|${bankAccount.accountNumber}|${amount}|${description}`
+      : null;
+
+  useEffect(() => {
+    if (!bankAccount || amount === null || key === null) return;
+    let cancelled = false;
+    const payload = buildVietQrPayload({
+      account: bankAccount,
+      amount,
+      description,
+    });
+    QRCode.toString(payload, { type: "svg", margin: 1, width: 160 })
+      .then((markup) => {
+        if (!cancelled) setResult({ key, svg: markup });
+      })
+      .catch(() => {
+        // QR loi thi van in hoa don, chi thieu ma — thong tin TK van hien.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bankAccount, amount, description, key]);
+
+  return result && result.key === key ? result.svg : null;
+}
+
+function ReceiptVietQr({
+  bankAccount,
+  amount,
+  description,
+  svg,
+}: {
+  bankAccount: BankAccount;
+  amount: number;
+  description: string;
+  svg: string | null;
+}) {
+  return (
+    <div
+      data-testid="receipt-vietqr"
+      className="flex flex-col items-center gap-1 border-b border-dashed border-black py-2 text-center text-[10px]"
+    >
+      <p className="font-bold uppercase">Quét mã để chuyển khoản</p>
+      {svg ? (
+        // eslint-disable-next-line @next/next/no-img-element -- data URI, khong can toi uu anh
+        <img
+          src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}
+          alt={`Mã VietQR chuyển khoản ${formatVnd(amount)} ₫`}
+          width={160}
+          height={160}
+        />
+      ) : (
+        <div className="size-40" aria-hidden="true" />
+      )}
+      <p>
+        {bankAccount.accountName} — {bankAccount.accountNumber}
+      </p>
+      <p className="font-bold">
+        {formatVnd(amount)} ₫ · ND: {description}
+      </p>
+    </div>
+  );
+}
+
+const PAGE_STYLE_ATTR = "data-print-receipt-page";
+/** Du phong vai mm de noi dung khong tran sang trang thu hai. */
+const PAGE_SLACK_MM = 4;
+const PX_PER_MM = 96 / 25.4;
+
+/**
+ * Dat chieu dai trang in dung bang hoa don (giay cuon 80mm) — do tren ban sao
+ * an ngoai man hinh. Khong do duoc (vd. jsdom) thi de may in tu quyet.
+ */
+function applyReceiptPageSize(node: HTMLElement | null): () => void {
+  const heightPx = node?.getBoundingClientRect().height ?? 0;
+  if (heightPx <= 0) return () => {};
+  const heightMm = Math.ceil(heightPx / PX_PER_MM) + PAGE_SLACK_MM;
+  const style = document.createElement("style");
+  style.setAttribute(PAGE_STYLE_ATTR, "");
+  style.textContent = `@page receipt-k80 { size: 80mm ${heightMm}mm; margin: 0; }`;
+  document.head.appendChild(style);
+  return () => style.remove();
+}
+
+/**
+ * Hoa don K80. Ban tren man hinh chi de xem truoc; khi bam in, mot ban sao
+ * duoc portal thang vao `document.body` (`[data-print-receipt]`) de khong bi
+ * transform/max-height/overflow cua hop thoai lam lech hay cat mat — CSS in
+ * (globals.css) an moi thu khac va dat khổ giay 80mm.
+ */
 export function ReceiptK80({
   storeName,
   storeAddress,
   storeHotline,
   order,
+  bankAccount,
   showPrintButton = true,
 }: ReceiptK80Props) {
+  const qrAmount = bankAccount ? resolveReceiptQrAmount(order) : null;
+  const qrSvg = useVietQrSvg(bankAccount, qrAmount, order.code);
+  const [printing, setPrinting] = useState(false);
+  const [printNode, setPrintNode] = useState<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!printing || !printNode) return;
+    const done = () => setPrinting(false);
+    window.addEventListener("afterprint", done);
+    const removePageSize = applyReceiptPageSize(printNode);
+    // Doi mot khung hinh de ban sao (va anh QR) ve xong roi moi mo hop in.
+    const frame = window.requestAnimationFrame(() => window.print());
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("afterprint", done);
+      removePageSize();
+    };
+  }, [printing, printNode]);
+
   function handlePrint() {
-    if (typeof window !== "undefined") {
-      window.print();
-    }
+    if (typeof window === "undefined") return;
+    // Ban sao con do (trinh duyet khong ban afterprint) thi in lai luon.
+    if (printing) window.print();
+    else setPrinting(true);
   }
+
+  const paper = (
+    <ReceiptPaper
+      storeName={storeName}
+      storeAddress={storeAddress}
+      storeHotline={storeHotline}
+      order={order}
+      bankAccount={bankAccount}
+      qrAmount={qrAmount}
+      qrSvg={qrSvg}
+    />
+  );
 
   return (
     <div className="flex flex-col items-center">
@@ -56,148 +218,201 @@ export function ReceiptK80({
             onClick={handlePrint}
             className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold shadow transition-colors"
           >
-            <Printer className="size-4" />
+            <Printer aria-hidden="true" className="size-4" />
             <span>In hóa đơn (K80)</span>
           </button>
         </div>
       )}
 
-      {/* K80 Thermal Receipt Container */}
       <div
-        className="w-[80mm] max-w-full border border-dashed border-gray-300 bg-white p-3 font-mono text-[11px] leading-tight text-black shadow-sm print:m-0 print:border-none print:p-0 print:shadow-none"
+        data-receipt-preview=""
+        className="w-[80mm] max-w-full border border-dashed border-gray-300 bg-white p-3 shadow-sm"
         style={{ colorScheme: "light" }}
       >
-        {/* Header */}
-        <div className="border-b border-black pb-2 text-center">
-          <h2 className="text-sm font-black tracking-wider uppercase">
-            {storeName.toUpperCase()}
-          </h2>
-          {storeAddress && (
-            <p className="mt-0.5 text-[10px] text-gray-700">{storeAddress}</p>
-          )}
-          {storeHotline && (
-            <p className="text-[10px] text-gray-700">Hotline: {storeHotline}</p>
-          )}
-          <h3 className="mt-1.5 text-xs font-extrabold uppercase">
-            HÓA ĐƠN BÁN HÀNG
-          </h3>
-          <p className="text-[10px] font-bold">Mã ĐH: {order.code}</p>
-        </div>
+        {paper}
+      </div>
 
-        {/* Metadata */}
-        <div className="space-y-0.5 border-b border-dashed border-black py-1.5 text-[10px]">
+      {printing
+        ? createPortal(
+            <div ref={setPrintNode} data-print-receipt="" aria-hidden="true">
+              {paper}
+            </div>,
+            document.body,
+          )
+        : null}
+    </div>
+  );
+}
+
+function ReceiptPaper({
+  storeName,
+  storeAddress,
+  storeHotline,
+  order,
+  bankAccount,
+  qrAmount,
+  qrSvg,
+}: Omit<ReceiptK80Props, "showPrintButton"> & {
+  qrAmount: number | null;
+  qrSvg: string | null;
+}) {
+  const shippingFee = Math.max(0, order.shippingFee ?? 0);
+
+  return (
+    <div className="w-full font-mono text-[11px] leading-tight text-black">
+      {/* Header */}
+      <div className="border-b border-black pb-2 text-center">
+        <h2 className="text-sm font-black tracking-wider uppercase">
+          {storeName.toUpperCase()}
+        </h2>
+        {storeAddress && (
+          <p className="mt-0.5 text-[10px] text-gray-700">{storeAddress}</p>
+        )}
+        {storeHotline && (
+          <p className="text-[10px] text-gray-700">Hotline: {storeHotline}</p>
+        )}
+        <h3 className="mt-1.5 text-xs font-extrabold uppercase">
+          HÓA ĐƠN BÁN HÀNG
+        </h3>
+        <p className="text-[10px] font-bold">Mã ĐH: {order.code}</p>
+      </div>
+
+      {/* Metadata */}
+      <div className="space-y-0.5 border-b border-dashed border-black py-1.5 text-[10px]">
+        <div className="flex justify-between">
+          <span>Ngày in:</span>
+          <span>{order.createdAt}</span>
+        </div>
+        {order.cashier && (
           <div className="flex justify-between">
-            <span>Ngày in:</span>
-            <span>{order.createdAt}</span>
+            <span>Thu ngân:</span>
+            <span>{order.cashier}</span>
           </div>
-          {order.cashier && (
-            <div className="flex justify-between">
-              <span>Thu ngân:</span>
-              <span>{order.cashier}</span>
-            </div>
-          )}
-          {order.customerName && (
-            <div className="flex justify-between">
-              <span>Khách hàng:</span>
-              <span>
-                {order.customerName}{" "}
-                {order.customerPhone ? `(${order.customerPhone})` : ""}
-              </span>
-            </div>
-          )}
+        )}
+        {order.customerName && (
+          <div className="flex justify-between">
+            <span>Khách hàng:</span>
+            <span>
+              {order.customerName}{" "}
+              {order.customerPhone ? `(${order.customerPhone})` : ""}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Items Table */}
+      <div className="border-b border-black py-2">
+        <div className="flex justify-between border-b border-dashed border-gray-400 pb-1 text-[10px] font-bold">
+          <span className="w-1/2">Tên hàng</span>
+          <span className="w-1/4 text-center">SL x Giá</span>
+          <span className="w-1/4 text-right">T.Tiền</span>
         </div>
 
-        {/* Items Table */}
-        <div className="border-b border-black py-2">
-          <div className="flex justify-between border-b border-dashed border-gray-400 pb-1 text-[10px] font-bold">
-            <span className="w-1/2">Tên hàng</span>
-            <span className="w-1/4 text-center">SL x Giá</span>
-            <span className="w-1/4 text-right">T.Tiền</span>
-          </div>
-
-          <div className="divide-y divide-dashed divide-gray-200 py-1">
-            {order.lines.map((line, idx) => (
-              <div key={idx} className="py-1">
-                <div className="text-[10.5px] font-semibold">{line.name}</div>
-                <div className="flex justify-between text-[10px] text-gray-800">
-                  <span className="w-1/2" />
-                  <span className="w-1/4 text-center">
-                    {line.quantity}
-                    {line.unit ? ` ${line.unit}` : ""} x{" "}
-                    {formatVnd(line.unitPrice)}
-                  </span>
-                  <span className="w-1/4 text-right font-bold">
-                    {formatVnd(line.total)}
-                  </span>
-                </div>
+        <div className="divide-y divide-dashed divide-gray-200 py-1">
+          {order.lines.map((line, idx) => (
+            <div key={idx} className="py-1">
+              <div className="text-[10.5px] font-semibold">{line.name}</div>
+              <div className="flex justify-between text-[10px] text-gray-800">
+                <span className="w-1/2" />
+                <span className="w-1/4 text-center">
+                  {line.quantity}
+                  {line.unit ? ` ${line.unit}` : ""} x{" "}
+                  {formatVnd(line.unitPrice)}
+                </span>
+                <span className="w-1/4 text-right font-bold">
+                  {formatVnd(line.total)}
+                </span>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Totals */}
+      <div className="space-y-1 border-b border-black py-2 text-[11px]">
+        <div className="flex justify-between">
+          <span>Tổng tiền hàng:</span>
+          <span>{formatVnd(order.subtotal)} ₫</span>
         </div>
 
-        {/* Totals */}
-        <div className="space-y-1 border-b border-black py-2 text-[11px]">
-          <div className="flex justify-between">
-            <span>Tổng tiền hàng:</span>
-            <span>{formatVnd(order.subtotal)} ₫</span>
-          </div>
-
-          {order.discount ? (
-            <div className="flex justify-between font-medium">
-              <span>Chiết khấu / Giảm giá:</span>
-              <span>- {formatVnd(order.discount)} ₫</span>
-            </div>
-          ) : null}
-
-          <div className="flex justify-between border-t border-dashed border-black pt-1 text-xs font-black">
-            <span>THANH TOÁN:</span>
-            <span>{formatVnd(order.total)} ₫</span>
-          </div>
-
-          {order.payments && order.payments.length > 0 ? (
-            <div className="space-y-0.5 pt-1 text-[10px] text-gray-700">
-              {order.payments.map((p, idx) => (
-                <div key={idx}>
-                  <div className="flex justify-between">
-                    <span>
-                      Tiền khách đưa (
-                      {p.method === "cash"
-                        ? "Tiền mặt"
-                        : p.method === "transfer"
-                          ? "Chuyển khoản"
-                          : p.method}
-                      ):
-                    </span>
-                    <span>{formatVnd(p.amount)} ₫</span>
-                  </div>
-                  {p.change !== undefined && p.change > 0 && (
-                    <div className="flex justify-between font-bold text-black">
-                      <span>Tiền thối lại:</span>
-                      <span>{formatVnd(p.change)} ₫</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </div>
-
-        {/* Note */}
-        {order.note ? (
-          <div className="border-b border-dashed border-gray-300 py-1 text-[10px] italic">
-            Ghi chú: {order.note}
+        {order.discount ? (
+          <div className="flex justify-between font-medium">
+            <span>Chiết khấu / Giảm giá:</span>
+            <span>- {formatVnd(order.discount)} ₫</span>
           </div>
         ) : null}
 
-        {/* Footer */}
-        <div className="space-y-1 pt-2 text-center text-[10px]">
-          <p className="font-bold tracking-wider uppercase">
-            CẢM ƠN QUÝ KHÁCH - HẸN GẶP LẠI
-          </p>
-          <p className="text-[9px] text-gray-600">
-            (Quý khách vui lòng kiểm tra hóa đơn & hàng trước khi rời quầy)
-          </p>
+        {order.voucherCode ? (
+          <div className="flex justify-between text-[10px]">
+            <span>Mã ưu đãi:</span>
+            <span>{order.voucherCode}</span>
+          </div>
+        ) : null}
+
+        {shippingFee > 0 ? (
+          <div className="flex justify-between">
+            <span>Phí giao hàng:</span>
+            <span>+ {formatVnd(shippingFee)} ₫</span>
+          </div>
+        ) : null}
+
+        <div className="flex justify-between border-t border-dashed border-black pt-1 text-xs font-black">
+          <span>THANH TOÁN:</span>
+          <span>{formatVnd(order.total)} ₫</span>
         </div>
+
+        {order.payments && order.payments.length > 0 ? (
+          <div className="space-y-0.5 pt-1 text-[10px] text-gray-700">
+            {order.payments.map((p, idx) => (
+              <div key={idx}>
+                <div className="flex justify-between">
+                  <span>
+                    Tiền khách đưa (
+                    {p.method === "cash"
+                      ? "Tiền mặt"
+                      : p.method === "transfer"
+                        ? "Chuyển khoản"
+                        : p.method}
+                    ):
+                  </span>
+                  <span>{formatVnd(p.amount)} ₫</span>
+                </div>
+                {p.change !== undefined && p.change > 0 && (
+                  <div className="flex justify-between font-bold text-black">
+                    <span>Tiền thối lại:</span>
+                    <span>{formatVnd(p.change)} ₫</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      {bankAccount && qrAmount !== null ? (
+        <ReceiptVietQr
+          bankAccount={bankAccount}
+          amount={qrAmount}
+          description={order.code}
+          svg={qrSvg}
+        />
+      ) : null}
+
+      {/* Note */}
+      {order.note ? (
+        <div className="border-b border-dashed border-gray-300 py-1 text-[10px] italic">
+          Ghi chú: {order.note}
+        </div>
+      ) : null}
+
+      {/* Footer */}
+      <div className="space-y-1 pt-2 text-center text-[10px]">
+        <p className="font-bold tracking-wider uppercase">
+          CẢM ƠN QUÝ KHÁCH - HẸN GẶP LẠI
+        </p>
+        <p className="text-[9px] text-gray-600">
+          (Quý khách vui lòng kiểm tra hóa đơn & hàng trước khi rời quầy)
+        </p>
       </div>
     </div>
   );

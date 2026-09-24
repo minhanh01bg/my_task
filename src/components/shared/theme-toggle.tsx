@@ -55,12 +55,12 @@ export function ThemeToggle({
     >
       {isDark ? (
         <Sun
-          className="size-5 text-amber-400 transition-transform duration-300"
+          className="text-warning size-5 transition-transform duration-300"
           aria-hidden="true"
         />
       ) : (
         <Moon
-          className="size-5 text-slate-700 transition-transform duration-300"
+          className="text-foreground size-5 transition-transform duration-300"
           aria-hidden="true"
         />
       )}

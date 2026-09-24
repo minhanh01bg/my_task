@@ -22,7 +22,17 @@ import { ProductSearch } from "@/components/pos/product-search";
 import { ServiceLineDialog } from "@/components/pos/service-line-dialog";
 import { SyncIndicator } from "@/components/pos/sync-indicator";
 import { usePosShortcuts } from "@/components/pos/use-pos-shortcuts";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { PrintReceiptButton } from "@/features/orders/print-receipt-button";
+import type { ReceiptOrder } from "@/features/orders/receipt-k80";
+import { reportClientError } from "@/lib/client-log";
 import { formatVnd } from "@/lib/money";
 import { calculateCart } from "@/lib/pricing/calculate";
 import {
@@ -48,6 +58,48 @@ interface LastSale {
   received: number;
   change: number;
   synced: boolean;
+  receipt: ReceiptOrder;
+}
+
+/** Chup lai gio hang TRUOC khi xoa de van in duoc hoa don sau khi ban xong. */
+function buildPosReceipt(
+  code: string,
+  totals: ReturnType<typeof calculateCart>,
+  result: PaymentResult,
+): ReceiptOrder {
+  const change = Math.max(0, result.received - totals.total);
+  // Tien chua thu: ghi no, hoac chuyen khoan chua xac nhan nhan tien.
+  const amountDue = result.payments
+    .filter(
+      (payment) =>
+        payment.method === "debt" ||
+        (payment.method === "transfer" && !payment.receivedAt),
+    )
+    .reduce((sum, payment) => sum + payment.amount, 0);
+
+  return {
+    code,
+    createdAt: new Intl.DateTimeFormat("vi-VN", {
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(new Date()),
+    lines: totals.lines.map((line) => ({
+      name: line.name,
+      quantity: line.quantity,
+      unit: line.unit,
+      unitPrice: line.unitPrice,
+      total: line.lineTotal,
+    })),
+    subtotal: totals.subtotal,
+    discount: totals.discount,
+    total: totals.total,
+    payments: result.payments.map((payment) => ({
+      method: payment.method,
+      amount: payment.method === "cash" ? result.received : payment.amount,
+      change: payment.method === "cash" ? change : undefined,
+    })),
+    amountDue,
+  };
 }
 
 export function PosScreen({
@@ -67,6 +119,9 @@ export function PosScreen({
   const [serviceOpen, setServiceOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [lastSale, setLastSale] = useState<LastSale | null>(null);
+  // Tach co mo khoi du lieu de hop thoai con noi dung trong luc dong (animation).
+  const [saleOpen, setSaleOpen] = useState(false);
+  const newOrderRef = useRef<HTMLButtonElement>(null);
   const [refreshingCatalog, setRefreshingCatalog] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -82,18 +137,28 @@ export function PosScreen({
 
   // Luu danh muc vao IndexedDB de lan sau mat mang van ban duoc.
   useEffect(() => {
-    void saveCatalog(initialCatalog);
+    saveCatalog(initialCatalog).catch((error: unknown) => {
+      reportClientError(error, "pos.catalog.save");
+    });
   }, [initialCatalog]);
 
   // Mat mang thi Server Component tra ve danh muc rong — dung ban cache.
   useEffect(() => {
     if (initialCatalog.products.length > 0) return;
 
-    void loadCatalog().then((cached) => {
-      if (!cached) return;
-      setCatalog(cached);
-      setStale(isCatalogStale(cached));
-    });
+    let cancelled = false;
+    loadCatalog()
+      .then((cached) => {
+        if (cancelled || !cached) return;
+        setCatalog(cached);
+        setStale(isCatalogStale(cached));
+      })
+      .catch((error: unknown) => {
+        reportClientError(error, "pos.catalog.load");
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [initialCatalog.products.length]);
 
   const refreshCatalog = useCallback(async () => {
@@ -105,14 +170,22 @@ export function PosScreen({
       setCatalog(fresh);
       setStale(false);
       await saveCatalog(fresh);
+    } catch (error) {
+      // Mat mang hoac IndexedDB loi: giu danh muc dang co, chi bao ve Sentry.
+      reportClientError(error, "pos.catalog.refresh");
     } finally {
       setRefreshingCatalog(false);
     }
   }, []);
 
+  const searchInput = useCallback(
+    () => searchRef.current?.querySelector("input") ?? null,
+    [],
+  );
+
   const focusSearch = useCallback(() => {
-    searchRef.current?.querySelector("input")?.focus();
-  }, []);
+    searchInput()?.focus();
+  }, [searchInput]);
 
   const holdCurrent = useCallback(() => {
     if (lines.length === 0) return;
@@ -151,13 +224,16 @@ export function PosScreen({
       customerId: result.customerId,
     });
 
+    const code = outcome.order?.code ?? null;
     setLastSale({
-      code: outcome.order?.code ?? null,
+      code,
       total: totals.total,
       received: result.received,
       change: Math.max(0, result.received - totals.total),
       synced: outcome.synced,
+      receipt: buildPosReceipt(code ?? pendingCode, totals, result),
     });
+    setSaleOpen(true);
 
     setPendingCode(`DH${Date.now().toString().slice(-6)}`);
     clear();
@@ -179,13 +255,16 @@ export function PosScreen({
               Tìm hoặc chọn mặt hàng, kiểm tra giỏ rồi thanh toán.
             </p>
           </div>
-          <Link
-            href="/admin/products"
-            className="border-border bg-card text-foreground hover:bg-accent focus-visible:ring-ring inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold transition-colors focus-visible:ring-3 focus-visible:outline-none"
-          >
-            <Wrench aria-hidden="true" weight="bold" className="size-5" />
-            Quản lý cửa hàng
-          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle className="bg-card" />
+            <Link
+              href="/admin/products"
+              className="border-border bg-card text-foreground hover:bg-accent focus-visible:ring-ring inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold transition-colors focus-visible:ring-3 focus-visible:outline-none"
+            >
+              <Wrench aria-hidden="true" weight="bold" className="size-5" />
+              Quản lý cửa hàng
+            </Link>
+          </div>
         </div>
 
         <div
@@ -285,50 +364,57 @@ export function PosScreen({
         onConfirm={handleConfirm}
       />
 
-      {lastSale ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="sale-success-title"
-            className="bg-background w-full max-w-md space-y-4 rounded-3xl p-6 text-center shadow-2xl sm:p-8"
-          >
-            <div className="bg-primary/10 text-primary mx-auto flex size-14 items-center justify-center rounded-full">
-              <CheckCircle
-                aria-hidden="true"
-                weight="fill"
-                className="size-8"
+      <Dialog open={saleOpen && lastSale !== null} onOpenChange={setSaleOpen}>
+        <DialogContent
+          showCloseButton={false}
+          initialFocus={newOrderRef}
+          finalFocus={() => searchInput() ?? true}
+          className="bg-background block space-y-4 rounded-3xl p-6 text-center shadow-2xl sm:max-w-md sm:p-8"
+        >
+          {lastSale ? (
+            <>
+              <div className="bg-primary/10 text-primary mx-auto flex size-14 items-center justify-center rounded-full">
+                <CheckCircle
+                  aria-hidden="true"
+                  weight="fill"
+                  className="size-8"
+                />
+              </div>
+              <DialogTitle className="text-2xl leading-tight font-bold">
+                Thanh toán thành công
+              </DialogTitle>
+              <DialogDescription className="text-base">
+                {lastSale.synced
+                  ? `Đã lưu đơn ${lastSale.code}`
+                  : "Đã lưu tạm — sẽ đồng bộ khi có mạng"}
+              </DialogDescription>
+              <p className="text-lg">
+                Khách đưa {formatVnd(lastSale.received)}
+              </p>
+              <p className="text-muted-foreground text-sm">Tiền thối lại</p>
+              <p
+                data-testid="last-sale-change"
+                className="text-7xl font-bold tabular-nums"
+              >
+                {formatVnd(lastSale.change)}
+              </p>
+              <PrintReceiptButton
+                className="h-12 w-full"
+                storeName={storeName}
+                order={lastSale.receipt}
+                bankAccount={bankAccount}
               />
-            </div>
-            <h2
-              id="sale-success-title"
-              className="font-heading text-2xl font-bold"
-            >
-              Thanh toán thành công
-            </h2>
-            <p className="text-muted-foreground">
-              {lastSale.synced
-                ? `Đã lưu đơn ${lastSale.code}`
-                : "Đã lưu tạm — sẽ đồng bộ khi có mạng"}
-            </p>
-            <p className="text-lg">Khách đưa {formatVnd(lastSale.received)}</p>
-            <p className="text-muted-foreground text-sm">Tiền thối lại</p>
-            <p
-              data-testid="last-sale-change"
-              className="text-7xl font-bold tabular-nums"
-            >
-              {formatVnd(lastSale.change)}
-            </p>
-            <Button
-              autoFocus
-              className="h-16 w-full text-xl"
-              onClick={() => setLastSale(null)}
-            >
-              Đơn mới
-            </Button>
-          </div>
-        </div>
-      ) : null}
+              <Button
+                ref={newOrderRef}
+                className="h-16 w-full text-xl"
+                onClick={() => setSaleOpen(false)}
+              >
+                Đơn mới
+              </Button>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

@@ -9,6 +9,7 @@ import { CountdownTimer } from "@/components/kit/countdown-timer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/lib/money";
+import { productHref } from "@/lib/seo/product-href";
 
 import { useOnlineCart } from "../cart-context";
 import type { OnlineProduct } from "../types";
@@ -112,7 +113,7 @@ export function FlashSaleSection({
                     </div>
 
                     <Link
-                      href={`/shop/products/${product.id}`}
+                      href={productHref(product)}
                       className="block h-full w-full"
                       tabIndex={-1}
                       aria-hidden="true"
@@ -136,7 +137,7 @@ export function FlashSaleSection({
                   {/* Title and Prices */}
                   <div className="mt-3">
                     <Link
-                      href={`/shop/products/${product.id}`}
+                      href={productHref(product)}
                       className="hover:text-primary transition-colors"
                     >
                       <h3 className="text-foreground line-clamp-2 min-h-10 text-xs font-bold sm:text-sm">
@@ -157,12 +158,16 @@ export function FlashSaleSection({
                     <div className="mt-2.5">
                       <div className="bg-muted h-3.5 w-full overflow-hidden rounded-full p-0.5">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-amber-500 to-red-500 transition-all duration-500"
+                          className="h-full rounded-full bg-gradient-to-r from-amber-500 to-red-500 transition-[width] duration-500"
                           style={{ width: `${soldPercent}%` }}
                         />
                       </div>
-                      <span className="text-muted-foreground mt-1 block text-[0.65rem] font-semibold">
-                        🔥 Đã bán {soldPercent}%
+                      <span className="text-muted-foreground mt-1 flex items-center gap-1 text-[0.65rem] font-semibold">
+                        <Flame
+                          aria-hidden="true"
+                          className="text-destructive size-3"
+                        />
+                        Đã bán {soldPercent}%
                       </span>
                     </div>
                   </div>

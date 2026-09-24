@@ -3,13 +3,15 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Eye, ShoppingCart } from "lucide-react";
+import { ArrowRight, Eye, PackageOpen, ShoppingCart } from "lucide-react";
 
+import { EmptyState } from "@/components/kit/empty-state";
 import { StarRating } from "@/components/kit/star-rating";
 import { WishlistButton } from "@/components/kit/wishlist-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/lib/money";
+import { productHref } from "@/lib/seo/product-href";
 
 import { useOnlineCart } from "../cart-context";
 import { QuickViewModal } from "../quick-view-modal";
@@ -80,7 +82,7 @@ export function ProductRail({
                       </div>
                     ) : null}
                     <Link
-                      href={`/shop/products/${product.id}`}
+                      href={productHref(product)}
                       className="block h-full w-full"
                       tabIndex={-1}
                       aria-hidden="true"
@@ -106,7 +108,7 @@ export function ProductRail({
                         setQuickViewProduct(product);
                       }}
                       aria-label={`Xem nhanh ${product.name}`}
-                      className="bg-background/90 text-foreground hover:bg-background absolute bottom-2.5 left-1/2 z-10 hidden -translate-x-1/2 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold shadow-md backdrop-blur-sm transition-all group-hover:flex hover:scale-105"
+                      className="bg-background/90 text-foreground hover:bg-background absolute bottom-2.5 left-1/2 z-10 hidden -translate-x-1/2 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold shadow-md backdrop-blur-sm transition-colors group-hover:flex"
                     >
                       <Eye className="size-3.5" />
                       <span>Xem nhanh</span>
@@ -115,16 +117,22 @@ export function ProductRail({
 
                   <div className="p-4 pb-2">
                     <Link
-                      href={`/shop/products/${product.id}`}
+                      href={productHref(product)}
                       className="hover:text-primary transition-colors"
                     >
                       <h3 className="text-foreground line-clamp-2 min-h-10 text-sm font-bold sm:text-base">
                         {product.name}
                       </h3>
                     </Link>
-                    <div className="mt-1">
-                      <StarRating rating={4.8} size="xs" />
-                    </div>
+                    {product.ratingCount ? (
+                      <div className="mt-1">
+                        <StarRating
+                          rating={product.ratingAvg ?? 0}
+                          reviewCount={product.ratingCount}
+                          size="xs"
+                        />
+                      </div>
+                    ) : null}
                     <div className="mt-2 flex items-baseline justify-between">
                       <span className="text-primary text-base font-bold sm:text-lg">
                         {formatVnd(product.price)} ₫
@@ -162,9 +170,12 @@ export function ProductRail({
           })}
         </div>
       ) : (
-        <div className="border-border bg-muted/20 text-muted-foreground mt-6 rounded-2xl border border-dashed p-8 text-center text-sm">
-          Chưa có sản phẩm nổi bật, sản phẩm sẽ sớm được cập nhật.
-        </div>
+        <EmptyState
+          icon={PackageOpen}
+          title="Chưa có sản phẩm nổi bật"
+          description="Cửa hàng đang bổ sung hàng mới, bạn quay lại sau nhé."
+          className="border-border bg-muted/20 mt-6 rounded-2xl border border-dashed"
+        />
       )}
 
       <QuickViewModal

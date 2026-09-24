@@ -47,4 +47,71 @@ describe("ChartSvg component", () => {
     fireEvent.mouseEnter(circles[0]);
     expect(screen.getByText(/1\.200k ₫/)).toBeInTheDocument();
   });
+
+  it("vẽ hai series với chú thích khi có secondaryValue", () => {
+    const { container } = render(
+      <ChartSvg
+        data={[
+          { label: "01", value: 100_000, secondaryValue: 50_000 },
+          { label: "02", value: 200_000, secondaryValue: 0 },
+          { label: "03", value: 0, secondaryValue: 300_000 },
+        ]}
+        seriesLabels={["Tại quầy", "Online"]}
+        valueFormat="vnd-k"
+      />,
+    );
+
+    expect(container.querySelectorAll("[data-series]")).toHaveLength(2);
+    expect(screen.getByText("Tại quầy")).toBeInTheDocument();
+    expect(screen.getByText("Online")).toBeInTheDocument();
+
+    const circles = container.querySelectorAll("circle");
+    expect(circles.length).toBe(6);
+    fireEvent.mouseEnter(circles[0]);
+    expect(screen.getByText(/100k ₫/)).toBeInTheDocument();
+    expect(screen.getByText(/50k ₫/)).toBeInTheDocument();
+  });
+
+  it("SVG có role img và aria-label tóm tắt series bằng tiếng Việt", () => {
+    render(
+      <ChartSvg data={sampleData} title="Doanh thu tuần" valueFormat="vnd" />,
+    );
+    const img = screen.getByRole("img", { name: /Doanh thu tuần/ });
+    expect(img.tagName.toLowerCase()).toBe("svg");
+    const label = img.getAttribute("aria-label") ?? "";
+    expect(label).toContain("7 điểm");
+    expect(label).toContain("T2");
+    expect(label).toContain("CN");
+    expect(label).toMatch(/cao nhất 6\.000\.000 ₫ \(T7\)/);
+    expect(label).toMatch(/thấp nhất 1\.200\.000 ₫ \(T2\)/);
+    // Danh sach nhan ngay van giu lam phan chi tiet.
+    expect(screen.getByText("T4")).toBeInTheDocument();
+  });
+
+  it("aria-label tóm tắt cả hai series", () => {
+    render(
+      <ChartSvg
+        data={[
+          { label: "01", value: 100_000, secondaryValue: 50_000 },
+          { label: "02", value: 200_000, secondaryValue: 300_000 },
+        ]}
+        seriesLabels={["Tại quầy", "Online"]}
+        valueFormat="vnd"
+      />,
+    );
+    const label = screen.getByRole("img").getAttribute("aria-label") ?? "";
+    expect(label).toMatch(/Tại quầy: tổng 300\.000 ₫/);
+    expect(label).toMatch(/Online: tổng 350\.000 ₫/);
+  });
+
+  it("thưa nhãn trục ngang khi nhiều điểm (30 ngày)", () => {
+    const data = Array.from({ length: 30 }, (_, i) => ({
+      label: String(i + 1).padStart(2, "0"),
+      value: i * 1000,
+    }));
+    render(<ChartSvg data={data} />);
+    expect(screen.getByText("01")).toBeInTheDocument();
+    expect(screen.getByText("30")).toBeInTheDocument();
+    expect(screen.queryByText("02")).not.toBeInTheDocument();
+  });
 });

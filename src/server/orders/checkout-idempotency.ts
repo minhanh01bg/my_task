@@ -38,6 +38,13 @@ export function computeCheckoutFingerprint(input: OnlineCheckoutInput): string {
     deliveryProvince: (input.deliveryProvince ?? "").trim(),
     note: (input.note ?? "").trim(),
     lines: sortedLines,
+    // Chi them khi co gia tri: van tuong thich fingerprint cua don cu.
+    ...(input.voucherCode?.trim()
+      ? { voucherCode: input.voucherCode.trim().toUpperCase() }
+      : {}),
+    ...(input.deliverySlot?.trim()
+      ? { deliverySlot: input.deliverySlot.trim() }
+      : {}),
   };
 
   return createHash("sha256").update(JSON.stringify(canonical)).digest("hex");

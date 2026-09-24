@@ -88,6 +88,69 @@ describe("Admin Settings Authorization & Protection", () => {
     expect(auditLog?.entityType).toBe("store_settings");
   });
 
+  it("saveSettingsAction: lưu phí giao hàng và ngưỡng miễn phí", async () => {
+    const { token } = await createAdminSession();
+    mockCookies.set(SESSION_COOKIE, token);
+
+    const formData = new FormData();
+    formData.set("storeName", "Cửa Hàng Chính Hãng");
+    formData.set("bankBin", "970407");
+    formData.set("accountNumber", "0123456789");
+    formData.set("accountName", "CHỦ CỬA HÀNG");
+    formData.set("shippingFee", "15000");
+    formData.set("freeShippingThreshold", "250000");
+
+    const result = await saveSettingsAction(null, formData);
+    expect(result.ok).toBe(true);
+
+    const rows = await prisma.setting.findMany({
+      where: {
+        key: { in: ["store.shippingFee", "store.freeShippingThreshold"] },
+      },
+      orderBy: { key: "asc" },
+    });
+    expect(rows.map((row) => [row.key, row.value])).toEqual([
+      ["store.freeShippingThreshold", "250000"],
+      ["store.shippingFee", "15000"],
+    ]);
+    await prisma.setting.deleteMany({
+      where: {
+        key: { in: ["store.shippingFee", "store.freeShippingThreshold"] },
+      },
+    });
+  });
+
+  it("saveSettingsAction: phí giao hàng âm hoặc thiếu một ô thì báo lỗi, không lưu", async () => {
+    const { token } = await createAdminSession();
+    mockCookies.set(SESSION_COOKIE, token);
+
+    const base = () => {
+      const formData = new FormData();
+      formData.set("storeName", "Cửa Hàng Chính Hãng");
+      formData.set("bankBin", "970407");
+      formData.set("accountNumber", "0123456789");
+      formData.set("accountName", "CHỦ CỬA HÀNG");
+      return formData;
+    };
+
+    const negative = base();
+    negative.set("shippingFee", "-1");
+    negative.set("freeShippingThreshold", "200000");
+    const negativeResult = await saveSettingsAction(null, negative);
+    expect(negativeResult).toEqual({
+      ok: false,
+      error: "Phí giao hàng không được âm",
+    });
+
+    const partial = base();
+    partial.set("shippingFee", "10000");
+    const partialResult = await saveSettingsAction(null, partial);
+    expect(partialResult.ok).toBe(false);
+    expect(
+      await prisma.setting.findUnique({ where: { key: "store.shippingFee" } }),
+    ).toBeNull();
+  });
+
   it("SettingsPage: chuyển hướng đến /login khi chưa có phiên đăng nhập", async () => {
     await expect(SettingsPage()).rejects.toThrow("NEXT_REDIRECT:/login");
     expect(mockRedirect).toHaveBeenCalledWith("/login");

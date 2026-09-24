@@ -1,12 +1,10 @@
 "use client";
 
-import {
-  ArrowClockwise,
-  CloudArrowUp,
-  WarningCircle,
-} from "@phosphor-icons/react";
+import { ArrowClockwise, WarningCircle } from "@phosphor-icons/react";
+import { CloudCheck } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { EmptyState } from "@/components/kit/empty-state";
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/lib/money";
@@ -73,15 +71,11 @@ export function OfflineQueueManager() {
 
   if (orders.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 py-12 text-center">
-        <span className="bg-success/12 text-success flex size-14 items-center justify-center rounded-2xl">
-          <CloudArrowUp aria-hidden="true" weight="fill" className="size-7" />
-        </span>
-        <p className="text-lg font-bold">Không có đơn bị kẹt</p>
-        <p className="text-muted-foreground max-w-md text-sm">
-          Tất cả đơn bán trên thiết bị này đã được gửi lên máy chủ.
-        </p>
-      </div>
+      <EmptyState
+        icon={CloudCheck}
+        title="Không có đơn bị kẹt"
+        description="Tất cả đơn bán trên thiết bị này đã được gửi lên máy chủ."
+      />
     );
   }
 

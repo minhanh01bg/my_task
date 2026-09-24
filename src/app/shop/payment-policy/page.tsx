@@ -1,28 +1,40 @@
+import type { Metadata } from "next";
+
 import { PolicyLayout } from "@/features/online-store/policy-layout";
-import { hasAdminSession } from "@/server/auth/require-admin-session";
-import { getOptionalCustomerSession } from "@/server/customer-auth/session";
-import { getPublicStoreProfile } from "@/server/settings/store-settings";
+import {
+  policyMetadata,
+  type PolicyPageMeta,
+} from "@/features/online-store/policy-metadata";
+import {
+  getPublicStoreProfile,
+  getShippingSettings,
+} from "@/server/settings/store-settings";
 
-export const dynamic = "force-dynamic";
+/** URL tuyệt đối (canonical/OG/JSON-LD) làm mới sau deploy đổi CANONICAL_ORIGIN. */
+export const revalidate = 3600;
 
-export const metadata = {
+const PAGE: PolicyPageMeta = {
+  path: "/shop/payment-policy",
   title: "Chính sách thanh toán",
   description: "Các phương thức thanh toán được hỗ trợ và quy trình xác nhận",
 };
 
+export function generateMetadata(): Promise<Metadata> {
+  return policyMetadata(PAGE);
+}
+
 export default async function PaymentPolicyPage() {
-  const [storeProfile, isAdmin, customerSession] = await Promise.all([
+  const [storeProfile, shipping] = await Promise.all([
     getPublicStoreProfile(),
-    hasAdminSession(),
-    getOptionalCustomerSession(),
+    getShippingSettings(),
   ]);
 
   return (
     <PolicyLayout
       storeProfile={storeProfile}
-      isAdmin={isAdmin}
-      isCustomer={Boolean(customerSession)}
-      title="Chính sách thanh toán"
+      shipping={shipping}
+      path={PAGE.path}
+      title={PAGE.title}
       description="Hướng dẫn các phương thức thanh toán an toàn, minh bạch được áp dụng tại hệ thống cửa hàng."
     >
       <section className="space-y-3">

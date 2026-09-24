@@ -54,7 +54,7 @@ export function TrustSection({
             return (
               <div
                 key={feature.title}
-                className="border-border bg-card rounded-2xl border p-6 text-center transition-all hover:shadow-xs"
+                className="border-border bg-card rounded-2xl border p-6 text-center transition-shadow hover:shadow-xs"
               >
                 <div className="bg-primary/10 text-primary mx-auto flex h-12 w-12 items-center justify-center rounded-xl">
                   <Icon className="h-6 w-6" />

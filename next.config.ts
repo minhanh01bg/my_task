@@ -45,8 +45,19 @@ const nextConfig: NextConfig = {
    */
   allowedDevOrigins: ["127.0.0.1", "160.250.247.137"],
   poweredByHeader: false,
+  images: {
+    formats: ["image/avif", "image/webp"],
+    // 30 ngày: ảnh sản phẩm đổi thì đổi tên file (UUID) nên không sợ ảnh cũ.
+    minimumCacheTTL: 2592000,
+  },
   async redirects() {
     return [
+      {
+        // Điểm vào công khai là cửa hàng; POS vẫn ở /pos (sau đăng nhập).
+        source: "/",
+        destination: "/shop",
+        permanent: true,
+      },
       {
         source: "/admin/login",
         destination: "/login",
@@ -59,6 +70,17 @@ const nextConfig: NextConfig = {
       {
         source: "/(.*)",
         headers: securityHeaders,
+      },
+      {
+        // save-image.ts đặt tên file bằng randomUUID() → nội dung không bao giờ
+        // đổi dưới cùng URL. Không áp cho /products/* vì ảnh mẫu đặt tên theo slug.
+        source: "/uploads/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
       },
       {
         source: "/order-success/:path*",

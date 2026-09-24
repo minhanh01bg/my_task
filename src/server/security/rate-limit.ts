@@ -98,6 +98,36 @@ function getGlobalDevMemoryStore(): RateLimitStore {
   return devMemoryStore;
 }
 
+// One Upstash client per process: the REST client is stateless and safe to
+// share, so building it on every check only adds allocation and setup cost.
+// A failed construction is not cached, so the next call retries.
+let upstashStore: UpstashRedisStore | null = null;
+function getGlobalUpstashStore(): RateLimitStore {
+  if (!upstashStore) {
+    upstashStore = new UpstashRedisStore();
+  }
+  return upstashStore;
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error("Rate limiter timeout")),
+      timeoutMs,
+    );
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export interface RateLimitTarget {
   bucketName: string;
   dimension: string;
@@ -185,7 +215,7 @@ export function createRateLimiter(
           store = getGlobalDevMemoryStore();
         } else if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
           try {
-            store = new UpstashRedisStore();
+            store = getGlobalUpstashStore();
           } catch {
             if (policy.failClosed) {
               return {
@@ -230,25 +260,34 @@ export function createRateLimiter(
           let isExceeded = false;
           let maxTtl = 0;
 
-          for (const target of targets) {
+          const lookups = targets.flatMap((target) => {
             const bucketConfig = policy.buckets.find(
               (b) => b.name === target.bucketName,
             );
-            if (!bucketConfig) continue;
+            return bucketConfig ? [{ target, bucketConfig }] : [];
+          });
 
+          // Buckets are independent keys, so increment them concurrently.
+          // Promise.all rejects on the first failure, which keeps the
+          // fail-closed/fail-open handling below unchanged.
+          const results = await Promise.all(
+            lookups.map(({ target, bucketConfig }) =>
+              store.incrementAndGetTtl(
+                deriveRateLimitKey(
+                  "v1",
+                  `${policy.name}:${target.bucketName}`,
+                  target.dimension,
+                  target.identifier,
+                  secret,
+                ),
+                bucketConfig.windowSeconds,
+              ),
+            ),
+          );
+
+          lookups.forEach(({ bucketConfig }, index) => {
+            const result = results[index];
             overallLimit = bucketConfig.limit;
-            const key = deriveRateLimitKey(
-              "v1",
-              `${policy.name}:${target.bucketName}`,
-              target.dimension,
-              target.identifier,
-              secret,
-            );
-
-            const result = await store.incrementAndGetTtl(
-              key,
-              bucketConfig.windowSeconds,
-            );
 
             if (
               typeof result?.count !== "number" ||
@@ -273,7 +312,7 @@ export function createRateLimiter(
                 maxRetryAfter = result.ttlSeconds;
               }
             }
-          }
+          });
 
           if (isExceeded) {
             return {
@@ -293,14 +332,7 @@ export function createRateLimiter(
           };
         };
 
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(
-            () => reject(new Error("Rate limiter timeout")),
-            timeoutMs,
-          ),
-        );
-
-        return await Promise.race([checkWithTimeout(), timeoutPromise]);
+        return await withTimeout(checkWithTimeout(), timeoutMs);
       } catch {
         if (policy.failClosed) {
           return {
@@ -330,7 +362,7 @@ export function createRateLimiter(
           store = getGlobalDevMemoryStore();
         } else if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
           try {
-            store = new UpstashRedisStore();
+            store = getGlobalUpstashStore();
           } catch {
             return;
           }

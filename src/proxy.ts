@@ -22,6 +22,11 @@ export async function proxy(request: NextRequest) {
     }
 
     const loginUrl = new URL("/login", request.url);
+    // Chu quan bi dang xuat giua chung quay lai dung trang admin sau khi
+    // dang nhap; /pos giu mac dinh (login-form tu ve /pos).
+    if (pathname.startsWith("/admin")) {
+      loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
+    }
     return NextResponse.redirect(loginUrl);
   }
 

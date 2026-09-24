@@ -17,3 +17,11 @@ export function buildSearchText(input: SearchTextInput): string {
 
   return parts.join(" ");
 }
+
+/**
+ * Chuan hoa query nguoi dung go vao de so voi `searchText` da luu
+ * (bo dau, viet thuong, gop khoang trang) — cung mot bo chuan hoa voi luc luu.
+ */
+export function normalizeSearchText(query: string): string {
+  return normalize(query);
+}

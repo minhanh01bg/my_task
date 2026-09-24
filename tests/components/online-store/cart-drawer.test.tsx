@@ -1,5 +1,12 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, expect, it, beforeEach } from "vitest";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { describe, expect, it, beforeEach, vi } from "vitest";
 
 import {
   OnlineCartProvider,
@@ -30,14 +37,23 @@ const mockProductB: OnlineProduct = {
   searchText: "tra lai",
 };
 
-function TestContainer() {
-  const { add, openDrawer } = useOnlineCart();
+const PAID_SHIPPING = { shippingFee: 20_000, freeShippingThreshold: 200_000 };
+
+function TestContainer({
+  shipping = PAID_SHIPPING,
+}: {
+  shipping?: { shippingFee: number; freeShippingThreshold: number };
+}) {
+  const { add, openDrawer, feedback } = useOnlineCart();
   return (
     <div>
+      <output data-testid="feedback">
+        {feedback ? `${feedback.status}:${feedback.productId}` : "none"}
+      </output>
       <button onClick={openDrawer}>Mở giỏ hàng</button>
       <button onClick={() => add(mockProductA)}>Thêm A</button>
       <button onClick={() => add(mockProductB)}>Thêm B</button>
-      <CartDrawer />
+      <CartDrawer shipping={shipping} />
     </div>
   );
 }
@@ -165,6 +181,29 @@ describe("CartDrawer", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("là sheet có tên, khoá cuộn trang và trả focus về nút mở", async () => {
+    render(
+      <OnlineCartProvider>
+        <TestContainer />
+      </OnlineCartProvider>,
+    );
+
+    const opener = screen.getByText("Mở giỏ hàng");
+    opener.focus();
+    fireEvent.click(opener);
+
+    const dialog = screen.getByRole("dialog", { name: "Giỏ hàng của bạn" });
+    expect(dialog).toHaveAttribute("data-slot", "sheet-content");
+    await waitFor(() =>
+      expect(document.documentElement).toHaveAttribute(
+        "data-base-ui-scroll-locked",
+      ),
+    );
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(opener).toHaveFocus());
+  });
+
   it("hiển thị thanh tiến độ Free Shipping khi tổng tiền dưới 200.000đ", () => {
     render(
       <OnlineCartProvider>
@@ -199,5 +238,142 @@ describe("CartDrawer", () => {
     expect(
       screen.getByText(/bạn đã được miễn phí giao hàng/i),
     ).toBeInTheDocument();
+  });
+
+  it("ngưỡng freeship đọc từ cài đặt", () => {
+    render(
+      <OnlineCartProvider>
+        <TestContainer
+          shipping={{ shippingFee: 15_000, freeShippingThreshold: 300_000 }}
+        />
+      </OnlineCartProvider>,
+    );
+    fireEvent.click(screen.getByText("Thêm A")); // 50.000
+    fireEvent.click(screen.getByText("Mở giỏ hàng"));
+    expect(
+      screen.getByText(/mua thêm/i).closest("span")?.textContent,
+    ).toContain("250.000");
+  });
+
+  it("không thu phí ship (phí 0) thì ẩn thanh tiến độ freeship", () => {
+    render(
+      <OnlineCartProvider>
+        <TestContainer
+          shipping={{ shippingFee: 0, freeShippingThreshold: 200_000 }}
+        />
+      </OnlineCartProvider>,
+    );
+    fireEvent.click(screen.getByText("Thêm A"));
+    fireEvent.click(screen.getByText("Mở giỏ hàng"));
+    expect(screen.queryByTestId("free-shipping-bar")).not.toBeInTheDocument();
+  });
+
+  it("xoá dòng hiện Hoàn tác ngay trong ngăn giỏ; hoàn tác trả đúng vị trí và số lượng, không báo 'đã thêm'", () => {
+    render(
+      <OnlineCartProvider>
+        <TestContainer />
+      </OnlineCartProvider>,
+    );
+    fireEvent.click(screen.getByText("Thêm A"));
+    fireEvent.click(screen.getByText("Thêm A"));
+    fireEvent.click(screen.getByText("Thêm B"));
+    fireEvent.click(screen.getByText("Mở giỏ hàng"));
+    expect(screen.getByTestId("feedback")).toHaveTextContent("added:p2");
+
+    const dialog = screen.getByRole("dialog", { name: "Giỏ hàng của bạn" });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: /xóa.*cà phê robusta/i }),
+    );
+    expect(screen.queryByTestId("quantity-p1")).not.toBeInTheDocument();
+
+    const status = within(dialog).getByTestId("cart-undo");
+    expect(status).toHaveAttribute("role", "status");
+    expect(status).toHaveTextContent("Đã xoá Cà phê Robusta.");
+    // Nut xoa bien mat cung dong — focus chuyen sang Hoàn tác.
+    expect(
+      within(status).getByRole("button", { name: "Hoàn tác" }),
+    ).toHaveFocus();
+    fireEvent.click(within(status).getByRole("button", { name: "Hoàn tác" }));
+
+    expect(screen.getByTestId("quantity-p1")).toHaveTextContent("2");
+    // Dong A tro ve vi tri dau tien (truoc B).
+    const names = within(dialog)
+      .getAllByRole("heading", { level: 3 })
+      .map((heading) => heading.textContent);
+    expect(names).toEqual(["Cà phê Robusta", "Trà lài"]);
+    expect(
+      within(dialog).queryByText("Đã xoá Cà phê Robusta."),
+    ).not.toBeInTheDocument();
+    // Hoan tac khong phat lai phan hoi "đã thêm" cho A.
+    expect(screen.getByTestId("feedback")).toHaveTextContent("added:p2");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("thông báo Hoàn tác tự ẩn sau 5 giây", () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <OnlineCartProvider>
+          <TestContainer />
+        </OnlineCartProvider>,
+      );
+      fireEvent.click(screen.getByText("Thêm A"));
+      fireEvent.click(screen.getByText("Mở giỏ hàng"));
+      fireEvent.click(
+        screen.getByRole("button", { name: /xóa.*cà phê robusta/i }),
+      );
+      expect(screen.getByText("Đã xoá Cà phê Robusta.")).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(5000);
+      });
+      expect(
+        screen.queryByText("Đã xoá Cà phê Robusta."),
+      ).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("nhập mã giảm giá trong giỏ gọi API validate và lưu mã cho trang thanh toán", async () => {
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: {
+          ok: true,
+          code: "GIAM10",
+          type: "percent",
+          value: 10,
+          maxDiscount: 30_000,
+          minOrderTotal: 0,
+          discount: 5_000,
+          shippingDiscount: 0,
+          message: "ok",
+        },
+      }),
+    } as Response);
+
+    render(
+      <OnlineCartProvider>
+        <TestContainer />
+      </OnlineCartProvider>,
+    );
+    fireEvent.click(screen.getByText("Thêm A"));
+    fireEvent.click(screen.getByText("Mở giỏ hàng"));
+
+    fireEvent.change(screen.getByLabelText(/mã ưu đãi/i), {
+      target: { value: "giam10" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Áp dụng" }));
+
+    expect(
+      await screen.findByTestId("cart-voucher-discount"),
+    ).toHaveTextContent("5.000");
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "/api/online/vouchers/validate",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(localStorage.getItem("online-voucher-v1")).toBe("GIAM10");
+    fetchSpy.mockRestore();
   });
 });

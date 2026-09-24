@@ -7,8 +7,18 @@ import * as dailyRevenueModule from "@/server/reports/daily-revenue";
 describe("ReportsPage Server Component", () => {
   it("render thành công trang Báo cáo mà không truyền function qua client boundary", async () => {
     vi.spyOn(dailyRevenueModule, "getDailyRevenue").mockResolvedValue([
-      { date: "2026-09-13", revenue: 1_500_000, orderCount: 5 },
-      { date: "2026-09-14", revenue: 2_500_000, orderCount: 8 },
+      {
+        date: "2026-09-13",
+        revenue: 1_500_000,
+        orderCount: 5,
+        byChannel: { pos: 1_000_000, online: 500_000 },
+      },
+      {
+        date: "2026-09-14",
+        revenue: 2_500_000,
+        orderCount: 8,
+        byChannel: { pos: 2_500_000, online: 0 },
+      },
     ]);
     vi.spyOn(dailyRevenueModule, "getTopProducts").mockResolvedValue([
       { id: "p1", name: "Đường trắng", soldCount: 20 },
@@ -24,5 +34,59 @@ describe("ReportsPage Server Component", () => {
     expect(screen.getByText("Biểu đồ xu hướng doanh thu")).toBeInTheDocument();
     expect(screen.getByText("Đường trắng")).toBeInTheDocument();
     expect(screen.getByText("Dây điện")).toBeInTheDocument();
+    expect(dailyRevenueModule.getDailyRevenue).toHaveBeenLastCalledWith(14);
+  });
+
+  it("doc khoang ngay tu ?days= va chi nhan 7/14/30", async () => {
+    const spy = vi
+      .spyOn(dailyRevenueModule, "getDailyRevenue")
+      .mockResolvedValue([]);
+    vi.spyOn(dailyRevenueModule, "getTopProducts").mockResolvedValue([]);
+    vi.spyOn(dailyRevenueModule, "getLowStockProducts").mockResolvedValue([]);
+
+    render(
+      await ReportsPage({ searchParams: Promise.resolve({ days: "30" }) }),
+    );
+    expect(spy).toHaveBeenLastCalledWith(30);
+    expect(screen.getByRole("link", { name: "30 ngày" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    await ReportsPage({ searchParams: Promise.resolve({ days: "99" }) });
+    expect(spy).toHaveBeenLastCalledWith(14);
+  });
+
+  it("biểu đồ tách POS/online theo từng ngày của kỳ và chỉ lấy top 5", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-14T05:00:00Z"));
+    try {
+      vi.spyOn(dailyRevenueModule, "getDailyRevenue").mockResolvedValue([
+        {
+          date: "2026-09-14",
+          revenue: 300_000,
+          orderCount: 2,
+          byChannel: { pos: 100_000, online: 200_000 },
+        },
+      ]);
+      const top = vi
+        .spyOn(dailyRevenueModule, "getTopProducts")
+        .mockResolvedValue([]);
+      vi.spyOn(dailyRevenueModule, "getLowStockProducts").mockResolvedValue([]);
+
+      const { container } = render(
+        await ReportsPage({ searchParams: Promise.resolve({ days: "7" }) }),
+      );
+
+      expect(top).toHaveBeenLastCalledWith(5);
+      expect(screen.getByText("Top 5 bán chạy")).toBeInTheDocument();
+      expect(container.querySelectorAll("[data-series]")).toHaveLength(2);
+      // 7 ngay x 2 series, ngay khong ban van co diem 0.
+      expect(container.querySelectorAll("circle")).toHaveLength(14);
+      expect(screen.getByText("08/09")).toBeInTheDocument();
+      expect(screen.getByText("14/09")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

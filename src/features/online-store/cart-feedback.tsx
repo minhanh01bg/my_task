@@ -70,7 +70,7 @@ export function CartFeedback({ onViewCart }: { onViewCart?: () => void }) {
     >
       <div
         role="status"
-        className="border-border bg-card text-card-foreground pointer-events-auto flex max-w-md items-center gap-3 rounded-2xl border p-4 shadow-xl backdrop-blur-md transition-all duration-200"
+        className="border-border bg-card text-card-foreground pointer-events-auto flex max-w-md items-center gap-3 rounded-2xl border p-4 shadow-xl backdrop-blur-md transition-[opacity,transform] duration-200"
       >
         <Icon aria-hidden="true" className={`size-5 shrink-0 ${iconColor}`} />
         <div className="min-w-0 flex-1 text-sm font-medium">

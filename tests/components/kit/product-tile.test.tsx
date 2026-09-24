@@ -36,6 +36,31 @@ describe("ProductTile", () => {
   });
 });
 
+describe("ProductTile — Xem nhanh", () => {
+  it("không có onQuickView thì không có nút Xem nhanh", () => {
+    render(<ProductTile {...product} onSelect={() => {}} />);
+    expect(screen.queryByRole("button", { name: /xem nhanh/i })).toBeNull();
+  });
+
+  it("nút Xem nhanh gọi onQuickView, không gọi onSelect", async () => {
+    const onSelect = vi.fn();
+    const onQuickView = vi.fn();
+    render(
+      <ProductTile
+        {...product}
+        onSelect={onSelect}
+        onQuickView={onQuickView}
+      />,
+    );
+    const quick = screen.getByRole("button", { name: "Xem nhanh Bugi Wave" });
+    // An cho toi khi hover/focus tren man hinh lon.
+    expect(quick).toHaveClass("sm:opacity-0");
+    await userEvent.click(quick);
+    expect(onQuickView).toHaveBeenCalledOnce();
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+});
+
 describe("ResultRow", () => {
   it("dong dang chon duoc danh dau cho trinh doc man hinh", () => {
     render(<ResultRow {...product} active onSelect={() => {}} />);
