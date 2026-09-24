@@ -64,3 +64,5 @@ prisma/*.db
 /playwright-report/
 /test-results/
 /e2e/screenshots/
+.crawl/
+.omc/
