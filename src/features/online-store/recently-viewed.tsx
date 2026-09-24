@@ -84,7 +84,7 @@ export function RecentlyViewedSection() {
                 <div className="bg-muted relative aspect-square overflow-hidden rounded-xl">
                   <Link
                     href={productHref(item)}
-                    className="block h-full w-full"
+                    className="relative block h-full w-full"
                     tabIndex={-1}
                     aria-hidden="true"
                   >

@@ -57,7 +57,7 @@ export function ProductCard({
         ) : null}
         <Link
           href={productHref(product)}
-          className="block h-full w-full"
+          className="relative block h-full w-full"
           tabIndex={-1}
           aria-hidden="true"
         >

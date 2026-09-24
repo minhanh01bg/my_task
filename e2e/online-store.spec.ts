@@ -331,3 +331,30 @@ test("mobile: header cửa hàng không làm trang tràn ngang", async ({ page }
     expect(overflow, `${path} tràn ngang`).toBeLessThanOrEqual(0);
   }
 });
+
+test("ảnh sản phẩm dạng fill luôn nằm trong khung đã định vị", async ({
+  page,
+}) => {
+  const staticFillParents = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll('img[data-nimg="fill"]')]
+        .filter(
+          (img) => getComputedStyle(img.parentElement!).position === "static",
+        )
+        .map((img) => img.getAttribute("alt")),
+    );
+
+  await page.goto("/shop");
+  await page.waitForLoadState("networkidle");
+  expect(await staticFillParents()).toEqual([]);
+
+  await page.locator('a[href^="/shop/p/"]').first().click();
+  await page.waitForURL(/\/shop\/p\//);
+  await page.waitForLoadState("networkidle");
+  expect(await staticFillParents()).toEqual([]);
+
+  // Quay lại /shop để mục "đã xem gần đây" hiện ảnh vừa xem.
+  await page.goto("/shop");
+  await page.waitForLoadState("networkidle");
+  expect(await staticFillParents()).toEqual([]);
+});
