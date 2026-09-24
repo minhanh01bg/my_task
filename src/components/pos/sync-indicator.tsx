@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { CloudArrowUp } from "@phosphor-icons/react";
 
 import { flushQueue } from "@/lib/sync/flush";
-import { countQueuedOrders } from "@/lib/sync/queue";
+import { QUEUE_CHANGED_EVENT, countQueuedOrders } from "@/lib/sync/queue";
 
 const POLL_INTERVAL_MS = 15_000;
 
@@ -29,12 +29,16 @@ export function SyncIndicator() {
     const initial = setTimeout(() => void refresh(), 0);
     const timer = setInterval(() => void flush(), POLL_INTERVAL_MS);
     const handleOnline = () => void flush();
+    // Ban luc mat mang: hang doi doi ngay ca khi khong the flush.
+    const handleQueueChanged = () => void refresh();
     window.addEventListener("online", handleOnline);
+    window.addEventListener(QUEUE_CHANGED_EVENT, handleQueueChanged);
 
     return () => {
       clearTimeout(initial);
       clearInterval(timer);
       window.removeEventListener("online", handleOnline);
+      window.removeEventListener(QUEUE_CHANGED_EVENT, handleQueueChanged);
     };
   }, [flush, refresh]);
 
