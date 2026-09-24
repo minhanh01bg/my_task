@@ -41,6 +41,7 @@ import {
   saveCatalog,
 } from "@/lib/sync/catalog-cache";
 import { submitOrder } from "@/lib/sync/submit";
+import { cn } from "@/lib/utils";
 import type { BankAccount } from "@/lib/vietqr/types";
 import { useCartStore } from "@/stores/cart-store";
 import { useHeldOrdersStore } from "@/stores/held-orders-store";
@@ -251,7 +252,13 @@ export function PosScreen({
   }
 
   return (
-    <main className="mx-auto grid min-h-dvh w-full max-w-[1800px] grid-cols-1 gap-4 p-3 sm:p-5 lg:h-dvh lg:grid-cols-[minmax(0,1fr)_430px] lg:gap-5 lg:p-6">
+    <main
+      className={cn(
+        "mx-auto grid min-h-dvh w-full max-w-[1800px] grid-cols-1 gap-4 p-3 sm:p-5 lg:h-dvh lg:grid-cols-[minmax(0,1fr)_430px] lg:gap-5 lg:p-6",
+        // Chua cho thanh tinh tien co dinh ben duoi de khong che dong cuoi.
+        lines.length > 0 && "pb-28 sm:pb-28",
+      )}
+    >
       <section className="flex min-h-0 flex-col gap-4 lg:overflow-y-auto lg:pr-1">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -347,7 +354,10 @@ export function PosScreen({
         </div>
       </section>
 
-      <section className="surface-panel flex min-h-[520px] flex-col gap-3 p-4 lg:min-h-0 lg:overflow-hidden lg:p-5">
+      <section
+        id="pos-cart"
+        className="surface-panel flex min-h-[520px] scroll-mt-4 flex-col gap-3 p-4 lg:min-h-0 lg:overflow-hidden lg:p-5"
+      >
         <div className="flex shrink-0 gap-2">
           <Button
             variant="outline"
@@ -367,6 +377,34 @@ export function PosScreen({
         </div>
         <CartPanel onCheckout={() => setPaymentOpen(true)} />
       </section>
+
+      {lines.length > 0 ? (
+        // Duoi lg gio hang nam duoi danh muc: thu ngan tren tablet doc/dien
+        // thoai van phai thay tong tien va tinh tien ma khong cuon het trang.
+        <div
+          data-testid="pos-mobile-checkout"
+          className="bg-background/95 border-border fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.25)] backdrop-blur-md sm:px-5 lg:hidden"
+        >
+          <a
+            href="#pos-cart"
+            className="focus-visible:ring-ring min-w-0 flex-1 rounded-xl px-1 focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <span className="text-muted-foreground block text-xs font-semibold">
+              {lines.length} dòng hàng · xem giỏ
+            </span>
+            <span className="block truncate text-2xl font-black tabular-nums">
+              {formatVnd(totals.total)}
+            </span>
+          </a>
+          <Button
+            type="button"
+            className="h-14 shrink-0 px-6 text-lg"
+            onClick={() => setPaymentOpen(true)}
+          >
+            Tính tiền
+          </Button>
+        </div>
+      ) : null}
 
       <ServiceLineDialog open={serviceOpen} onOpenChange={setServiceOpen} />
 

@@ -61,4 +61,23 @@ describe("PosScreen — mở lại đơn đang giữ", () => {
     expect(held).toHaveLength(1);
     expect(held[0]?.lines[0]?.name).toBe("Dép lào");
   });
+
+  it("màn hình hẹp có thanh tính tiền cố định mở hộp thanh toán", async () => {
+    useCartStore.setState({ lines: [line("Dép lào", 85_000)] });
+    render(<PosScreen catalog={CATALOG} bankAccount={null} storeName="Tiệm" />);
+
+    const bar = screen.getByTestId("pos-mobile-checkout");
+    expect(bar).toHaveClass("fixed", "bottom-0", "lg:hidden");
+    expect(bar).toHaveTextContent("85.000");
+
+    fireEvent.click(screen.getByRole("button", { name: /tính tiền/i }));
+    expect(await screen.findByTestId("payment-total")).toHaveTextContent(
+      "85.000",
+    );
+  });
+
+  it("giỏ trống thì không hiện thanh tính tiền", () => {
+    render(<PosScreen catalog={CATALOG} bankAccount={null} storeName="Tiệm" />);
+    expect(screen.queryByTestId("pos-mobile-checkout")).not.toBeInTheDocument();
+  });
 });
