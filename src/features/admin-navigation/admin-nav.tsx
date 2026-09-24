@@ -154,10 +154,12 @@ function NavLink({
   item,
   active,
   onNavigate,
+  badge,
 }: {
   item: NavItem;
   active: boolean;
   onNavigate?: () => void;
+  badge?: React.ReactNode;
 }) {
   return (
     <Link
@@ -175,11 +177,17 @@ function NavLink({
         className="size-5 shrink-0"
       />
       {item.label}
+      {badge}
     </Link>
   );
 }
 
-export function AdminNav() {
+export function AdminNav({
+  productsBadge,
+}: {
+  /** Huy hieu (vi du so hang sap het) gan muc "Sản phẩm" — server truyen vao. */
+  productsBadge?: React.ReactNode;
+} = {}) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const currentHref = activeHref(pathname);
@@ -237,7 +245,11 @@ export function AdminNav() {
           <ul className="flex flex-col gap-1.5">
             {NAV.map((item) => (
               <li key={item.href}>
-                <NavLink item={item} active={item.href === currentHref} />
+                <NavLink
+                  item={item}
+                  active={item.href === currentHref}
+                  badge={item.href === "/admin/products" ? productsBadge : null}
+                />
               </li>
             ))}
           </ul>
@@ -315,6 +327,9 @@ export function AdminNav() {
                     item={item}
                     active={item.href === currentHref}
                     onNavigate={() => setMenuOpen(false)}
+                    badge={
+                      item.href === "/admin/products" ? productsBadge : null
+                    }
                   />
                 </li>
               ))}

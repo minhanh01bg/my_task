@@ -144,4 +144,10 @@ describe("AdminNav", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
   });
+
+  it("gan huy hieu ton kho thap vao muc San pham khi server truyen vao", () => {
+    render(<AdminNav productsBadge={<span data-testid="low-stock">3</span>} />);
+    const badge = screen.getByTestId("low-stock");
+    expect(badge.closest("a")).toHaveAttribute("href", "/admin/products");
+  });
 });

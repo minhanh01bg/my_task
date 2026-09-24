@@ -19,6 +19,10 @@ This file provides guidance to agents when working with code in this repository.
 - Public/protected routing is centralized in `src/lib/auth/public-paths.ts` plus `src/proxy.ts` (Next.js proxy convention); customer APIs are intentionally exempt from admin-session middleware.
 - Security-sensitive JSON endpoints should use `readJsonBody()` for streamed byte limits, then Zod `safeParse`; return discriminated `{ ok: true/false }` results from server actions.
 - Use `logger` from `src/lib/logger.ts`, not direct console calls: it redacts secrets/PII and normalizes paths. Unexpected API errors expose a correlation ID, not raw error details.
+- Public storefront data is tag-cached (`src/server/cache/public-cache.ts`, tags in `tags.ts`: `catalog`, `settings`, `promotions`, `vouchers`, `product:<id>`). Every write path must call `revalidatePublic(...)` AFTER its transaction commits; `/shop`, product, category and policy pages are static/ISR and must never read cookies or headers.
+- Product and category slugs are generated once (in `saveProduct()` / the category action) and never change on rename; old `/shop/products/[id]` URLs 308 to `/shop/p/[slug]`.
+- Vouchers are validated only on the server (`src/lib/vouchers/validate-voucher.ts` engine + `src/server/vouchers`); `usedCount` is incremented atomically inside the order transaction and restored on cancel. `Order.discount` includes `voucherDiscount`; `total = subtotal - discount + shippingFee`.
+- Order codes come from the atomic `order.sequence` counter in `Setting` (`src/server/orders/order-sequence.ts`), never from `count()`.
 - Production env validation fails closed for Redis rate limiting, HMAC secret, proxy mode, canonical origin, and password hash; build-only dummy values in `src/config/env.ts` must never become runtime defaults.
 
 ## Local style and workflow
