@@ -302,6 +302,11 @@ export function PosScreen({
 
         <HeldOrdersBar
           onResume={(order) => {
+            // Doi cho: gio dang ban duoc giu lai thay vi bi ghi de mat.
+            const current = useCartStore.getState();
+            if (current.lines.length > 0) {
+              hold(current.lines, current.orderDiscount);
+            }
             useCartStore.setState({
               lines: order.lines,
               orderDiscount: order.orderDiscount,

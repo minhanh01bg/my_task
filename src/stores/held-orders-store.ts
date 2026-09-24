@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 
 import { calculateCart } from "@/lib/pricing/calculate";
 import type { CartLine } from "@/lib/pricing/types";
@@ -22,42 +23,52 @@ interface HeldOrdersState {
  * Giu don de tinh nhanh cho khach khac roi quay lai — VD khach bo quen vi,
  * hoac dang tinh do thi co khach sua xe can tra tien gap.
  *
- * Don giu chi nam trong may, chua len server.
+ * Don giu chi nam trong may, chua len server — luu localStorage nhu gio hang
+ * hien tai de tai lai trang hay trinh duyet tu khoi dong lai khong mat don.
  */
-export const useHeldOrdersStore = create<HeldOrdersState>((set, get) => ({
-  held: [],
+export const useHeldOrdersStore = create<HeldOrdersState>()(
+  persist(
+    (set, get) => ({
+      held: [],
 
-  hold: (lines, orderDiscount) => {
-    if (lines.length === 0) return;
+      hold: (lines, orderDiscount) => {
+        if (lines.length === 0) return;
 
-    const totals = calculateCart(lines, orderDiscount);
+        const totals = calculateCart(lines, orderDiscount);
 
-    set((state) => ({
-      held: [
-        ...state.held,
-        {
-          id: crypto.randomUUID(),
-          lines,
-          orderDiscount,
-          heldAt: Date.now(),
-          total: totals.total,
-        },
-      ],
-    }));
-  },
+        set((state) => ({
+          held: [
+            ...state.held,
+            {
+              id: crypto.randomUUID(),
+              lines,
+              orderDiscount,
+              heldAt: Date.now(),
+              total: totals.total,
+            },
+          ],
+        }));
+      },
 
-  resume: (id) => {
-    const found = get().held.find((order) => order.id === id);
-    if (!found) return null;
+      resume: (id) => {
+        const found = get().held.find((order) => order.id === id);
+        if (!found) return null;
 
-    set((state) => ({
-      held: state.held.filter((order) => order.id !== id),
-    }));
-    return found;
-  },
+        set((state) => ({
+          held: state.held.filter((order) => order.id !== id),
+        }));
+        return found;
+      },
 
-  discard: (id) =>
-    set((state) => ({
-      held: state.held.filter((order) => order.id !== id),
-    })),
-}));
+      discard: (id) =>
+        set((state) => ({
+          held: state.held.filter((order) => order.id !== id),
+        })),
+    }),
+    {
+      name: "an-phat-pos-held-orders",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ held: state.held }),
+    },
+  ),
+);
