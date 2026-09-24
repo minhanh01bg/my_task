@@ -37,6 +37,10 @@ async function auditFor(entityId: string) {
 }
 
 beforeEach(async () => {
+  await prisma.order.deleteMany({
+    // Cac file chay noi tiep tren cung DB: lich su voucher la mot phan fixture.
+    where: { voucherCode: { not: null } },
+  });
   await prisma.voucher.deleteMany();
   await prisma.adminAuditEvent.deleteMany({ where: { entityType: "voucher" } });
   vi.restoreAllMocks();
@@ -79,6 +83,53 @@ describe("voucherInputSchema", () => {
 });
 
 describe("admin-vouchers", () => {
+  async function history(code: string, status = "pending") {
+    return prisma.order.create({
+      data: {
+        code: `voucher-history-${code}`,
+        clientId: `voucher-history-${code}`,
+        voucherCode: code,
+        status,
+      },
+    });
+  }
+
+  it.each(["pending", "cancelled"])(
+    "giữ mã và voucher có đơn lịch sử %s kể cả usedCount bằng 0",
+    async (status) => {
+      const created = await createVoucher(input(), {});
+      if (!created.ok) throw new Error("create failed");
+      const id = created.voucherId!;
+      await history("GIAM10", status);
+      expect((await updateVoucher(id, input({ code: "GIAM20" }), {})).ok).toBe(
+        false,
+      );
+      expect((await deleteVoucher(id, {})).ok).toBe(false);
+      expect(await prisma.voucher.findUnique({ where: { id } })).toMatchObject({
+        code: "GIAM10",
+        usedCount: 0,
+      });
+      expect((await updateVoucher(id, input({ value: 15 }), {})).ok).toBe(true);
+      expect((await toggleVoucher(id, false, {})).ok).toBe(true);
+    },
+  );
+
+  it("không tái dùng mã lịch sử đã mất voucher khi tạo hoặc đổi mã", async () => {
+    await history("OLD", "cancelled");
+    expect((await createVoucher(input({ code: "OLD" }), {})).ok).toBe(false);
+    const created = await createVoucher(input(), {});
+    if (!created.ok) throw new Error("create failed");
+    expect(
+      (await updateVoucher(created.voucherId!, input({ code: "OLD" }), {})).ok,
+    ).toBe(false);
+    expect(
+      await prisma.voucher.findUnique({ where: { code: "OLD" } }),
+    ).toBeNull();
+    expect(
+      (await updateVoucher(created.voucherId!, input({ code: "NEW" }), {})).ok,
+    ).toBe(true);
+  });
+
   it("tạo voucher kèm audit event và tìm được theo mã", async () => {
     const result = await createVoucher(input(), {});
     expect(result.ok).toBe(true);

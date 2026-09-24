@@ -18,6 +18,28 @@ const NOT_FOUND: VoucherActionResult = {
   error: "Không tìm thấy mã giảm giá",
 };
 
+const HISTORY_LOCKED: VoucherActionResult = {
+  ok: false,
+  error:
+    "Mã giảm giá đã có trong lịch sử đơn hàng, không thể đổi mã, xoá hoặc dùng lại. Bạn có thể tạm dừng mã.",
+};
+
+async function hasOrderHistory(tx: Prisma.TransactionClient, codes: string[]) {
+  return (
+    (await tx.order.findFirst({
+      where: { voucherCode: { in: codes } },
+      select: { id: true },
+    })) !== null
+  );
+}
+
+/** Giữ khoá ghi SQLite trước khi đọc lịch sử, đồng bộ với transaction tạo đơn. */
+async function lockVoucherWrites(tx: Prisma.TransactionClient, code: string) {
+  await tx.$executeRaw`
+    UPDATE "Voucher" SET "usedCount" = "usedCount" WHERE "code" = ${code}
+  `;
+}
+
 function isKnownError(error: unknown, code: string): boolean {
   return (
     error instanceof Prisma.PrismaClientKnownRequestError && error.code === code
@@ -55,7 +77,12 @@ export async function createVoucher(
   actor: VoucherActor,
 ): Promise<VoucherActionResult> {
   try {
-    const created = await prisma.voucher.create({ data: input });
+    const created = await prisma.$transaction(async (tx) => {
+      await lockVoucherWrites(tx, input.code);
+      if (await hasOrderHistory(tx, [input.code])) return null;
+      return tx.voucher.create({ data: input });
+    });
+    if (!created) return HISTORY_LOCKED;
     await logAdminAction({
       identityId: actor.identityId,
       action: "voucher.create",
@@ -82,35 +109,32 @@ export async function updateVoucher(
   input: VoucherInput,
   actor: VoucherActor,
 ): Promise<VoucherActionResult> {
-  const existing = await prisma.voucher.findUnique({
-    where: { id },
-    select: { usedCount: true },
-  });
-  if (!existing) return NOT_FOUND;
-  if (input.maxUses !== null && input.maxUses < existing.usedCount) {
-    return {
-      ok: false,
-      error: `Số lượt tối đa không được nhỏ hơn số lượt đã dùng (${existing.usedCount})`,
-    };
-  }
-
   try {
-    // Dieu kien usedCount giu bat bien maxUses >= usedCount khi co don dang ghi.
-    const result = await prisma.voucher.updateMany({
-      where: {
-        id,
-        ...(input.maxUses !== null
-          ? { usedCount: { lte: input.maxUses } }
-          : {}),
+    const result = await prisma.$transaction(
+      async (tx): Promise<VoucherActionResult> => {
+        await lockVoucherWrites(tx, input.code);
+        const existing = await tx.voucher.findUnique({
+          where: { id },
+          select: { code: true, usedCount: true },
+        });
+        if (!existing) return NOT_FOUND;
+        if (
+          existing.code !== input.code &&
+          (await hasOrderHistory(tx, [existing.code, input.code]))
+        ) {
+          return HISTORY_LOCKED;
+        }
+        if (input.maxUses !== null && input.maxUses < existing.usedCount) {
+          return {
+            ok: false,
+            error: `Số lượt tối đa không được nhỏ hơn số lượt đã dùng (${existing.usedCount})`,
+          };
+        }
+        await tx.voucher.update({ where: { id }, data: input });
+        return { ok: true, message: "Đã cập nhật mã giảm giá" };
       },
-      data: input,
-    });
-    if (result.count === 0) {
-      return {
-        ok: false,
-        error: "Số lượt tối đa không được nhỏ hơn số lượt đã dùng",
-      };
-    }
+    );
+    if (!result.ok) return result;
   } catch (error: unknown) {
     if (isKnownError(error, "P2002")) {
       return { ok: false, error: "Mã giảm giá đã tồn tại" };
@@ -154,18 +178,31 @@ export async function toggleVoucher(
   };
 }
 
-/** Đơn cũ chỉ lưu chuỗi `voucherCode` nên xoá voucher không ảnh hưởng đơn. */
+/** Giữ voucher có đơn lịch sử để huỷ đơn luôn hoàn lượt cho đúng mã. */
 export async function deleteVoucher(
   id: string,
   actor: VoucherActor,
 ): Promise<VoucherActionResult> {
-  const deleted = await prisma.voucher
-    .delete({ where: { id }, select: { code: true } })
-    .catch((error: unknown) => {
-      if (isKnownError(error, "P2025")) return null;
-      throw error;
+  const result = await prisma.$transaction(async (tx) => {
+    // Cả khi mã không tồn tại, UPDATE vẫn lấy khoá ghi SQLite.
+    await tx.$executeRaw`
+      UPDATE "Voucher" SET "usedCount" = "usedCount" WHERE "id" = ${id}
+    `;
+    const existing = await tx.voucher.findUnique({
+      where: { id },
+      select: { code: true },
     });
-  if (!deleted) return NOT_FOUND;
+    if (!existing) return { error: NOT_FOUND };
+    if (await hasOrderHistory(tx, [existing.code]))
+      return { error: HISTORY_LOCKED };
+    const deleted = await tx.voucher.delete({
+      where: { id },
+      select: { code: true },
+    });
+    return { deleted };
+  });
+  if (result.error) return result.error;
+  const deleted = result.deleted;
 
   await logAdminAction({
     identityId: actor.identityId,
