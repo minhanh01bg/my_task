@@ -65,4 +65,40 @@ describe("usePosShortcuts", () => {
 
     expect(handlers.onCheckout).not.toHaveBeenCalled();
   });
+
+  it("popup dang dong (con trong DOM de chay animation, khong co data-open) khong chan phim tat", () => {
+    const handlers = makeHandlers();
+    render(
+      <>
+        <Harness handlers={handlers} />
+        <div data-slot="dialog-content" />
+        <div data-slot="sheet-content" data-ending-style="" />
+      </>,
+    );
+
+    fireEvent.keyDown(window, { key: "F4" });
+
+    expect(handlers.onCheckout).toHaveBeenCalledTimes(1);
+  });
+
+  it("bo qua khi sheet hoac popover dang mo (data-open)", () => {
+    const handlers = makeHandlers();
+    const { rerender } = render(
+      <>
+        <Harness handlers={handlers} />
+        <div data-slot="sheet-content" data-open="" />
+      </>,
+    );
+    fireEvent.keyDown(window, { key: "F8" });
+    expect(handlers.onHold).not.toHaveBeenCalled();
+
+    rerender(
+      <>
+        <Harness handlers={handlers} />
+        <div data-slot="popover-content" data-open="" />
+      </>,
+    );
+    fireEvent.keyDown(window, { key: "F8" });
+    expect(handlers.onHold).not.toHaveBeenCalled();
+  });
 });

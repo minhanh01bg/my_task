@@ -8,9 +8,22 @@ interface ShortcutHandlers {
   onHold: () => void;
 }
 
-/** Popup cua Base UI Dialog/Sheet co data-open; dialog tu viet chi co role. */
-const OPEN_DIALOG_SELECTOR =
-  '[role="dialog"][data-open], [role="alertdialog"][data-open], [data-slot="dialog-content"], [data-slot="sheet-content"]';
+/**
+ * Chi tinh popup dang mo that su: Base UI giu popup trong DOM them mot nhip de
+ * chay animation dong, luc do da mat data-open nen phim tat hoat dong lai ngay.
+ * Popover/menu/select cung chan vi chung giu focus ban phim — F4/F8 luc do se
+ * doi gio hang phia sau popup ma thu ngan khong thay.
+ * Khong dung `[data-slot$="-content"]` tran: collapsible/tooltip cung co data-open.
+ */
+const OPEN_DIALOG_SELECTOR = [
+  '[role="dialog"][data-open]',
+  '[role="alertdialog"][data-open]',
+  '[data-slot="dialog-content"][data-open]',
+  '[data-slot="sheet-content"][data-open]',
+  '[data-slot="popover-content"][data-open]',
+  '[data-slot="dropdown-menu-content"][data-open]',
+  '[data-slot="select-content"][data-open]',
+].join(", ");
 
 function isDialogOpen(): boolean {
   return document.querySelector(OPEN_DIALOG_SELECTOR) !== null;

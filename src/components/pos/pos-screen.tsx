@@ -30,6 +30,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { reportClientError } from "@/lib/client-log";
 import { formatVnd } from "@/lib/money";
 import { calculateCart } from "@/lib/pricing/calculate";
 import {
@@ -92,7 +93,9 @@ export function PosScreen({
 
   // Luu danh muc vao IndexedDB de lan sau mat mang van ban duoc.
   useEffect(() => {
-    void saveCatalog(initialCatalog);
+    saveCatalog(initialCatalog).catch((error: unknown) => {
+      reportClientError(error, "pos.catalog.save");
+    });
   }, [initialCatalog]);
 
   // Mat mang thi Server Component tra ve danh muc rong — dung ban cache.
@@ -100,11 +103,15 @@ export function PosScreen({
     if (initialCatalog.products.length > 0) return;
 
     let cancelled = false;
-    void loadCatalog().then((cached) => {
-      if (cancelled || !cached) return;
-      setCatalog(cached);
-      setStale(isCatalogStale(cached));
-    });
+    loadCatalog()
+      .then((cached) => {
+        if (cancelled || !cached) return;
+        setCatalog(cached);
+        setStale(isCatalogStale(cached));
+      })
+      .catch((error: unknown) => {
+        reportClientError(error, "pos.catalog.load");
+      });
     return () => {
       cancelled = true;
     };
@@ -119,6 +126,9 @@ export function PosScreen({
       setCatalog(fresh);
       setStale(false);
       await saveCatalog(fresh);
+    } catch (error) {
+      // Mat mang hoac IndexedDB loi: giu danh muc dang co, chi bao ve Sentry.
+      reportClientError(error, "pos.catalog.refresh");
     } finally {
       setRefreshingCatalog(false);
     }

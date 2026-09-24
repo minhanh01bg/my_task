@@ -40,14 +40,16 @@ export function ProductSearch({ products, onSelect }: ProductSearchProps) {
   );
   const activeResult = results[activeIndex];
 
-  // Giu option dang chon trong tam nhin khi di chuyen bang mui ten.
+  // Giu option dang chon trong tam nhin khi di chuyen bang mui ten. Chi theo
+  // activeIndex: danh sach doi (go phim, lam moi danh muc) khong duoc giat cuon;
+  // option dau tien luon o dinh danh sach nen bo qua.
   useEffect(() => {
-    if (!activeResult) return;
+    if (activeIndex === 0) return;
     const option = listRef.current?.querySelector<HTMLElement>(
       `#${optionId(activeIndex)}`,
     );
     option?.scrollIntoView?.({ block: "nearest" });
-  }, [activeIndex, activeResult]);
+  }, [activeIndex]);
 
   function reset() {
     setQuery("");
