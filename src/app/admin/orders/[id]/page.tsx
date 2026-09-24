@@ -89,6 +89,8 @@ export default async function OrderDetailPage({
     payments: order.payments.map((payment) => ({
       method: payment.method,
       amount: payment.amount,
+      receivedAt: payment.receivedAt ? payment.receivedAt.toISOString() : null,
+      isCod: order.channel === "online" && order.paymentMethod === "cod",
     })),
     amountDue:
       order.status === "cancelled" ? 0 : Math.max(0, order.total - received),
@@ -219,16 +221,33 @@ export default async function OrderDetailPage({
           </CardHeader>
           <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
             <ul className="space-y-3">
-              {order.payments.map((payment) => (
-                <li key={payment.id} className="flex justify-between gap-2">
-                  <span className="break-words">
-                    {PAYMENT_LABEL[payment.method] ?? payment.method}
-                  </span>
-                  <strong className="shrink-0 tabular-nums">
-                    {formatVnd(payment.amount)}
-                  </strong>
-                </li>
-              ))}
+              {order.payments.map((payment) => {
+                const isCodPending =
+                  order.channel === "online" &&
+                  order.paymentMethod === "cod" &&
+                  !payment.receivedAt;
+                const label = isCodPending
+                  ? "Thu hộ (COD)"
+                  : (PAYMENT_LABEL[payment.method] ?? payment.method);
+                return (
+                  <li
+                    key={payment.id}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <span className="break-words">
+                      {label}
+                      {!payment.receivedAt ? (
+                        <span className="text-muted-foreground ml-1.5 text-xs font-normal">
+                          (Chưa thu)
+                        </span>
+                      ) : null}
+                    </span>
+                    <strong className="shrink-0 tabular-nums">
+                      {formatVnd(payment.amount)}
+                    </strong>
+                  </li>
+                );
+              })}
             </ul>
           </CardContent>
         </Card>

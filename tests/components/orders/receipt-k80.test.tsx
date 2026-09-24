@@ -94,6 +94,32 @@ describe("ReceiptK80 component", () => {
     );
   });
 
+  it("đơn online COD chưa thu tiền in nhãn Thu hộ (COD) thay vì Tiền khách đưa", () => {
+    render(
+      <ReceiptK80
+        storeName="Tạp Hóa Việt"
+        order={{
+          ...sampleOrder,
+          payments: [
+            {
+              method: "cash",
+              amount: 122_000,
+              isCod: true,
+              receivedAt: null,
+            },
+          ],
+          amountDue: 122_000,
+        }}
+      />,
+    );
+
+    expect(screen.queryByText(/tiền khách đưa/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Thu hộ (COD):")).toBeInTheDocument();
+    expect(screen.getByText("CÒN PHẢI THU:").parentElement).toHaveTextContent(
+      "122.000",
+    );
+  });
+
   it("không in VietQR khi đơn tiền mặt đã trả đủ", () => {
     render(
       <ReceiptK80
