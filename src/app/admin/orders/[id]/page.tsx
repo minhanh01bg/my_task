@@ -2,8 +2,12 @@ import Link from "next/link";
 import { ArrowLeft, ReceiptText } from "lucide-react";
 import { notFound } from "next/navigation";
 
-import { PageHeader } from "@/components/kit";
-import { Badge } from "@/components/ui/badge";
+import {
+  FulfillmentStatusBadge,
+  OrderStatusBadge,
+  PageHeader,
+} from "@/components/kit";
+import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PrintReceiptButton } from "@/features/orders/print-receipt-button";
 import type { ReceiptOrder } from "@/features/orders/receipt-k80";
@@ -128,15 +132,7 @@ export default async function OrderDetailPage({
             order={receiptOrder}
             bankAccount={bankAccount}
           />
-          <Badge variant={order.status === "cancelled" ? "outline" : "default"}>
-            {order.status === "paid"
-              ? "Đã thanh toán"
-              : order.status === "debt"
-                ? "Ghi nợ"
-                : order.status === "cancelled"
-                  ? "Đã hủy"
-                  : order.status}
-          </Badge>
+          <OrderStatusBadge status={order.status} />
         </div>
       </div>
 
@@ -332,9 +328,11 @@ export default async function OrderDetailPage({
                   Trạng thái xử lý
                 </dt>
                 <dd>
-                  {onlineStatus
-                    ? ONLINE_ORDER_STATUS_LABELS[onlineStatus]
-                    : "—"}
+                  {onlineStatus ? (
+                    <FulfillmentStatusBadge status={onlineStatus} />
+                  ) : (
+                    "—"
+                  )}
                 </dd>
               </div>
             </dl>
@@ -354,27 +352,41 @@ export default async function OrderDetailPage({
                 </form>
               ) : null}
               {onlineStatus
-                ? getNextOnlineOrderStatuses(onlineStatus).map((next) => (
-                    <form
-                      key={next}
-                      className="w-full sm:w-auto"
-                      action={transitionOnlineOrderAction.bind(
-                        null,
-                        order.id,
-                        next,
-                      )}
-                    >
-                      <Button
-                        type="submit"
-                        className="min-h-11 w-full sm:w-auto"
-                        variant={
-                          next === "cancelled" ? "destructive" : "default"
-                        }
+                ? getNextOnlineOrderStatuses(onlineStatus).map((next) =>
+                    next === "cancelled" ? (
+                      <ConfirmAction
+                        key={next}
+                        action={transitionOnlineOrderAction.bind(
+                          null,
+                          order.id,
+                          next,
+                        )}
+                        triggerLabel="Hủy đơn hàng"
+                        title={`Hủy đơn hàng ${order.code}?`}
+                        description="Tồn kho và lượt dùng mã giảm giá của đơn hàng sẽ được hoàn lại. Thao tác này không thể hoàn tác."
+                        confirmLabel="Xác nhận hủy đơn"
+                        triggerClassName="text-destructive font-semibold"
+                      />
+                    ) : (
+                      <form
+                        key={next}
+                        className="w-full sm:w-auto"
+                        action={transitionOnlineOrderAction.bind(
+                          null,
+                          order.id,
+                          next,
+                        )}
                       >
-                        {ONLINE_ORDER_STATUS_LABELS[next]}
-                      </Button>
-                    </form>
-                  ))
+                        <Button
+                          type="submit"
+                          className="min-h-11 w-full sm:w-auto"
+                          variant="default"
+                        >
+                          {ONLINE_ORDER_STATUS_LABELS[next]}
+                        </Button>
+                      </form>
+                    ),
+                  )
                 : null}
             </div>
           </CardContent>

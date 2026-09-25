@@ -1,14 +1,15 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { ErrorState } from "@/components/kit";
 
 export default function AccountError({ reset }: { reset: () => void }) {
   return (
-    <main className="p-16 text-center">
-      <h1 className="text-2xl font-bold">Không thể tải tài khoản</h1>
-      <Button onClick={reset} className="mt-5">
-        Thử lại
-      </Button>
+    <main className="p-16">
+      <ErrorState
+        title="Không thể tải tài khoản"
+        description="Đã xảy ra sự cố khi tải thông tin tài khoản. Vui lòng kiểm tra kết nối và thử lại."
+        onRetry={reset}
+      />
     </main>
   );
 }

@@ -1,18 +1,10 @@
 import Link from "next/link";
 
-import { Money } from "@/components/kit/money";
-import { Badge } from "@/components/ui/badge";
 import {
-  ONLINE_ORDER_STATUS_LABELS,
-  type OnlineOrderStatus,
-} from "@/server/orders/online-order-status";
-
-const ORDER_STATUS_LABELS: Record<string, string> = {
-  paid: "Đã thanh toán",
-  pending: "Chờ thanh toán",
-  debt: "Ghi nợ",
-  cancelled: "Đã hủy",
-};
+  FulfillmentStatusBadge,
+  Money,
+  OrderStatusBadge,
+} from "@/components/kit";
 
 export function CustomerOrderCard({
   order,
@@ -27,14 +19,6 @@ export function CustomerOrderCard({
   };
   href: string;
 }) {
-  const fulfillmentLabel = order.fulfillmentStatus
-    ? (ONLINE_ORDER_STATUS_LABELS[
-        order.fulfillmentStatus as OnlineOrderStatus
-      ] ?? order.fulfillmentStatus)
-    : null;
-
-  const paymentLabel = ORDER_STATUS_LABELS[order.status] ?? order.status;
-
   return (
     <li>
       <Link
@@ -51,17 +35,8 @@ export function CustomerOrderCard({
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          {fulfillmentLabel ? (
-            <Badge variant="secondary" className="font-medium">
-              {fulfillmentLabel}
-            </Badge>
-          ) : null}
-          <Badge
-            variant={order.status === "cancelled" ? "destructive" : "outline"}
-            className="font-medium"
-          >
-            {paymentLabel}
-          </Badge>
+          <FulfillmentStatusBadge status={order.fulfillmentStatus} />
+          <OrderStatusBadge status={order.status} />
           <span className="text-muted-foreground ml-auto text-xs">
             {order.createdAt.toLocaleDateString("vi-VN", {
               timeZone: "Asia/Ho_Chi_Minh",

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { requireAdminSession } from "@/server/auth/require-admin-session";
-import { prisma } from "@/server/db/prisma";
+import { listCategoriesWithProductCount } from "@/server/categories/get-categories";
 
 import {
   deleteCategoryAction,
@@ -21,10 +21,7 @@ export const dynamic = "force-dynamic";
 export default async function CategoriesPage() {
   await requireAdminSession({ redirectToLogin: true });
 
-  const categories = await prisma.category.findMany({
-    orderBy: { sortOrder: "asc" },
-    include: { _count: { select: { products: true } } },
-  });
+  const categories = await listCategoriesWithProductCount();
 
   return (
     <div className="max-w-3xl space-y-6">

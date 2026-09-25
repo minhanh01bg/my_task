@@ -2,7 +2,15 @@ import Link from "next/link";
 import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
 import { ReceiptText, SearchX } from "lucide-react";
 
-import { EmptyState, Money, PageHeader, Pagination } from "@/components/kit";
+import {
+  ChannelBadge,
+  EmptyState,
+  FulfillmentStatusBadge,
+  Money,
+  OrderStatusBadge,
+  PageHeader,
+  Pagination,
+} from "@/components/kit";
 import { DateField } from "@/components/kit/date-field";
 import { DropdownField } from "@/components/kit/dropdown-field";
 import { ConfirmAction } from "@/components/shared/confirm-action";
@@ -23,27 +31,10 @@ import {
 } from "@/server/admin/list-orders";
 import { parsePageParam } from "@/server/admin/pagination";
 import { requireAdminSession } from "@/server/auth/require-admin-session";
-import {
-  ONLINE_ORDER_STATUS_LABELS,
-  type OnlineOrderStatus,
-} from "@/server/orders/online-order-status";
 
 import { cancelOrderAction } from "./actions";
 
 export const dynamic = "force-dynamic";
-
-const STATUS_LABEL: Record<string, string> = {
-  paid: "Đã thanh toán",
-  pending: "Chờ thanh toán",
-  debt: "Ghi nợ",
-  cancelled: "Đã huỷ",
-};
-const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline"> = {
-  paid: "default",
-  pending: "secondary",
-  debt: "outline",
-  cancelled: "outline",
-};
 
 function itemSummary(order: AdminOrderListItem): string {
   return order.items
@@ -72,19 +63,9 @@ function OrderCodeLink({ order }: { order: AdminOrderListItem }) {
 function OrderBadges({ order }: { order: AdminOrderListItem }) {
   return (
     <>
-      <Badge variant={STATUS_VARIANT[order.status] ?? "outline"}>
-        {STATUS_LABEL[order.status] ?? order.status}
-      </Badge>
-      <Badge variant="outline">
-        {order.channel === "online" ? "Online" : "Tại quầy"}
-      </Badge>
-      {order.fulfillmentStatus ? (
-        <Badge variant="secondary">
-          {ONLINE_ORDER_STATUS_LABELS[
-            order.fulfillmentStatus as OnlineOrderStatus
-          ] ?? order.fulfillmentStatus}
-        </Badge>
-      ) : null}
+      <OrderStatusBadge status={order.status} />
+      <ChannelBadge channel={order.channel} />
+      <FulfillmentStatusBadge status={order.fulfillmentStatus} />
       {order.hasStockWarning ? (
         <Badge variant="destructive">Tồn âm</Badge>
       ) : null}

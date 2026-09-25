@@ -6,8 +6,20 @@ export { DateField } from "./date-field";
 export { DropdownField } from "./dropdown-field";
 export type { DropdownOption } from "./dropdown-field";
 export { EmptyState } from "./empty-state";
+export { ErrorState } from "./error-state";
+export type { ErrorStateProps } from "./error-state";
 export { ImagePicker } from "./image-picker";
 export { Money } from "./money";
+export {
+  ChannelBadge,
+  FulfillmentStatusBadge,
+  OrderStatusBadge,
+} from "./order-status-badge";
+export type {
+  ChannelBadgeProps,
+  FulfillmentStatusBadgeProps,
+  OrderStatusBadgeProps,
+} from "./order-status-badge";
 export { PageHeader } from "./page-header";
 export { Pagination } from "./pagination";
 export type { PaginationProps } from "./pagination";

@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/lib/money";
 import { buildVietQrPayload } from "@/lib/vietqr/build";
 import type { BankAccount } from "@/lib/vietqr/types";
@@ -237,14 +238,14 @@ export function ReceiptK80({
     <div className="flex flex-col items-center">
       {showPrintButton && (
         <div className="mb-4 flex gap-2 print:hidden">
-          <button
+          <Button
             type="button"
             onClick={handlePrint}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold shadow transition-colors"
+            className="gap-2 font-bold shadow-xs"
           >
             <Printer aria-hidden="true" className="size-4" />
             <span>In hóa đơn (K80)</span>
-          </button>
+          </Button>
         </div>
       )}
 
