@@ -1,23 +1,8 @@
-import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
-import { prisma } from "@/server/db/prisma";
 import { resolveCustomerSessionToken } from "@/server/customer-auth/session";
+import { listCustomerNotifications } from "@/server/notifications/customer-notifications";
 import { customerNotificationsQuerySchema } from "@/types/customer-notification";
-
-/** Dung cac truong cua `CustomerNotificationDTO`. */
-const customerNotificationListSelect = {
-  id: true,
-  accountId: true,
-  eventKey: true,
-  kind: true,
-  title: true,
-  body: true,
-  orderId: true,
-  href: true,
-  createdAt: true,
-  readAt: true,
-} satisfies Prisma.CustomerNotificationSelect;
 
 export async function GET(request: Request) {
   const cookie = request.headers
@@ -47,39 +32,14 @@ export async function GET(request: Request) {
     ? parsedQuery.data
     : { limit: 20, cursor: undefined };
 
-  const [unreadCount, rawItems] = await Promise.all([
-    prisma.customerNotification.count({
-      where: {
-        accountId: session.accountId,
-        readAt: null,
-      },
-    }),
-    prisma.customerNotification.findMany({
-      where: { accountId: session.accountId },
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      take: limit + 1,
-      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-      select: customerNotificationListSelect,
-    }),
-  ]);
+  const result = await listCustomerNotifications({
+    accountId: session.accountId,
+    limit,
+    cursor,
+  });
 
-  let nextCursor: string | null = null;
-  const items = [...rawItems];
-
-  if (items.length > limit) {
-    items.pop();
-    nextCursor = items[items.length - 1]?.id ?? null;
-  }
-
-  return NextResponse.json(
-    {
-      items,
-      unreadCount,
-      nextCursor,
-    },
-    {
-      status: 200,
-      headers: { "Cache-Control": "private, no-store" },
-    },
-  );
+  return NextResponse.json(result, {
+    status: 200,
+    headers: { "Cache-Control": "private, no-store" },
+  });
 }

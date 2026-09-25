@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PrintReceiptButton } from "@/features/orders/print-receipt-button";
 import type { ReceiptOrder } from "@/features/orders/receipt-k80";
 import { formatVnd } from "@/lib/money";
-import { prisma } from "@/server/db/prisma";
+import { getOrderDetail } from "@/server/orders/get-order";
 import {
   getNextOnlineOrderStatuses,
   isOnlineOrderStatus,
@@ -46,14 +46,7 @@ export default async function OrderDetailPage({
 
   const { id } = await params;
   const [order, storeProfile, bankAccount] = await Promise.all([
-    prisma.order.findUnique({
-      where: { id },
-      include: {
-        customer: true,
-        items: true,
-        payments: { orderBy: { createdAt: "asc" } },
-      },
-    }),
+    getOrderDetail(id),
     getPublicStoreProfile(),
     getStoreBankAccount(),
   ]);

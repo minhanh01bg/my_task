@@ -9,13 +9,13 @@ import {
 import { SearchX, Users } from "lucide-react";
 
 import {
+  AccountStatusBadge,
   DataTableShell,
   EmptyState,
   PageHeader,
   Pagination,
 } from "@/components/kit";
 import { ConfirmAction } from "@/components/shared/confirm-action";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -45,18 +45,6 @@ function CustomerName({ name }: { name: string }) {
       </span>
       <span className="text-foreground truncate">{name}</span>
     </div>
-  );
-}
-
-function AccountStatus({ disabled }: { disabled: boolean }) {
-  return disabled ? (
-    <Badge variant="destructive" className="font-bold">
-      Đã khóa
-    </Badge>
-  ) : (
-    <Badge className="bg-success/12 text-success font-bold">
-      Đang hoạt động
-    </Badge>
   );
 }
 
@@ -187,7 +175,7 @@ export default async function CustomersPage({
             <li key={account.id} className="space-y-3 px-4 py-4">
               <div className="flex items-start justify-between gap-3">
                 <CustomerName name={account.displayName} />
-                <AccountStatus disabled={Boolean(account.disabledAt)} />
+                <AccountStatusBadge disabled={Boolean(account.disabledAt)} />
               </div>
               <dl className="text-muted-foreground grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                 <dt className="sr-only">Số điện thoại</dt>
@@ -236,7 +224,9 @@ export default async function CustomersPage({
                     {new Date(account.createdAt).toLocaleDateString("vi-VN")}
                   </TableCell>
                   <TableCell>
-                    <AccountStatus disabled={Boolean(account.disabledAt)} />
+                    <AccountStatusBadge
+                      disabled={Boolean(account.disabledAt)}
+                    />
                   </TableCell>
                   <TableCell className="pr-6 text-right">
                     <ToggleAccount account={account} />

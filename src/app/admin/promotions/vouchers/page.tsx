@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { TicketPercent } from "lucide-react";
 
-import { EmptyState, PageHeader, Pagination } from "@/components/kit";
+import {
+  EmptyState,
+  PageHeader,
+  Pagination,
+  VoucherStatusBadge,
+} from "@/components/kit";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,8 +20,8 @@ import {
 } from "@/lib/vouchers/validate-voucher";
 import { parsePageParam } from "@/server/admin/pagination";
 import { requireAdminSession } from "@/server/auth/require-admin-session";
-import { prisma } from "@/server/db/prisma";
 import {
+  getVoucherById,
   listVouchers,
   VOUCHERS_PAGE_SIZE,
 } from "@/server/vouchers/admin-vouchers";
@@ -35,29 +40,6 @@ function formatDay(date: Date | null, fallback: string): string {
     : fallback;
 }
 
-function voucherStatus(voucher: {
-  isActive: boolean;
-  startsAt: Date | null;
-  endsAt: Date | null;
-  maxUses: number | null;
-  usedCount: number;
-}): { label: string; className: string } {
-  const now = Date.now();
-  if (!voucher.isActive) {
-    return { label: "Đã tắt", className: "bg-muted text-muted-foreground" };
-  }
-  if (voucher.endsAt && voucher.endsAt.getTime() < now) {
-    return { label: "Hết hạn", className: "bg-muted text-muted-foreground" };
-  }
-  if (voucher.maxUses !== null && voucher.usedCount >= voucher.maxUses) {
-    return { label: "Hết lượt", className: "bg-warning/15 text-warning" };
-  }
-  if (voucher.startsAt && voucher.startsAt.getTime() > now) {
-    return { label: "Sắp diễn ra", className: "bg-info/15 text-info" };
-  }
-  return { label: "Đang chạy", className: "bg-success/15 text-success" };
-}
-
 export default async function AdminVouchersPage({
   searchParams,
 }: {
@@ -70,7 +52,7 @@ export default async function AdminVouchersPage({
 
   const [result, editing] = await Promise.all([
     listVouchers({ page: parsePageParam(params.page) }),
-    editId ? prisma.voucher.findUnique({ where: { id: editId } }) : null,
+    editId ? getVoucherById(editId) : null,
   ]);
 
   const initialData: VoucherFormValues | null = editing
@@ -128,66 +110,59 @@ export default async function AdminVouchersPage({
         <CardContent>
           {result.items.length > 0 ? (
             <ul className="divide-y">
-              {result.items.map((voucher) => {
-                const status = voucherStatus(voucher);
-                return (
-                  <li
-                    key={voucher.id}
-                    className="flex flex-col justify-between gap-3 py-4 sm:flex-row sm:items-center"
-                  >
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono font-bold tracking-wider">
-                          {voucher.code}
-                        </span>
-                        <span
-                          className={`rounded-md px-2 py-0.5 text-xs font-semibold ${status.className}`}
-                        >
-                          {status.label}
-                        </span>
-                      </div>
-                      <p className="text-muted-foreground text-sm">
-                        {isVoucherType(voucher.type)
-                          ? describeVoucher({
-                              type: voucher.type,
-                              value: voucher.value,
-                              maxDiscount: voucher.maxDiscount,
-                              minOrderTotal: voucher.minOrderTotal,
-                            })
-                          : voucher.type}
-                      </p>
-                      <div className="text-muted-foreground flex flex-wrap gap-x-4 text-xs">
-                        <span>
-                          Đã dùng: {voucher.usedCount.toLocaleString("vi-VN")}
-                          {voucher.maxUses !== null
-                            ? `/${voucher.maxUses.toLocaleString("vi-VN")}`
-                            : " (không giới hạn)"}
-                        </span>
-                        <span>
-                          Hiệu lực: {formatDay(voucher.startsAt, "Ngay")} →{" "}
-                          {formatDay(voucher.endsAt, "Không thời hạn")}
-                        </span>
-                      </div>
-                    </div>
-
+              {result.items.map((voucher) => (
+                <li
+                  key={voucher.id}
+                  className="flex flex-col justify-between gap-3 py-4 sm:flex-row sm:items-center"
+                >
+                  <div className="min-w-0 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        nativeButton={false}
-                        render={<Link href={`${PATH}?edit=${voucher.id}`} />}
-                      >
-                        Sửa
-                      </Button>
-                      <VoucherRowActions
-                        id={voucher.id}
-                        code={voucher.code}
-                        isActive={voucher.isActive}
-                      />
+                      <span className="font-mono font-bold tracking-wider">
+                        {voucher.code}
+                      </span>
+                      <VoucherStatusBadge voucher={voucher} />
                     </div>
-                  </li>
-                );
-              })}
+                    <p className="text-muted-foreground text-sm">
+                      {isVoucherType(voucher.type)
+                        ? describeVoucher({
+                            type: voucher.type,
+                            value: voucher.value,
+                            maxDiscount: voucher.maxDiscount,
+                            minOrderTotal: voucher.minOrderTotal,
+                          })
+                        : voucher.type}
+                    </p>
+                    <div className="text-muted-foreground flex flex-wrap gap-x-4 text-xs">
+                      <span>
+                        Đã dùng: {voucher.usedCount.toLocaleString("vi-VN")}
+                        {voucher.maxUses !== null
+                          ? `/${voucher.maxUses.toLocaleString("vi-VN")}`
+                          : " (không giới hạn)"}
+                      </span>
+                      <span>
+                        Hiệu lực: {formatDay(voucher.startsAt, "Ngay")} →{" "}
+                        {formatDay(voucher.endsAt, "Không thời hạn")}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      nativeButton={false}
+                      render={<Link href={`${PATH}?edit=${voucher.id}`} />}
+                    >
+                      Sửa
+                    </Button>
+                    <VoucherRowActions
+                      id={voucher.id}
+                      code={voucher.code}
+                      isActive={voucher.isActive}
+                    />
+                  </div>
+                </li>
+              ))}
             </ul>
           ) : (
             <EmptyState

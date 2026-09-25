@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { prisma } from "@/server/db/prisma";
 import { resolveCustomerSessionToken } from "@/server/customer-auth/session";
 import { hasSafeMutationOrigin } from "@/server/http/origin";
 import { readJsonBody } from "@/server/http/read-json-body";
+import { markCustomerNotificationsRead } from "@/server/notifications/customer-notifications";
 import { customerNotificationMarkReadSchema } from "@/types/customer-notification";
 
 export async function POST(request: Request) {
@@ -56,30 +56,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const { notificationId } = parsed.data;
-
-  if (notificationId) {
-    await prisma.customerNotification.updateMany({
-      where: {
-        id: notificationId,
-        accountId: session.accountId,
-        readAt: null,
-      },
-      data: {
-        readAt: new Date(),
-      },
-    });
-  } else {
-    await prisma.customerNotification.updateMany({
-      where: {
-        accountId: session.accountId,
-        readAt: null,
-      },
-      data: {
-        readAt: new Date(),
-      },
-    });
-  }
+  await markCustomerNotificationsRead({
+    accountId: session.accountId,
+    notificationId: parsed.data.notificationId,
+  });
 
   return NextResponse.json(
     { ok: true },

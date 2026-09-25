@@ -72,6 +72,10 @@ export function listVouchers(query: {
   );
 }
 
+export function getVoucherById(id: string): Promise<Voucher | null> {
+  return prisma.voucher.findUnique({ where: { id } });
+}
+
 export async function createVoucher(
   input: VoucherInput,
   actor: VoucherActor,

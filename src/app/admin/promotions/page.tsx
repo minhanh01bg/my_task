@@ -1,21 +1,19 @@
 import { Megaphone } from "lucide-react";
 
-import { EmptyState, PageHeader } from "@/components/kit";
+import { ActiveStatusBadge, EmptyState, PageHeader } from "@/components/kit";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PromotionForm } from "@/features/admin-promotions/promotion-form";
 import { PromotionRowActions } from "@/features/admin-promotions/promotion-row-actions";
 import { requireAdminSession } from "@/server/auth/require-admin-session";
-import { prisma } from "@/server/db/prisma";
+import { listStorefrontPromotions } from "@/server/promotions/get-promotions";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPromotionsPage() {
   await requireAdminSession({ redirectToLogin: true });
 
-  const promotions = await prisma.storefrontPromotion.findMany({
-    orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
-  });
+  const promotions = await listStorefrontPromotions();
 
   return (
     <div className="space-y-8">
@@ -56,16 +54,7 @@ export default async function AdminPromotionsPage() {
                       >
                         {promo.placement}
                       </Badge>
-                      <Badge
-                        variant={promo.isActive ? "default" : "outline"}
-                        className={
-                          promo.isActive
-                            ? "bg-success/15 text-success border-success/30 font-semibold"
-                            : "bg-muted text-muted-foreground font-semibold"
-                        }
-                      >
-                        {promo.isActive ? "Đang bật" : "Đã tắt"}
-                      </Badge>
+                      <ActiveStatusBadge active={promo.isActive} />
                     </div>
 
                     {promo.body ? (

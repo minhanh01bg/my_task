@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 
-import { EmptyState, Money } from "@/components/kit";
-import { Badge } from "@/components/ui/badge";
-import type { DashboardOnlineOrder } from "@/server/admin/dashboard";
 import {
-  isOnlineOrderStatus,
-  ONLINE_ORDER_STATUS_LABELS,
-} from "@/server/orders/online-order-status";
+  EmptyState,
+  FulfillmentStatusBadge,
+  Money,
+  OrderStatusBadge,
+} from "@/components/kit";
+import type { DashboardOnlineOrder } from "@/server/admin/dashboard";
 
 import { DashboardListCard } from "./dashboard-list-card";
 
@@ -18,22 +18,6 @@ const TIME_FORMATTER = new Intl.DateTimeFormat("vi-VN", {
   day: "2-digit",
   month: "2-digit",
 });
-
-function statusLabel(order: DashboardOnlineOrder): string {
-  if (order.status === "cancelled") return "Đã hủy";
-  const status = order.fulfillmentStatus ?? "";
-  return isOnlineOrderStatus(status)
-    ? ONLINE_ORDER_STATUS_LABELS[status]
-    : status || "Chưa rõ";
-}
-
-function isAwaiting(order: DashboardOnlineOrder): boolean {
-  return (
-    order.status !== "cancelled" &&
-    (order.fulfillmentStatus === "new" ||
-      order.fulfillmentStatus === "confirmed")
-  );
-}
 
 export function RecentOnlineOrders({
   orders,
@@ -81,9 +65,11 @@ export function RecentOnlineOrders({
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant={isAwaiting(order) ? "default" : "secondary"}>
-                  {statusLabel(order)}
-                </Badge>
+                {order.status === "cancelled" ? (
+                  <OrderStatusBadge status="cancelled" />
+                ) : (
+                  <FulfillmentStatusBadge status={order.fulfillmentStatus} />
+                )}
                 <Money amount={order.total} size="sm" />
               </div>
             </li>

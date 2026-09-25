@@ -1,11 +1,10 @@
 import { PosScreen } from "@/components/pos/pos-screen";
 import { requireAdminSession } from "@/server/auth/require-admin-session";
-import { prisma } from "@/server/db/prisma";
+import { getPosCatalog } from "@/server/catalog/get-pos-catalog";
 import {
   getStoreBankAccount,
   getStoreName,
 } from "@/server/settings/store-settings";
-import type { CatalogResponse } from "@/types/catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -16,36 +15,11 @@ export const dynamic = "force-dynamic";
 export default async function PosPage() {
   await requireAdminSession({ redirectToLogin: true });
 
-  const [categories, products, bankAccount, storeName] = await Promise.all([
-    prisma.category.findMany({
-      orderBy: { sortOrder: "asc" },
-      select: { id: true, name: true, sortOrder: true },
-    }),
-    prisma.product.findMany({
-      where: { isActive: true, deletedAt: null },
-      orderBy: { name: "asc" },
-      select: {
-        id: true,
-        name: true,
-        sku: true,
-        price: true,
-        unit: true,
-        stock: true,
-        imageUrl: true,
-        categoryId: true,
-        soldCount: true,
-        searchText: true,
-      },
-    }),
+  const [catalog, bankAccount, storeName] = await Promise.all([
+    getPosCatalog(),
     getStoreBankAccount(),
     getStoreName(),
   ]);
-
-  const catalog: CatalogResponse = {
-    categories,
-    products,
-    fetchedAt: new Date().toISOString(),
-  };
 
   return (
     <PosScreen

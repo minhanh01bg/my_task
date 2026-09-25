@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { CheckCircle2, MessagesSquare } from "lucide-react";
 
-import { EmptyState, PageHeader, Pagination } from "@/components/kit";
+import {
+  EmptyState,
+  PageHeader,
+  Pagination,
+  ReviewStatusBadge,
+} from "@/components/kit";
 import { StarRating } from "@/components/kit/star-rating";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -109,16 +114,7 @@ export default async function AdminReviewsPage({
                             Đã mua hàng
                           </span>
                         ) : null}
-                        <span
-                          className={cn(
-                            "rounded-md px-2 py-0.5 text-xs font-semibold",
-                            hidden
-                              ? "bg-muted text-muted-foreground"
-                              : "bg-success/15 text-success",
-                          )}
-                        >
-                          {hidden ? "Đã ẩn" : "Đang hiển thị"}
-                        </span>
+                        <ReviewStatusBadge status={review.status} />
                       </div>
                       <p className="text-foreground/90 text-sm whitespace-pre-line">
                         {review.content}

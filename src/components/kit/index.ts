@@ -30,6 +30,19 @@ export { SearchField } from "./search-field";
 export { StatTile } from "./stat-tile";
 export { LOW_STOCK_THRESHOLD, StockBadge, stockLevel } from "./stock-badge";
 export type { StockLevel } from "./stock-badge";
+export {
+  AccountStatusBadge,
+  ActiveStatusBadge,
+  ReviewStatusBadge,
+  VoucherStatusBadge,
+  getVoucherStatusInfo,
+} from "./status-badge";
+export type {
+  AccountStatusBadgeProps,
+  ActiveStatusBadgeProps,
+  ReviewStatusBadgeProps,
+  VoucherStatusBadgeProps,
+} from "./status-badge";
 export { TouchButton } from "./touch-button";
 export { NumberStepper } from "./number-stepper";
 export type { NumberStepperProps } from "./number-stepper";
