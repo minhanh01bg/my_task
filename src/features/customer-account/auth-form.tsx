@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { invalidateStorefrontSession } from "@/features/online-store/storefront-session";
 
 export function CustomerAuthForm({ mode }: { mode: "login" | "register" }) {
@@ -116,16 +117,18 @@ export function CustomerAuthForm({ mode }: { mode: "login" | "register" }) {
           </div>
         </div>
       ) : null}
-      <button
+      <Button
+        type="submit"
         disabled={pending}
-        className="bg-primary text-primary-foreground min-h-12 w-full rounded-xl font-bold disabled:opacity-60"
+        size="lg"
+        className="w-full font-bold"
       >
         {pending
           ? "Đang xử lý…"
           : mode === "login"
             ? "Đăng nhập"
             : "Tạo tài khoản"}
-      </button>
+      </Button>
       <p className="text-center text-sm">
         {mode === "login" ? (
           <>

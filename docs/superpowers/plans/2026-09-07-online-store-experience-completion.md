@@ -117,16 +117,16 @@ Ngoài giới hạn chủ đích đó, implementation hiện tại còn chưa ho
 
 **Tests first:**
 
-- [ ] Định nghĩa strict schemas cho filter URL, cart mutation result, public store profile và promotion public payload.
-- [ ] Test unknown keys, malformed numeric range, invalid sort, unsafe CTA URL và overlong public copy bị từ chối.
-- [ ] Test defaults ổn định để URL không có query vẫn cho catalog hợp lệ.
+- [x] Định nghĩa strict schemas cho filter URL, cart mutation result, public store profile và promotion public payload.
+- [x] Test unknown keys, malformed numeric range, invalid sort, unsafe CTA URL và overlong public copy bị từ chối.
+- [x] Test defaults ổn định để URL không có query vẫn cho catalog hợp lệ.
 
 **Implementation:**
 
-- [ ] Export `catalogFilterSchema` với `q`, `category`, `inStock`, `minPrice`, `maxPrice`, `sort`.
-- [ ] Export `CartMutationResult` phân biệt `added`, `incremented`, `capped`, `unavailable`.
-- [ ] Export allowlisted public store profile/promotion types; không expose raw Setting/Prisma model.
-- [ ] Ghi rõ phase này không bao gồm third-party ads, dynamic shipping fee, SMS/Zalo/email provider.
+- [x] Export `catalogFilterSchema` với `q`, `category`, `inStock`, `minPrice`, `maxPrice`, `sort`.
+- [x] Export `CartMutationResult` phân biệt `added`, `incremented`, `capped`, `unavailable`.
+- [x] Export allowlisted public store profile/promotion types; không expose raw Setting/Prisma model.
+- [x] Ghi rõ phase này không bao gồm third-party ads, dynamic shipping fee, SMS/Zalo/email provider.
 
 **Verification:**
 
@@ -153,19 +153,19 @@ Ngoài giới hạn chủ đích đó, implementation hiện tại còn chưa ho
 
 **Tests first:**
 
-- [ ] Click “Thêm vào giỏ” trả feedback chứa tên sản phẩm và quantity hiện tại.
-- [ ] Click liên tiếp increment đúng; khi đạt stock cap phải báo “Đã đạt số lượng tối đa”, không báo thành công giả.
-- [ ] Sản phẩm unavailable không mutate và không phát success feedback.
-- [ ] Live region công bố kết quả; toast có dismiss, auto-dismiss hợp lý và không cướp focus.
-- [ ] Rapid clicks không tạo chồng vô hạn hoặc timer race.
+- [x] Click “Thêm vào giỏ” trả feedback chứa tên sản phẩm và quantity hiện tại.
+- [x] Click liên tiếp increment đúng; khi đạt stock cap phải báo “Đã đạt số lượng tối đa”, không báo thành công giả.
+- [x] Sản phẩm unavailable không mutate và không phát success feedback.
+- [x] Live region công bố kết quả; toast có dismiss, auto-dismiss hợp lý và không cướp focus.
+- [x] Rapid clicks không tạo chồng vô hạn hoặc timer race.
 
 **Implementation:**
 
-- [ ] Đổi `add()` trả `CartMutationResult` dựa trên functional state update an toàn.
-- [ ] Tạo một feedback host duy nhất trong cart provider hoặc storefront shell.
-- [ ] Toast dùng icon vector, copy ngắn, link “Xem giỏ”; không dùng emoji.
-- [ ] Product card có pressed/pending micro-state không làm layout shift.
-- [ ] Cart count vẫn là nguồn bền vững; toast chỉ là phản hồi tức thời.
+- [x] Đổi `add()` trả `CartMutationResult` dựa trên functional state update an toàn.
+- [x] Tạo một feedback host duy nhất trong cart provider hoặc storefront shell.
+- [x] Toast dùng icon vector, copy ngắn, link “Xem giỏ”; không dùng emoji.
+- [x] Product card có pressed/pending micro-state không làm layout shift.
+- [x] Cart count vẫn là nguồn bền vững; toast chỉ là phản hồi tức thời.
 
 **Verification:**
 
@@ -192,18 +192,18 @@ Ngoài giới hạn chủ đích đó, implementation hiện tại còn chưa ho
 
 **Tests first:**
 
-- [ ] Header button mở drawer, hiển thị lines, quantity, subtotal và empty state.
-- [ ] Tăng/giảm bị chặn bởi stock/minimum; xóa item cập nhật count/subtotal.
-- [ ] Drawer trap focus, Escape đóng, trả focus về trigger và background không thao tác được.
-- [ ] “Tiến hành đặt hàng” dẫn `/checkout`; cart rỗng vô hiệu CTA.
-- [ ] Reload vẫn hydrate cart không mismatch.
+- [x] Header button mở drawer, hiển thị lines, quantity, subtotal và empty state.
+- [x] Tăng/giảm bị chặn bởi stock/minimum; xóa item cập nhật count/subtotal.
+- [x] Drawer trap focus, Escape đóng, trả focus về trigger và background không thao tác được.
+- [x] “Tiến hành đặt hàng” dẫn `/checkout`; cart rỗng vô hiệu CTA.
+- [x] Reload vẫn hydrate cart không mismatch.
 
 **Implementation:**
 
-- [ ] Thay link “Giỏ hàng” bằng button mở accessible drawer; vẫn hỗ trợ direct checkout link trong drawer.
-- [ ] Render thumbnail/fallback, tên, unit price, line total, stepper và remove.
-- [ ] Có disclaimer giá/tồn được xác nhận lại khi checkout.
-- [ ] Mobile drawer full-height phù hợp safe area; desktop side sheet có max width.
+- [x] Thay link “Giỏ hàng” bằng button mở accessible drawer; vẫn hỗ trợ direct checkout link trong drawer.
+- [x] Render thumbnail/fallback, tên, unit price, line total, stepper và remove.
+- [x] Có disclaimer giá/tồn được xác nhận lại khi checkout.
+- [x] Mobile drawer full-height phù hợp safe area; desktop side sheet có max width.
 
 **Verification:**
 
@@ -231,18 +231,18 @@ Ngoài giới hạn chủ đích đó, implementation hiện tại còn chưa ho
 
 **Tests first:**
 
-- [ ] Search bỏ dấu kết hợp category, còn hàng và price range theo AND semantics.
-- [ ] Sort hỗ trợ `relevance`, `price-asc`, `price-desc`, `name-asc`; deterministic tie-break bằng id/name.
-- [ ] Invalid query được normalize về default, không crash và không echo unsafe value.
-- [ ] Filter state đồng bộ URL bằng replace/push có debounce phù hợp; back/forward khôi phục state.
-- [ ] Hiện result count, active filter chips và clear-all; empty state giữ ngữ cảnh filter.
+- [x] Search bỏ dấu kết hợp category, còn hàng và price range theo AND semantics.
+- [x] Sort hỗ trợ `relevance`, `price-asc`, `price-desc`, `name-asc`; deterministic tie-break bằng id/name.
+- [x] Invalid query được normalize về default, không crash và không echo unsafe value.
+- [x] Filter state đồng bộ URL bằng replace/push có debounce phù hợp; back/forward khôi phục state.
+- [x] Hiện result count, active filter chips và clear-all; empty state giữ ngữ cảnh filter.
 
 **Implementation:**
 
-- [ ] Tách pure filtering/sorting khỏi component.
-- [ ] Desktop dùng filter bar/sidebar tùy viewport; mobile dùng sheet có nút “Áp dụng”.
-- [ ] Giá input là integer VND, min không vượt max; category lấy từ catalog allowlist.
-- [ ] Selected states dùng semantic attributes, focus visible và hit target tối thiểu.
+- [x] Tách pure filtering/sorting khỏi component.
+- [x] Desktop dùng filter bar/sidebar tùy viewport; mobile dùng sheet có nút “Áp dụng”.
+- [x] Giá input là integer VND, min không vượt max; category lấy từ catalog allowlist.
+- [x] Selected states dùng semantic attributes, focus visible và hit target tối thiểu.
 
 **Verification:**
 
@@ -273,18 +273,18 @@ Ngoài giới hạn chủ đích đó, implementation hiện tại còn chưa ho
 
 **Tests first:**
 
-- [ ] Chọn tỉnh reset quận/phường cũ; chọn quận reset phường cũ.
-- [ ] Delivery yêu cầu street, province, district và ward theo policy; pickup loại bỏ address khỏi payload.
-- [ ] Server schema từ chối tổ hợp code/name không hợp lệ hoặc field giả.
-- [ ] Keyboard/screen reader đọc đúng label, required, loading và lỗi.
-- [ ] Dataset/provider unavailable có fallback nhập tay rõ ràng thay vì khóa checkout.
+- [x] Chọn tỉnh reset quận/phường cũ; chọn quận reset phường cũ.
+- [x] Delivery yêu cầu street, province, district và ward theo policy; pickup loại bỏ address khỏi payload.
+- [x] Server schema từ chối tổ hợp code/name không hợp lệ hoặc field giả.
+- [x] Keyboard/screen reader đọc đúng label, required, loading và lỗi.
+- [x] Dataset/provider unavailable có fallback nhập tay rõ ràng thay vì khóa checkout.
 
 **Implementation:**
 
-- [ ] Dùng code ổn định cho selection và snapshot tên vào Order sau validation.
-- [ ] Address fields theo thứ tự tỉnh → quận/huyện → phường/xã → số nhà/đường.
-- [ ] Hiển thị summary địa chỉ trước submit.
-- [ ] Không log hoặc đưa địa chỉ vào analytics.
+- [x] Dùng code ổn định cho selection và snapshot tên vào Order sau validation.
+- [x] Address fields theo thứ tự tỉnh → quận/huyện → phường/xã → số nhà/đường.
+- [x] Hiển thị summary địa chỉ trước submit.
+- [x] Không log hoặc đưa địa chỉ vào analytics.
 
 **Verification:**
 
@@ -313,17 +313,17 @@ Ngoài giới hạn chủ đích đó, implementation hiện tại còn chưa ho
 
 **Tests first:**
 
-- [ ] Admin setting schema validate store name, hotline, address, hours và optional map URL.
-- [ ] Public getter chỉ trả allowlisted profile, không raw setting rows.
-- [ ] Pickup checkout hiển thị địa chỉ/giờ nhận hàng; thiếu cấu hình có fallback trung thực.
-- [ ] Phone/map links chỉ render khi hợp lệ.
+- [x] Admin setting schema validate store name, hotline, address, hours và optional map URL.
+- [x] Public getter chỉ trả allowlisted profile, không raw setting rows.
+- [x] Pickup checkout hiển thị địa chỉ/giờ nhận hàng; thiếu cấu hình có fallback trung thực.
+- [x] Phone/map links chỉ render khi hợp lệ.
 
 **Implementation:**
 
-- [ ] Thêm store profile fields theo key namespaced, không nhét JSON không validate vào một setting.
-- [ ] Admin form chia section “Thông tin cửa hàng online”, có save result feedback.
-- [ ] Footer hiển thị contact, hours, address và links chính sách.
-- [ ] Pickup selection hiển thị pickup card thay vì chỉ ẩn delivery fields.
+- [x] Thêm store profile fields theo key namespaced, không nhét JSON không validate vào một setting.
+- [x] Admin form chia section “Thông tin cửa hàng online”, có save result feedback.
+- [x] Footer hiển thị contact, hours, address và links chính sách.
+- [x] Pickup selection hiển thị pickup card thay vì chỉ ẩn delivery fields.
 
 **Verification:**
 
@@ -353,17 +353,17 @@ Ngoài giới hạn chủ đích đó, implementation hiện tại còn chưa ho
 
 **Tests first:**
 
-- [ ] Landing có một H1, CTA tới catalog, featured categories và product rail fallback.
-- [ ] Anchor “Mua ngay” focus/scroll đúng catalog và không bị sticky header che.
-- [ ] Empty catalog/campaign vẫn render usable landing, không có section trống.
-- [ ] Image giữ aspect ratio, alt đúng, responsive sizes hợp lý.
+- [x] Landing có một H1, CTA tới catalog, featured categories và product rail fallback.
+- [x] Anchor “Mua ngay” focus/scroll đúng catalog và không bị sticky header che.
+- [x] Empty catalog/campaign vẫn render usable landing, không có section trống.
+- [x] Image giữ aspect ratio, alt đúng, responsive sizes hợp lý.
 
 **Implementation:**
 
-- [ ] Tách landing section server-rendered khỏi interactive catalog client leaf.
-- [ ] Section order: announcement/promotion → hero → categories → featured products → benefits/trust → catalog → footer.
-- [ ] Không dùng carousel auto-play trong baseline; nếu có carousel phải có pause và reduced-motion behavior.
-- [ ] Copy không hứa giao hàng/đổi trả nếu admin chưa cấu hình policy tương ứng.
+- [x] Tách landing section server-rendered khỏi interactive catalog client leaf.
+- [x] Section order: announcement/promotion → hero → categories → featured products → benefits/trust → catalog → footer.
+- [x] Không dùng carousel auto-play trong baseline; nếu có carousel phải có pause và reduced-motion behavior.
+- [x] Copy không hứa giao hàng/đổi trả nếu admin chưa cấu hình policy tương ứng.
 
 **Verification:**
 
@@ -397,16 +397,16 @@ Ngoài giới hạn chủ đích đó, implementation hiện tại còn chưa ho
 
 **Tests first:**
 
-- [ ] Public query chỉ lấy active campaign trong UTC window, deterministic priority.
-- [ ] Unsafe CTA scheme/path bị từ chối; expired/future campaign không render.
-- [ ] Không có campaign trả empty state không chiếm layout.
-- [ ] Banner image/copy/CTA có accessible names và contrast.
+- [x] Public query chỉ lấy active campaign trong UTC window, deterministic priority.
+- [x] Unsafe CTA scheme/path bị từ chối; expired/future campaign không render.
+- [x] Không có campaign trả empty state không chiếm layout.
+- [x] Banner image/copy/CTA có accessible names và contrast.
 
 **Implementation:**
 
-- [ ] Minimal Prisma select và Zod parse trước render.
-- [ ] Hỗ trợ `announcement` và `hero` placement; giới hạn số item mỗi placement.
-- [ ] Không thêm third-party scripts/pixels.
+- [x] Minimal Prisma select và Zod parse trước render.
+- [x] Hỗ trợ `announcement` và `hero` placement; giới hạn số item mỗi placement.
+- [x] Không thêm third-party scripts/pixels.
 
 **Verification:**
 
@@ -434,16 +434,16 @@ Ngoài giới hạn chủ đích đó, implementation hiện tại còn chưa ho
 
 **Tests first:**
 
-- [ ] Direct action invocation không admin bị từ chối trước parse/write.
-- [ ] Strict Zod validate schedule, placement, priority, copy lengths, image và CTA.
-- [ ] Create/update/activate/deactivate revalidate `/shop` và admin list.
-- [ ] Overlapping campaigns tuân thủ priority và max visible policy.
+- [x] Direct action invocation không admin bị từ chối trước parse/write.
+- [x] Strict Zod validate schedule, placement, priority, copy lengths, image và CTA.
+- [x] Create/update/activate/deactivate revalidate `/shop` và admin list.
+- [x] Overlapping campaigns tuân thủ priority và max visible policy.
 
 **Implementation:**
 
-- [ ] Server Action gọi `requireAdminSession()` đầu tiên và audit create/update/toggle.
-- [ ] Form có preview desktop/mobile, pending/error/success states.
-- [ ] Dùng image pipeline hiện hữu hoặc module upload riêng có validation; không cho arbitrary HTML.
+- [x] Server Action gọi `requireAdminSession()` đầu tiên và audit create/update/toggle.
+- [x] Form có preview desktop/mobile, pending/error/success states.
+- [x] Dùng image pipeline hiện hữu hoặc module upload riêng có validation; không cho arbitrary HTML.
 
 **Verification:**
 
@@ -477,18 +477,18 @@ Ngoài giới hạn chủ đích đó, implementation hiện tại còn chưa ho
 
 **Tests first:**
 
-- [ ] Account order create/status events tạo tối đa một notification theo deterministic event key.
-- [ ] Guest order không tạo customer inbox event khi chưa có owner.
-- [ ] Claim thành công có thể tạo một ownership event theo policy, không copy guest token.
-- [ ] Notification insert cùng transaction với status update; failure rollback mutation.
-- [ ] Body không chứa full phone/address/note/token/receipt nonce.
+- [x] Account order create/status events tạo tối đa một notification theo deterministic event key.
+- [x] Guest order không tạo customer inbox event khi chưa có owner.
+- [x] Claim thành công có thể tạo một ownership event theo policy, không copy guest token.
+- [x] Notification insert cùng transaction với status update; failure rollback mutation.
+- [x] Body không chứa full phone/address/note/token/receipt nonce.
 
 **Implementation:**
 
-- [ ] Tách hoàn toàn khỏi `AdminNotification` và admin read state.
-- [ ] Event allowlist: order accepted, confirmed, preparing, ready, completed, cancelled, payment updated nếu thực sự hữu ích.
-- [ ] Internal href chỉ tới ownership-protected account order route.
-- [ ] Retention tích hợp policy hiện hữu.
+- [x] Tách hoàn toàn khỏi `AdminNotification` và admin read state.
+- [x] Event allowlist: order accepted, confirmed, preparing, ready, completed, cancelled, payment updated nếu thực sự hữu ích.
+- [x] Internal href chỉ tới ownership-protected account order route.
+- [x] Retention tích hợp policy hiện hữu.
 
 **Verification:**
 
@@ -518,18 +518,18 @@ Ngoài giới hạn chủ đích đó, implementation hiện tại còn chưa ho
 
 **Tests first:**
 
-- [ ] Anonymous, guest capability và admin cookie không đọc được customer inbox.
-- [ ] Account A không đọc/mark notification của account B.
-- [ ] Cursor pagination, limit cap, unread count và mark-one/mark-all cutoff hoạt động.
-- [ ] Bell/panel có loading, empty, error, keyboard/focus và `99+` behavior.
-- [ ] Click deep-link chỉ mở ownership-protected order.
+- [x] Anonymous, guest capability và admin cookie không đọc được customer inbox.
+- [x] Account A không đọc/mark notification của account B.
+- [x] Cursor pagination, limit cap, unread count và mark-one/mark-all cutoff hoạt động.
+- [x] Bell/panel có loading, empty, error, keyboard/focus và `99+` behavior.
+- [x] Click deep-link chỉ mở ownership-protected order.
 
 **Implementation:**
 
-- [ ] Route handler validate Zod và query bằng account predicate.
-- [ ] Poll chỉ khi visible/focused hoặc dùng refresh-on-navigation phù hợp quy mô; không tạo polling ở từng page.
-- [ ] Mark-read optimistic rồi reconcile; không lưu read state localStorage.
-- [ ] Header shop chỉ hiện customer bell khi customer session hợp lệ; admin session không được xem như customer.
+- [x] Route handler validate Zod và query bằng account predicate.
+- [x] Poll chỉ khi visible/focused hoặc dùng refresh-on-navigation phù hợp quy mô; không tạo polling ở từng page.
+- [x] Mark-read optimistic rồi reconcile; không lưu read state localStorage.
+- [x] Header shop chỉ hiện customer bell khi customer session hợp lệ; admin session không được xem như customer.
 
 **Verification:**
 
@@ -660,7 +660,7 @@ Ngoài giới hạn chủ đích đó, implementation hiện tại còn chưa ho
 - [x] Fix phát sinh có commit concern-specific riêng, không amend/squash concern khác.
 - [x] Working tree sạch, không secret/PII/database artifact.
 - [x] Branch chính xác `feat/pos-core`.
-- [ ] Push không force: `git push origin feat/pos-core`.
+- [x] Push không force: `git push origin feat/pos-core`.
 
 ---
 

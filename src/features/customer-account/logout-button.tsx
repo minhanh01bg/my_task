@@ -2,13 +2,15 @@
 
 import { useRouter } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
 import { invalidateStorefrontSession } from "@/features/online-store/storefront-session";
 
 export function CustomerLogoutButton() {
   const router = useRouter();
   return (
-    <button
-      className="min-h-11 font-bold"
+    <Button
+      variant="outline"
+      size="sm"
       onClick={async () => {
         await fetch("/api/customer-auth/logout", { method: "POST" });
         invalidateStorefrontSession();
@@ -17,6 +19,6 @@ export function CustomerLogoutButton() {
       }}
     >
       Đăng xuất
-    </button>
+    </Button>
   );
 }

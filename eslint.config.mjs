@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     ".agents/**",
     ".tmp-ui-ux-pro-max/**",
+    ".crawl/**",
+    ".omc/**",
     "next-env.d.ts",
   ]),
 ]);
