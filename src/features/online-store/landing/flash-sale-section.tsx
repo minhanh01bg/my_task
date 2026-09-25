@@ -48,14 +48,14 @@ export function FlashSaleSection({
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
-      <div className="surface-panel relative overflow-hidden rounded-3xl border-red-500/20 bg-gradient-to-r from-red-500/5 via-amber-500/5 to-transparent p-6 sm:p-8">
+      <div className="surface-panel border-destructive/20 from-destructive/5 via-warning/5 relative overflow-hidden rounded-3xl bg-gradient-to-r to-transparent p-6 sm:p-8">
         {/* Decorative background glow */}
-        <div className="pointer-events-none absolute -top-12 -left-12 size-64 rounded-full bg-red-500/10 blur-3xl" />
+        <div className="bg-destructive/10 pointer-events-none absolute -top-12 -left-12 size-64 rounded-full blur-3xl" />
 
         {/* Section Header */}
         <div className="relative z-10 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div className="flex items-center gap-3">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-red-500/15 text-red-600 shadow-xs dark:text-red-400">
+            <div className="bg-destructive/15 text-destructive flex size-12 items-center justify-center rounded-2xl shadow-xs">
               <Flame className="animate-pulse-subtle size-7 fill-current" />
             </div>
             <div>
@@ -101,13 +101,16 @@ export function FlashSaleSection({
             return (
               <article
                 key={product.id}
-                className="card-interactive border-border/80 bg-card/95 group flex flex-col justify-between overflow-hidden rounded-2xl border p-3 shadow-xs hover:border-red-500/40"
+                className="card-interactive border-border/80 bg-card/95 hover:border-destructive/40 group flex flex-col justify-between overflow-hidden rounded-2xl border p-3 shadow-xs"
               >
                 <div>
                   {/* Image & Discount Badge */}
                   <div className="bg-muted relative aspect-square overflow-hidden rounded-xl">
                     <div className="absolute top-2 left-2 z-10">
-                      <Badge className="bg-red-600 text-xs font-bold text-white shadow-xs">
+                      <Badge
+                        variant="destructive"
+                        className="text-xs font-bold shadow-xs"
+                      >
                         -{discountPercent}%
                       </Badge>
                     </div>
@@ -146,7 +149,7 @@ export function FlashSaleSection({
                     </Link>
 
                     <div className="mt-2 flex items-baseline gap-2">
-                      <span className="font-mono text-sm font-extrabold text-red-600 sm:text-base dark:text-red-400">
+                      <span className="text-destructive font-mono text-sm font-extrabold sm:text-base">
                         {formatVnd(product.price)}
                       </span>
                       <span className="text-muted-foreground font-mono text-xs line-through">
@@ -158,7 +161,7 @@ export function FlashSaleSection({
                     <div className="mt-2.5">
                       <div className="bg-muted h-3.5 w-full overflow-hidden rounded-full p-0.5">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-amber-500 to-red-500 transition-[width] duration-500"
+                          className="from-warning to-destructive h-full rounded-full bg-gradient-to-r transition-[width] duration-500"
                           style={{ width: `${soldPercent}%` }}
                         />
                       </div>
@@ -177,9 +180,10 @@ export function FlashSaleSection({
                 <div className="mt-3 pt-2">
                   <Button
                     type="button"
+                    variant="destructive"
                     size="sm"
                     onClick={() => add(product)}
-                    className="btn-press w-full gap-1.5 rounded-xl bg-red-600 text-xs font-bold text-white shadow-xs hover:bg-red-700 sm:text-sm"
+                    className="btn-press w-full gap-1.5 rounded-xl text-xs font-bold shadow-xs sm:text-sm"
                   >
                     <ShoppingCart className="size-3.5" />
                     <span>Mua ngay</span>

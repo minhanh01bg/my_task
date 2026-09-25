@@ -13,21 +13,27 @@ export function HealthCheck() {
   });
 
   if (isLoading) {
-    return <p className="text-sm text-zinc-500">Checking app health...</p>;
+    return (
+      <p className="text-muted-foreground text-sm">Đang kiểm tra hệ thống...</p>
+    );
   }
 
   if (isError || !data) {
-    return <p className="text-sm text-red-600">Health check failed.</p>;
+    return (
+      <p className="text-destructive text-sm font-medium">
+        Kiểm tra kết nối thất bại.
+      </p>
+    );
   }
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-      <p className="text-sm text-zinc-600 dark:text-zinc-300">
-        API status:{" "}
-        <span className="font-semibold text-emerald-600">{data.status}</span>
+    <div className="border-border bg-card rounded-xl border p-4">
+      <p className="text-foreground text-sm">
+        Trạng thái API:{" "}
+        <span className="text-success font-semibold">{data.status}</span>
       </p>
-      <p className="mt-1 text-xs text-zinc-500">
-        {new Date(data.timestamp).toLocaleString()}
+      <p className="text-muted-foreground mt-1 text-xs">
+        {new Date(data.timestamp).toLocaleString("vi-VN")}
       </p>
     </div>
   );

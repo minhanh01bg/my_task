@@ -245,8 +245,8 @@ export function PaymentDialog({
                 className={cn(
                   "flex items-baseline justify-between gap-4 rounded-2xl border p-4",
                   cashEnough
-                    ? "border-emerald-500/30 bg-emerald-500/10"
-                    : "border-amber-500/30 bg-amber-500/10",
+                    ? "border-success/30 bg-success/10"
+                    : "border-warning/30 bg-warning/10",
                 )}
               >
                 <div>

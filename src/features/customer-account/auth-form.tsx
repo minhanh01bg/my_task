@@ -103,7 +103,7 @@ export function CustomerAuthForm({ mode }: { mode: "login" | "register" }) {
       {success ? (
         <div
           role="status"
-          className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-800 dark:text-emerald-300"
+          className="border-success/30 bg-success/10 text-foreground rounded-xl border p-4"
         >
           <p className="font-semibold">{success}</p>
           <div className="mt-3">

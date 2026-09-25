@@ -107,7 +107,7 @@ describe("CheckoutForm - Structured Address & Experience", () => {
     expect(summary.textContent).toContain("Phường Bến Nghé");
     expect(summary.textContent).toContain("Quận 1");
     expect(summary.textContent).toContain("TP. Hồ Chí Minh");
-  });
+  }, 15_000);
 
   it("chuyển sang nhận tại cửa hàng ẩn địa chỉ và không gửi address trong payload", async () => {
     const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce({

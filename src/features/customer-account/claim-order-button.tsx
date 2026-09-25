@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
+
 export function ClaimOrderButton({ guestToken }: { guestToken: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,17 +42,18 @@ export function ClaimOrderButton({ guestToken }: { guestToken: string }) {
 
   return (
     <div className="mt-6 border-t pt-4">
-      <button
+      <Button
         type="button"
         id="claim-guest-order-button"
         onClick={handleClaim}
         disabled={loading}
-        className="bg-primary text-primary-foreground w-full rounded-xl px-4 py-3 text-center text-sm font-semibold shadow-sm transition hover:opacity-90 disabled:opacity-50"
+        className="w-full"
+        size="lg"
       >
         {loading ? "Đang liên kết..." : "Lưu đơn hàng vào tài khoản của bạn"}
-      </button>
+      </Button>
       {error && (
-        <p className="mt-2 text-center text-sm text-red-600">{error}</p>
+        <p className="text-destructive mt-2 text-center text-sm">{error}</p>
       )}
     </div>
   );

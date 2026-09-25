@@ -133,33 +133,27 @@ export function ProductFilters({
       id: "low",
       label: "Cảnh báo tồn thấp (≤ 5)",
       count: counts.low,
-      icon: <Warning className="size-4 text-amber-500" weight="fill" />,
+      icon: <Warning className="text-warning size-4" weight="fill" />,
       badgeVariant: "outline" as const,
-      activeClass:
-        "border-amber-500/50 bg-amber-500/15 text-amber-900 dark:text-amber-200",
-      badgeClass:
-        "bg-amber-500/20 text-amber-800 dark:text-amber-200 border-amber-500/30",
+      activeClass: "border-warning/50 bg-warning/15 text-warning-foreground",
+      badgeClass: "bg-warning/20 text-warning border-warning/30",
     },
     {
       id: "out",
       label: "Hết hàng (= 0)",
       count: counts.out,
-      icon: <WarningCircle className="size-4 text-red-500" weight="fill" />,
+      icon: <WarningCircle className="text-destructive size-4" weight="fill" />,
       badgeVariant: "destructive" as const,
-      activeClass:
-        "border-red-500/50 bg-red-500/15 text-red-900 dark:text-red-200",
-      badgeClass:
-        "bg-red-500/20 text-red-800 dark:text-red-200 border-red-500/30",
+      activeClass: "border-destructive/50 bg-destructive/15 text-destructive",
+      badgeClass: "bg-destructive/20 text-destructive border-destructive/30",
     },
     {
       id: "negative",
       label: "Tồn âm (< 0)",
       count: counts.negative,
       badgeVariant: "destructive" as const,
-      activeClass:
-        "border-rose-500/50 bg-rose-500/15 text-rose-900 dark:text-rose-200",
-      badgeClass:
-        "bg-rose-500/20 text-rose-800 dark:text-rose-200 border-rose-500/30",
+      activeClass: "border-destructive/50 bg-destructive/15 text-destructive",
+      badgeClass: "bg-destructive/20 text-destructive border-destructive/30",
     },
     {
       id: "available",

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 export function RevokeGuestButton({ orderId }: { orderId: string }) {
   const [loading, setLoading] = useState(false);
@@ -45,16 +46,16 @@ export function RevokeGuestButton({ orderId }: { orderId: string }) {
 
   return (
     <div className="mt-6 border-t pt-4">
-      <button
+      <Button
         type="button"
         id="revoke-guest-access-button"
+        variant="destructive"
         onClick={handleRevoke}
         disabled={loading}
-        className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:opacity-50 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400"
       >
         {loading ? "Đang thu hồi..." : "Thu hồi liên kết khách"}
-      </button>
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      </Button>
+      {error && <p className="text-destructive mt-2 text-sm">{error}</p>}
     </div>
   );
 }

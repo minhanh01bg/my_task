@@ -23,6 +23,10 @@ import {
 } from "@/server/admin/list-orders";
 import { parsePageParam } from "@/server/admin/pagination";
 import { requireAdminSession } from "@/server/auth/require-admin-session";
+import {
+  ONLINE_ORDER_STATUS_LABELS,
+  type OnlineOrderStatus,
+} from "@/server/orders/online-order-status";
 
 import { cancelOrderAction } from "./actions";
 
@@ -75,7 +79,11 @@ function OrderBadges({ order }: { order: AdminOrderListItem }) {
         {order.channel === "online" ? "Online" : "Tại quầy"}
       </Badge>
       {order.fulfillmentStatus ? (
-        <Badge variant="secondary">{order.fulfillmentStatus}</Badge>
+        <Badge variant="secondary">
+          {ONLINE_ORDER_STATUS_LABELS[
+            order.fulfillmentStatus as OnlineOrderStatus
+          ] ?? order.fulfillmentStatus}
+        </Badge>
       ) : null}
       {order.hasStockWarning ? (
         <Badge variant="destructive">Tồn âm</Badge>

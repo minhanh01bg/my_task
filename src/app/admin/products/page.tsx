@@ -7,9 +7,9 @@ import {
   PageHeader,
   Pagination,
   ProductImage,
+  StockBadge,
 } from "@/components/kit";
 import { ConfirmAction } from "@/components/shared/confirm-action";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -99,10 +99,10 @@ export default async function ProductsPage({
       {lowStockCount > 0 ? (
         <div
           data-testid="low-stock-alert"
-          className="surface-panel flex flex-col items-start justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-900 sm:flex-row sm:items-center dark:text-amber-200"
+          className="surface-panel border-warning/30 bg-warning/10 text-foreground flex flex-col items-start justify-between gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center"
         >
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-amber-500/20 p-2 text-amber-600 dark:text-amber-400">
+            <div className="bg-warning/20 text-warning rounded-xl p-2">
               <Warning className="size-5" />
             </div>
             <div>
@@ -126,7 +126,7 @@ export default async function ProductsPage({
             ) : (
               <Link
                 href={`/admin/products?status=low${q ? `&q=${encodeURIComponent(q)}` : ""}${categoryId ? `&categoryId=${encodeURIComponent(categoryId)}` : ""}`}
-                className="rounded-lg border border-amber-500/30 bg-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-800 hover:underline dark:text-amber-300"
+                className="border-warning/30 bg-warning/20 text-warning rounded-lg border px-3 py-1.5 text-xs font-bold hover:underline"
               >
                 Lọc hàng sắp hết ({lowStockCount})
               </Link>
@@ -214,29 +214,7 @@ export default async function ProductsPage({
                       {formatVnd(product.price)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {product.stock < 0 ? (
-                        <Badge variant="destructive">
-                          {product.stock} {product.unit}
-                        </Badge>
-                      ) : product.stock === 0 ? (
-                        <Badge
-                          variant="destructive"
-                          className="border-red-500/30 bg-red-500/15 text-red-700 dark:text-red-300"
-                        >
-                          Hết hàng ({product.stock} {product.unit})
-                        </Badge>
-                      ) : product.stock <= 5 ? (
-                        <Badge
-                          variant="outline"
-                          className="border-amber-500/30 bg-amber-500/15 text-amber-800 dark:text-amber-200"
-                        >
-                          {product.stock} {product.unit}
-                        </Badge>
-                      ) : (
-                        <span className="font-semibold text-emerald-700 dark:text-emerald-400">
-                          {product.stock} {product.unit}
-                        </span>
-                      )}
+                      <StockBadge stock={product.stock} unit={product.unit} />
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-2">

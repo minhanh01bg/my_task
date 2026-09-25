@@ -81,7 +81,7 @@ export function SyncIndicator() {
     <button
       type="button"
       onClick={() => void flush()}
-      className="focus-visible:ring-ring inline-flex min-h-11 items-center gap-2 rounded-xl border-2 border-amber-700/20 bg-amber-100 px-4 py-2 text-sm font-extrabold text-amber-950 transition-colors hover:bg-amber-200 focus-visible:ring-3 focus-visible:outline-none"
+      className="focus-visible:ring-ring border-warning/30 bg-warning/15 text-warning-foreground hover:bg-warning/25 inline-flex min-h-11 items-center gap-2 rounded-xl border-2 px-4 py-2 text-sm font-extrabold transition-colors focus-visible:ring-3 focus-visible:outline-none"
     >
       <CloudArrowUp aria-hidden="true" weight="duotone" className="size-5" />
       {pending} đơn chờ đồng bộ — bấm để thử lại
