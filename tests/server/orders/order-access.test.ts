@@ -327,4 +327,105 @@ describe("order ownership", () => {
       await prisma.order.deleteMany({ where: { id: ownedOrderId } });
     });
   });
+
+  describe("listCustomerOrders status filtering", () => {
+    it("lọc chính xác theo pending, processing, completed và cancelled", async () => {
+      await prisma.order.deleteMany({
+        where: {
+          code: {
+            in: [
+              "TEST-PENDING",
+              "TEST-PROCESSING",
+              "TEST-COMPLETED",
+              "TEST-CANCELLED",
+            ],
+          },
+        },
+      });
+
+      const orderPending = await prisma.order.create({
+        data: {
+          code: "TEST-PENDING",
+          clientId: "client-pending-1",
+          channel: "online",
+          customerAccountId: ids.a,
+          status: "pending",
+          fulfillmentStatus: "new",
+        },
+      });
+
+      const orderProcessing = await prisma.order.create({
+        data: {
+          code: "TEST-PROCESSING",
+          clientId: "client-proc-1",
+          channel: "online",
+          customerAccountId: ids.a,
+          status: "paid",
+          fulfillmentStatus: "preparing",
+        },
+      });
+
+      const orderCompleted = await prisma.order.create({
+        data: {
+          code: "TEST-COMPLETED",
+          clientId: "client-comp-1",
+          channel: "online",
+          customerAccountId: ids.a,
+          status: "paid",
+          fulfillmentStatus: "completed",
+        },
+      });
+
+      const orderCancelled = await prisma.order.create({
+        data: {
+          code: "TEST-CANCELLED",
+          clientId: "client-canc-1",
+          channel: "online",
+          customerAccountId: ids.a,
+          status: "cancelled",
+        },
+      });
+
+      const pendingOrders = await listCustomerOrders(ids.a, "pending");
+      expect(pendingOrders.some((o) => o.id === orderPending.id)).toBe(true);
+      expect(pendingOrders.some((o) => o.id === orderCancelled.id)).toBe(false);
+
+      const processingOrders = await listCustomerOrders(ids.a, "processing");
+      expect(processingOrders.some((o) => o.id === orderProcessing.id)).toBe(
+        true,
+      );
+      expect(processingOrders.some((o) => o.id === orderCompleted.id)).toBe(
+        false,
+      );
+
+      const completedOrders = await listCustomerOrders(ids.a, "completed");
+      expect(completedOrders.some((o) => o.id === orderCompleted.id)).toBe(
+        true,
+      );
+      expect(completedOrders.some((o) => o.id === orderProcessing.id)).toBe(
+        false,
+      );
+
+      const cancelledOrders = await listCustomerOrders(ids.a, "cancelled");
+      expect(cancelledOrders.some((o) => o.id === orderCancelled.id)).toBe(
+        true,
+      );
+      expect(cancelledOrders.some((o) => o.id === orderCompleted.id)).toBe(
+        false,
+      );
+
+      await prisma.order.deleteMany({
+        where: {
+          id: {
+            in: [
+              orderPending.id,
+              orderProcessing.id,
+              orderCompleted.id,
+              orderCancelled.id,
+            ],
+          },
+        },
+      });
+    });
+  });
 });

@@ -3,9 +3,9 @@
 import type { ReactNode } from "react";
 import { AlertCircle, Printer } from "lucide-react";
 
+import { Money } from "@/components/kit";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatVnd } from "@/lib/money";
 
 export interface OrderStatusInfo {
   label: string;
@@ -257,7 +257,7 @@ export function CustomerOrderDetail({
                 </span>
               </div>
               <strong className="text-foreground font-mono">
-                {formatVnd(item.lineTotal)} ₫
+                <Money amount={item.lineTotal} />
               </strong>
             </li>
           ))}
@@ -266,7 +266,7 @@ export function CustomerOrderDetail({
         <div className="border-border mt-5 flex items-baseline justify-between border-t pt-4">
           <span className="text-lg font-bold">Tổng thanh toán</span>
           <span className="text-primary font-heading text-2xl font-extrabold">
-            {formatVnd(order.total)} ₫
+            <Money amount={order.total} className="text-2xl" />
           </span>
         </div>
       </div>

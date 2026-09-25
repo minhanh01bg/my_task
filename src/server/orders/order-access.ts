@@ -1,5 +1,7 @@
-import { createCustomerOrderClaimedNotification } from "@/server/customer-notifications/create-customer-notification";
+import type { Prisma } from "@prisma/client";
+
 import { digestOpaqueToken } from "@/server/customer-auth/session";
+import { createCustomerOrderClaimedNotification } from "@/server/customer-notifications/create-customer-notification";
 import { prisma } from "@/server/db/prisma";
 import { canonicalizeVietnamesePhone } from "@/types/customer-auth";
 
@@ -38,9 +40,46 @@ export const customerOrderSelect = {
 /** Lich su don cua khach chi hien 50 don moi nhat. */
 export const CUSTOMER_ORDER_HISTORY_LIMIT = 50;
 
-export function listCustomerOrders(accountId: string) {
+export type CustomerOrderFilterStatus =
+  | "all"
+  | "pending"
+  | "processing"
+  | "completed"
+  | "cancelled";
+
+export function listCustomerOrders(
+  accountId: string,
+  filterStatus?: CustomerOrderFilterStatus | string,
+) {
+  let statusCondition: Prisma.OrderWhereInput = {};
+
+  if (filterStatus === "pending") {
+    statusCondition = {
+      status: "pending",
+      fulfillmentStatus: { not: "cancelled" },
+    };
+  } else if (filterStatus === "processing") {
+    statusCondition = {
+      status: { not: "cancelled" },
+      fulfillmentStatus: { in: ["new", "confirmed", "preparing", "ready"] },
+    };
+  } else if (filterStatus === "completed") {
+    statusCondition = {
+      fulfillmentStatus: "completed",
+      status: { not: "cancelled" },
+    };
+  } else if (filterStatus === "cancelled") {
+    statusCondition = {
+      OR: [{ status: "cancelled" }, { fulfillmentStatus: "cancelled" }],
+    };
+  }
+
   return prisma.order.findMany({
-    where: { customerAccountId: accountId, channel: "online" },
+    where: {
+      customerAccountId: accountId,
+      channel: "online",
+      ...statusCondition,
+    },
     orderBy: { createdAt: "desc" },
     take: CUSTOMER_ORDER_HISTORY_LIMIT,
     select: customerOrderSelect,
