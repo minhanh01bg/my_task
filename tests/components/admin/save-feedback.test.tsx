@@ -161,3 +161,113 @@ describe("Thông báo sau khi lưu", () => {
     },
   );
 });
+
+it("cài đặt: lỗi bất ngờ không lộ chi tiết, giữ dữ liệu và thử lại được", async () => {
+  actions.settings
+    .mockRejectedValueOnce(new Error("password=private-secret"))
+    .mockResolvedValueOnce({ ok: true, message: "Lưu cài đặt thành công" });
+  render(
+    <ToastProvider>
+      <SettingsForm
+        storeProfile={{ name: "Cửa hàng" }}
+        account={{
+          bankBin: "970423",
+          accountNumber: "123456",
+          accountName: "NGUYEN VAN A",
+        }}
+        shipping={{ shippingFee: 0, freeShippingThreshold: 0 }}
+      />
+    </ToastProvider>,
+  );
+  const user = userEvent.setup();
+  await user.clear(screen.getByLabelText(/Tên cửa hàng/));
+  await user.type(screen.getByLabelText(/Tên cửa hàng/), "Thông tin cần giữ");
+  await user.click(screen.getByRole("button", { name: "Lưu cài đặt" }));
+  await expectToast("Không thể lưu cài đặt. Vui lòng thử lại.", "error");
+  expect(screen.getByLabelText(/Tên cửa hàng/)).toHaveValue(
+    "Thông tin cần giữ",
+  );
+  expect(screen.queryByText(/private-secret/)).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Lưu cài đặt" }));
+  await expectToast("Lưu cài đặt thành công", "success");
+});
+
+it.each(["settings", "product", "quick"] as const)(
+  "%s: khóa nút trong lúc lưu, không gửi lặp, lỗi vẫn giữ dữ liệu để thử lại",
+  async (kind) => {
+    type Result = { ok: false; error: string; message: string };
+    let finish!: (result: Result) => void;
+    actions[kind].mockImplementationOnce(
+      () =>
+        new Promise<Result>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    render(
+      <ToastProvider>
+        {kind === "settings" ? (
+          <SettingsForm
+            storeProfile={{ name: "Cửa hàng" }}
+            account={{
+              bankBin: "970423",
+              accountNumber: "123456",
+              accountName: "NGUYEN VAN A",
+            }}
+            shipping={{ shippingFee: 0, freeShippingThreshold: 0 }}
+          />
+        ) : kind === "product" ? (
+          <ProductForm categories={[]} product={product} />
+        ) : (
+          <QuickProductEdit product={product} />
+        )}
+      </ToastProvider>,
+    );
+    const user = userEvent.setup();
+    if (kind === "quick")
+      await user.click(screen.getByRole("button", { name: /Sửa nhanh giá/ }));
+    const field =
+      kind === "settings"
+        ? screen.getByLabelText(/Tên cửa hàng/)
+        : kind === "product"
+          ? screen.getByLabelText("Tên sản phẩm")
+          : screen.getByRole("spinbutton", { name: /^Giá bán$/ });
+    const value = kind === "quick" ? "7500" : "Nội dung đang sửa";
+    await user.clear(field);
+    await user.type(field, value);
+    await user.click(
+      screen.getByRole("button", {
+        name: kind === "settings" ? "Lưu cài đặt" : "Lưu thay đổi",
+      }),
+    );
+    const saving = screen.getByRole("button", {
+      name: kind === "settings" ? "Đang lưu cài đặt…" : "Đang lưu…",
+    });
+    expect(saving).toBeDisabled();
+    await user.click(saving);
+    expect(actions[kind]).toHaveBeenCalledTimes(1);
+    expect(document.querySelectorAll("[data-slot='toast']")).toHaveLength(0);
+    finish({ ok: false, error: "Không lưu được", message: "Không lưu được" });
+    await expectToast("Không lưu được", "error");
+    expect(field).toHaveValue(kind === "quick" ? 7500 : value);
+    const retry = screen.getByRole("button", {
+      name: kind === "settings" ? "Lưu cài đặt" : "Lưu thay đổi",
+    });
+    expect(retry).toBeEnabled();
+    if (kind === "quick")
+      expect(
+        screen.getByRole("dialog", { name: "Sửa nhanh Đường" }),
+      ).toBeInTheDocument();
+    actions[kind].mockResolvedValueOnce(
+      kind === "settings"
+        ? { ok: true, message: "Lưu cài đặt thành công" }
+        : { ok: true },
+    );
+    await user.click(retry);
+    await expectToast(
+      kind === "settings"
+        ? "Lưu cài đặt thành công"
+        : "Đã lưu sản phẩm thành công",
+      "success",
+    );
+  },
+);

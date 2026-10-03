@@ -58,7 +58,10 @@ export function QuickProductEdit({ product }: QuickProductEditProps) {
         </DialogHeader>
         <form
           className="grid gap-4"
-          action={async (formData) => {
+          onSubmit={async (event) => {
+            event.preventDefault();
+            if (saving) return;
+            const formData = new FormData(event.currentTarget);
             setSaving(true);
             setMessage("");
             try {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState } from "react";
 import { Check, X } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -45,7 +45,16 @@ export function SettingsForm({
   }, null);
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (pending) return;
+        const formData = new FormData(event.currentTarget);
+        // Goi action thu cong de React khong reset cac o khi server tra loi loi.
+        startTransition(() => formAction(formData));
+      }}
+      className="space-y-6"
+    >
       {state ? (
         state.ok ? (
           <Alert variant="success" role="status" className="p-4">

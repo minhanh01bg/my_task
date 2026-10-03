@@ -119,7 +119,11 @@ export function ProductForm({
   const formElement = (
     <form
       ref={formRef}
-      action={handleAction}
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (isSaving) return;
+        void handleAction(new FormData(event.currentTarget));
+      }}
       onInput={(event) => saveDraft(event.currentTarget)}
       onChange={(event) => saveDraft(event.currentTarget)}
       className="grid grid-cols-1 gap-5 sm:grid-cols-2"
