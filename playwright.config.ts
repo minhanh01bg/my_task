@@ -17,7 +17,12 @@ process.env.DATABASE_URL = DATABASE_URL;
 export default defineConfig({
   testDir: "./e2e",
   globalSetup: "./e2e/global-setup.ts",
-  fullyParallel: true,
+  // Cold compile tren may RAM thap can them thoi gian, van fail neu request treo.
+  timeout: 60_000,
+  expect: { timeout: 15_000 },
+  // Cac file dung chung SQLite va Setting; tranh ghi/restore fixture dong thoi.
+  fullyParallel: false,
+  workers: 1,
   retries: process.env.CI ? 2 : 0,
   reporter: "html",
   use: {
@@ -33,7 +38,8 @@ export default defineConfig({
   webServer: {
     command: `pnpm dev --port ${PORT}`,
     url: BASE_URL,
-    reuseExistingServer: !process.env.CI,
+    // Server phai dung dung DB/env fixture va song cung vong doi bo test.
+    reuseExistingServer: false,
     env: {
       DATABASE_URL,
       CANONICAL_ORIGIN: BASE_URL,

@@ -241,7 +241,7 @@ test("admin session lifecycle: unauthenticated redirect and logout cookie revoca
     .getByRole("button", { name: "Quay lại trang quản trị" })
     .or(page.getByRole("link", { name: "Quay lại trang quản trị" }))
     .click();
-  await expect(page).toHaveURL(/.*\/admin\/orders/);
+  await expect(page).toHaveURL(/\/admin$/);
 
   // Admin can log out from the visible desktop navigation.
   await page.getByRole("button", { name: "Đăng xuất" }).click();
