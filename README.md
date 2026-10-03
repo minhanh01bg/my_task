@@ -41,6 +41,16 @@ pnpm version-packages
 pnpm release
 ```
 
+## Prisma khi cập nhật code
+
+`pnpm build` tự tạo lại Prisma Client từ `prisma/schema.prisma` trước khi build
+Next.js. Sau khi pull code mới, client cũ trong `node_modules` sẽ được cập nhật,
+kể cả khi không cài lại dependencies.
+
+`prisma generate` chỉ tạo client, không cập nhật database. Khi triển khai thay đổi
+schema, áp dụng migrations bằng `pnpm exec prisma migrate deploy` với
+`DATABASE_URL` của môi trường triển khai trước khi khởi động ứng dụng mới.
+
 ## Project structure
 
 ```txt
