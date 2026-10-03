@@ -1,8 +1,14 @@
-import { render, screen } from "@testing-library/react";
+import { render as renderComponent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
+import { ToastProvider } from "@/components/ui/toast";
+
 import { QuickProductEdit } from "@/app/admin/products/quick-product-edit";
+
+function render(ui: React.ReactNode) {
+  return renderComponent(<ToastProvider>{ui}</ToastProvider>);
+}
 
 describe("QuickProductEdit (Admin)", () => {
   it("hỗ trợ sửa nhanh sản phẩm có giá lẻ (7.500) và tồn kho số thập phân (1.25)", async () => {

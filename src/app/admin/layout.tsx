@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { ServiceWorkerRegistrar } from "@/components/pos/service-worker-registrar";
+import { ToastProvider } from "@/components/ui/toast";
 import { AdminNav } from "@/features/admin-navigation/admin-nav";
 import { LowStockNavBadge } from "@/features/admin-navigation/low-stock-nav-badge";
 import { NotificationProvider } from "@/features/admin-notifications/notification-provider";
@@ -22,19 +23,21 @@ export default async function AdminLayout({
 
   return (
     <QueryProvider>
-      <NotificationProvider>
-        <AdminSearchProvider>
-          <div className="grid min-h-dvh grid-cols-1 md:grid-cols-[auto_minmax(0,1fr)]">
-            <AdminNav productsBadge={<LowStockNavBadge />} />
-            <main
-              id="admin-main-content"
-              className="min-w-0 p-4 pb-24 sm:p-6 sm:pb-24 md:pb-6 lg:p-8"
-            >
-              {children}
-            </main>
-          </div>
-        </AdminSearchProvider>
-      </NotificationProvider>
+      <ToastProvider>
+        <NotificationProvider>
+          <AdminSearchProvider>
+            <div className="grid min-h-dvh grid-cols-1 md:grid-cols-[auto_minmax(0,1fr)]">
+              <AdminNav productsBadge={<LowStockNavBadge />} />
+              <main
+                id="admin-main-content"
+                className="min-w-0 p-4 pb-24 sm:p-6 sm:pb-24 md:pb-6 lg:p-8"
+              >
+                {children}
+              </main>
+            </div>
+          </AdminSearchProvider>
+        </NotificationProvider>
+      </ToastProvider>
       <ServiceWorkerRegistrar />
     </QueryProvider>
   );

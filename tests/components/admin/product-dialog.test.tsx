@@ -1,6 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { render as renderComponent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+
+import { ToastProvider } from "@/components/ui/toast";
 
 import { ProductDialog } from "@/app/admin/products/product-dialog";
 import type { CatalogCategory } from "@/types/catalog";
@@ -17,6 +19,10 @@ const mockCategories: CatalogCategory[] = [
   { id: "cat-1", name: "Đồ uống", sortOrder: 0 },
   { id: "cat-2", name: "Gia vị", sortOrder: 1 },
 ];
+
+function render(ui: React.ReactNode) {
+  return renderComponent(<ToastProvider>{ui}</ToastProvider>);
+}
 
 describe("ProductDialog (Admin)", () => {
   it("hiển thị nút kích hoạt mặc định và mở dialog rộng rãi (sm:max-w-3xl lg:max-w-4xl)", async () => {

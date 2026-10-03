@@ -1,6 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { render as renderComponent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
+
+import { ToastProvider } from "@/components/ui/toast";
 
 import { ProductForm } from "@/app/admin/products/product-form";
 import type { CatalogCategory } from "@/types/catalog";
@@ -9,6 +11,10 @@ const mockCategories: CatalogCategory[] = [
   { id: "cat-1", name: "Đồ uống", sortOrder: 0 },
   { id: "cat-2", name: "Bánh kẹo", sortOrder: 1 },
 ];
+
+function render(ui: React.ReactNode) {
+  return renderComponent(<ToastProvider>{ui}</ToastProvider>);
+}
 
 describe("ProductForm (Admin)", () => {
   it("hiển thị các trường số với bước nhảy 1.000đ cho giá bán và nút bấm rõ ràng", () => {

@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import ProductsPage from "@/app/admin/products/page";
+import { ToastProvider } from "@/components/ui/toast";
 import { prisma } from "@/server/db/prisma";
 
 vi.mock("next/navigation", () => ({
@@ -33,7 +34,7 @@ describe("Admin Products - Low stock inventory alerts", () => {
         searchParams: Promise.resolve({}),
       });
 
-      render(page);
+      render(<ToastProvider>{page}</ToastProvider>);
 
       expect(screen.getByTestId("low-stock-alert")).toBeInTheDocument();
       expect(screen.getByText(/cảnh báo tồn kho thấp/i)).toBeInTheDocument();

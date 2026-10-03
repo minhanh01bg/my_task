@@ -36,6 +36,9 @@ test.describe("Quản lý sản phẩm", () => {
       .getByRole("button", { name: "Lưu và nhập món tiếp" })
       .click();
     await expect(productDialog).not.toBeVisible();
+    const savedToast = page.locator('[data-slot="toast"][data-type="success"]');
+    await expect(savedToast).toContainText("Đã lưu sản phẩm thành công");
+    await expect(savedToast).toBeInViewport();
 
     await expect(page.getByText("Ruột xe Dream").first()).toBeVisible();
 

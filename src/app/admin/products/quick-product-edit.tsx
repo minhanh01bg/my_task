@@ -14,6 +14,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+import { useToast } from "@/components/ui/toast";
+
 import { quickUpdateProductAction } from "./actions";
 
 interface QuickProductEditProps {
@@ -27,6 +29,7 @@ interface QuickProductEditProps {
 }
 
 export function QuickProductEdit({ product }: QuickProductEditProps) {
+  const toast = useToast();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -58,13 +61,26 @@ export function QuickProductEdit({ product }: QuickProductEditProps) {
           action={async (formData) => {
             setSaving(true);
             setMessage("");
-            const result = await quickUpdateProductAction(formData);
-            setSaving(false);
-            if (result.ok) {
-              setEditing(false);
-              return;
+            try {
+              const result = await quickUpdateProductAction(formData);
+              toast.add({
+                title: result.ok
+                  ? "Đã lưu sản phẩm thành công"
+                  : result.message,
+                type: result.ok ? "success" : "error",
+              });
+              if (result.ok) {
+                setEditing(false);
+                return;
+              }
+              setMessage(result.message);
+            } catch {
+              const title = "Không thể lưu sản phẩm. Vui lòng thử lại.";
+              toast.add({ title, type: "error" });
+              setMessage(title);
+            } finally {
+              setSaving(false);
             }
-            setMessage(result.message);
           }}
         >
           <input type="hidden" name="id" value={product.id} />

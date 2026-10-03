@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/toast";
 import type { ShippingSettings } from "@/lib/shipping/shipping-fee";
 import type { BankAccount } from "@/lib/vietqr/types";
 import type { PublicStoreProfile } from "@/types/storefront";
@@ -25,10 +26,23 @@ export function SettingsForm({
   account,
   shipping,
 }: SettingsFormProps) {
+  const toast = useToast();
   const [state, formAction, pending] = useActionState<
     SaveSettingsResult | null,
     FormData
-  >(saveSettingsAction, null);
+  >(async (previousState, formData) => {
+    let result: SaveSettingsResult;
+    try {
+      result = await saveSettingsAction(previousState, formData);
+    } catch {
+      result = { ok: false, error: "Không thể lưu cài đặt. Vui lòng thử lại." };
+    }
+    toast.add({
+      title: result.ok ? result.message : result.error,
+      type: result.ok ? "success" : "error",
+    });
+    return result;
+  }, null);
 
   return (
     <form action={formAction} className="space-y-6">

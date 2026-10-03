@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle, Sparkle } from "@phosphor-icons/react";
+import { Sparkle } from "@phosphor-icons/react";
 
 import { NumberStepper } from "@/components/kit";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/toast";
 import { ImageUploader } from "@/features/product-image/image-uploader";
 import type { CatalogCategory } from "@/types/catalog";
 
@@ -37,6 +38,7 @@ export function ProductForm({
   onSuccess,
   isDialog = false,
 }: ProductFormProps) {
+  const toast = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -91,7 +93,9 @@ export function ProductForm({
 
     try {
       const result = await saveProductAction(formData);
-      setMessage(result.ok ? "Đã lưu sản phẩm thành công" : result.message);
+      const title = result.ok ? "Đã lưu sản phẩm thành công" : result.message;
+      toast.add({ title, type: result.ok ? "success" : "error" });
+      setMessage(result.ok ? null : result.message);
 
       if (result.ok) {
         if (!product) {
@@ -103,6 +107,10 @@ export function ProductForm({
         }
         onSuccess?.();
       }
+    } catch {
+      const title = "Không thể lưu sản phẩm. Vui lòng thử lại.";
+      toast.add({ title, type: "error" });
+      setMessage(title);
     } finally {
       setIsSaving(false);
     }
@@ -295,10 +303,9 @@ export function ProductForm({
         </Button>
         {message ? (
           <span
-            className="text-primary flex items-center gap-1.5 text-sm font-semibold"
+            className="text-muted-foreground flex items-center gap-1.5 text-sm font-semibold"
             role="status"
           >
-            <CheckCircle aria-hidden="true" weight="fill" />
             {message}
           </span>
         ) : null}
