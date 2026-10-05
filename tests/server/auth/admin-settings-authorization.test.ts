@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { saveSettingsAction } from "@/app/admin/settings/actions";
 import SettingsPage from "@/app/admin/settings/page";
 import AdminLayout from "@/app/admin/layout";
+import PosLayout from "@/app/pos/layout";
+import { AdminWorkspace } from "@/features/admin-navigation/admin-workspace";
 import { createAdminSession, SESSION_COOKIE } from "@/server/auth/session";
 import { prisma } from "@/server/db/prisma";
 import * as storeSettings from "@/server/settings/store-settings";
@@ -176,10 +178,15 @@ describe("Admin Settings Authorization & Protection", () => {
     expect(mockRedirect).toHaveBeenCalledWith("/login");
   });
 
-  it("AdminLayout: chuyển hướng đến /login khi chưa có phiên đăng nhập", async () => {
-    await expect(AdminLayout({ children: "content" })).rejects.toThrow(
-      "NEXT_REDIRECT:/login",
-    );
-    expect(mockRedirect).toHaveBeenCalledWith("/login");
-  });
+  it.each([AdminLayout, PosLayout])(
+    "layout dùng khung chung bảo vệ phiên đăng nhập",
+    async (Layout) => {
+      const element = await Layout({ children: "content" });
+      expect(element.type).toBe(AdminWorkspace);
+      await expect(AdminWorkspace(element.props)).rejects.toThrow(
+        "NEXT_REDIRECT:/login",
+      );
+      expect(mockRedirect).toHaveBeenCalledWith("/login");
+    },
+  );
 });

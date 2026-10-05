@@ -26,7 +26,7 @@ export default function PosError({
   }, [error]);
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-lg items-center justify-center p-6">
+    <div className="mx-auto flex min-h-dvh max-w-lg items-center justify-center p-6">
       <div
         role="alert"
         className="surface-panel flex w-full flex-col items-center gap-3 px-6 py-10 text-center"
@@ -64,6 +64,6 @@ export default function PosError({
           </Button>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

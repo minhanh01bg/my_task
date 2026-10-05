@@ -27,7 +27,7 @@ export function CategoryGrid({
     : products;
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="@container flex flex-col gap-3">
       <div
         className="flex gap-2 overflow-x-auto pb-2 sm:flex-wrap"
         aria-label="Danh mục sản phẩm"
@@ -67,7 +67,7 @@ export function CategoryGrid({
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 @min-[28rem]:grid-cols-3 @min-[38rem]:grid-cols-4">
         {visible.map((product) => (
           <button
             key={product.id}

@@ -1,18 +1,10 @@
-import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 
 import { PosScreen } from "@/components/pos/pos-screen";
 
-vi.mock("next-themes", () => ({
-  useTheme: () => ({
-    theme: "light",
-    resolvedTheme: "light",
-    setTheme: vi.fn(),
-  }),
-}));
-
 describe("PosScreen header", () => {
-  it("có nút đổi giao diện sáng/tối cạnh lối vào quản lý cửa hàng", () => {
+  it("hiển thị quầy trực tiếp, không còn lối vào quản lý trung gian", () => {
     render(
       <PosScreen
         catalog={{
@@ -25,10 +17,12 @@ describe("PosScreen header", () => {
       />,
     );
 
-    const adminLink = screen.getByRole("link", { name: /quản lý cửa hàng/i });
-    const toggle = within(adminLink.parentElement!).getByRole("button", {
-      name: "Chuyển sang giao diện tối",
-    });
-    expect(toggle).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Hôm nay bán gì đây?" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Tiệm An Phát")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /quản lý cửa hàng/i }),
+    ).not.toBeInTheDocument();
   });
 });

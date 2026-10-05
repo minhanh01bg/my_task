@@ -7,7 +7,6 @@ import {
   Plus,
   ShoppingBagOpen,
   Storefront,
-  Wrench,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -22,7 +21,6 @@ import { ProductSearch } from "@/components/pos/product-search";
 import { ServiceLineDialog } from "@/components/pos/service-line-dialog";
 import { SyncIndicator } from "@/components/pos/sync-indicator";
 import { usePosShortcuts } from "@/components/pos/use-pos-shortcuts";
-import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -272,9 +270,9 @@ export function PosScreen({
   }
 
   return (
-    <main
+    <div
       className={cn(
-        "mx-auto grid min-h-dvh w-full max-w-[1800px] grid-cols-1 gap-4 p-3 sm:p-5 lg:h-dvh lg:grid-cols-[minmax(0,1fr)_430px] lg:gap-5 lg:p-6",
+        "mx-auto grid min-h-[calc(100dvh-4rem)] w-full max-w-[1800px] grid-cols-1 gap-4 p-3 sm:p-5 lg:h-[calc(100dvh-3.5rem)] lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5 lg:p-6 2xl:grid-cols-[minmax(0,1fr)_430px]",
         // Chua cho thanh tinh tien co dinh ben duoi de khong che dong cuoi.
         lines.length > 0 && "pb-28 sm:pb-28",
       )}
@@ -291,16 +289,6 @@ export function PosScreen({
             <p className="text-muted-foreground mt-1 text-sm">
               Tìm hoặc chọn mặt hàng, kiểm tra giỏ rồi thanh toán.
             </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle className="bg-card" />
-            <Link
-              href="/admin/products"
-              className="border-border bg-card text-foreground hover:bg-accent focus-visible:ring-ring inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold transition-colors focus-visible:ring-3 focus-visible:outline-none"
-            >
-              <Wrench aria-hidden="true" weight="bold" className="size-5" />
-              Quản lý cửa hàng
-            </Link>
           </div>
         </div>
 
@@ -410,7 +398,7 @@ export function PosScreen({
         // thoai van phai thay tong tien va tinh tien ma khong cuon het trang.
         <div
           data-testid="pos-mobile-checkout"
-          className="bg-background/95 border-border fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.25)] backdrop-blur-md sm:px-5 lg:hidden"
+          className="bg-background/95 border-border fixed inset-x-0 bottom-[calc(3.75rem+1px+max(0.25rem,env(safe-area-inset-bottom)))] z-30 flex items-center gap-3 border-t px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.25)] backdrop-blur-md sm:px-5 md:bottom-0 lg:hidden"
         >
           <a
             href="#pos-cart"
@@ -516,6 +504,6 @@ export function PosScreen({
           ) : null}
         </DialogContent>
       </Dialog>
-    </main>
+    </div>
   );
 }

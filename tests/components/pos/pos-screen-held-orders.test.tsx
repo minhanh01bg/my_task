@@ -67,7 +67,6 @@ describe("PosScreen — mở lại đơn đang giữ", () => {
     render(<PosScreen catalog={CATALOG} bankAccount={null} storeName="Tiệm" />);
 
     const bar = screen.getByTestId("pos-mobile-checkout");
-    expect(bar).toHaveClass("fixed", "bottom-0", "lg:hidden");
     expect(bar).toHaveTextContent("85.000");
 
     fireEvent.click(screen.getByRole("button", { name: /tính tiền/i }));
