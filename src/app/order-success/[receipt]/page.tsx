@@ -7,6 +7,8 @@ import { OrderTimeline } from "@/features/customer-account/order-timeline";
 import { PrintReceiptButton } from "@/features/online-store/print-receipt-button";
 import { formatVnd } from "@/lib/money";
 import { getPublicReceipt } from "@/server/orders/public-receipt";
+import { BankTransferPayment } from "@/features/online-store/bank-transfer-payment";
+import { getStoreBankAccount } from "@/server/settings/store-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,10 @@ export default async function OrderSuccessPage({
     notFound();
   }
   if (!order) notFound();
+  const bankAccount =
+    order.paymentMethod === "bank_transfer" && order.status === "pending"
+      ? await getStoreBankAccount()
+      : null;
 
   return (
     <main className="mx-auto max-w-xl px-4 py-16 text-center sm:py-24">
@@ -93,8 +99,8 @@ export default async function OrderSuccessPage({
         <div className="border-border bg-muted/40 text-muted-foreground mt-5 rounded-xl p-3.5 text-xs leading-relaxed">
           {order.paymentMethod === "bank_transfer" ? (
             <p>
-              Cửa hàng sẽ sớm liên hệ qua số điện thoại để hướng dẫn chuyển
-              khoản và tiến hành giao hàng.
+              Vui lòng kiểm tra hướng dẫn chuyển khoản bên dưới. Cửa hàng sẽ xác
+              nhận khi nhận được tiền.
             </p>
           ) : (
             <p>
@@ -105,6 +111,7 @@ export default async function OrderSuccessPage({
         </div>
       </div>
 
+      <BankTransferPayment order={order} bankAccount={bankAccount} />
       <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
         <Link
           href="/shop"

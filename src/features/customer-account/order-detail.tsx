@@ -6,6 +6,8 @@ import { AlertCircle, Printer } from "lucide-react";
 import { Money } from "@/components/kit";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BankTransferPayment } from "@/features/online-store/bank-transfer-payment";
+import type { BankAccount } from "@/lib/vietqr/types";
 
 export interface OrderStatusInfo {
   label: string;
@@ -77,9 +79,11 @@ export function resolveFulfillmentStatus(
 export function CustomerOrderDetail({
   order,
   timeline,
+  bankAccount = null,
 }: {
   /** Dong thoi gian trang thai (Server Component) do trang truyen vao. */
   timeline?: ReactNode;
+  bankAccount?: BankAccount | null;
   order: {
     code: string;
     total: number;
@@ -193,6 +197,7 @@ export function CustomerOrderDetail({
         </div>
       ) : null}
 
+      <BankTransferPayment order={order} bankAccount={bankAccount} />
       {/* Recipient & Delivery Info */}
       <div className="border-border bg-card mt-6 space-y-4 rounded-2xl border p-6 shadow-xs">
         <h2 className="font-heading text-lg font-bold">Thông tin giao nhận</h2>

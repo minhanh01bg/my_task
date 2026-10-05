@@ -6,6 +6,7 @@ import { OrderTimeline } from "@/features/customer-account/order-timeline";
 import { RevokeGuestButton } from "@/features/customer-account/revoke-guest-button";
 import { requireCustomerSession } from "@/server/customer-auth/session";
 import { findOwnedCustomerOrder } from "@/server/orders/order-access";
+import { getStoreBankAccount } from "@/server/settings/store-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -25,11 +26,16 @@ export default async function CustomerOrderPage({
   ]);
   const order = await findOwnedCustomerOrder(session.accountId, id);
   if (!order) notFound();
+  const bankAccount =
+    order.paymentMethod === "bank_transfer" && order.status === "pending"
+      ? await getStoreBankAccount()
+      : null;
 
   return (
     <div className="mx-auto max-w-3xl">
       <CustomerOrderDetail
         order={order}
+        bankAccount={bankAccount}
         timeline={<OrderTimeline order={order} />}
       />
       <div className="px-4">

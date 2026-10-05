@@ -4,6 +4,7 @@ import { ClaimOrderButton } from "@/features/customer-account/claim-order-button
 import { CustomerOrderDetail } from "@/features/customer-account/order-detail";
 import { OrderTimeline } from "@/features/customer-account/order-timeline";
 import { findGuestOrder } from "@/server/orders/order-access";
+import { getStoreBankAccount } from "@/server/settings/store-settings";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -19,11 +20,17 @@ export default async function GuestOrderPage({
   const { token } = await params;
   const access = await findGuestOrder(token);
   if (!access) notFound();
+  const bankAccount =
+    access.order.paymentMethod === "bank_transfer" &&
+    access.order.status === "pending"
+      ? await getStoreBankAccount()
+      : null;
 
   return (
     <div className="mx-auto max-w-3xl">
       <CustomerOrderDetail
         order={access.order}
+        bankAccount={bankAccount}
         timeline={<OrderTimeline order={access.order} />}
       />
       <div className="px-4">
