@@ -4,6 +4,8 @@ This file provides guidance to agents when working with code in this repository.
 
 ## Commands and test isolation
 
+- Before building, check whether a live `next start` serves this checkout. Never overwrite its build directory. Use a fresh `NEXT_DIST_DIR=.next-release-<unique-id>` for verification; restart the service with the verified directory only after smoke checks pass. Fixture production E2E must use a separate build copy as well as a separate DB: Next persists Data/Full Route Cache under distDir. See README. Production-only regressions need production smoke/E2E, not only `next dev`.
+
 - Use pnpm 10.28.2/Node 22. Full gate: `pnpm check && pnpm build`; E2E is separate: `pnpm test:e2e`.
 - One Vitest file: `pnpm exec vitest run tests/lib/money.test.ts`; one case: append `-t "dung dau cham"`.
 - One Playwright file: `pnpm test:e2e -- e2e/home.spec.ts`; do not call `pnpm exec playwright` because both `playwright` and `@playwright/test` are installed and direct invocation resolves the wrong runner.
