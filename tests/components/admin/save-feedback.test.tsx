@@ -249,7 +249,7 @@ it.each(["settings", "product", "quick"] as const)(
     finish({ ok: false, error: "Không lưu được", message: "Không lưu được" });
     await expectToast("Không lưu được", "error");
     expect(field).toHaveValue(kind === "quick" ? 7500 : value);
-    const retry = screen.getByRole("button", {
+    const retry = await screen.findByRole("button", {
       name: kind === "settings" ? "Lưu cài đặt" : "Lưu thay đổi",
     });
     expect(retry).toBeEnabled();
