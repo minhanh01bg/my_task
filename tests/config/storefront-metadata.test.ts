@@ -17,6 +17,7 @@ import { generateMetadata as privacyPolicyMetadata } from "@/app/shop/privacy/pa
 import { generateMetadata as productMetadata } from "@/app/shop/products/[id]/page";
 import { generateMetadata as productSlugMetadata } from "@/app/shop/p/[slug]/page";
 import { generateMetadata as categoryMetadata } from "@/app/shop/c/[slug]/page";
+import { generateMetadata as paginatedCategoryMetadata } from "@/app/shop/c/[slug]/page/[page]/page";
 import * as deliveryPolicyModule from "@/app/shop/delivery-policy/page";
 import * as paymentPolicyModule from "@/app/shop/payment-policy/page";
 import * as privacyPolicyModule from "@/app/shop/privacy/page";
@@ -438,7 +439,6 @@ describe("Storefront SEO & Metadata (Task 13)", () => {
 
       const first = await categoryMetadata({
         params: Promise.resolve({ slug: "nuoc-cham-seo" }),
-        searchParams: Promise.resolve({}),
       });
       expect(first.title).toBe("Nước chấm SEO");
       expect(first.alternates?.canonical).toBe("/shop/c/nuoc-cham-seo");
@@ -448,21 +448,18 @@ describe("Storefront SEO & Metadata (Task 13)", () => {
       );
       expect(ogImageUrls(first)).toEqual(["/opengraph-image"]);
 
-      const explicitFirst = await categoryMetadata({
-        params: Promise.resolve({ slug: "nuoc-cham-seo" }),
-        searchParams: Promise.resolve({ page: "1" }),
+      const explicitFirst = await paginatedCategoryMetadata({
+        params: Promise.resolve({ slug: "nuoc-cham-seo", page: "1" }),
       });
       expect(explicitFirst.alternates?.canonical).toBe("/shop/c/nuoc-cham-seo");
 
-      const beyond = await categoryMetadata({
-        params: Promise.resolve({ slug: "nuoc-cham-seo" }),
-        searchParams: Promise.resolve({ page: "9" }),
+      const beyond = await paginatedCategoryMetadata({
+        params: Promise.resolve({ slug: "nuoc-cham-seo", page: "9" }),
       });
       expect(beyond.title).toBe("Danh mục không tồn tại");
 
       const missing = await categoryMetadata({
         params: Promise.resolve({ slug: "khong-ton-tai" }),
-        searchParams: Promise.resolve({}),
       });
       expect(missing.title).toBe("Danh mục không tồn tại");
     });

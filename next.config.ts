@@ -37,6 +37,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Build kiểm chứng phải tách khỏi thư mục mà next start đang phục vụ.
+  distDir: process.env.NEXT_DIST_DIR ?? ".next",
   reactStrictMode: true,
   /*
    * Playwright goi qua 127.0.0.1 con `next dev` phuc vu localhost, nen Next
@@ -45,6 +47,19 @@ const nextConfig: NextConfig = {
    */
   allowedDevOrigins: ["127.0.0.1", "160.250.247.137"],
   poweredByHeader: false,
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: "/shop/c/:slug",
+          has: [
+            { type: "query", key: "page", value: "(?<categoryPage>[1-9]\\d*)" },
+          ],
+          destination: "/shop/c/:slug/page/:categoryPage",
+        },
+      ],
+    };
+  },
   images: {
     formats: ["image/avif", "image/webp"],
     // 30 ngày: ảnh sản phẩm đổi thì đổi tên file (UUID) nên không sợ ảnh cũ.
