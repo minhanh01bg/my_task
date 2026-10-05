@@ -38,4 +38,5 @@ Playwright report.
 - Cập nhật test bảo vệ cả layout admin/POS; chờ nút retry sau transition trong test lưu cài đặt. 20/20 ca liên quan qua.
 - `pnpm check`: lint, TypeScript và 225 file / 1.470 test qua.
 - `NEXT_DIST_DIR=.next-release-pos-admin-20261005 pnpm build`: qua.
-- Kiểm tra domain sau triển khai đang chạy.
+- Đã triển khai release `.next-release-pos-admin-20261005` lên HTTPS domain.
+- Smoke sau khi dịch vụ sẵn sàng: 32 kiểm tra, 0 lỗi; `/sw.js` trả cache v3. Lần gọi ngay khi restart có 502 tạm thời; chạy lại sau ready qua đầy đủ.
