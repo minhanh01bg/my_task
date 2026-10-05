@@ -9,7 +9,7 @@ export default function PosLoading() {
   return (
     <div
       aria-busy="true"
-      className="mx-auto grid min-h-[calc(100dvh-4rem)] w-full max-w-[1800px] grid-cols-1 gap-4 p-3 sm:p-5 lg:h-[calc(100dvh-3.5rem)] lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5 lg:p-6 2xl:grid-cols-[minmax(0,1fr)_430px]"
+      className="mx-auto grid min-h-[calc(100dvh-4rem)] w-full max-w-[1800px] grid-cols-1 gap-4 p-3 sm:p-5 lg:h-[calc(100dvh-4rem)] lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5 lg:p-6 2xl:grid-cols-[minmax(0,1fr)_430px]"
     >
       <p role="status" className="sr-only">
         Đang tải màn hình bán hàng…

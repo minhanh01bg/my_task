@@ -8,7 +8,7 @@ import { metadata as accountOrdersMetadata } from "@/app/account/orders/page";
 import { metadata as accountRegisterMetadata } from "@/app/account/register/page";
 import { metadata as rootMetadata, viewport } from "@/app/layout";
 import { generateMetadata as loginMetadata } from "@/app/login/page";
-import { metadata as posMetadata } from "@/app/pos/layout";
+import { metadata as posMetadata } from "@/app/(management)/pos/layout";
 import { generateMetadata as deliveryPolicyMetadata } from "@/app/shop/delivery-policy/page";
 import { generateMetadata as shopLayoutMetadata } from "@/app/shop/layout";
 import { generateMetadata } from "@/app/shop/page";

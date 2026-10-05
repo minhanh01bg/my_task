@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import {
   deletePromotionAction,
   togglePromotionActiveAction,
-} from "@/app/admin/promotions/actions";
+} from "@/app/(management)/admin/promotions/actions";
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Button } from "@/components/ui/button";
 import type { PromotionActionResult } from "@/types/storefront";

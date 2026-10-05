@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import * as adminOrderActions from "@/app/admin/orders/actions";
+import * as adminOrderActions from "@/app/(management)/admin/orders/actions";
 import {
   AdminUnauthorizedError,
   hasAdminSession,

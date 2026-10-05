@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { ReviewRowActions } from "@/app/admin/reviews/review-row-actions";
+import { ReviewRowActions } from "@/app/(management)/admin/reviews/review-row-actions";
 import type { ReviewActionResult } from "@/server/reviews/admin-reviews";
 
 function setup(overrides: {

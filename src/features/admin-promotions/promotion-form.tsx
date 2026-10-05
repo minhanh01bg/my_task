@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import type { StorefrontPromotion } from "@prisma/client";
 
 import { DropdownField } from "@/components/kit/dropdown-field";
-import { savePromotionAction } from "@/app/admin/promotions/actions";
+import { savePromotionAction } from "@/app/(management)/admin/promotions/actions";
 import type { PromotionActionResult } from "@/types/storefront";
 
 const PLACEMENT_OPTIONS = [

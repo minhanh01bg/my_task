@@ -5,10 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   deleteVoucherAction,
   toggleVoucherActiveAction,
-} from "@/app/admin/promotions/vouchers/actions";
+} from "@/app/(management)/admin/promotions/vouchers/actions";
 import { VoucherRowActions } from "@/features/admin-vouchers/voucher-row-actions";
 
-vi.mock("@/app/admin/promotions/vouchers/actions", () => ({
+vi.mock("@/app/(management)/admin/promotions/vouchers/actions", () => ({
   deleteVoucherAction: vi.fn(),
   toggleVoucherActiveAction: vi.fn(),
 }));

@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import OrderDetailPage from "@/app/admin/orders/[id]/page";
+import OrderDetailPage from "@/app/(management)/admin/orders/[id]/page";
 import { prisma } from "@/server/db/prisma";
 import {
   getNextOnlineOrderStatuses,
@@ -23,7 +23,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/server/auth/require-admin-session", () => ({
   requireAdminSession: vi.fn().mockResolvedValue({ userId: "admin" }),
 }));
-vi.mock("@/app/admin/orders/actions", () => ({
+vi.mock("@/app/(management)/admin/orders/actions", () => ({
   markOnlineOrderPaidAction: vi.fn(),
   transitionOnlineOrderAction: vi.fn(),
 }));

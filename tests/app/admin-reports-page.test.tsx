@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import ReportsPage from "@/app/admin/reports/page";
+import ReportsPage from "@/app/(management)/admin/reports/page";
 
 vi.mock("next/navigation", () => ({
   redirect: (href: string) => {

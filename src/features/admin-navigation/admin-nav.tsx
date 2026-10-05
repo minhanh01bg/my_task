@@ -19,9 +19,11 @@ import {
   Ticket,
   Users,
   X,
+  SidebarSimple,
 } from "@phosphor-icons/react";
 
 import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetClose,
@@ -193,6 +195,7 @@ export function AdminNav({
 } = {}) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [navigationHidden, setNavigationHidden] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
   const currentHref = activeHref(pathname);
   const current = NAV.find((item) => item.href === currentHref);
@@ -250,8 +253,24 @@ export function AdminNav({
         Bỏ qua menu
       </a>
 
-      <header className="bg-card/95 border-border sticky top-0 z-40 flex h-16 items-center justify-between border-b px-4 backdrop-blur-xl md:hidden">
+      <header
+        aria-label="Thanh công cụ quản lý"
+        className="bg-card/95 border-border sticky top-0 z-40 col-span-full flex h-16 items-center justify-between gap-2 border-b px-4 backdrop-blur-xl"
+      >
         <div className="flex min-w-0 items-center gap-3">
+          <Button
+            variant="ghost"
+            className="hidden md:inline-flex"
+            aria-expanded={!navigationHidden}
+            onClick={() => setNavigationHidden((hidden) => !hidden)}
+          >
+            <SidebarSimple aria-hidden="true" className="size-5" />
+            <span className="sr-only">
+              {navigationHidden
+                ? "Hiện thanh điều hướng"
+                : "Ẩn thanh điều hướng"}
+            </span>
+          </Button>
           <span className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-xl shadow-sm">
             <Storefront aria-hidden="true" weight="fill" className="size-5" />
           </span>
@@ -266,11 +285,16 @@ export function AdminNav({
           <ThemeToggle />
           <AdminSearchButton placement="mobile" />
           <NotificationButton placement="mobile" />
+          <AdminLogoutButton className="hidden md:block" />
         </div>
       </header>
 
       <aside
-        className="bg-card/85 relative border-r p-5 backdrop-blur-xl max-md:hidden md:sticky md:top-0 md:z-40 md:h-dvh md:overflow-y-auto"
+        data-collapsed={navigationHidden || undefined}
+        className={cn(
+          "bg-card/85 relative border-r p-5 backdrop-blur-xl max-md:hidden md:sticky md:top-16 md:z-40 md:h-[calc(100dvh-4rem)] md:overflow-y-auto",
+          navigationHidden && "md:hidden",
+        )}
         style={{ width: sidebarWidth }}
       >
         <div className="mb-5 flex items-center justify-between gap-3 px-2">
@@ -285,10 +309,7 @@ export function AdminNav({
               </p>
             </div>
           </div>
-          <ThemeToggle />
         </div>
-        <AdminSearchButton placement="desktop" />
-        <NotificationButton placement="desktop" />
         <nav aria-label="Điều hướng quản lý">
           <ul className="flex flex-col gap-1.5">
             {NAV.map((item) => (
@@ -302,7 +323,6 @@ export function AdminNav({
             ))}
           </ul>
         </nav>
-        <AdminLogoutButton className="border-border mt-5 border-t pt-3" />
         <div
           role="separator"
           aria-label="Thay đổi chiều rộng thanh điều hướng"

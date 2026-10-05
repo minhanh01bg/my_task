@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { saveSettingsAction } from "@/app/admin/settings/actions";
-import SettingsPage from "@/app/admin/settings/page";
-import AdminLayout from "@/app/admin/layout";
-import PosLayout from "@/app/pos/layout";
+import { saveSettingsAction } from "@/app/(management)/admin/settings/actions";
+import SettingsPage from "@/app/(management)/admin/settings/page";
+import ManagementLayout from "@/app/(management)/layout";
 import { AdminWorkspace } from "@/features/admin-navigation/admin-workspace";
 import { createAdminSession, SESSION_COOKIE } from "@/server/auth/session";
 import { prisma } from "@/server/db/prisma";
@@ -178,7 +177,7 @@ describe("Admin Settings Authorization & Protection", () => {
     expect(mockRedirect).toHaveBeenCalledWith("/login");
   });
 
-  it.each([AdminLayout, PosLayout])(
+  it.each([ManagementLayout])(
     "layout dùng khung chung bảo vệ phiên đăng nhập",
     async (Layout) => {
       const element = await Layout({ children: "content" });

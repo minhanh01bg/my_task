@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import AdminDashboardPage from "@/app/admin/page";
+import AdminDashboardPage from "@/app/(management)/admin/page";
 import { DashboardSection } from "@/features/admin-dashboard/dashboard-section";
 import { summarizeSales } from "@/server/admin/sales-analytics";
 import {

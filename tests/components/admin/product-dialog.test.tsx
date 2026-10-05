@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "@/components/ui/toast";
 
-import { ProductDialog } from "@/app/admin/products/product-dialog";
+import { ProductDialog } from "@/app/(management)/admin/products/product-dialog";
 import type { CatalogCategory } from "@/types/catalog";
 
 vi.mock("next/navigation", () => ({

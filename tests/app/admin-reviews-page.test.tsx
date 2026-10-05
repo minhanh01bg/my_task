@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import AdminReviewsPage from "@/app/admin/reviews/page";
+import AdminReviewsPage from "@/app/(management)/admin/reviews/page";
 import { listAdminReviews } from "@/server/reviews/admin-reviews";
 
 vi.mock("@/server/auth/require-admin-session", () => ({

@@ -1,14 +1,14 @@
 import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import CategoriesPage from "@/app/admin/categories/page";
-import CustomersPage from "@/app/admin/customers/page";
-import DebtsPage from "@/app/admin/debts/page";
-import OrderDetailPage from "@/app/admin/orders/[id]/page";
-import OrdersPage from "@/app/admin/orders/page";
-import ProductsPage from "@/app/admin/products/page";
-import AdminPromotionsPage from "@/app/admin/promotions/page";
-import ReportsPage from "@/app/admin/reports/page";
+import CategoriesPage from "@/app/(management)/admin/categories/page";
+import CustomersPage from "@/app/(management)/admin/customers/page";
+import DebtsPage from "@/app/(management)/admin/debts/page";
+import OrderDetailPage from "@/app/(management)/admin/orders/[id]/page";
+import OrdersPage from "@/app/(management)/admin/orders/page";
+import ProductsPage from "@/app/(management)/admin/products/page";
+import AdminPromotionsPage from "@/app/(management)/admin/promotions/page";
+import ReportsPage from "@/app/(management)/admin/reports/page";
 import { listCustomers } from "@/server/admin/list-customers";
 import {
   listDebts,

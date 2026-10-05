@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { ProductFilters } from "@/app/admin/products/product-filters";
+import { ProductFilters } from "@/app/(management)/admin/products/product-filters";
 import type { CatalogCategory } from "@/types/catalog";
 
 const push = vi.fn();

@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { toggleCustomerAccountDisabledAction } from "@/app/admin/customers/actions";
+import { toggleCustomerAccountDisabledAction } from "@/app/(management)/admin/customers/actions";
 import { prisma } from "@/server/db/prisma";
 
 // Mock admin session as authorized

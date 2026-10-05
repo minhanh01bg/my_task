@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { prisma } from "@/server/db/prisma";
 import * as requireAdminModule from "@/server/auth/require-admin-session";
-import { saveCategoryAction } from "@/app/admin/categories/actions";
+import { saveCategoryAction } from "@/app/(management)/admin/categories/actions";
 
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),

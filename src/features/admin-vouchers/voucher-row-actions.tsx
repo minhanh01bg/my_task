@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import {
   deleteVoucherAction,
   toggleVoucherActiveAction,
-} from "@/app/admin/promotions/vouchers/actions";
+} from "@/app/(management)/admin/promotions/vouchers/actions";
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Button } from "@/components/ui/button";
 import type { VoucherActionResult } from "@/types/voucher";

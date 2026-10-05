@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { ToastProvider } from "@/components/ui/toast";
 
-import { QuickProductEdit } from "@/app/admin/products/quick-product-edit";
+import { QuickProductEdit } from "@/app/(management)/admin/products/quick-product-edit";
 
 function render(ui: React.ReactNode) {
   return renderComponent(<ToastProvider>{ui}</ToastProvider>);

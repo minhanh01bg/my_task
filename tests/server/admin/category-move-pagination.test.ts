@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
-import { moveCategoryAction } from "@/app/admin/categories/actions";
+import { moveCategoryAction } from "@/app/(management)/admin/categories/actions";
 import { listAdminCategories } from "@/server/admin/list-categories";
 import { prisma } from "@/server/db/prisma";
 

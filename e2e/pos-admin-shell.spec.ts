@@ -9,7 +9,18 @@ test.beforeEach(async ({ page }) => {
   }
   await page.goto("/login?next=%2Fpos");
   await page.getByLabel("Mật khẩu cửa hàng").fill("123456");
+  const loginResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/auth/login") &&
+      response.request().method() === "POST",
+  );
   await page.getByRole("button", { name: "Vào bán hàng" }).click();
+  expect((await loginResponse).status()).toBe(200);
+  expect(
+    (await page.context().cookies()).some(
+      (cookie) => cookie.name === "pos_session",
+    ),
+  ).toBe(true);
   await expect(page).toHaveURL(/\/pos$/);
 });
 
@@ -28,14 +39,24 @@ test("quầy dùng menu admin, chuyển mục giữ giỏ và ẩn/hiện sideba
   ).toHaveCount(0);
   await page.getByRole("combobox").fill("nhot");
   await page.getByRole("option").getByText("Nhớt Castrol Power1 0.8L").click();
-  await expect(page.getByTestId("cart-total")).toHaveText("120.000");
+  await expect(
+    page.getByTestId("cart-total").filter({ visible: true }),
+  ).toHaveText("120.000");
   await nav.getByRole("link", { name: /^Sản phẩm/ }).click();
   await expect(page).toHaveURL(/\/admin\/products$/);
+  await nav.evaluate((node) =>
+    node.setAttribute("data-shell-persisted", "true"),
+  );
   await nav.getByRole("link", { name: "Quầy bán hàng" }).click();
-  await expect(page.getByTestId("cart-total")).toHaveText("120.000");
+  await expect(
+    page.getByTestId("cart-total").filter({ visible: true }),
+  ).toHaveText("120.000");
+  await expect(nav).toHaveAttribute("data-shell-persisted", "true");
   await page.getByRole("button", { name: "Ẩn thanh điều hướng" }).click();
   await expect(nav).not.toBeVisible();
-  await expect(page.getByTestId("cart-total")).toHaveText("120.000");
+  await expect(
+    page.getByTestId("cart-total").filter({ visible: true }),
+  ).toHaveText("120.000");
   await page.getByRole("button", { name: "Hiện thanh điều hướng" }).click();
   await expect(nav).toBeVisible();
   await test.info().attach("Quầy trong layout admin desktop", {
@@ -43,7 +64,9 @@ test("quầy dùng menu admin, chuyển mục giữ giỏ và ẩn/hiện sideba
     contentType: "image/png",
   });
   await page.reload();
-  await expect(page.getByTestId("cart-total")).toHaveText("120.000");
+  await expect(
+    page.getByTestId("cart-total").filter({ visible: true }),
+  ).toHaveText("120.000");
 });
 
 test("mobile: menu admin và thanh tính tiền không che nhau", async ({
@@ -85,13 +108,17 @@ test("production offline: tải lại quầy giữ giỏ rồi thanh toán và �
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
   await page.getByRole("combobox").fill("nhot");
   await page.getByRole("option").getByText("Nhớt Castrol Power1 0.8L").click();
-  await expect(page.getByTestId("cart-total")).toHaveText("120.000");
+  await expect(
+    page.getByTestId("cart-total").filter({ visible: true }),
+  ).toHaveText("120.000");
   await context.setOffline(true);
   await page.reload();
   await expect(
     page.getByRole("navigation", { name: "Điều hướng quản lý", exact: true }),
   ).toBeVisible();
-  await expect(page.getByTestId("cart-total")).toHaveText("120.000");
+  await expect(
+    page.getByTestId("cart-total").filter({ visible: true }),
+  ).toHaveText("120.000");
   await page.getByRole("button", { name: /thanh toán/i }).click();
   await page.getByRole("button", { name: /đúng số tiền/i }).click();
   await page.getByRole("button", { name: /^xác nhận/i }).click();

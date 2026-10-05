@@ -27,6 +27,19 @@ vi.mock("@/features/admin-notifications/notification-button", () => ({
 }));
 
 describe("AdminNav", () => {
+  it("công cụ chung nằm trên navbar, sidebar chỉ giữ chức năng", () => {
+    const { container } = render(<AdminNav />);
+    const header = container.querySelector("header")!;
+    expect(header).not.toHaveClass("md:hidden");
+    expect(
+      within(header).getByRole("button", { name: "Thông báo mobile" }),
+    ).toBeInTheDocument();
+    expect(
+      within(container.querySelector("aside")!).queryByRole("button", {
+        name: /Thông báo/,
+      }),
+    ).not.toBeInTheDocument();
+  });
   it("có top bar, bottom navigation và trạng thái trang hiện tại", () => {
     render(<AdminNav />);
 

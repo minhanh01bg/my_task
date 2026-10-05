@@ -4,13 +4,13 @@ import {
   deleteProductAction,
   quickUpdateProductAction,
   saveProductAction,
-} from "@/app/admin/products/actions";
+} from "@/app/(management)/admin/products/actions";
 import {
   deleteCategoryAction,
   moveCategoryAction,
   saveCategoryAction,
-} from "@/app/admin/categories/actions";
-import { recordDebtPaymentAction } from "@/app/admin/debts/actions";
+} from "@/app/(management)/admin/categories/actions";
+import { recordDebtPaymentAction } from "@/app/(management)/admin/debts/actions";
 import { POST as uploadProductImage } from "@/app/api/products/images/route";
 import { AdminUnauthorizedError } from "@/server/auth/require-admin-session";
 import { createAdminSession, SESSION_COOKIE } from "@/server/auth/session";

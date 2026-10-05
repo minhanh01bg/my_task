@@ -4,7 +4,7 @@ import {
   deleteVoucherAction,
   saveVoucherAction,
   toggleVoucherActiveAction,
-} from "@/app/admin/promotions/vouchers/actions";
+} from "@/app/(management)/admin/promotions/vouchers/actions";
 import * as requireAdminModule from "@/server/auth/require-admin-session";
 import { prisma } from "@/server/db/prisma";
 import {

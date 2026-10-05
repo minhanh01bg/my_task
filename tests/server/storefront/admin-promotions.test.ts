@@ -6,7 +6,7 @@ import {
   deletePromotionAction,
   savePromotionAction,
   togglePromotionActiveAction,
-} from "@/app/admin/promotions/actions";
+} from "@/app/(management)/admin/promotions/actions";
 import { promotionActionSchema } from "@/types/storefront";
 
 describe("Admin Promotion Management Actions", () => {

@@ -272,7 +272,7 @@ export function PosScreen({
   return (
     <div
       className={cn(
-        "mx-auto grid min-h-[calc(100dvh-4rem)] w-full max-w-[1800px] grid-cols-1 gap-4 p-3 sm:p-5 lg:h-[calc(100dvh-3.5rem)] lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5 lg:p-6 2xl:grid-cols-[minmax(0,1fr)_430px]",
+        "mx-auto grid min-h-[calc(100dvh-4rem)] w-full max-w-[1800px] grid-cols-1 gap-4 p-3 sm:p-5 lg:h-[calc(100dvh-4rem)] lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5 lg:p-6 2xl:grid-cols-[minmax(0,1fr)_430px]",
         // Chua cho thanh tinh tien co dinh ben duoi de khong che dong cuoi.
         lines.length > 0 && "pb-28 sm:pb-28",
       )}

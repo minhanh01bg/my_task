@@ -1,6 +1,6 @@
 // Tang version moi khi shell/CSS thay doi. Khong tai su dung HTML cua build cu:
 // HTML Next.js chua ten CSS chunk theo hash, chunk do se bien mat sau deploy moi.
-const CACHE_VERSION = "v3";
+const CACHE_VERSION = "v4";
 const CACHE_NAME = `pos-shell-${CACHE_VERSION}`;
 const IMAGE_CACHE = `pos-images-${CACHE_VERSION}`;
 const SHELL_URLS = ["/pos"];

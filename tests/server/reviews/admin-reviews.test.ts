@@ -3,7 +3,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   deleteReviewAction,
   setReviewStatusAction,
-} from "@/app/admin/reviews/actions";
+} from "@/app/(management)/admin/reviews/actions";
 import * as requireAdminModule from "@/server/auth/require-admin-session";
 import { prisma } from "@/server/db/prisma";
 import {

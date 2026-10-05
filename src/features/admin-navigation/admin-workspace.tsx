@@ -14,10 +14,8 @@ import { LowStockNavBadge } from "./low-stock-nav-badge";
 /** Khung và công cụ quản trị dùng chung cho admin và quầy bán hàng. */
 export async function AdminWorkspace({
   children,
-  sales = false,
 }: {
   children: React.ReactNode;
-  sales?: boolean;
 }) {
   await requireAdminSession({ redirectToLogin: true });
 
@@ -27,7 +25,6 @@ export async function AdminWorkspace({
         <NotificationProvider>
           <AdminSearchProvider>
             <AdminWorkspaceFrame
-              sales={sales}
               navigation={
                 <AdminNav
                   productsBadge={

@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { OfflineQueueManager } from "@/app/admin/offline/offline-queue-manager";
+import { OfflineQueueManager } from "@/app/(management)/admin/offline/offline-queue-manager";
 import {
   clearQueue,
   enqueueOrder,

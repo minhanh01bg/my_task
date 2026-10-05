@@ -2,9 +2,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ProductForm } from "@/app/admin/products/product-form";
-import { QuickProductEdit } from "@/app/admin/products/quick-product-edit";
-import { SettingsForm } from "@/app/admin/settings/settings-form";
+import { ProductForm } from "@/app/(management)/admin/products/product-form";
+import { QuickProductEdit } from "@/app/(management)/admin/products/quick-product-edit";
+import { SettingsForm } from "@/app/(management)/admin/settings/settings-form";
 import { ToastProvider } from "@/components/ui/toast";
 
 const actions = vi.hoisted(() => ({
@@ -12,10 +12,10 @@ const actions = vi.hoisted(() => ({
   product: vi.fn(),
   quick: vi.fn(),
 }));
-vi.mock("@/app/admin/settings/actions", () => ({
+vi.mock("@/app/(management)/admin/settings/actions", () => ({
   saveSettingsAction: actions.settings,
 }));
-vi.mock("@/app/admin/products/actions", () => ({
+vi.mock("@/app/(management)/admin/products/actions", () => ({
   saveProductAction: actions.product,
   quickUpdateProductAction: actions.quick,
 }));

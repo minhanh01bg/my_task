@@ -4,16 +4,16 @@ import type { ComponentType } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import AccountLoading from "@/app/account/loading";
-import AdminError from "@/app/admin/error";
-import AdminLoading from "@/app/admin/loading";
+import AdminError from "@/app/(management)/admin/error";
+import AdminLoading from "@/app/(management)/admin/loading";
 import CheckoutLoading from "@/app/checkout/loading";
 import RootLoading from "@/app/loading";
 import LoginLoading from "@/app/login/loading";
 import OrderSuccessLoading from "@/app/order-success/[receipt]/loading";
 import GuestOrderLoading from "@/app/orders/guest/[token]/loading";
-import PosError from "@/app/pos/error";
-import PosLoading from "@/app/pos/loading";
-import AdminProductsLoading from "@/app/admin/products/loading";
+import PosError from "@/app/(management)/pos/error";
+import PosLoading from "@/app/(management)/pos/loading";
+import AdminProductsLoading from "@/app/(management)/admin/products/loading";
 import ShopLoading from "@/app/shop/loading";
 
 const captureException = vi.fn();

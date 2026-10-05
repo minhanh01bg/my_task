@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import ProductsPage from "@/app/admin/products/page";
+import ProductsPage from "@/app/(management)/admin/products/page";
 import { ToastProvider } from "@/components/ui/toast";
 import { prisma } from "@/server/db/prisma";
 

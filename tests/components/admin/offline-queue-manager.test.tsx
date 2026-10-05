@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { OfflineQueueManager } from "@/app/admin/offline/offline-queue-manager";
+import { OfflineQueueManager } from "@/app/(management)/admin/offline/offline-queue-manager";
 
 vi.mock("@/lib/sync/queue", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/sync/queue")>()),

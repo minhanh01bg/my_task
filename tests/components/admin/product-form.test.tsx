@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { ToastProvider } from "@/components/ui/toast";
 
-import { ProductForm } from "@/app/admin/products/product-form";
+import { ProductForm } from "@/app/(management)/admin/products/product-form";
 import type { CatalogCategory } from "@/types/catalog";
 
 const mockCategories: CatalogCategory[] = [
