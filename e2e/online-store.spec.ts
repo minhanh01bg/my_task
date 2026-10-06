@@ -225,6 +225,9 @@ test("CSP enforcement and reporting: pages include CSP header and emit no violat
 test("admin session lifecycle: unauthenticated redirect and logout cookie revocation", async ({
   page,
 }) => {
+  if (process.env.PLAYWRIGHT_PRODUCTION_DIR) {
+    await page.setExtraHTTPHeaders({ "X-Real-IP": "1.1.1.1" });
+  }
   // Accessing /admin/orders without auth redirects to /login
   await page.goto("/admin/orders");
   await expect(page).toHaveURL(/.*\/login/);
@@ -244,7 +247,11 @@ test("admin session lifecycle: unauthenticated redirect and logout cookie revoca
   await expect(page).toHaveURL(/\/admin$/);
 
   // Admin can log out from the visible desktop navigation.
-  await page.getByRole("button", { name: "Đăng xuất" }).click();
+  await page.getByRole("button", { name: "Đăng xuất", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Đăng xuất khỏi quản lý?" })
+    .getByRole("button", { name: "Đăng xuất", exact: true })
+    .click();
   await expect(page).toHaveURL(/.*\/login/);
 
   // The revoked session can no longer access protected admin routes.

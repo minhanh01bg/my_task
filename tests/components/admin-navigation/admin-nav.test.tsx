@@ -241,6 +241,19 @@ describe("AdminNav", () => {
     const dialog = screen.getByRole("dialog", { name: "Menu quản lý" });
     fireEvent.click(within(dialog).getByRole("button", { name: "Đăng xuất" }));
 
+    expect(fetchMock).not.toHaveBeenCalled();
+    const confirmation = screen.getByRole("dialog", {
+      name: "Đăng xuất khỏi quản lý?",
+    });
+    fireEvent.click(within(confirmation).getByRole("button", { name: "Hủy" }));
+    expect(fetchMock).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Đăng xuất" }));
+    fireEvent.click(
+      within(
+        screen.getByRole("dialog", { name: "Đăng xuất khỏi quản lý?" }),
+      ).getByRole("button", { name: "Đăng xuất" }),
+    );
+
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith("/api/auth/logout", {
         method: "POST",

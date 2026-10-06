@@ -208,3 +208,58 @@ test("admin thay đổi độ rộng thanh điều hướng desktop và giữ l�
   expect((await header.boundingBox())!.y).toBe(0);
   expect((await sidebar.boundingBox())!.y).toBe(0);
 });
+
+test("đăng xuất cần xác nhận, Hủy và Escape giữ phiên đăng nhập", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/login");
+  await page.getByRole("textbox", { name: "Mật khẩu cửa hàng" }).fill("123456");
+  await page.getByRole("button", { name: /vào bán hàng/i }).click();
+  await page.waitForURL("**/pos");
+  const logout = page
+    .getByRole("banner")
+    .getByRole("button", { name: "Đăng xuất", exact: true });
+  await logout.click();
+  const confirmation = page.getByRole("dialog", {
+    name: "Đăng xuất khỏi quản lý?",
+  });
+  await expect(confirmation.getByRole("button", { name: "Hủy" })).toBeFocused();
+  await confirmation.getByRole("button", { name: "Hủy" }).click();
+  await expect(confirmation).toBeHidden();
+  await expect(page).toHaveURL(/\/pos$/);
+  await logout.click();
+  await page.keyboard.press("Escape");
+  await expect(confirmation).toBeHidden();
+  await expect(logout).toBeFocused();
+  await logout.click();
+  await confirmation
+    .getByRole("button", { name: "Đăng xuất", exact: true })
+    .click();
+  await page.waitForURL("**/login");
+  await page.goto("/admin/orders");
+  await expect(page).toHaveURL(/\/login\?/);
+});
+
+test("mobile: hủy đăng xuất giữ menu và phiên quản lý", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/login");
+  await page.getByRole("textbox", { name: "Mật khẩu cửa hàng" }).fill("123456");
+  await page.getByRole("button", { name: /vào bán hàng/i }).click();
+  await page.waitForURL("**/pos");
+  await page.getByRole("button", { name: "Mở toàn bộ menu quản lý" }).click();
+  const menu = page.getByRole("dialog", { name: "Menu quản lý" });
+  await menu.getByRole("button", { name: "Đăng xuất", exact: true }).click();
+  const confirmation = page.getByRole("dialog", {
+    name: "Đăng xuất khỏi quản lý?",
+  });
+  await expect(confirmation.getByRole("button", { name: "Hủy" })).toBeFocused();
+  await confirmation.getByRole("button", { name: "Hủy" }).click();
+  await expect(confirmation).toBeHidden();
+  await expect(menu).toBeVisible();
+  await menu.getByRole("button", { name: "Đăng xuất", exact: true }).click();
+  await confirmation
+    .getByRole("button", { name: "Đăng xuất", exact: true })
+    .click();
+  await page.waitForURL("**/login");
+});
