@@ -300,4 +300,16 @@ describe("AdminNav", () => {
     const badge = screen.getByTestId("low-stock");
     expect(badge.closest("a")).toHaveAttribute("href", "/admin/products");
   });
+  it("giữ số hàng sắp hết trong tên truy cập của menu khi thu gọn", () => {
+    render(<AdminNav productsBadge={<span>4 sản phẩm sắp hết hàng</span>} />);
+    expect(
+      screen.getByRole("link", { name: /Sản phẩm\s*4 sản phẩm sắp hết hàng/ }),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Thu gọn thanh điều hướng" }),
+    );
+    expect(
+      screen.getByRole("link", { name: /Sản phẩm\s*4 sản phẩm sắp hết hàng/ }),
+    ).toBeInTheDocument();
+  });
 });

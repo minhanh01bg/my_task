@@ -176,9 +176,9 @@ function NavLink({
       aria-current={active ? "page" : undefined}
       onClick={onNavigate}
       className={cn(
-        "hover:bg-accent/12 focus-visible:ring-ring aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground flex min-h-12 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-colors focus-visible:ring-3 focus-visible:outline-none",
+        "admin-sidebar-link hover:bg-accent/12 focus-visible:ring-ring aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground flex min-h-12 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-colors focus-visible:ring-3 focus-visible:outline-none",
         !compact && "nested" in item && item.nested && "pl-8",
-        compact && "relative justify-center gap-0 px-0",
+        compact && "relative",
       )}
     >
       <item.icon
@@ -186,9 +186,7 @@ function NavLink({
         weight={active ? "fill" : "regular"}
         className="size-5 shrink-0"
       />
-      <span className={compact ? "sr-only" : "min-w-0 truncate"}>
-        {item.label}
-      </span>
+      <span className="admin-sidebar-label min-w-0 truncate">{item.label}</span>
       {compact && badge ? (
         <span className="pointer-events-none absolute top-0.5 right-0.5 origin-top-right scale-75">
           {badge}
@@ -198,15 +196,13 @@ function NavLink({
       )}
     </Link>
   );
-  return compact ? (
-    <Tooltip>
+  return (
+    <Tooltip disabled={!compact}>
       <TooltipTrigger render={link} />
       <TooltipContent role="tooltip" side="right">
         {item.label}
       </TooltipContent>
     </Tooltip>
-  ) : (
-    link
   );
 }
 
@@ -218,6 +214,7 @@ export function AdminNav({
 } = {}) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [resizing, setResizing] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
   const expandedWidth = useRef(SIDEBAR_DEFAULT_WIDTH);
   const compact = sidebarWidth <= SIDEBAR_COMPACT_THRESHOLD;
@@ -283,6 +280,7 @@ export function AdminNav({
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
+    setResizing(false);
     updateSidebarWidth(sidebarWidth, true);
   }
 
@@ -351,34 +349,34 @@ export function AdminNav({
       <aside
         id="admin-desktop-sidebar"
         data-compact={compact || undefined}
-        className="bg-card/85 relative flex-col border-r backdrop-blur-xl max-md:hidden md:sticky md:top-0 md:z-40 md:col-start-1 md:row-span-2 md:row-start-1 md:flex md:h-dvh md:self-start"
+        data-resizing={resizing || undefined}
+        className="admin-sidebar bg-card/85 relative flex-col border-r backdrop-blur-xl max-md:hidden md:sticky md:top-0 md:z-40 md:col-start-1 md:row-span-2 md:row-start-1 md:flex md:h-dvh md:self-start"
         style={{ width: sidebarWidth }}
       >
         <div
           className={cn(
-            "flex h-16 shrink-0 items-center gap-3 px-4",
-            compact && "justify-center px-0",
+            "admin-sidebar-brand flex h-16 shrink-0 items-center gap-3 px-4",
+            compact && "gap-0",
           )}
         >
           <span className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-xl shadow-sm">
             <Storefront aria-hidden="true" weight="fill" className="size-5" />
           </span>
-          {!compact && (
-            <div className="min-w-0">
-              <p className="font-heading truncate font-bold">
-                Quản lý cửa hàng
-              </p>
-              <p className="text-muted-foreground truncate text-xs">
-                Dễ nhìn · dễ thao tác
-              </p>
-            </div>
-          )}
+          <div
+            className="admin-sidebar-label min-w-0"
+            aria-hidden={compact || undefined}
+          >
+            <p className="font-heading truncate font-bold">Quản lý cửa hàng</p>
+            <p className="text-muted-foreground truncate text-xs">
+              Dễ nhìn · dễ thao tác
+            </p>
+          </div>
         </div>
         <TooltipProvider>
           <nav
             aria-label="Điều hướng quản lý"
             className={cn(
-              "min-h-0 flex-1 overflow-y-auto p-5 pt-3 [scrollbar-width:thin]",
+              "admin-sidebar-menu min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-5 pt-3 [scrollbar-width:thin]",
               compact && "px-2",
             )}
           >
@@ -413,6 +411,7 @@ export function AdminNav({
           onDoubleClick={() => updateSidebarWidth(SIDEBAR_DEFAULT_WIDTH, true)}
           onKeyDown={handleResizeKeyDown}
           onPointerDown={(event) => {
+            setResizing(true);
             event.currentTarget.setPointerCapture(event.pointerId);
           }}
           onPointerMove={(event) => {
@@ -420,6 +419,7 @@ export function AdminNav({
               updateSidebarWidth(event.clientX);
             }
           }}
+          onLostPointerCapture={() => setResizing(false)}
           onPointerCancel={handleResizeEnd}
           onPointerUp={handleResizeEnd}
         >
