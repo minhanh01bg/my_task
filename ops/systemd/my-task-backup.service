@@ -6,8 +6,8 @@ After=network-online.target
 [Service]
 Type=oneshot
 WorkingDirectory=/home/ccgram/my_task
-ExecStart=/usr/bin/python3 /home/ccgram/my_task/scripts/backup-sqlite-telegram.py
+ExecStart=/home/ccgram/.nvm/versions/node/v22.23.3/bin/node /home/ccgram/my_task/scripts/backup-db.mjs
 UMask=0077
-TimeoutStartSec=5min
+TimeoutStartSec=7min
 NoNewPrivileges=true
 PrivateTmp=true
