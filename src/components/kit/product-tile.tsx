@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye } from "lucide-react";
+import { IconEye as Eye } from "@tabler/icons-react";
 
 import { Money } from "@/components/kit/money";
 import { ProductImage } from "@/components/kit/product-image";

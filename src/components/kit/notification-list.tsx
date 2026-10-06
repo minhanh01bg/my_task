@@ -1,13 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import {
-  ArrowUpRight,
-  Bell,
-  Check,
-  Package,
-  TriangleAlert,
-} from "lucide-react";
+  IconArrowUpRight as ArrowUpRight,
+  IconBell as Bell,
+  IconCheck as Check,
+  IconPackage as Package,
+  IconAlertTriangle as TriangleAlert,
+} from "@tabler/icons-react";
+import Link from "next/link";
 
 import { EmptyState } from "@/components/kit/empty-state";
 import { Skeleton } from "@/components/kit/skeleton-loader";

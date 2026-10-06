@@ -1,14 +1,14 @@
 "use client";
 
+import {
+  IconAlertCircle as CircleAlert,
+  IconCircleCheck as CircleCheck,
+  IconInfoCircle as Info,
+  IconAlertTriangle as TriangleAlert,
+  IconX as XIcon,
+} from "@tabler/icons-react";
 import * as React from "react";
 import { Toast as ToastPrimitive } from "@base-ui/react/toast";
-import {
-  CircleAlert,
-  CircleCheck,
-  Info,
-  TriangleAlert,
-  XIcon,
-} from "lucide-react";
 
 import { cn } from "@/lib/utils";
 

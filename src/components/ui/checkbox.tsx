@@ -1,7 +1,10 @@
 "use client";
 
+import {
+  IconCheck as CheckIcon,
+  IconMinus as MinusIcon,
+} from "@tabler/icons-react";
 import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox";
-import { CheckIcon, MinusIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -21,9 +24,9 @@ function Checkbox({ className, ...props }: CheckboxPrimitive.Root.Props) {
         render={(indicatorProps, state) => (
           <span {...indicatorProps}>
             {state.indeterminate ? (
-              <MinusIcon aria-hidden="true" strokeWidth={3} />
+              <MinusIcon aria-hidden="true" />
             ) : (
-              <CheckIcon aria-hidden="true" strokeWidth={3} />
+              <CheckIcon aria-hidden="true" />
             )}
           </span>
         )}

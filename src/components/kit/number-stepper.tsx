@@ -1,7 +1,7 @@
 "use client";
 
+import { IconMinus as Minus, IconPlus as Plus } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
-import { Minus, Plus } from "@phosphor-icons/react";
 
 import { formatVnd } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -187,7 +187,7 @@ export function NumberStepper({
           aria-label={`Giảm ${labelPrefix}${stepFormatted}`}
           className="hover:bg-muted active:bg-muted/80 border-input/60 text-muted-foreground hover:text-foreground inline-flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center border-r transition-colors select-none disabled:pointer-events-none disabled:opacity-30 sm:w-14"
         >
-          <Minus aria-hidden="true" weight="bold" className="size-5" />
+          <Minus aria-hidden="true" className="size-5" />
         </button>
 
         <input
@@ -237,7 +237,7 @@ export function NumberStepper({
           aria-label={`Tăng ${labelPrefix}${stepFormatted}`}
           className="hover:bg-muted active:bg-muted/80 border-input/60 text-muted-foreground hover:text-foreground inline-flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center border-l transition-colors select-none disabled:pointer-events-none disabled:opacity-30 sm:w-14"
         >
-          <Plus aria-hidden="true" weight="bold" className="size-5" />
+          <Plus aria-hidden="true" className="size-5" />
         </button>
       </div>
 

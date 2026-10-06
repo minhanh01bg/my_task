@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { IconPlus as Plus } from "@tabler/icons-react";
 import { useState } from "react";
 
 import { TouchButton } from "@/components/kit/touch-button";

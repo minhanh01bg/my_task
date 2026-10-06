@@ -1,7 +1,11 @@
 "use client";
 
+import {
+  IconCalendar as CalendarBlank,
+  IconChevronLeft as CaretLeft,
+  IconChevronRight as CaretRight,
+} from "@tabler/icons-react";
 import { Popover } from "@base-ui/react/popover";
-import { CalendarBlank, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
@@ -114,11 +118,7 @@ export function DateField({
         )}
       >
         <span className="bg-muted text-primary flex size-8 shrink-0 items-center justify-center rounded-lg">
-          <CalendarBlank
-            aria-hidden="true"
-            weight="duotone"
-            className="size-5"
-          />
+          <CalendarBlank aria-hidden="true" className="size-5" />
         </span>
         <span
           className={cn(
@@ -155,11 +155,7 @@ export function DateField({
                 }
                 className="hover:bg-accent focus-visible:ring-ring flex size-10 items-center justify-center rounded-xl outline-none focus-visible:ring-2"
               >
-                <CaretLeft
-                  aria-hidden="true"
-                  weight="bold"
-                  className="size-4"
-                />
+                <CaretLeft aria-hidden="true" className="size-4" />
               </button>
               <p className="font-heading font-bold">
                 {MONTHS[visibleMonth.getMonth()]} {visibleMonth.getFullYear()}
@@ -178,11 +174,7 @@ export function DateField({
                 }
                 className="hover:bg-accent focus-visible:ring-ring flex size-10 items-center justify-center rounded-xl outline-none focus-visible:ring-2"
               >
-                <CaretRight
-                  aria-hidden="true"
-                  weight="bold"
-                  className="size-4"
-                />
+                <CaretRight aria-hidden="true" className="size-4" />
               </button>
             </div>
 

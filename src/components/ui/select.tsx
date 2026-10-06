@@ -1,9 +1,14 @@
 "use client";
 
+import {
+  IconChevronDown as CaretDown,
+  IconChevronUp as CaretUp,
+  IconCheck as Check,
+} from "@tabler/icons-react";
 import * as React from "react";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
+
 import { cn } from "@/lib/utils";
-import { CaretDown, CaretUp, Check } from "@phosphor-icons/react";
 
 const Select = SelectPrimitive.Root;
 
@@ -49,7 +54,7 @@ function SelectTrigger({
       <SelectPrimitive.Icon
         render={
           <span className="bg-muted text-muted-foreground cubic-bezier(0.16,1,0.3,1) -mr-1 flex size-7 items-center justify-center rounded-lg transition-transform duration-300 group-data-[popup-open]:rotate-180">
-            <CaretDown aria-hidden="true" weight="bold" className="size-4" />
+            <CaretDown aria-hidden="true" className="size-4" />
           </span>
         }
       />
@@ -137,7 +142,7 @@ function SelectItem({
           <span className="bg-primary text-primary-foreground pointer-events-none absolute right-2.5 flex size-6 items-center justify-center rounded-full shadow-sm" />
         }
       >
-        <Check aria-hidden="true" weight="bold" className="size-3.5" />
+        <Check aria-hidden="true" className="size-3.5" />
       </SelectPrimitive.ItemIndicator>
     </SelectPrimitive.Item>
   );
@@ -169,7 +174,7 @@ function SelectScrollUpButton({
       )}
       {...props}
     >
-      <CaretUp aria-hidden="true" weight="bold" className="size-4" />
+      <CaretUp aria-hidden="true" className="size-4" />
     </SelectPrimitive.ScrollUpArrow>
   );
 }
@@ -187,7 +192,7 @@ function SelectScrollDownButton({
       )}
       {...props}
     >
-      <CaretDown aria-hidden="true" weight="bold" className="size-4" />
+      <CaretDown aria-hidden="true" className="size-4" />
     </SelectPrimitive.ScrollDownArrow>
   );
 }

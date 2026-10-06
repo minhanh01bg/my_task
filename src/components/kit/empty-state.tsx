@@ -1,5 +1,5 @@
+import { IconPackage as PackageOpen } from "@tabler/icons-react";
 import type { ComponentType, HTMLAttributes, ReactNode } from "react";
-import { PackageOpen } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -15,7 +15,7 @@ interface EmptyStateProps extends Omit<
   title: string;
   description?: ReactNode;
   action?: ReactNode;
-  /** Icon trang tri (lucide); mac dinh la hop rong. */
+  /** Icon trang trí; mặc định là hộp hàng. */
   icon?: EmptyStateIcon;
   /** `compact` cho panel hep: gio hang POS, popover thong bao. */
   size?: "default" | "compact";

@@ -1,7 +1,7 @@
 "use client";
 
+import { IconAlertCircle as WarningCircle } from "@tabler/icons-react";
 import { type ReactNode, useState } from "react";
-import { WarningCircle } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -73,11 +73,7 @@ export function ConfirmAction({
       <DialogContent className="gap-5 p-6 sm:max-w-md">
         <DialogHeader className="gap-3">
           <span className="bg-destructive/10 text-destructive flex size-11 items-center justify-center rounded-full">
-            <WarningCircle
-              aria-hidden="true"
-              weight="fill"
-              className="size-6"
-            />
+            <WarningCircle aria-hidden="true" className="size-6" />
           </span>
           <DialogTitle className="text-xl font-bold">{title}</DialogTitle>
           <DialogDescription className="text-base leading-relaxed">

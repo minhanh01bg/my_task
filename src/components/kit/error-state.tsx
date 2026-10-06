@@ -1,5 +1,5 @@
+import { IconAlertCircle as AlertCircle } from "@tabler/icons-react";
 import type { ComponentType, HTMLAttributes, ReactNode } from "react";
-import { AlertCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
