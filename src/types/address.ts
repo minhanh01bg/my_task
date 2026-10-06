@@ -11,7 +11,7 @@ export interface AdministrativeDistrict {
 
 export interface AdministrativeWard {
   code: string;
-  districtCode: string;
+  provinceCode: string;
   name: string;
 }
 

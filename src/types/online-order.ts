@@ -58,7 +58,6 @@ export const onlineCheckoutSchema = z
       for (const field of [
         "deliveryAddress",
         "deliveryWard",
-        "deliveryDistrict",
         "deliveryProvince",
       ] as const) {
         if (!value[field]?.trim()) {

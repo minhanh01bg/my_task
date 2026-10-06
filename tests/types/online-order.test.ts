@@ -47,7 +47,7 @@ describe("onlineCheckoutSchema", () => {
     expect(
       onlineCheckoutSchema.safeParse({ ...valid, deliveryDistrict: "" })
         .success,
-    ).toBe(false);
+    ).toBe(true);
 
     expect(
       onlineCheckoutSchema.safeParse({ ...valid, deliveryProvince: "" })
@@ -58,9 +58,11 @@ describe("onlineCheckoutSchema", () => {
   it("chấp nhận structured address codes hợp lệ", () => {
     const result = onlineCheckoutSchema.safeParse({
       ...valid,
-      provinceCode: "79",
-      districtCode: "760",
-      wardCode: "26734",
+      provinceCode: "24",
+      wardCode: "07210",
+      deliveryProvince: "Thành phố Bắc Ninh",
+      deliveryWard: "Phường Bắc Giang",
+      deliveryDistrict: "",
     });
     expect(result.success).toBe(true);
   });

@@ -60,69 +60,37 @@ describe("CheckoutForm - Structured Address & Experience", () => {
     await user.click(option);
   }
 
-  it("chọn tỉnh reset quận/huyện và phường/xã cũ; chọn quận reset phường/xã cũ", async () => {
+  it("chọn tỉnh trực tiếp mở xã/phường và đổi tỉnh xóa xã cũ, không còn huyện", async () => {
     const user = userEvent.setup();
     render(<CheckoutForm />);
-
-    const districtTrigger = screen.getByRole("combobox", {
-      name: /quận\/huyện/i,
-    });
-    const wardTrigger = screen.getByRole("combobox", { name: /phường\/xã/i });
-
-    // Ban đầu chưa chọn tỉnh thì quận/phường bị disabled
-    expect(districtTrigger).toBeDisabled();
-    expect(wardTrigger).toBeDisabled();
-
-    // 1. Chọn Hà Nội
-    await selectDropdown(/tỉnh\/thành phố/i, /Hà Nội/i, user);
-    expect(districtTrigger).not.toBeDisabled();
-    expect(wardTrigger).toBeDisabled();
-
-    // 2. Chọn Ba Đình
-    await selectDropdown(/quận\/huyện/i, /Ba Đình/i, user);
-    expect(wardTrigger).not.toBeDisabled();
-
-    // 3. Chọn một phường trong Ba Đình (Phúc Xá)
-    await selectDropdown(/phường\/xã/i, /Phúc Xá/i, user);
-    expect(wardTrigger).toHaveTextContent("Phúc Xá");
-
-    // 4. Đổi sang TP. Hồ Chí Minh -> quận và phường phải được reset về rỗng
-    await selectDropdown(/tỉnh\/thành phố/i, /TP\. Hồ Chí Minh/i, user);
-    expect(districtTrigger).not.toHaveTextContent("Ba Đình");
-    expect(wardTrigger).toBeDisabled();
-
-    // 5. Chọn Quận 1 trong TP.HCM
-    await selectDropdown(/quận\/huyện/i, /^Quận 1$/, user);
-    expect(wardTrigger).not.toBeDisabled();
-
-    // 6. Chọn phường Bến Nghé trong Quận 1
-    await selectDropdown(/phường\/xã/i, /Bến Nghé/i, user);
-    expect(wardTrigger).toHaveTextContent("Bến Nghé");
-
-    // 7. Đổi sang quận khác trong TP.HCM -> phường phải reset
-    await selectDropdown(/quận\/huyện/i, /Bình Thạnh/i, user);
-    expect(wardTrigger).not.toHaveTextContent("Bến Nghé");
-    // 7 lan mo dropdown Base UI trong jsdom mat ~6-8s tren may cham/CI.
+    const ward = screen.getByRole("combobox", { name: /phường\/xã/i });
+    expect(
+      screen.queryByRole("combobox", { name: /quận\/huyện/i }),
+    ).not.toBeInTheDocument();
+    expect(ward).toBeDisabled();
+    await selectDropdown(/tỉnh\/thành phố/i, /Thành phố Bắc Ninh/i, user);
+    expect(ward).not.toBeDisabled();
+    await selectDropdown(/phường\/xã/i, /^Phường Bắc Giang$/, user);
+    expect(ward).toHaveTextContent("Phường Bắc Giang");
+    await selectDropdown(/tỉnh\/thành phố/i, /Thành phố Hà Nội/i, user);
+    expect(ward).not.toHaveTextContent("Phường Bắc Giang");
+    expect(ward).not.toBeDisabled();
+    await selectDropdown(/phường\/xã/i, /^Phường Ba Đình$/, user);
+    expect(ward).toHaveTextContent("Phường Ba Đình");
   }, 20_000);
 
-  it("hiển thị address summary trực quan trước submit", async () => {
+  it("summary địa chỉ hai cấp không có huyện", async () => {
     const user = userEvent.setup();
     render(<CheckoutForm />);
-
-    await selectDropdown(/tỉnh\/thành phố/i, /TP\. Hồ Chí Minh/i, user);
-    await selectDropdown(/quận\/huyện/i, /^Quận 1$/, user);
-    await selectDropdown(/phường\/xã/i, /Bến Nghé/i, user);
-
-    const streetInput = screen.getByLabelText(/địa chỉ cụ thể|số nhà/i);
-    fireEvent.change(streetInput, { target: { value: "123 Lê Lợi" } });
-
-    // Summary địa chỉ hiển thị đầy đủ
+    await selectDropdown(/tỉnh\/thành phố/i, /Thành phố Bắc Ninh/i, user);
+    await selectDropdown(/phường\/xã/i, /^Phường Bắc Giang$/, user);
+    fireEvent.change(screen.getByLabelText(/địa chỉ cụ thể|số nhà/i), {
+      target: { value: "123 Lê Lợi" },
+    });
     const summary = screen.getByTestId("address-summary");
-    expect(summary).toBeInTheDocument();
-    expect(summary.textContent).toContain("123 Lê Lợi");
-    expect(summary.textContent).toContain("Phường Bến Nghé");
-    expect(summary.textContent).toContain("Quận 1");
-    expect(summary.textContent).toContain("TP. Hồ Chí Minh");
+    expect(summary).toHaveTextContent(
+      "123 Lê Lợi, Phường Bắc Giang, Thành phố Bắc Ninh",
+    );
   }, 15_000);
 
   it("chuyển sang nhận tại cửa hàng ẩn địa chỉ và không gửi address trong payload", async () => {

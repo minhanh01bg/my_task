@@ -72,10 +72,8 @@ function FormContent({
   );
   const [address, setAddress] = useState<AddressState>({
     provinceCode: "",
-    districtCode: "",
     wardCode: "",
     provinceName: "",
-    districtName: "",
     wardName: "",
     street: "",
     isManual: false,
@@ -103,7 +101,6 @@ function FormContent({
   const formattedAddress = formatFullAddress({
     street: address.street,
     ward: address.wardName,
-    district: address.districtName,
     province: address.provinceName,
   });
 
@@ -131,10 +128,7 @@ function FormContent({
         fulfillment === "delivery"
           ? (data.get("deliveryWard") as string) || address.wardName
           : "",
-      deliveryDistrict:
-        fulfillment === "delivery"
-          ? (data.get("deliveryDistrict") as string) || address.districtName
-          : "",
+      deliveryDistrict: "",
       deliveryProvince:
         fulfillment === "delivery"
           ? (data.get("deliveryProvince") as string) || address.provinceName
@@ -142,10 +136,6 @@ function FormContent({
       provinceCode:
         fulfillment === "delivery" && !address.isManual && address.provinceCode
           ? address.provinceCode
-          : undefined,
-      districtCode:
-        fulfillment === "delivery" && !address.isManual && address.districtCode
-          ? address.districtCode
           : undefined,
       wardCode:
         fulfillment === "delivery" && !address.isManual && address.wardCode

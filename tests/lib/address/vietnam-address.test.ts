@@ -2,129 +2,83 @@ import { describe, expect, it } from "vitest";
 
 import {
   formatFullAddress,
-  getDistricts,
   getProvinces,
   getWards,
   validateAddressHierarchy,
 } from "@/lib/address/vietnam-address";
 
-describe("Vietnam Administrative Address Dataset & Validation", () => {
-  it("trả về danh sách 63 tỉnh/thành phố Việt Nam với mã và tên duy nhất", () => {
+describe("Địa chỉ hành chính hai cấp hiện hành", () => {
+  it("có 34 mã cấp tỉnh duy nhất và Bắc Ninh mã 24, không còn tỉnh Bắc Giang", () => {
     const provinces = getProvinces();
-    expect(provinces.length).toBe(63);
-
-    const codes = new Set(provinces.map((p) => p.code));
-    expect(codes.size).toBe(63);
-
-    const hanoi = provinces.find((p) => p.code === "01");
-    expect(hanoi?.name).toBe("Hà Nội");
-
-    const hcm = provinces.find((p) => p.code === "79");
-    expect(hcm?.name).toBe("TP. Hồ Chí Minh");
-
-    const danang = provinces.find((p) => p.code === "48");
-    expect(danang?.name).toBe("Đà Nẵng");
+    expect(provinces).toHaveLength(34);
+    expect(new Set(provinces.map((p) => p.code)).size).toBe(34);
+    expect(provinces.find((p) => p.code === "24")?.name).toBe(
+      "Thành phố Bắc Ninh",
+    );
+    expect(provinces.some((p) => p.name === "Bắc Giang")).toBe(false);
   });
-
-  it("trả về danh sách quận/huyện thuộc tỉnh/thành phố tương ứng", () => {
-    const hanoiDistricts = getDistricts("01");
-    expect(hanoiDistricts.length).toBeGreaterThan(0);
-    expect(hanoiDistricts.every((d) => d.provinceCode === "01")).toBe(true);
-    expect(hanoiDistricts.some((d) => d.name === "Ba Đình")).toBe(true);
-    expect(hanoiDistricts.some((d) => d.name === "Cầu Giấy")).toBe(true);
-
-    const hcmDistricts = getDistricts("79");
-    expect(hcmDistricts.length).toBeGreaterThan(0);
-    expect(hcmDistricts.every((d) => d.provinceCode === "79")).toBe(true);
-    expect(hcmDistricts.some((d) => d.name === "Quận 1")).toBe(true);
-    expect(hcmDistricts.some((d) => d.name === "Bình Thạnh")).toBe(true);
-
-    // Tỉnh không tồn tại trả về mảng rỗng
-    expect(getDistricts("invalid-code")).toEqual([]);
+  it("có 3321 xã/phường với mã duy nhất và thuộc tỉnh tồn tại", () => {
+    const wards = getProvinces().flatMap((p) => getWards(p.code));
+    expect(wards).toHaveLength(3321);
+    expect(new Set(wards.map((w) => w.code)).size).toBe(3321);
+    expect(getWards("24").find((w) => w.code === "07210")?.name).toBe(
+      "Phường Bắc Giang",
+    );
+    expect(getWards("invalid")).toEqual([]);
   });
-
-  it("trả về danh sách phường/xã thuộc quận/huyện tương ứng", () => {
-    const q1Districts = getDistricts("79");
-    const q1 = q1Districts.find((d) => d.name === "Quận 1")!;
-    expect(q1).toBeDefined();
-
-    const q1Wards = getWards(q1.code);
-    expect(q1Wards.length).toBeGreaterThan(0);
-    expect(q1Wards.every((w) => w.districtCode === q1.code)).toBe(true);
-    expect(q1Wards.some((w) => w.name.includes("Bến Nghé"))).toBe(true);
-
-    // Quận không tồn tại trả về mảng rỗng
-    expect(getWards("invalid-district")).toEqual([]);
+  it("chấp nhận địa chỉ Bắc Giang mới không có quận/huyện", () => {
+    expect(
+      validateAddressHierarchy({
+        provinceCode: "24",
+        wardCode: "07210",
+        provinceName: "Thành phố Bắc Ninh",
+        wardName: "Phường Bắc Giang",
+      }),
+    ).toEqual({ valid: true });
   });
-
-  it("validateAddressHierarchy: chấp nhận tổ hợp hợp lệ", () => {
-    const result = validateAddressHierarchy({
-      provinceCode: "79",
-      districtCode: "760",
-      wardCode: "26734",
-      provinceName: "TP. Hồ Chí Minh",
-      districtName: "Quận 1",
-      wardName: "Phường Bến Nghé",
-    });
-    expect(result.valid).toBe(true);
+  it.each([
+    { provinceCode: "999" },
+    { provinceCode: "01", wardCode: "07210" },
+    { wardCode: "07210" },
+    { provinceCode: "24", wardCode: "99999" },
+    { provinceCode: "24", provinceName: "Bắc Giang" },
+    { provinceCode: "24", wardCode: "07210", wardName: "Phường Đa Mai" },
+    { provinceCode: "24", provinceName: "Ninh" },
+    { provinceCode: "24", districtCode: "213" },
+  ])("từ chối cấu trúc/mã/tên sai %j", (input) => {
+    expect(validateAddressHierarchy(input).valid).toBe(false);
   });
-
-  it("validateAddressHierarchy: từ chối mã tỉnh không tồn tại", () => {
-    const result = validateAddressHierarchy({
-      provinceCode: "999",
-      districtCode: "760",
-    });
-    expect(result.valid).toBe(false);
-    expect(result.error).toContain("tỉnh");
+  it("chấp nhận tên không có tiền tố và cho phép nhập tay không mã", () => {
+    expect(
+      validateAddressHierarchy({
+        provinceCode: "24",
+        wardCode: "07210",
+        provinceName: "Bắc Ninh",
+        wardName: "Bắc Giang",
+      }).valid,
+    ).toBe(true);
+    expect(
+      validateAddressHierarchy({
+        provinceName: "Bắc Ninh",
+        wardName: "Bắc Giang",
+      }).valid,
+    ).toBe(true);
   });
-
-  it("validateAddressHierarchy: từ chối quận không thuộc tỉnh", () => {
-    // 001 là Ba Đình (Hà Nội "01"), nhưng gửi provinceCode là TP.HCM "79"
-    const result = validateAddressHierarchy({
-      provinceCode: "79",
-      districtCode: "001",
-    });
-    expect(result.valid).toBe(false);
-    expect(result.error).toContain("quận/huyện");
-  });
-
-  it("validateAddressHierarchy: từ chối phường không thuộc quận", () => {
-    // 00001 thuộc Ba Đình (Hà Nội), nhưng gửi districtCode là Quận 1 (TP.HCM)
-    const result = validateAddressHierarchy({
-      provinceCode: "79",
-      districtCode: "760",
-      wardCode: "00001",
-    });
-    expect(result.valid).toBe(false);
-    expect(result.error).toContain("phường/xã");
-  });
-
-  it("validateAddressHierarchy: từ chối khi tên không khớp với mã", () => {
-    const result = validateAddressHierarchy({
-      provinceCode: "79",
-      provinceName: "Hà Nội", // Mã 79 nhưng tên Hà Nội
-    });
-    expect(result.valid).toBe(false);
-    expect(result.error).toContain("tên tỉnh");
-  });
-
-  it("formatFullAddress: định dạng chuỗi địa chỉ đầy đủ chuẩn Việt Nam", () => {
-    const full = formatFullAddress({
-      street: "123 Lê Lợi",
-      ward: "Phường Bến Nghé",
-      district: "Quận 1",
-      province: "TP. Hồ Chí Minh",
-    });
-    expect(full).toBe("123 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh");
-  });
-
-  it("formatFullAddress: bỏ qua các phần tử trống một cách an toàn", () => {
-    const partial = formatFullAddress({
-      street: "123 Lê Lợi",
-      ward: "",
-      district: "Quận 1",
-      province: "TP. Hồ Chí Minh",
-    });
-    expect(partial).toBe("123 Lê Lợi, Quận 1, TP. Hồ Chí Minh");
+  it("định dạng hai cấp và vẫn giữ địa chỉ lịch sử có huyện", () => {
+    expect(
+      formatFullAddress({
+        street: "12 Lê Lợi",
+        ward: "Phường Bắc Giang",
+        province: "Thành phố Bắc Ninh",
+      }),
+    ).toBe("12 Lê Lợi, Phường Bắc Giang, Thành phố Bắc Ninh");
+    expect(
+      formatFullAddress({
+        street: "12 Lê Lợi",
+        ward: "Phường Bến Nghé",
+        district: "Quận 1",
+        province: "TP. Hồ Chí Minh",
+      }),
+    ).toContain("Quận 1");
   });
 });
