@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowsClockwise,
   CreditCard,
@@ -33,6 +33,12 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { AdminLogoutButton } from "@/features/admin-navigation/admin-logout-button";
 import { NotificationButton } from "@/features/admin-notifications/notification-button";
 import { AdminSearchButton } from "@/features/admin-search/admin-search-button";
@@ -122,8 +128,10 @@ const MOBILE_PRIMARY_HREFS = new Set([
 ]);
 
 const SIDEBAR_STORAGE_KEY = "admin-sidebar-width";
+const SIDEBAR_EXPANDED_STORAGE_KEY = "admin-sidebar-expanded-width";
 const SIDEBAR_DEFAULT_WIDTH = 250;
-const SIDEBAR_MIN_WIDTH = 208;
+const SIDEBAR_MIN_WIDTH = 72;
+const SIDEBAR_COMPACT_THRESHOLD = 160;
 const SIDEBAR_MAX_WIDTH = 360;
 const SIDEBAR_KEYBOARD_STEP = 16;
 
@@ -154,20 +162,23 @@ function NavLink({
   active,
   onNavigate,
   badge,
+  compact = false,
 }: {
   item: NavItem;
   active: boolean;
   onNavigate?: () => void;
   badge?: React.ReactNode;
+  compact?: boolean;
 }) {
-  return (
+  const link = (
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
       onClick={onNavigate}
       className={cn(
         "hover:bg-accent/12 focus-visible:ring-ring aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground flex min-h-12 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-colors focus-visible:ring-3 focus-visible:outline-none",
-        "nested" in item && item.nested && "pl-8",
+        !compact && "nested" in item && item.nested && "pl-8",
+        compact && "relative justify-center gap-0 px-0",
       )}
     >
       <item.icon
@@ -175,9 +186,27 @@ function NavLink({
         weight={active ? "fill" : "regular"}
         className="size-5 shrink-0"
       />
-      {item.label}
-      {badge}
+      <span className={compact ? "sr-only" : "min-w-0 truncate"}>
+        {item.label}
+      </span>
+      {compact && badge ? (
+        <span className="pointer-events-none absolute top-0.5 right-0.5 origin-top-right scale-75">
+          {badge}
+        </span>
+      ) : (
+        badge
+      )}
     </Link>
+  );
+  return compact ? (
+    <Tooltip>
+      <TooltipTrigger render={link} />
+      <TooltipContent role="tooltip" side="right">
+        {item.label}
+      </TooltipContent>
+    </Tooltip>
+  ) : (
+    link
   );
 }
 
@@ -189,8 +218,9 @@ export function AdminNav({
 } = {}) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [navigationHidden, setNavigationHidden] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
+  const expandedWidth = useRef(SIDEBAR_DEFAULT_WIDTH);
+  const compact = sidebarWidth <= SIDEBAR_COMPACT_THRESHOLD;
   const currentHref = activeHref(pathname);
   const current = NAV.find((item) => item.href === currentHref);
   const primaryItems = NAV.filter((item) =>
@@ -199,9 +229,21 @@ export function AdminNav({
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
+      const storedExpandedWidth = Number(
+        localStorage.getItem(SIDEBAR_EXPANDED_STORAGE_KEY),
+      );
+      if (
+        Number.isFinite(storedExpandedWidth) &&
+        storedExpandedWidth > SIDEBAR_COMPACT_THRESHOLD
+      ) {
+        expandedWidth.current = clampSidebarWidth(storedExpandedWidth);
+      }
       const storedWidth = Number(localStorage.getItem(SIDEBAR_STORAGE_KEY));
       if (Number.isFinite(storedWidth) && storedWidth > 0) {
-        setSidebarWidth(clampSidebarWidth(storedWidth));
+        const nextWidth = clampSidebarWidth(storedWidth);
+        setSidebarWidth(nextWidth);
+        if (nextWidth > SIDEBAR_COMPACT_THRESHOLD)
+          expandedWidth.current = nextWidth;
       }
     });
     return () => cancelAnimationFrame(frame);
@@ -210,8 +252,14 @@ export function AdminNav({
   function updateSidebarWidth(width: number, persist = false) {
     const nextWidth = clampSidebarWidth(width);
     setSidebarWidth(nextWidth);
+    if (persist && nextWidth > SIDEBAR_COMPACT_THRESHOLD)
+      expandedWidth.current = nextWidth;
     if (persist) {
       localStorage.setItem(SIDEBAR_STORAGE_KEY, String(nextWidth));
+      localStorage.setItem(
+        SIDEBAR_EXPANDED_STORAGE_KEY,
+        String(expandedWidth.current),
+      );
     }
   }
 
@@ -249,25 +297,29 @@ export function AdminNav({
 
       <header
         aria-label="Thanh công cụ quản lý"
-        className="bg-card/95 border-border sticky top-0 z-40 col-span-full flex h-16 items-center justify-between gap-2 border-b px-4 backdrop-blur-xl"
+        className="bg-card/95 border-border sticky top-0 z-40 col-start-1 row-start-1 flex h-16 items-center justify-between gap-2 border-b px-4 backdrop-blur-xl md:col-start-2"
       >
         <div className="flex min-w-0 items-center gap-3">
           <Button
             variant="ghost"
-            className="hidden md:inline-flex"
-            aria-expanded={!navigationHidden}
-            onClick={() => setNavigationHidden((hidden) => !hidden)}
+            size="icon"
+            className="hidden size-11 md:inline-flex"
+            aria-controls="admin-desktop-sidebar"
+            aria-expanded={!compact}
+            onClick={() =>
+              updateSidebarWidth(
+                compact ? expandedWidth.current : SIDEBAR_MIN_WIDTH,
+                true,
+              )
+            }
           >
             <SidebarSimple aria-hidden="true" className="size-5" />
             <span className="sr-only">
-              {navigationHidden
-                ? "Hiện thanh điều hướng"
-                : "Ẩn thanh điều hướng"}
+              {compact
+                ? "Mở rộng thanh điều hướng"
+                : "Thu gọn thanh điều hướng"}
             </span>
           </Button>
-          <span className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-xl shadow-sm">
-            <Storefront aria-hidden="true" weight="fill" className="size-5" />
-          </span>
           <div className="min-w-0">
             <p className="text-muted-foreground text-xs font-semibold">
               Quản lý
@@ -292,44 +344,60 @@ export function AdminNav({
           <ThemeToggle />
           <AdminSearchButton placement="mobile" />
           <NotificationButton placement="mobile" />
-          <AdminLogoutButton className="hidden md:block" />
+          <AdminLogoutButton compact className="hidden md:block" />
         </div>
       </header>
 
       <aside
-        data-collapsed={navigationHidden || undefined}
-        className={cn(
-          "bg-card/85 relative border-r p-5 backdrop-blur-xl max-md:hidden md:sticky md:top-16 md:z-40 md:h-[calc(100dvh-4rem)] md:overflow-y-auto",
-          navigationHidden && "md:hidden",
-        )}
+        id="admin-desktop-sidebar"
+        data-compact={compact || undefined}
+        className="bg-card/85 relative flex-col border-r backdrop-blur-xl max-md:hidden md:sticky md:top-0 md:z-40 md:col-start-1 md:row-span-2 md:row-start-1 md:flex md:h-dvh md:self-start"
         style={{ width: sidebarWidth }}
       >
-        <div className="mb-5 flex items-center justify-between gap-3 px-2">
-          <div className="flex items-center gap-3">
-            <span className="bg-primary text-primary-foreground flex size-11 items-center justify-center rounded-2xl shadow-md">
-              <Storefront aria-hidden="true" weight="fill" className="size-5" />
-            </span>
-            <div>
-              <p className="font-heading font-bold">Quản lý cửa hàng</p>
-              <p className="text-muted-foreground text-xs">
+        <div
+          className={cn(
+            "flex h-16 shrink-0 items-center gap-3 px-4",
+            compact && "justify-center px-0",
+          )}
+        >
+          <span className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-xl shadow-sm">
+            <Storefront aria-hidden="true" weight="fill" className="size-5" />
+          </span>
+          {!compact && (
+            <div className="min-w-0">
+              <p className="font-heading truncate font-bold">
+                Quản lý cửa hàng
+              </p>
+              <p className="text-muted-foreground truncate text-xs">
                 Dễ nhìn · dễ thao tác
               </p>
             </div>
-          </div>
+          )}
         </div>
-        <nav aria-label="Điều hướng quản lý">
-          <ul className="flex flex-col gap-1.5">
-            {NAV.map((item) => (
-              <li key={item.href}>
-                <NavLink
-                  item={item}
-                  active={item.href === currentHref}
-                  badge={item.href === "/admin/products" ? productsBadge : null}
-                />
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <TooltipProvider>
+          <nav
+            aria-label="Điều hướng quản lý"
+            className={cn(
+              "min-h-0 flex-1 overflow-y-auto p-5 pt-3 [scrollbar-width:thin]",
+              compact && "px-2",
+            )}
+          >
+            <ul className="flex flex-col gap-1.5">
+              {NAV.map((item) => (
+                <li key={item.href}>
+                  <NavLink
+                    item={item}
+                    active={item.href === currentHref}
+                    compact={compact}
+                    badge={
+                      item.href === "/admin/products" ? productsBadge : null
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </TooltipProvider>
         <div
           role="separator"
           aria-label="Thay đổi chiều rộng thanh điều hướng"
@@ -337,6 +405,9 @@ export function AdminNav({
           aria-valuemin={SIDEBAR_MIN_WIDTH}
           aria-valuemax={SIDEBAR_MAX_WIDTH}
           aria-valuenow={sidebarWidth}
+          aria-valuetext={
+            compact ? `Chỉ biểu tượng, ${sidebarWidth}px` : `${sidebarWidth}px`
+          }
           tabIndex={0}
           className="group focus-visible:ring-primary absolute top-0 right-0 hidden h-full w-2 cursor-col-resize touch-none outline-none focus-visible:ring-2 md:block"
           onDoubleClick={() => updateSidebarWidth(SIDEBAR_DEFAULT_WIDTH, true)}

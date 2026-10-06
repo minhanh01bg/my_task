@@ -116,14 +116,95 @@ test("admin thay đổi độ rộng thanh điều hướng desktop và giữ l�
     body: await page.screenshot(),
     contentType: "image/png",
   });
+  const sidebar = page.locator("#admin-desktop-sidebar");
+  const main = page.locator("#admin-main-content");
+  const sidebarBox = await sidebar.boundingBox();
+  const headerBox = await header.boundingBox();
+  const mainBox = await main.boundingBox();
+  expect(sidebarBox!.y).toBe(0);
+  expect(sidebarBox!.height).toBe(900);
+  expect(headerBox!.x).toBeCloseTo(sidebarBox!.x + sidebarBox!.width, 0);
+  expect(mainBox!.x).toBeCloseTo(headerBox!.x, 0);
+
   await expect(handle).toBeVisible();
   await handle.focus();
   await page.keyboard.press("End");
   await expect(handle).toHaveAttribute("aria-valuenow", "360");
+  await page.setViewportSize({ width: 768, height: 900 });
+  expect(
+    await header.evaluate((node) => node.scrollWidth <= node.clientWidth),
+  ).toBe(true);
+  expect(
+    await header
+      .locator(":scope > div")
+      .first()
+      .evaluate((node) => node.scrollWidth <= node.clientWidth),
+  ).toBe(true);
+  await expect(
+    header.getByRole("button", { name: "Đăng xuất", exact: true }),
+  ).toBeInViewport();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const drag = await handle.boundingBox();
+  await page.mouse.move(drag!.x + drag!.width / 2, drag!.y + 100);
+  await page.mouse.down();
+  await page.mouse.move(72, drag!.y + 100, { steps: 12 });
+  await page.mouse.up();
+  await expect(handle).toHaveAttribute("aria-valuenow", "72");
+  await expect(sidebar).toHaveAttribute("data-compact", "true");
+  const compactBox = await sidebar.boundingBox();
+  expect(compactBox!.width).toBe(72);
+  expect((await header.boundingBox())!.x).toBe(72);
+  const settings = page
+    .getByRole("navigation", { name: "Điều hướng quản lý", exact: true })
+    .getByRole("link", { name: "Cài đặt" });
+  await settings.hover();
+  await expect(page.getByRole("tooltip")).toHaveText("Cài đặt");
+  await handle.focus();
+  await page.keyboard.press("Shift+Tab");
+  await expect(settings).toBeFocused();
+  await expect(page.getByRole("tooltip")).toHaveText("Cài đặt");
+  await header
+    .getByRole("button", { name: "Mở rộng thanh điều hướng" })
+    .focus();
+  await test.info().attach("Sidebar icon và navbar trong content", {
+    body: await page.screenshot(),
+    contentType: "image/png",
+  });
 
+  await page.reload();
+  await expect(handle).toHaveAttribute("aria-valuenow", "72");
+  await header
+    .getByRole("button", { name: "Mở rộng thanh điều hướng" })
+    .click();
+  await expect(sidebar).not.toHaveAttribute("data-compact");
+  await expect(handle).toHaveAttribute("aria-valuenow", "360");
+  await handle.focus();
+  await page.keyboard.press("End");
   await page.reload();
   await expect(handle).toHaveAttribute("aria-valuenow", "360");
   await expect(
     page.getByRole("navigation", { name: "Điều hướng quản lý", exact: true }),
   ).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 500 });
+  const desktopNav = page.getByRole("navigation", {
+    name: "Điều hướng quản lý",
+    exact: true,
+  });
+  await desktopNav
+    .getByRole("link", { name: "Cài đặt" })
+    .scrollIntoViewIfNeeded();
+  await expect(
+    desktopNav.getByRole("link", { name: "Cài đặt" }),
+  ).toBeInViewport();
+  expect(await desktopNav.evaluate((node) => node.scrollTop)).toBeGreaterThan(
+    0,
+  );
+  expect((await sidebar.boundingBox())!.y).toBe(0);
+  expect((await sidebar.boundingBox())!.height).toBe(500);
+  await main.evaluate((node) => {
+    node.style.minHeight = "1600px";
+  });
+  await page.evaluate(() => window.scrollTo(0, 500));
+  expect((await header.boundingBox())!.y).toBe(0);
+  expect((await sidebar.boundingBox())!.y).toBe(0);
 });

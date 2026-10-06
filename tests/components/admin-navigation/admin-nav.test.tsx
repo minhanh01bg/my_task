@@ -5,7 +5,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AdminNav } from "@/features/admin-navigation/admin-nav";
 
@@ -25,6 +25,11 @@ vi.mock("@/features/admin-notifications/notification-button", () => ({
     <button type="button">Thông báo {placement}</button>
   ),
 }));
+
+beforeEach(() => {
+  localStorage.removeItem("admin-sidebar-width");
+  localStorage.removeItem("admin-sidebar-expanded-width");
+});
 
 describe("AdminNav", () => {
   it("công cụ chung nằm trên navbar, sidebar chỉ giữ chức năng", () => {
@@ -87,14 +92,20 @@ describe("AdminNav", () => {
     expect(aside).toHaveClass("md:z-40");
   });
 
-  it("sidebar desktop có md:overflow-y-auto để cuộn được trên màn hình chiều cao nhỏ", () => {
+  it("menu sidebar cuộn riêng trên màn hình chiều cao nhỏ", () => {
     const { container } = render(<AdminNav />);
-    const aside = container.querySelector("aside");
-    expect(aside).toHaveClass("md:overflow-y-auto");
+    const nav = within(container.querySelector("aside")!).getByRole(
+      "navigation",
+      {
+        name: "Điều hướng quản lý",
+      },
+    );
+    expect(nav).toHaveClass("overflow-y-auto");
   });
 
   it("đổi chiều rộng sidebar bằng bàn phím và ghi nhớ lựa chọn", () => {
     localStorage.removeItem("admin-sidebar-width");
+    localStorage.removeItem("admin-sidebar-expanded-width");
     const { container } = render(<AdminNav />);
     const aside = container.querySelector("aside");
     const handle = screen.getByRole("separator", {
@@ -107,9 +118,74 @@ describe("AdminNav", () => {
     expect(localStorage.getItem("admin-sidebar-width")).toBe("266");
 
     fireEvent.keyDown(handle, { key: "Home" });
-    expect(aside).toHaveStyle({ width: "208px" });
+    expect(aside).toHaveStyle({ width: "72px" });
+    expect(aside).toHaveAttribute("data-compact", "true");
+    expect(
+      within(aside!).getByRole("link", { name: "Đơn hàng" }),
+    ).toHaveAttribute("href", "/admin/orders");
     fireEvent.keyDown(handle, { key: "End" });
     expect(aside).toHaveStyle({ width: "360px" });
+  });
+
+  it("thu gọn vẫn giữ menu icon và mở rộng về chiều rộng đã chọn", () => {
+    const { container } = render(<AdminNav />);
+    const aside = container.querySelector("aside")!;
+    const handle = screen.getByRole("separator", {
+      name: "Thay đổi chiều rộng thanh điều hướng",
+    });
+    fireEvent.keyDown(handle, { key: "End" });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Thu gọn thanh điều hướng" }),
+    );
+    expect(aside).toHaveStyle({ width: "72px" });
+    expect(localStorage.getItem("admin-sidebar-width")).toBe("72");
+    expect(
+      within(aside).getByRole("link", { name: "Đơn hàng" }),
+    ).toHaveAttribute("aria-current", "page");
+    expect(
+      screen.getByRole("button", { name: "Mở rộng thanh điều hướng" }),
+    ).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Mở rộng thanh điều hướng" }),
+    );
+    expect(aside).toHaveStyle({ width: "360px" });
+  });
+
+  it("thu gọn rồi tải lại vẫn mở rộng đúng chiều rộng đã chọn trước đó", async () => {
+    const first = render(<AdminNav />);
+    fireEvent.keyDown(
+      screen.getByRole("separator", {
+        name: "Thay đổi chiều rộng thanh điều hướng",
+      }),
+      { key: "End" },
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Thu gọn thanh điều hướng" }),
+    );
+    first.unmount();
+    const second = render(<AdminNav />);
+    await waitFor(() =>
+      expect(second.container.querySelector("aside")).toHaveStyle({
+        width: "72px",
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Mở rộng thanh điều hướng" }),
+    );
+    expect(second.container.querySelector("aside")).toHaveStyle({
+      width: "360px",
+    });
+  });
+
+  it("ghi nhớ chế độ icon sau khi tải lại và giữ tên chức năng truy cập được", async () => {
+    localStorage.setItem("admin-sidebar-width", "72");
+    const { container } = render(<AdminNav />);
+    const aside = container.querySelector("aside")!;
+    await waitFor(() => expect(aside).toHaveStyle({ width: "72px" }));
+    expect(aside).toHaveAttribute("data-compact", "true");
+    expect(
+      within(aside).getByRole("link", { name: "Cài đặt" }),
+    ).toHaveAttribute("href", "/admin/settings");
   });
 
   it("liên kết cửa hàng online nằm trên navbar và không lặp trong menu", () => {

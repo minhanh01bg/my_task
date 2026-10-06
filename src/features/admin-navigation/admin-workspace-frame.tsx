@@ -16,17 +16,16 @@ export function AdminWorkspaceFrame({
   return (
     <div
       className={cn(
-        "grid min-h-dvh grid-cols-1 grid-rows-[4rem_1fr] md:grid-cols-[auto_minmax(0,1fr)] [&:has(>aside[data-collapsed])]:md:grid-cols-1",
+        "grid min-h-dvh grid-cols-1 grid-rows-[4rem_1fr] md:grid-cols-[auto_minmax(0,1fr)]",
       )}
     >
       {navigation}
       <main
         id="admin-main-content"
-        className={
-          sales
-            ? "min-w-0 pb-20 md:pb-0"
-            : "min-w-0 p-4 pb-24 sm:p-6 sm:pb-24 md:pb-6 lg:p-8"
-        }
+        className={cn(
+          "min-w-0 md:col-start-2 md:row-start-2",
+          sales ? "pb-20 md:pb-0" : "p-4 pb-24 sm:p-6 sm:pb-24 md:pb-6 lg:p-8",
+        )}
       >
         {children}
       </main>

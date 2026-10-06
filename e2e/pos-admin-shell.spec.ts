@@ -52,12 +52,19 @@ test("quầy dùng menu admin, chuyển mục giữ giỏ và ẩn/hiện sideba
     page.getByTestId("cart-total").filter({ visible: true }),
   ).toHaveText("120.000");
   await expect(nav).toHaveAttribute("data-shell-persisted", "true");
-  await page.getByRole("button", { name: "Ẩn thanh điều hướng" }).click();
-  await expect(nav).not.toBeVisible();
+  await page.getByRole("button", { name: "Thu gọn thanh điều hướng" }).click();
+  await expect(nav).toBeVisible();
+  await expect(page.locator("#admin-desktop-sidebar")).toHaveAttribute(
+    "data-compact",
+    "true",
+  );
+  await expect(
+    nav.getByRole("link", { name: "Quầy bán hàng" }),
+  ).toHaveAttribute("aria-current", "page");
   await expect(
     page.getByTestId("cart-total").filter({ visible: true }),
   ).toHaveText("120.000");
-  await page.getByRole("button", { name: "Hiện thanh điều hướng" }).click();
+  await page.getByRole("button", { name: "Mở rộng thanh điều hướng" }).click();
   await expect(nav).toBeVisible();
   await test.info().attach("Quầy trong layout admin desktop", {
     body: await page.screenshot(),
