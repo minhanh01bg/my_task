@@ -36,4 +36,4 @@
 - [x] Ghi các workflow còn thiếu, không tạo trang rỗng để che chức năng chưa có.
 - [x] pnpm check và build riêng; E2E production; review và preview smoke.
 - [x] Triển khai artifact đã kiểm chứng, HTTPS smoke/chunks.
-- [ ] QA commit và push (bước chốt sau tài liệu).
+- [x] QA commit và push: c21da5b (snapshot), 9941c14 (checkout), a793742 (audit) đã lên origin/main.
