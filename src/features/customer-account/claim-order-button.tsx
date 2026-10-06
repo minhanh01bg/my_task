@@ -5,12 +5,19 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 
-export function ClaimOrderButton({ guestToken }: { guestToken: string }) {
+export function ClaimOrderButton({
+  guestToken,
+  phoneVerified,
+}: {
+  guestToken: string;
+  phoneVerified?: boolean;
+}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   async function handleClaim() {
+    if (loading || phoneVerified === false) return;
     setLoading(true);
     setError(null);
     try {
@@ -48,12 +55,21 @@ export function ClaimOrderButton({ guestToken }: { guestToken: string }) {
         type="button"
         id="claim-guest-order-button"
         onClick={handleClaim}
-        disabled={loading}
+        disabled={loading || phoneVerified === false}
         className="w-full"
         size="lg"
       >
         {loading ? "Đang liên kết..." : "Lưu đơn hàng vào tài khoản của bạn"}
       </Button>
+      {phoneVerified === false && (
+        <p
+          role="status"
+          className="text-muted-foreground mt-2 text-center text-sm"
+        >
+          Tài khoản cần xác minh số điện thoại trước khi lưu đơn. Bạn vẫn có thể
+          theo dõi đơn bằng liên kết này.
+        </p>
+      )}
       {error && (
         <p className="text-destructive mt-2 text-center text-sm">{error}</p>
       )}

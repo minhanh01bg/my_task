@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ClaimOrderButton } from "@/features/customer-account/claim-order-button";
 import { CustomerOrderDetail } from "@/features/customer-account/order-detail";
 import { OrderTimeline } from "@/features/customer-account/order-timeline";
+import { getOptionalCustomerSession } from "@/server/customer-auth/session";
 import { findGuestOrder } from "@/server/orders/order-access";
 import { getStoreBankAccount } from "@/server/settings/store-settings";
 
@@ -18,7 +19,10 @@ export default async function GuestOrderPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const access = await findGuestOrder(token);
+  const [access, session] = await Promise.all([
+    findGuestOrder(token),
+    getOptionalCustomerSession(),
+  ]);
   if (!access) notFound();
   const bankAccount =
     access.order.paymentMethod === "bank_transfer" &&
@@ -34,7 +38,12 @@ export default async function GuestOrderPage({
         timeline={<OrderTimeline order={access.order} />}
       />
       <div className="px-4">
-        <ClaimOrderButton guestToken={token} />
+        <ClaimOrderButton
+          guestToken={token}
+          phoneVerified={
+            session ? Boolean(session.account.phoneVerifiedAt) : undefined
+          }
+        />
       </div>
     </div>
   );

@@ -24,3 +24,15 @@ it("chưa đăng nhập chuyển tới login và giữ đường dẫn đơn c�
     ),
   );
 });
+
+it("khách chưa xác minh thấy hướng dẫn thay vì gửi yêu cầu bị từ chối", () => {
+  const fetch = vi.spyOn(globalThis, "fetch");
+  render(<ClaimOrderButton guestToken="fixture-token" phoneVerified={false} />);
+  expect(
+    screen.getByRole("button", { name: "Lưu đơn hàng vào tài khoản của bạn" }),
+  ).toBeDisabled();
+  expect(screen.getByRole("status")).toHaveTextContent(
+    "xác minh số điện thoại",
+  );
+  expect(fetch).not.toHaveBeenCalled();
+});

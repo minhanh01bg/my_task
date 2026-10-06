@@ -20,6 +20,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/server/customer-auth/session", () => ({
   requireCustomerSession: vi.fn(),
+  getOptionalCustomerSession: vi.fn().mockResolvedValue(null),
 }));
 vi.mock("@/server/orders/order-access", () => ({
   findOwnedCustomerOrder: vi.fn(),
