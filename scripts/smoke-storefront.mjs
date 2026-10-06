@@ -52,8 +52,48 @@ for (const path of categories) {
     /text\/x-component/,
   );
 }
-for (const path of ["/shop/delivery-policy", "/shop/return-policy"])
+for (const path of [
+  "/shop/delivery-policy",
+  "/shop/return-policy",
+  "/shop/payment-policy",
+  "/shop/privacy",
+])
   await check(`${path}?_rsc=smoke`, [200], { RSC: "1" }, /text\/x-component/);
+for (const path of [
+  "/",
+  "/checkout",
+  "/account",
+  "/account/login",
+  "/account/register",
+  "/account/orders",
+  "/shop.webmanifest",
+])
+  await check(path);
+// Bao gồm CTA do admin cấu hình trong banner/promotion và link sản phẩm thực tế.
+const linkedPages = new Set(
+  [...shop.matchAll(/<a\b[^>]*href="(\/[^"#?]*)[^"]*"/g)].map(
+    (match) => match[1],
+  ),
+);
+for (const path of linkedPages) {
+  if (/^\/(?:admin|pos|login)(?:\/|$)/.test(path)) continue;
+  if (
+    categories.has(path) ||
+    [
+      "/shop",
+      "/checkout",
+      "/account/orders",
+      "/account/login",
+      "/account/register",
+      "/shop/delivery-policy",
+      "/shop/return-policy",
+      "/shop/payment-policy",
+      "/shop/privacy",
+    ].includes(path)
+  )
+    continue;
+  await check(path);
+}
 await check("/admin", [307]);
 
 for (const failure of failures) process.stderr.write(`${failure}\n`);
