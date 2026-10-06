@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Check, Package, TriangleAlert } from "lucide-react";
+import {
+  ArrowUpRight,
+  Bell,
+  Check,
+  Package,
+  TriangleAlert,
+} from "lucide-react";
 
 import { EmptyState } from "@/components/kit/empty-state";
 import { Skeleton } from "@/components/kit/skeleton-loader";
@@ -14,6 +20,19 @@ export interface NotificationListItem {
   kind: string;
   createdAt: string | Date;
   readAt?: string | Date | null;
+}
+
+function notificationAction(kind: string): string {
+  if (kind.includes("stock")) return "Kiểm tra tồn kho";
+  if (kind === "order_payment_paid") return "Xem thanh toán";
+  if (kind.startsWith("order_status_")) return "Theo dõi đơn hàng";
+  if (
+    kind === "online_order_created" ||
+    kind === "order_created" ||
+    kind === "order_claimed"
+  )
+    return "Xem đơn hàng";
+  return "Xem chi tiết";
 }
 
 const dateFormatter = new Intl.DateTimeFormat("vi-VN", {
@@ -36,7 +55,7 @@ export function NotificationListSkeleton() {
           aria-hidden="true"
           className="flex gap-3 rounded-xl p-3"
         >
-          <Skeleton className="size-10 shrink-0 rounded-xl" />
+          <Skeleton className="size-8 shrink-0 rounded-lg" />
           <div className="flex-1 space-y-2">
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-3 w-full" />
@@ -98,16 +117,16 @@ export function NotificationList({
                     onNavigate?.();
                     if (!item.readAt) onMarkRead(item.id);
                   }}
-                  className={`focus-visible:ring-ring flex gap-3 rounded-xl p-3 pr-14 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none ${item.readAt ? "hover:bg-muted/60" : "bg-primary/6 hover:bg-primary/10"}`}
+                  className={`focus-visible:ring-ring flex gap-2 rounded-xl p-2.5 pr-12 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none ${item.readAt ? "hover:bg-muted/60" : "bg-primary/6 hover:bg-primary/10"}`}
                 >
                   <span
-                    className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${item.readAt ? "bg-muted text-muted-foreground" : "bg-primary/12 text-primary"}`}
+                    className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${item.readAt ? "bg-muted text-muted-foreground" : "bg-primary/12 text-primary"}`}
                   >
                     <Icon aria-hidden="true" className="size-5" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="flex items-start gap-2 leading-snug font-semibold">
-                      {item.title}
+                    <span className="flex items-start gap-2 leading-snug font-semibold [overflow-wrap:anywhere]">
+                      <span className="line-clamp-2">{item.title}</span>
                       {!item.readAt ? (
                         <span
                           aria-hidden="true"
@@ -118,15 +137,19 @@ export function NotificationList({
                     {!item.readAt ? (
                       <span className="sr-only">Chưa đọc. </span>
                     ) : null}
-                    <span className="text-muted-foreground mt-1 block text-xs leading-relaxed">
+                    <span className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-relaxed [overflow-wrap:anywhere]">
                       {item.body}
                     </span>
                     <time
                       dateTime={new Date(item.createdAt).toISOString()}
-                      className="text-muted-foreground mt-2 block text-xs"
+                      className="text-muted-foreground mt-1.5 block text-[0.65rem]"
                     >
                       {dateFormatter.format(new Date(item.createdAt))}
                     </time>
+                    <span className="text-primary mt-1 inline-flex min-h-8 items-center gap-1 text-xs font-semibold">
+                      {notificationAction(item.kind)}
+                      <ArrowUpRight aria-hidden="true" className="size-3.5" />
+                    </span>
                   </span>
                 </Link>
                 {!item.readAt ? (
