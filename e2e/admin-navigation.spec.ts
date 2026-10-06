@@ -130,6 +130,7 @@ test("admin thay đổi độ rộng thanh điều hướng desktop và giữ l�
   await handle.focus();
   await page.keyboard.press("End");
   await expect(handle).toHaveAttribute("aria-valuenow", "360");
+  await expect.poll(async () => (await sidebar.boundingBox())!.width).toBe(360);
   await page.setViewportSize({ width: 768, height: 900 });
   expect(
     await header.evaluate((node) => node.scrollWidth <= node.clientWidth),
