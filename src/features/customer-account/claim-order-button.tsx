@@ -21,7 +21,9 @@ export function ClaimOrderButton({ guestToken }: { guestToken: string }) {
       });
 
       if (res.status === 401) {
-        router.push("/account");
+        router.push(
+          `/account/login?next=${encodeURIComponent(`/orders/guest/${guestToken}`)}`,
+        );
         return;
       }
 

@@ -7,6 +7,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { customerReturnPath } from "@/lib/auth/customer-return-path";
 import { invalidateStorefrontSession } from "@/features/online-store/storefront-session";
 import {
   customerLoginSchema,
@@ -15,7 +16,18 @@ import {
 
 type Field = "phone" | "password" | "displayName";
 
-export function CustomerAuthForm({ mode }: { mode: "login" | "register" }) {
+export function CustomerAuthForm({
+  mode,
+  returnTo,
+}: {
+  mode: "login" | "register";
+  returnTo?: string;
+}) {
+  const destination = customerReturnPath(returnTo);
+  const authHref = (path: string) =>
+    destination === "/account/orders"
+      ? path
+      : `${path}?next=${encodeURIComponent(destination)}`;
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -88,7 +100,7 @@ export function CustomerAuthForm({ mode }: { mode: "login" | "register" }) {
         return;
       }
       invalidateStorefrontSession();
-      router.replace("/account/orders");
+      router.replace(destination);
       router.refresh();
     } catch {
       setError("Không thể kết nối. Vui lòng thử lại.");
@@ -233,7 +245,7 @@ export function CustomerAuthForm({ mode }: { mode: "login" | "register" }) {
         >
           <p className="font-semibold">{success}</p>
           <Link
-            href="/account/login"
+            href={authHref("/account/login")}
             className="text-primary mt-3 inline-flex min-h-11 items-center font-bold"
           >
             Đăng nhập ngay
@@ -258,7 +270,7 @@ export function CustomerAuthForm({ mode }: { mode: "login" | "register" }) {
             Chưa có tài khoản?{" "}
             <Link
               className="text-primary inline-flex min-h-11 items-center font-bold"
-              href="/account/register"
+              href={authHref("/account/register")}
             >
               Đăng ký
             </Link>
@@ -268,7 +280,7 @@ export function CustomerAuthForm({ mode }: { mode: "login" | "register" }) {
             Đã có tài khoản hoặc cần khôi phục?{" "}
             <Link
               className="text-primary inline-flex min-h-11 items-center font-bold"
-              href="/account/login"
+              href={authHref("/account/login")}
             >
               Đăng nhập
             </Link>

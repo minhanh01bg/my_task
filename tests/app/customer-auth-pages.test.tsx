@@ -18,7 +18,7 @@ describe("customer account entry pages", () => {
   ] as const)(
     "%s có banner cửa hàng và lối vào admin",
     async (heading, Page) => {
-      render(await Page());
+      render(await Page({ searchParams: Promise.resolve({}) }));
       expect(
         screen.getByRole("heading", { name: heading }),
       ).toBeInTheDocument();

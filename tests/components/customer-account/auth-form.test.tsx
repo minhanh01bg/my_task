@@ -68,3 +68,26 @@ describe("CustomerAuthForm", () => {
     );
   });
 });
+
+it("login quay lại đơn đang lưu và link đăng ký giữ next", async () => {
+  vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response("{}", { status: 200 }),
+  );
+  render(
+    <CustomerAuthForm mode="login" returnTo="/orders/guest/fixture-token" />,
+  );
+  expect(screen.getByRole("link", { name: "Đăng ký" })).toHaveAttribute(
+    "href",
+    "/account/register?next=%2Forders%2Fguest%2Ffixture-token",
+  );
+  fireEvent.change(screen.getByLabelText("Số điện thoại"), {
+    target: { value: "0901234567" },
+  });
+  fireEvent.change(screen.getByLabelText("Mật khẩu"), {
+    target: { value: "a-secure-password" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
+  await waitFor(() =>
+    expect(replace).toHaveBeenCalledWith("/orders/guest/fixture-token"),
+  );
+});
