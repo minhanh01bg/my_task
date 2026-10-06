@@ -243,7 +243,7 @@ export function PaymentDialog({
               <div
                 aria-live="polite"
                 className={cn(
-                  "flex items-baseline justify-between gap-4 rounded-2xl border p-4",
+                  "flex items-center justify-between gap-4 rounded-2xl border p-4",
                   cashEnough
                     ? "border-success/30 bg-success/10"
                     : "border-warning/30 bg-warning/10",
@@ -259,9 +259,13 @@ export function PaymentDialog({
                 </div>
                 <span
                   data-testid="payment-change"
-                  className="text-right text-4xl font-black tabular-nums sm:text-5xl"
+                  className="shrink-0 text-right"
                 >
-                  <Money amount={change} size="display" />
+                  <Money
+                    amount={change}
+                    size="display"
+                    className="text-3xl leading-none sm:text-5xl"
+                  />
                 </span>
               </div>
             </div>
