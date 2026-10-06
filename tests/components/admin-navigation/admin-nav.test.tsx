@@ -112,12 +112,29 @@ describe("AdminNav", () => {
     expect(aside).toHaveStyle({ width: "360px" });
   });
 
-  it("có liên kết sang cửa hàng online", () => {
-    render(<AdminNav />);
-
+  it("liên kết cửa hàng online nằm trên navbar và không lặp trong menu", () => {
+    const { container } = render(<AdminNav />);
     expect(
-      screen.getByRole("link", { name: "Xem cửa hàng online" }),
+      within(container.querySelector("header")!).getByRole("link", {
+        name: "Xem cửa hàng online",
+      }),
     ).toHaveAttribute("href", "/shop");
+    expect(
+      within(container.querySelector("aside")!).queryByRole("link", {
+        name: "Xem cửa hàng online",
+      }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Mở toàn bộ menu quản lý" }),
+    );
+    expect(
+      within(screen.getByRole("dialog", { name: "Menu quản lý" })).queryByRole(
+        "link",
+        {
+          name: "Xem cửa hàng online",
+        },
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it("đóng menu bằng phím Escape và trả focus về nút mở", async () => {

@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
 
+test.beforeEach(async ({ page }) => {
+  if (process.env.PLAYWRIGHT_PRODUCTION_DIR) {
+    await page.setExtraHTTPHeaders({ "X-Real-IP": "1.1.1.1" });
+  }
+});
+
 test("admin có app shell mobile rõ ràng và menu đầy đủ truy cập được", async ({
   page,
 }) => {
@@ -13,6 +19,24 @@ test("admin có app shell mobile rõ ràng và menu đầy đủ truy cập đư
   await page.goto("/admin/orders");
 
   await expect(page.getByText("Quản lý", { exact: true })).toBeVisible();
+  const header = page.getByRole("banner", { name: "Thanh công cụ quản lý" });
+  const storefront = header.getByRole("link", { name: "Xem cửa hàng online" });
+  await expect(storefront).toBeVisible();
+  await expect(storefront).toHaveAttribute("href", "/shop");
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await expect(storefront).toBeInViewport();
+    const box = await storefront.boundingBox();
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    expect(
+      await header.evaluate((node) => node.scrollWidth <= node.clientWidth),
+    ).toBe(true);
+  }
+  await test.info().attach("Navbar cửa hàng trên điện thoại", {
+    body: await page.screenshot(),
+    contentType: "image/png",
+  });
   const mobileNav = page.getByRole("navigation", {
     name: "Điều hướng quản lý trên điện thoại",
   });
@@ -49,6 +73,9 @@ test("admin có app shell mobile rõ ràng và menu đầy đủ truy cập đư
   await expect(
     page.getByRole("region", { name: "Thông báo quản trị" }),
   ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await storefront.click();
+  await expect(page).toHaveURL(/\/shop$/);
 });
 
 test("chưa đăng nhập truy cập trang quản lý hoặc /admin/login sẽ được chuyển hướng về /login", async ({
@@ -75,6 +102,19 @@ test("admin thay đổi độ rộng thanh điều hướng desktop và giữ l�
 
   const handle = page.getByRole("separator", {
     name: "Thay đổi chiều rộng thanh điều hướng",
+  });
+  const header = page.getByRole("banner", { name: "Thanh công cụ quản lý" });
+  await expect(
+    header.getByRole("link", { name: "Xem cửa hàng online" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("navigation", { name: "Điều hướng quản lý", exact: true })
+      .getByRole("link", { name: "Xem cửa hàng online" }),
+  ).toHaveCount(0);
+  await test.info().attach("Navbar cửa hàng trên desktop", {
+    body: await page.screenshot(),
+    contentType: "image/png",
   });
   await expect(handle).toBeVisible();
   await handle.focus();

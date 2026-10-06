@@ -23,7 +23,7 @@ import {
 } from "@phosphor-icons/react";
 
 import { ThemeToggle } from "@/components/shared/theme-toggle";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Sheet,
   SheetClose,
@@ -50,12 +50,6 @@ const NAV = [
     label: "Quầy bán hàng",
     shortLabel: "Bán hàng",
     icon: ShoppingCart,
-  },
-  {
-    href: "/shop",
-    label: "Xem cửa hàng online",
-    shortLabel: "Cửa hàng",
-    icon: Storefront,
   },
   {
     href: "/admin/products",
@@ -281,7 +275,20 @@ export function AdminNav({
             <p className="truncate font-bold">{current?.label ?? "Cửa hàng"}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href="/shop"
+            prefetch={false}
+            aria-label="Xem cửa hàng online"
+            title="Xem cửa hàng online"
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              "size-11 shrink-0 px-0 lg:w-auto lg:px-3",
+            )}
+          >
+            <Storefront aria-hidden="true" className="size-5" />
+            <span className="hidden lg:inline">Xem cửa hàng online</span>
+          </Link>
           <ThemeToggle />
           <AdminSearchButton placement="mobile" />
           <NotificationButton placement="mobile" />
