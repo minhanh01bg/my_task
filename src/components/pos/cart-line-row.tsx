@@ -1,7 +1,11 @@
 "use client";
 
+import {
+  IconMinus as Minus,
+  IconPlus as Plus,
+  IconTrash as Trash,
+} from "@tabler/icons-react";
 import { useState } from "react";
-import { Minus, Plus, Trash } from "@phosphor-icons/react";
 
 import { Input } from "@/components/ui/input";
 import type { CartLine } from "@/lib/pricing/types";
@@ -84,7 +88,7 @@ export function CartLineRow({ line, lineTotal }: CartLineRowProps) {
               onClick={() => updateQuantity(line.id, line.quantity - 1)}
               className={`${stepperButtonClass} border-border border-r disabled:pointer-events-none disabled:opacity-40`}
             >
-              <Minus aria-hidden="true" weight="bold" className="size-4" />
+              <Minus aria-hidden="true" className="size-4" />
             </button>
             <Input
               aria-label={`Số lượng ${line.name}`}
@@ -106,7 +110,7 @@ export function CartLineRow({ line, lineTotal }: CartLineRowProps) {
               onClick={() => updateQuantity(line.id, line.quantity + 1)}
               className={`${stepperButtonClass} border-border text-primary border-l`}
             >
-              <Plus aria-hidden="true" weight="bold" className="size-4" />
+              <Plus aria-hidden="true" className="size-4" />
             </button>
           </div>
         </div>
@@ -127,7 +131,7 @@ export function CartLineRow({ line, lineTotal }: CartLineRowProps) {
               }
               className={`${stepperButtonClass} border-border border-r`}
             >
-              <Minus aria-hidden="true" weight="bold" className="size-4" />
+              <Minus aria-hidden="true" className="size-4" />
             </button>
             <Input
               aria-label={`Đơn giá ${line.name}`}
@@ -152,7 +156,7 @@ export function CartLineRow({ line, lineTotal }: CartLineRowProps) {
               }
               className={`${stepperButtonClass} border-border text-primary border-l`}
             >
-              <Plus aria-hidden="true" weight="bold" className="size-4" />
+              <Plus aria-hidden="true" className="size-4" />
             </button>
           </div>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { MagnifyingGlass } from "@phosphor-icons/react";
+import { IconSearch as MagnifyingGlass } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 

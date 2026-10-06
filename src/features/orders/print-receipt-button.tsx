@@ -1,6 +1,6 @@
 "use client";
 
-import { Printer } from "lucide-react";
+import { IconPrinter as Printer } from "@tabler/icons-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";

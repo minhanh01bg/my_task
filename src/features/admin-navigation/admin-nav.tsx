@@ -1,26 +1,27 @@
 "use client";
 
+import {
+  IconRefresh as ArrowsClockwise,
+  IconCreditCard as CreditCard,
+  IconDashboard as Gauge,
+  IconSettings as Gear,
+  IconMenu2 as List,
+  IconSpeakerphone as Megaphone,
+  IconPackage as Package,
+  IconShoppingCart as ShoppingCart,
+  IconCategory2 as SquaresFour,
+  IconStar as Star,
+  IconBuildingStore as Storefront,
+  IconReceipt as TextAlignLeft,
+  IconTicket as Ticket,
+  IconUsers as Users,
+  IconX as X,
+  IconLayoutSidebarLeftCollapse,
+  IconLayoutSidebarLeftExpand,
+} from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import {
-  ArrowsClockwise,
-  CreditCard,
-  Gauge,
-  Gear,
-  List,
-  Megaphone,
-  Package,
-  ShoppingCart,
-  SquaresFour,
-  Star,
-  Storefront,
-  TextAlignLeft,
-  Ticket,
-  Users,
-  X,
-  SidebarSimple,
-} from "@phosphor-icons/react";
 
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -181,11 +182,7 @@ function NavLink({
         compact && "relative",
       )}
     >
-      <item.icon
-        aria-hidden="true"
-        weight={active ? "fill" : "regular"}
-        className="size-5 shrink-0"
-      />
+      <item.icon aria-hidden="true" className="size-5 shrink-0" />
       <span className="admin-sidebar-label min-w-0 truncate">{item.label}</span>
       {compact && badge ? (
         <span className="pointer-events-none absolute top-0.5 right-0.5 origin-top-right scale-75">
@@ -311,7 +308,17 @@ export function AdminNav({
               )
             }
           >
-            <SidebarSimple aria-hidden="true" className="size-5" />
+            {compact ? (
+              <IconLayoutSidebarLeftExpand
+                aria-hidden="true"
+                className="size-5"
+              />
+            ) : (
+              <IconLayoutSidebarLeftCollapse
+                aria-hidden="true"
+                className="size-5"
+              />
+            )}
             <span className="sr-only">
               {compact
                 ? "Mở rộng thanh điều hướng"
@@ -360,7 +367,7 @@ export function AdminNav({
           )}
         >
           <span className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-xl shadow-sm">
-            <Storefront aria-hidden="true" weight="fill" className="size-5" />
+            <Storefront aria-hidden="true" className="size-5" />
           </span>
           <div
             className="admin-sidebar-label min-w-0"
@@ -442,11 +449,7 @@ export function AdminNav({
                     aria-current={active ? "page" : undefined}
                     className="text-muted-foreground focus-visible:ring-ring aria-[current=page]:text-primary flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl text-[0.68rem] font-bold focus-visible:ring-2 focus-visible:outline-none"
                   >
-                    <item.icon
-                      aria-hidden="true"
-                      weight={active ? "fill" : "regular"}
-                      className="size-5"
-                    />
+                    <item.icon aria-hidden="true" className="size-5" />
                     {item.shortLabel}
                   </Link>
                 </li>
@@ -461,11 +464,7 @@ export function AdminNav({
                   menuOpen && "text-primary",
                 )}
               >
-                <List
-                  aria-hidden="true"
-                  weight={menuOpen ? "bold" : "regular"}
-                  className="size-5"
-                />
+                <List aria-hidden="true" className="size-5" />
                 Thêm
               </SheetTrigger>
             </li>

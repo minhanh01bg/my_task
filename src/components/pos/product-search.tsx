@@ -1,8 +1,10 @@
 "use client";
 
+import {
+  IconSearch as MagnifyingGlass,
+  IconSearchOff as SearchX,
+} from "@tabler/icons-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MagnifyingGlass } from "@phosphor-icons/react";
-import { SearchX } from "lucide-react";
 
 import { EmptyState } from "@/components/kit/empty-state";
 import { ProductImage } from "@/components/kit/product-image";
@@ -101,7 +103,6 @@ export function ProductSearch({ products, onSelect }: ProductSearchProps) {
       <div className="relative">
         <MagnifyingGlass
           aria-hidden="true"
-          weight="bold"
           className="text-primary pointer-events-none absolute top-1/2 left-4 size-6 -translate-y-1/2"
         />
         <Input

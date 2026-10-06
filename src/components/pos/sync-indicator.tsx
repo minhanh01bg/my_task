@@ -1,7 +1,7 @@
 "use client";
 
+import { IconCloudUpload as CloudArrowUp } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CloudArrowUp } from "@phosphor-icons/react";
 
 import { flushQueue } from "@/lib/sync/flush";
 import { QUEUE_CHANGED_EVENT, countQueuedOrders } from "@/lib/sync/queue";
@@ -83,7 +83,7 @@ export function SyncIndicator() {
       onClick={() => void flush()}
       className="focus-visible:ring-ring border-warning/30 bg-warning/15 text-warning-foreground hover:bg-warning/25 inline-flex min-h-11 items-center gap-2 rounded-xl border-2 px-4 py-2 text-sm font-extrabold transition-colors focus-visible:ring-3 focus-visible:outline-none"
     >
-      <CloudArrowUp aria-hidden="true" weight="duotone" className="size-5" />
+      <CloudArrowUp aria-hidden="true" className="size-5" />
       {pending} đơn chờ đồng bộ — bấm để thử lại
     </button>
   );

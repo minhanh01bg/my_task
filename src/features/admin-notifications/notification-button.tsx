@@ -1,8 +1,8 @@
 "use client";
 
+import { IconBell as Bell, IconX as X } from "@tabler/icons-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Bell, X } from "@phosphor-icons/react";
 
 import { NotificationList } from "@/components/kit/notification-list";
 
@@ -121,11 +121,7 @@ export function NotificationButton({
             : "hover:bg-accent focus-visible:ring-ring relative flex size-11 items-center justify-center rounded-xl focus-visible:ring-2 focus-visible:outline-none"
         }
       >
-        <Bell
-          aria-hidden="true"
-          className="size-5"
-          weight={unreadCount ? "fill" : "regular"}
-        />
+        <Bell aria-hidden="true" className="size-5" />
         {placement === "desktop" ? <span>Thông báo</span> : null}
         {unreadCount > 0 && (
           <span

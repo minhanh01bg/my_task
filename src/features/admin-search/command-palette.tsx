@@ -1,5 +1,12 @@
 "use client";
 
+import {
+  IconSearch as MagnifyingGlass,
+  IconPackage as Package,
+  IconReceipt as Receipt,
+  IconUser as User,
+  IconX as X,
+} from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
@@ -11,13 +18,6 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import {
-  MagnifyingGlass,
-  Package,
-  Receipt,
-  User,
-  X,
-} from "@phosphor-icons/react";
 
 import { EmptyState, Money, Skeleton } from "@/components/kit";
 import {

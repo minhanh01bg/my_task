@@ -1,13 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import {
-  ArrowClockwise,
-  CheckCircle,
-  Plus,
-  ShoppingBagOpen,
-  Storefront,
-} from "@phosphor-icons/react";
+  IconRefresh as ArrowClockwise,
+  IconCircleCheck as CheckCircle,
+  IconPlus as Plus,
+  IconShoppingBag as ShoppingBagOpen,
+  IconBuildingStore as Storefront,
+} from "@tabler/icons-react";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CartPanel } from "@/components/pos/cart-panel";
@@ -281,7 +281,7 @@ export function PosScreen({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <span className="bg-accent/15 text-accent-foreground border-accent/20 mb-2 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold shadow-sm backdrop-blur-sm">
-              <Storefront aria-hidden="true" weight="fill" /> {storeName}
+              <Storefront aria-hidden="true" /> {storeName}
             </span>
             <h1 className="font-heading mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
               Hôm nay bán gì đây?
@@ -315,7 +315,7 @@ export function PosScreen({
                 disabled={refreshingCatalog}
                 onClick={() => void refreshCatalog()}
               >
-                <ArrowClockwise aria-hidden="true" weight="bold" />
+                <ArrowClockwise aria-hidden="true" />
                 {refreshingCatalog ? "Đang tải…" : "Tải lại hàng hóa"}
               </Button>
             </div>
@@ -344,11 +344,7 @@ export function PosScreen({
         <div className="surface-panel p-4 sm:p-5">
           <div className="mb-4 flex items-start gap-3">
             <span className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-xl">
-              <ShoppingBagOpen
-                aria-hidden="true"
-                weight="duotone"
-                className="size-6"
-              />
+              <ShoppingBagOpen aria-hidden="true" className="size-6" />
             </span>
             <div>
               <h2 className="font-heading font-bold">
@@ -379,7 +375,7 @@ export function PosScreen({
             className="flex-1"
             onClick={() => setServiceOpen(true)}
           >
-            <Plus aria-hidden="true" weight="bold" /> Tiền công
+            <Plus aria-hidden="true" /> Tiền công
           </Button>
           <Button
             variant="outline"
@@ -442,11 +438,7 @@ export function PosScreen({
           {lastSale ? (
             <>
               <div className="bg-primary/10 text-primary mx-auto flex size-14 items-center justify-center rounded-full">
-                <CheckCircle
-                  aria-hidden="true"
-                  weight="fill"
-                  className="size-8"
-                />
+                <CheckCircle aria-hidden="true" className="size-8" />
               </div>
               <DialogTitle className="text-2xl leading-tight font-bold">
                 {saleTitle(lastSale.receipt)}

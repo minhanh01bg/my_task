@@ -1,8 +1,11 @@
 "use client";
 
+import {
+  IconArrowRight as ArrowRight,
+  IconBasket as Basket,
+  IconBasket as ShoppingBasket,
+} from "@tabler/icons-react";
 import { useMemo } from "react";
-import { ArrowRight, Basket } from "@phosphor-icons/react";
-import { ShoppingBasket } from "lucide-react";
 
 import { EmptyState } from "@/components/kit/empty-state";
 import { CartLineRow } from "@/components/pos/cart-line-row";
@@ -31,7 +34,7 @@ export function CartPanel({ onCheckout }: CartPanelProps) {
       <div className="flex shrink-0 items-center justify-between border-b pb-4">
         <div className="flex items-center gap-3">
           <span className="bg-primary text-primary-foreground flex size-10 items-center justify-center rounded-xl">
-            <Basket aria-hidden="true" weight="duotone" className="size-6" />
+            <Basket aria-hidden="true" className="size-6" />
           </span>
           <div>
             <h2 className="font-heading text-xl font-bold">Đơn hiện tại</h2>
@@ -90,7 +93,7 @@ export function CartPanel({ onCheckout }: CartPanelProps) {
           <span>
             Thanh toán <span className="hidden opacity-75 sm:inline">(F4)</span>
           </span>
-          <ArrowRight aria-hidden="true" weight="bold" className="size-5" />
+          <ArrowRight aria-hidden="true" className="size-5" />
         </Button>
       </div>
     </section>

@@ -1,6 +1,6 @@
 "use client";
 
-import { SignOut } from "@phosphor-icons/react";
+import { IconLogout as SignOut } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
@@ -13,7 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
 import { invalidateStorefrontSession } from "@/features/online-store/storefront-session";
 import { cn } from "@/lib/utils";
 
