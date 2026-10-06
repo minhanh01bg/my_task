@@ -1,0 +1,13 @@
+[Unit]
+Description=Encrypted SQLite backup to Telegram
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/ccgram/my_task
+ExecStart=/usr/bin/python3 /home/ccgram/my_task/scripts/backup-sqlite-telegram.py
+UMask=0077
+TimeoutStartSec=5min
+NoNewPrivileges=true
+PrivateTmp=true

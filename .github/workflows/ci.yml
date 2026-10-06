@@ -32,6 +32,9 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Database backup tests
+        run: python3 -m unittest discover -s tests/scripts -p "test_backup*.py"
+
       - name: Unit tests
         run: pnpm test
 
