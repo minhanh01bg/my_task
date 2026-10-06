@@ -127,7 +127,7 @@ export function PaymentDialog({
         initialFocus={() => cashInputRef.current ?? true}
         className="bg-background ring-foreground/10 modal-scroll block max-h-[calc(100dvh-1.5rem)] w-full max-w-[calc(100%-1.5rem)] space-y-5 overflow-y-auto rounded-3xl p-4 shadow-2xl ring-1 sm:max-h-[calc(100dvh-2rem)] sm:max-w-xl sm:p-6"
       >
-        <div className="border-border bg-muted/40 flex items-baseline justify-between gap-4 rounded-2xl border p-4">
+        <div className="border-border bg-muted/40 flex items-center justify-between gap-4 rounded-2xl border p-4">
           <div>
             <DialogTitle className="text-muted-foreground font-sans text-sm leading-normal font-semibold">
               Thanh toán đơn hàng
@@ -136,9 +136,12 @@ export function PaymentDialog({
           </div>
           <span
             data-testid="payment-total"
-            className="text-primary text-right text-3xl font-black tabular-nums"
+            className="text-primary shrink-0 text-right"
           >
-            <Money amount={total} className="text-3xl" />
+            <Money
+              amount={total}
+              className="text-2xl leading-none font-black sm:text-3xl"
+            />
           </span>
         </div>
 
