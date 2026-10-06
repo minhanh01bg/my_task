@@ -201,7 +201,7 @@ export function PaymentDialog({
                     if (cashEnough && !submitting) confirmCash();
                   }}
                   inputMode="numeric"
-                  className="border-primary/30 bg-primary/5 h-16 rounded-2xl text-right text-3xl font-black tabular-nums"
+                  className="border-primary/30 bg-primary/5 h-16 [appearance:textfield] rounded-2xl text-right text-3xl font-black tabular-nums [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
               </div>
 
