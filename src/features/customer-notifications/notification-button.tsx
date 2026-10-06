@@ -110,11 +110,11 @@ export function CustomerNotificationButton({
           aria-label="Hộp thư thông báo đơn hàng"
           className={
             placement === "page"
-              ? "bg-popover text-popover-foreground border-border animate-in fade-in-0 zoom-in-95 absolute top-12 right-0 z-[100] max-h-[80dvh] w-80 origin-top-right transform-gpu overflow-auto rounded-2xl border p-4 shadow-2xl backdrop-blur-xl duration-200 ease-out will-change-[transform,opacity] sm:w-96"
-              : "bg-popover text-popover-foreground border-border animate-in fade-in-0 zoom-in-95 absolute top-full right-0 z-[100] mt-2 max-h-[80dvh] w-80 origin-top-right transform-gpu overflow-auto rounded-2xl border p-4 shadow-2xl backdrop-blur-xl duration-200 ease-out will-change-[transform,opacity] sm:w-96"
+              ? "bg-popover text-popover-foreground border-border animate-in fade-in-0 zoom-in-95 absolute top-12 right-0 z-[100] flex max-h-[min(32rem,calc(100dvh-9rem))] w-[min(20rem,calc(100vw-1.5rem))] origin-top-right transform-gpu flex-col overflow-hidden rounded-2xl border p-3 shadow-2xl backdrop-blur-xl duration-200 ease-out will-change-[transform,opacity] sm:w-96"
+              : "bg-popover text-popover-foreground border-border animate-in fade-in-0 zoom-in-95 absolute top-full right-0 z-[100] mt-2 flex max-h-[min(32rem,calc(100dvh-9rem))] w-[min(20rem,calc(100vw-1.5rem))] origin-top-right transform-gpu flex-col overflow-hidden rounded-2xl border p-3 shadow-2xl backdrop-blur-xl duration-200 ease-out will-change-[transform,opacity] sm:w-96"
           }
         >
-          <header className="mb-3 flex items-center justify-between gap-2 border-b pb-3">
+          <header className="mb-2 flex shrink-0 items-center justify-between gap-2 border-b pb-3">
             <div className="flex items-center gap-2">
               <h2 className="font-heading text-base font-bold">Thông báo</h2>
               {unreadCount > 0 && (
@@ -149,18 +149,20 @@ export function CustomerNotificationButton({
             </div>
           </header>
 
-          <NotificationList
-            items={items}
-            loading={loading}
-            loadingMore={loadingMore}
-            error={error}
-            hasMore={Boolean(nextCursor)}
-            onRetry={() => void retry()}
-            onLoadMore={() => void loadMore()}
-            onMarkRead={(id) => void markOne(id)}
-            onNavigate={() => setOpen(false)}
-            emptyDescription="Các cập nhật về đơn hàng của bạn sẽ hiển thị tại đây."
-          />
+          <div className="min-h-0 overflow-y-auto overscroll-contain">
+            <NotificationList
+              items={items}
+              loading={loading}
+              loadingMore={loadingMore}
+              error={error}
+              hasMore={Boolean(nextCursor)}
+              onRetry={() => void retry()}
+              onLoadMore={() => void loadMore()}
+              onMarkRead={(id) => void markOne(id)}
+              onNavigate={() => setOpen(false)}
+              emptyDescription="Các cập nhật về đơn hàng của bạn sẽ hiển thị tại đây."
+            />
+          </div>
         </section>
       )}
     </div>

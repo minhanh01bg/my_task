@@ -149,11 +149,11 @@ export function NotificationButton({
             style={placement === "desktop" ? desktopPosition : undefined}
             className={
               placement === "desktop"
-                ? "bg-popover text-popover-foreground animate-popover-enter fixed z-[100] max-h-[min(75dvh,calc(100dvh-1.5rem))] w-[min(24rem,calc(100vw-1.5rem))] overflow-auto rounded-2xl border p-3 shadow-xl"
-                : "bg-popover text-popover-foreground animate-popover-enter fixed inset-x-3 top-18 z-[100] max-h-[calc(100dvh-6rem)] overflow-auto rounded-2xl border p-3 shadow-xl"
+                ? "bg-popover text-popover-foreground animate-popover-enter fixed z-[100] flex max-h-[min(32rem,calc(100dvh-1.5rem))] w-[min(24rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border p-3 shadow-xl"
+                : "bg-popover text-popover-foreground animate-popover-enter fixed top-18 right-3 z-[100] flex max-h-[min(32rem,calc(100dvh-9rem))] w-[min(24rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border p-3 shadow-xl"
             }
           >
-            <header className="mb-2 flex items-center justify-between gap-2">
+            <header className="mb-2 flex shrink-0 items-center justify-between gap-2">
               <h2 className="font-heading font-bold">Thông báo</h2>
               <div className="flex items-center gap-1">
                 {unreadCount > 0 && (
@@ -176,18 +176,20 @@ export function NotificationButton({
                 </button>
               </div>
             </header>
-            <NotificationList
-              items={items}
-              loading={loading}
-              loadingMore={loadingMore}
-              error={error}
-              hasMore={Boolean(nextCursor)}
-              onRetry={() => void retry()}
-              onLoadMore={() => void loadMore()}
-              onMarkRead={(id) => void markOne(id)}
-              onNavigate={() => setOpen(false)}
-              emptyDescription="Đơn online mới và cảnh báo tồn kho sẽ hiện ở đây."
-            />
+            <div className="min-h-0 overflow-y-auto overscroll-contain">
+              <NotificationList
+                items={items}
+                loading={loading}
+                loadingMore={loadingMore}
+                error={error}
+                hasMore={Boolean(nextCursor)}
+                onRetry={() => void retry()}
+                onLoadMore={() => void loadMore()}
+                onMarkRead={(id) => void markOne(id)}
+                onNavigate={() => setOpen(false)}
+                emptyDescription="Đơn online mới và cảnh báo tồn kho sẽ hiện ở đây."
+              />
+            </div>
           </section>,
           document.body,
         )}
