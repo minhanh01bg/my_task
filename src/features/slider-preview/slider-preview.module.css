@@ -1,0 +1,599 @@
+.page {
+  --preview-ink: #203b2a;
+  --preview-paper: #f9f6ef;
+  min-height: 100vh;
+  background: var(--preview-paper);
+  color: var(--preview-ink);
+  padding: 0 32px 40px;
+}
+.previewHeader {
+  max-width: 1280px;
+  margin: auto;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid #203b2a1a;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.previewBadge {
+  color: #5b6459;
+  border: 1px solid #203b2a26;
+  border-radius: 30px;
+  padding: 7px 12px;
+  font-size: 11px;
+}
+.backLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.variantNav {
+  max-width: 1280px;
+  margin: 22px auto;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.variantLink {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 18px;
+  border: 1px solid #203b2a26;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 150ms;
+}
+.variantLink > span {
+  font-size: 10px;
+  opacity: 0.6;
+}
+.variantLink > svg {
+  margin-left: 12px;
+}
+.variantLink[aria-current="page"] {
+  background: #203b2a;
+  color: #fff;
+  border-color: #203b2a;
+}
+.frame {
+  max-width: 1280px;
+  margin: auto;
+}
+.caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 11px;
+  color: #606858;
+}
+.caption > span {
+  letter-spacing: 0.12em;
+  font-size: 10px;
+  font-weight: 700;
+}
+.hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 26px;
+  isolation: isolate;
+  min-height: 690px;
+  outline-offset: 5px;
+}
+.heroTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  position: relative;
+  z-index: 20;
+  padding: 25px 36px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+.heroTop > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+.heroHeading {
+  position: relative;
+  text-align: center;
+  z-index: 12;
+}
+.eyebrow {
+  display: block;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.19em;
+  margin-bottom: 15px;
+}
+.heroHeading h1 {
+  font-size: clamp(36px, 4.1vw, 58px);
+  line-height: 1.12;
+  letter-spacing: -0.055em;
+  font-weight: 700;
+  margin: 0;
+}
+.heroHeading em {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  letter-spacing: -0.035em;
+}
+.heroHeading > p {
+  max-width: 450px;
+  margin: 15px auto 0;
+  font-size: 12px;
+  line-height: 1.8;
+  opacity: 0.72;
+}
+.stage {
+  position: relative;
+  height: 340px;
+  perspective: 1100px;
+  touch-action: pan-y;
+  user-select: none;
+}
+.stageGlow {
+  position: absolute;
+  left: 50%;
+  top: 25px;
+  width: 560px;
+  height: 280px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    color-mix(in srgb, var(--slide-accent) 32%, transparent),
+    transparent 70%
+  );
+  filter: blur(25px);
+  transition: background 650ms;
+  pointer-events: none;
+}
+.productCard {
+  position: absolute;
+  top: 34px;
+  left: calc(50% - 117px);
+  width: 234px;
+  height: 282px;
+  border-radius: 18px;
+  background: #f8f5ed;
+  color: #25392b;
+  border: 1px solid #ffffff9e;
+  padding: 16px;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 25px 65px #0003;
+  transform: translateX(calc(var(--offset) * 185px))
+    translateY(calc(var(--distance) * 14px))
+    rotateY(calc(var(--offset) * -25deg))
+    scale(calc(1 - var(--distance) * 0.09));
+  transition:
+    transform 650ms cubic-bezier(0.22, 0.8, 0.2, 1),
+    opacity 650ms,
+    box-shadow 650ms;
+}
+.cardCategory {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  opacity: 0.72;
+}
+.productImage {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 166px;
+  background: white;
+  border-radius: 12px;
+  margin: 10px 0 12px;
+  overflow: hidden;
+}
+.image {
+  object-fit: contain;
+  padding: 12px;
+  pointer-events: none;
+}
+.cardName {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 650;
+}
+.cardPrice {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 3px;
+}
+.cardPrice small {
+  font-size: 10px;
+  font-weight: 400;
+  opacity: 0.65;
+}
+.dragHint {
+  display: block;
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  opacity: 0.5;
+}
+.productDetails {
+  position: relative;
+  z-index: 12;
+  text-align: center;
+  margin: 18px 28px 80px;
+}
+.activeCategory {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.65;
+}
+.productDetails h2 {
+  font-size: 20px;
+  line-height: 1.4;
+  font-weight: 600;
+  margin: 7px 0 3px;
+  letter-spacing: -0.04em;
+}
+.activePrice {
+  font-size: 14px;
+  font-weight: 600;
+}
+.activePrice > span {
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.6;
+}
+.actions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.primaryAction {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 25px;
+  border-radius: 40px;
+  padding: 10px 19px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #ddf1b2;
+  color: #163a2b;
+  transition: transform 180ms;
+}
+.primaryAction:hover {
+  transform: translateY(-2px);
+}
+.secondaryAction {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+}
+.controls {
+  position: absolute;
+  z-index: 20;
+  left: 36px;
+  right: 36px;
+  bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+.counter {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.counter strong {
+  font-size: 22px;
+  font-weight: 500;
+}
+.counter > span {
+  font-size: 10px;
+  opacity: 0.5;
+}
+.dots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.dots button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 44px;
+  cursor: pointer;
+  border-radius: 20px;
+}
+.dots button::after {
+  content: "";
+  display: block;
+  width: 5px;
+  height: 5px;
+  border-radius: 10px;
+  background: currentColor;
+  opacity: 0.3;
+  transition: width 250ms;
+}
+.dots button[aria-pressed="true"]::after {
+  opacity: 1;
+  width: 21px;
+}
+.controlButtons {
+  display: flex;
+  gap: 7px;
+}
+.controlButtons > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 180ms;
+}
+.controlButtons > button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.controlButtons > button:hover:not(:disabled) {
+  background: #ffffff16;
+}
+.previewFooter {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 15px;
+  font-size: 10px;
+  color: #606858;
+}
+.previewFooter > a {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.empty {
+  padding: 80px 20px;
+  border: 1px dashed #203b2a33;
+  border-radius: 24px;
+  text-align: center;
+}
+.page a:focus-visible,
+.page button:focus-visible,
+.hero:focus-visible {
+  outline: 3px solid #e39a37;
+  outline-offset: 4px;
+}
+.spectra {
+  color: #f6f8ed;
+  background: radial-gradient(
+    ellipse at 50% 48%,
+    #234733 0%,
+    #112d22 45%,
+    #0b2018 90%
+  );
+}
+.spectra .heroTop {
+  color: #c9d8c6;
+}
+.spectra .eyebrow {
+  color: #c3d5b1;
+}
+.spectra .heroHeading em {
+  color: #e0edbd;
+}
+.spectra .productCard[data-offset="0"] {
+  box-shadow:
+    0 25px 70px #0005,
+    0 0 65px color-mix(in srgb, var(--slide-accent) 24%, transparent);
+  transform: translateY(-2px) scale(1.04);
+}
+.spectra .productCard:not([data-offset="0"]) {
+  opacity: 0.78;
+}
+@media (max-width: 640px) {
+  .page {
+    padding: 0 14px 24px;
+  }
+  .previewHeader {
+    min-height: 66px;
+    gap: 8px;
+  }
+  .brand {
+    font-size: 12px;
+    gap: 6px;
+  }
+  .previewBadge {
+    display: none;
+  }
+  .backLink {
+    font-size: 10px;
+    gap: 4px;
+  }
+  .variantNav {
+    gap: 6px;
+    margin: 15px 0;
+  }
+  .variantLink {
+    flex: 1;
+    justify-content: center;
+    padding: 11px 6px;
+    gap: 5px;
+    font-size: 10px;
+    border-radius: 9px;
+  }
+  .variantLink > span,
+  .variantLink > svg {
+    display: none;
+  }
+  .caption {
+    align-items: flex-start;
+    font-size: 9px;
+    gap: 8px;
+  }
+  .caption > span {
+    font-size: 8px;
+    white-space: nowrap;
+  }
+  .caption p {
+    max-width: 180px;
+    text-align: right;
+  }
+  .hero {
+    border-radius: 20px;
+    min-height: 704px;
+  }
+  .heroTop {
+    padding: 20px;
+  }
+  .heroTop > span:first-child {
+    font-size: 10px;
+  }
+  .heroTop > span:last-child {
+    display: none;
+  }
+  .heroHeading {
+    padding: 8px 18px 0;
+  }
+  .heroHeading h1 {
+    font-size: clamp(33px, 9vw, 42px);
+  }
+  .eyebrow {
+    font-size: 7px;
+    margin-bottom: 12px;
+  }
+  .heroHeading > p {
+    font-size: 10px;
+    max-width: 290px;
+    line-height: 1.7;
+    margin-top: 12px;
+  }
+  .stage {
+    height: 316px;
+  }
+  .productCard {
+    width: 194px;
+    height: 248px;
+    left: calc(50% - 97px);
+    top: 28px;
+    padding: 13px;
+    transform: translateX(calc(var(--offset) * 132px))
+      translateY(calc(var(--distance) * 14px))
+      rotateY(calc(var(--offset) * -28deg))
+      scale(calc(1 - var(--distance) * 0.12));
+  }
+  .productImage {
+    height: 139px;
+    margin: 9px 0;
+  }
+  .cardCategory {
+    font-size: 8px;
+  }
+  .cardName {
+    font-size: 11px;
+  }
+  .cardPrice {
+    font-size: 12px;
+  }
+  .productDetails {
+    margin: 12px 18px 82px;
+  }
+  .productDetails h2 {
+    font-size: 17px;
+  }
+  .actions {
+    gap: 8px;
+  }
+  .primaryAction {
+    padding: 10px 15px;
+    gap: 16px;
+  }
+  .controls {
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    gap: 6px;
+  }
+  .counter {
+    gap: 5px;
+  }
+  .counter strong {
+    font-size: 19px;
+  }
+  .dots {
+    gap: 0;
+  }
+  .dots button {
+    width: 20px;
+  }
+  .controlButtons {
+    gap: 5px;
+  }
+  .controlButtons > button {
+    width: 44px;
+    height: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page *,
+  .page *::before,
+  .page *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .dots {
+    position: absolute;
+    left: 50%;
+    top: -37px;
+    transform: translateX(-50%);
+  }
+  .productDetails {
+    margin-bottom: 112px;
+  }
+}
