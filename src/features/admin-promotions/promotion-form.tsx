@@ -22,6 +22,7 @@ import { promotionActionSchema } from "@/types/storefront";
 
 import { PROMOTION_PLACEMENTS } from "./promotion-placement";
 import { PromotionPreview } from "./promotion-preview";
+import { PromotionScheduleField } from "./promotion-schedule-field";
 
 function initialValues(data?: StorefrontPromotion | null) {
   return {
@@ -70,7 +71,9 @@ export function PromotionForm({
       (field) => fieldErrors[field as Field],
     );
     if (field)
-      formRef.current?.querySelector<HTMLElement>(`[name="${field}"]`)?.focus();
+      formRef.current
+        ?.querySelector<HTMLElement>(`[id="${prefix}-${field}"]`)
+        ?.focus();
   };
   function update<K extends Field>(field: K, value: Values[K]) {
     const next = { ...values, [field]: value };
@@ -272,13 +275,21 @@ export function PromotionForm({
                 Lịch chạy & mức ưu tiên
               </h3>
               <div className="grid gap-4 sm:grid-cols-2">
-                <InputField
-                  {...textProps("startsAt", "Thời gian bắt đầu")}
-                  type="datetime-local"
+                <PromotionScheduleField
+                  id={`${prefix}-startsAt`}
+                  kind="bắt đầu"
+                  value={values.startsAt}
+                  onValueChange={(value) => update("startsAt", value)}
+                  error={errors.startsAt}
+                  readOnly={pending}
                 />
-                <InputField
-                  {...textProps("endsAt", "Thời gian kết thúc")}
-                  type="datetime-local"
+                <PromotionScheduleField
+                  id={`${prefix}-endsAt`}
+                  kind="kết thúc"
+                  value={values.endsAt}
+                  onValueChange={(value) => update("endsAt", value)}
+                  error={errors.endsAt}
+                  readOnly={pending}
                 />
               </div>
               <p className="text-muted-foreground text-xs">

@@ -27,6 +27,10 @@ const MONTHS = [
 ];
 
 interface DateFieldProps {
+  id?: string;
+  readOnly?: boolean;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
   name?: string;
   defaultValue?: string;
   value?: string;
@@ -81,6 +85,10 @@ function calendarDays(month: Date): Array<Date | null> {
 
 /** Date picker mau cho cac bo loc va form admin. */
 export function DateField({
+  id,
+  readOnly = false,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
   name,
   defaultValue = "",
   value,
@@ -103,17 +111,27 @@ export function DateField({
   const today = dateValue(new Date());
 
   function select(nextValue: string) {
+    if (readOnly) return;
     if (!controlled) setInternalValue(nextValue);
     onValueChange?.(nextValue);
     setOpen(false);
   }
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
+    <Popover.Root
+      open={open}
+      onOpenChange={(next) => {
+        if (!readOnly) setOpen(next);
+      }}
+    >
       <Popover.Trigger
+        id={id}
+        aria-disabled={readOnly || undefined}
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
         aria-label={ariaLabel}
         className={cn(
-          "group border-input bg-background hover:border-primary/45 hover:bg-accent/35 focus-visible:border-primary focus-visible:ring-primary/15 data-[popup-open]:border-primary data-[popup-open]:ring-primary/15 flex h-12 w-full cursor-pointer items-center gap-3 rounded-xl border px-3.5 text-left text-sm font-semibold shadow-xs transition-[border-color,background-color,box-shadow] outline-none focus-visible:ring-4 data-[popup-open]:ring-4",
+          "aria-invalid:border-destructive aria-invalid:ring-destructive/20 group border-input bg-background hover:border-primary/45 hover:bg-accent/35 focus-visible:border-primary focus-visible:ring-primary/15 data-[popup-open]:border-primary data-[popup-open]:ring-primary/15 flex h-12 w-full cursor-pointer items-center gap-3 rounded-xl border px-3.5 text-left text-sm font-semibold shadow-xs transition-[border-color,background-color,box-shadow] outline-none focus-visible:ring-4 aria-disabled:cursor-wait data-[popup-open]:ring-4",
           className,
         )}
       >

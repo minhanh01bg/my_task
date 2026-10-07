@@ -95,6 +95,29 @@ describe("DateField", () => {
     await user.click(screen.getByRole("button", { name: "Tháng sau" }));
     expect(screen.getByText("Tháng 10 2026")).toBeVisible();
   });
+  it("keeps a readonly calendar focusable with linked validation", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <DateField
+          id="schedule"
+          aria-label="Ngày bắt đầu"
+          readOnly
+          aria-invalid
+          aria-describedby="schedule-error"
+        />
+        <p id="schedule-error">Ngày không hợp lệ</p>
+      </>,
+    );
+    const trigger = screen.getByRole("button", { name: "Ngày bắt đầu" });
+    await user.click(trigger);
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveAttribute("aria-invalid", "true");
+    expect(trigger).toHaveAccessibleDescription("Ngày không hợp lệ");
+    expect(
+      screen.queryByRole("button", { name: "Tháng sau" }),
+    ).not.toBeInTheDocument();
+  });
 });
 
 describe("DataTableShell", () => {

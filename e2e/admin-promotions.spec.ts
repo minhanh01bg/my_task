@@ -44,6 +44,37 @@ test("khuyến mãi: validation, xem trước, tạo, tạm dừng và xóa", as
   await expect(form.getByLabel("Đường dẫn nút", { exact: true })).toBeFocused();
   await form.getByLabel("Đường dẫn nút", { exact: true }).fill("/shop#catalog");
   await form.getByLabel("Nội dung nút", { exact: true }).fill("Khám phá ngay");
+  const now = new Date();
+  const selectDay = async (label: string, day: number) => {
+    await form.getByRole("button", { name: label, exact: true }).click();
+    await expect(page.getByRole("button", { name: "Tháng sau" })).toBeVisible();
+    await page
+      .getByRole("button", {
+        name: new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          day,
+        ).toLocaleDateString("vi-VN", { dateStyle: "full" }),
+        exact: true,
+      })
+      .click();
+    await expect(page.getByRole("button", { name: "Tháng sau" })).toHaveCount(
+      0,
+    );
+  };
+  await selectDay("Ngày bắt đầu", 2);
+  await form.getByLabel("Giờ bắt đầu", { exact: true }).fill("08:30");
+  await selectDay("Ngày kết thúc", 1);
+  await submit.click();
+  await expect(
+    form.getByRole("button", { name: "Ngày kết thúc", exact: true }),
+  ).toBeFocused();
+  await expect(
+    form.getByRole("button", { name: "Ngày kết thúc", exact: true }),
+  ).toHaveAttribute("aria-invalid", "true");
+  await selectDay("Ngày kết thúc", 3);
+  await form.getByLabel("Giờ kết thúc", { exact: true }).fill("09:00");
+  expect(await form.locator('input[type="datetime-local"]').count()).toBe(0);
   await form.getByText("Banner đầu trang", { exact: true }).click();
   await expect(
     form.getByRole("radio", { name: /Banner đầu trang/ }),
@@ -54,11 +85,23 @@ test("khuyến mãi: validation, xem trước, tạo, tạm dừng và xóa", as
   ).toHaveAttribute("aria-pressed", "true");
   for (const width of [320, 390, 1280]) {
     await page.setViewportSize({ width, height: 900 });
+    await form
+      .getByRole("button", { name: "Ngày bắt đầu", exact: true })
+      .click();
+    await expect(page.getByRole("button", { name: "Tháng sau" })).toBeVisible();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
     ).toBe(true);
+    await page.screenshot({
+      path: `/tmp/promotion-calendar-${width}.png`,
+      animations: "disabled",
+    });
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("button", { name: "Tháng sau" })).toHaveCount(
+      0,
+    );
   }
   await page.screenshot({
     path: "/tmp/promotions-desktop.png",
@@ -85,6 +128,15 @@ test("khuyến mãi: validation, xem trước, tạo, tạm dừng và xóa", as
     (await prisma.storefrontPromotion.findFirstOrThrow({ where: { title } }))
       .placement,
   ).toBe("hero");
+  const saved = await prisma.storefrontPromotion.findFirstOrThrow({
+    where: { title },
+  });
+  expect(saved.startsAt?.toISOString().slice(0, 16)).toBe(
+    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-02T08:30`,
+  );
+  expect(saved.endsAt?.toISOString().slice(0, 16)).toBe(
+    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-03T09:00`,
+  );
   await row.getByRole("button", { name: "Tạm dừng", exact: true }).click();
   await expect(
     row.getByRole("button", { name: "Kích hoạt", exact: true }),
