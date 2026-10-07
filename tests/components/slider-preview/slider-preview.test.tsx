@@ -160,3 +160,24 @@ it("reduced motion disables autoplay but keeps manual navigation available", () 
     "/shop/p/dep-lao",
   );
 });
+
+it("only the visible selected card participates in keyboard navigation", () => {
+  render(
+    <SliderPreview variant="spectra" slides={slides} storeName="Cửa hàng" />,
+  );
+  expect(
+    screen.getByRole("button", { name: "Xem Mì Hảo Hảo" }),
+  ).toHaveAttribute("tabindex", "0");
+  expect(screen.getByRole("button", { name: "Xem Dép lào" })).toHaveAttribute(
+    "tabindex",
+    "-1",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Sản phẩm tiếp theo" }));
+  expect(screen.getByRole("button", { name: "Xem Dép lào" })).toHaveAttribute(
+    "tabindex",
+    "0",
+  );
+  expect(
+    screen.getByRole("button", { name: "Xem Mì Hảo Hảo" }),
+  ).toHaveAttribute("tabindex", "-1");
+});

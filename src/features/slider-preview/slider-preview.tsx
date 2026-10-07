@@ -224,6 +224,7 @@ export function SliderPreview({
                     data-offset={offset}
                     aria-label={`Xem ${slide.productName}`}
                     aria-pressed={selected}
+                    tabIndex={selected ? 0 : -1}
                     style={
                       {
                         "--offset": offset,

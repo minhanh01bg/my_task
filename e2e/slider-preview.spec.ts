@@ -58,6 +58,10 @@ for (const variant of variants) {
     await hero.focus();
     await page.keyboard.press("ArrowLeft");
     await expect(buy).toHaveAttribute("href", firstHref!);
+    await page.keyboard.press("Tab");
+    await expect(hero.locator('button[data-offset="0"]')).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(buy).toBeFocused();
     for (const width of [390, 320]) {
       await page.setViewportSize({ width, height: 844 });
       await expect
