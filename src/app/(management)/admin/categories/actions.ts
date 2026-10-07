@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import {
+  categoryNameSchema,
+  type SaveCategoryResult,
+} from "@/lib/categories/category-form";
+
 import { revalidatePublic } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
 import { resolveCategorySlug } from "@/server/categories/category-slug";
@@ -13,11 +18,13 @@ import { buildSearchText } from "@/lib/search/search-text";
 
 const schema = z.object({
   id: z.string().optional(),
-  name: z.string().trim().min(1),
+  name: categoryNameSchema,
   sortOrder: z.coerce.number().int().default(0),
 });
 
-export async function saveCategoryAction(formData: FormData): Promise<void> {
+export async function saveCategoryAction(
+  formData: FormData,
+): Promise<SaveCategoryResult> {
   await requireAdminSession();
   const parsed = schema.safeParse({
     id: (formData.get("id") as string) || undefined,
@@ -25,7 +32,13 @@ export async function saveCategoryAction(formData: FormData): Promise<void> {
     sortOrder: formData.get("sortOrder"),
   });
 
-  if (!parsed.success) return;
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Vui lòng kiểm tra thông tin danh mục.",
+      fieldErrors: { name: parsed.error.flatten().fieldErrors.name?.[0] },
+    };
+  }
 
   const { id, ...fields } = parsed.data;
   if (id) {
@@ -62,6 +75,7 @@ export async function saveCategoryAction(formData: FormData): Promise<void> {
   revalidatePublic(CACHE_TAGS.catalog);
   revalidatePath("/admin/categories");
   revalidatePath("/pos");
+  return { ok: true, message: id ? "Đã lưu danh mục." : "Đã thêm danh mục." };
 }
 
 export async function deleteCategoryAction(id: string): Promise<void> {

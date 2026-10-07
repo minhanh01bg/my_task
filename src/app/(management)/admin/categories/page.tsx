@@ -1,21 +1,21 @@
-import { ArrowDown, ArrowUp } from "@phosphor-icons/react/dist/ssr";
-import { LayoutGrid } from "lucide-react";
+import {
+  IconArrowDown as ArrowDown,
+  IconArrowUp as ArrowUp,
+  IconCategory as LayoutGrid,
+} from "@tabler/icons-react";
 
 import { EmptyState, PageHeader, Pagination } from "@/components/kit";
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+
 import { requireAdminSession } from "@/server/auth/require-admin-session";
 import { listAdminCategories } from "@/server/admin/list-categories";
 import { parsePageParam } from "@/server/admin/pagination";
 
-import {
-  deleteCategoryAction,
-  moveCategoryAction,
-  saveCategoryAction,
-} from "./actions";
+import { deleteCategoryAction, moveCategoryAction } from "./actions";
+
+import { CategoryForm } from "./category-form";
 
 export const dynamic = "force-dynamic";
 
@@ -34,29 +34,25 @@ export default async function CategoriesPage({
   const offset = (result.page - 1) * result.pageSize;
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-5xl space-y-6">
       <PageHeader
         eyebrow="Sắp xếp quầy hàng"
         title="Danh mục"
-        description="Thứ tự tại đây cũng là thứ tự hiển thị ở quầy bán hàng."
+        description="Nhóm sản phẩm để khách dễ tìm và quầy bán hàng dễ thao tác."
       />
 
-      <Card>
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader>
+          <CardTitle>Thêm nhóm sản phẩm</CardTitle>
+        </CardHeader>
         <CardContent>
-          <form action={saveCategoryAction} className="flex items-end gap-2">
-            <div className="flex-1 space-y-1.5">
-              <Label htmlFor="category-name">Tên danh mục</Label>
-              <Input id="category-name" name="name" required />
-            </div>
-            <input type="hidden" name="sortOrder" value={result.total + 1} />
-            <Button type="submit">Thêm</Button>
-          </form>
+          <CategoryForm sortOrder={result.total + 1} />
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Danh sách ({result.total})</CardTitle>
+          <CardTitle>Danh mục hiện có ({result.total})</CardTitle>
         </CardHeader>
         <CardContent>
           {categories.length === 0 ? (
@@ -66,91 +62,88 @@ export default async function CategoriesPage({
               description="Thêm danh mục ở trên để nhóm sản phẩm tại quầy bán hàng."
             />
           ) : (
-            <ul className="divide-y">
-              {categories.map((category, index) => (
-                <li
-                  key={category.id}
-                  className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center"
-                >
-                  <form
-                    action={saveCategoryAction}
-                    className="flex min-w-0 flex-1 gap-2"
+            <>
+              <p className="text-muted-foreground mb-4 text-sm">
+                Dùng mũi tên để đổi thứ tự hiển thị tại quầy bán hàng.
+              </p>
+              <ul className="space-y-3">
+                {categories.map((category, index) => (
+                  <li
+                    key={category.id}
+                    className="bg-background flex flex-col gap-4 rounded-xl border p-4"
                   >
-                    <input type="hidden" name="id" value={category.id} />
-                    <input
-                      type="hidden"
-                      name="sortOrder"
-                      value={category.sortOrder}
-                    />
-                    <Input
-                      aria-label={`Tên danh mục ${category.name}`}
-                      name="name"
-                      defaultValue={category.name}
-                      required
-                    />
-                    <Button type="submit" variant="outline">
-                      Lưu
-                    </Button>
-                  </form>
-                  <div className="flex items-center justify-between gap-3 sm:justify-end">
-                    <div
-                      className="flex gap-1"
-                      aria-label={`Sắp xếp ${category.name}`}
-                    >
-                      <form
-                        action={moveCategoryAction.bind(
-                          null,
-                          category.id,
-                          "up",
-                        )}
+                    <div className="flex items-start gap-3">
+                      <span
+                        className="bg-muted text-muted-foreground mt-6 flex size-11 shrink-0 items-center justify-center rounded-lg text-sm font-semibold tabular-nums"
+                        aria-label={`Vị trí ${offset + index + 1}`}
                       >
-                        <Button
-                          type="submit"
-                          variant="outline"
-                          size="icon"
-                          disabled={offset + index === 0}
-                          aria-label={`Đưa ${category.name} lên trên`}
-                        >
-                          <ArrowUp aria-hidden="true" weight="bold" />
-                        </Button>
-                      </form>
-                      <form
-                        action={moveCategoryAction.bind(
-                          null,
-                          category.id,
-                          "down",
-                        )}
-                      >
-                        <Button
-                          type="submit"
-                          variant="outline"
-                          size="icon"
-                          disabled={offset + index === result.total - 1}
-                          aria-label={`Đưa ${category.name} xuống dưới`}
-                        >
-                          <ArrowDown aria-hidden="true" weight="bold" />
-                        </Button>
-                      </form>
+                        {String(offset + index + 1).padStart(2, "0")}
+                      </span>
+                      <CategoryForm
+                        category={{ id: category.id, name: category.name }}
+                        sortOrder={category.sortOrder}
+                      />
                     </div>
-                    <span className="text-muted-foreground text-sm whitespace-nowrap">
-                      {category._count.products} sản phẩm
-                    </span>
-                    <ConfirmAction
-                      action={deleteCategoryAction.bind(null, category.id)}
-                      triggerLabel="Xóa"
-                      title={`Xóa danh mục “${category.name}”?`}
-                      description={
-                        category._count.products > 0
-                          ? `${category._count.products} sản phẩm sẽ được chuyển sang trạng thái chưa phân loại. Sản phẩm không bị xóa.`
-                          : "Danh mục sẽ bị xóa khỏi quầy hàng. Thao tác này không thể hoàn tác."
-                      }
-                      confirmLabel="Xóa danh mục"
-                      triggerClassName="text-destructive"
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
+                    <div className="flex items-center justify-between gap-3 border-t pt-3">
+                      <div
+                        className="flex gap-1"
+                        aria-label={`Sắp xếp ${category.name}`}
+                      >
+                        <form
+                          action={moveCategoryAction.bind(
+                            null,
+                            category.id,
+                            "up",
+                          )}
+                        >
+                          <Button
+                            type="submit"
+                            variant="outline"
+                            size="icon"
+                            disabled={offset + index === 0}
+                            aria-label={`Đưa ${category.name} lên trên`}
+                          >
+                            <ArrowUp aria-hidden="true" />
+                          </Button>
+                        </form>
+                        <form
+                          action={moveCategoryAction.bind(
+                            null,
+                            category.id,
+                            "down",
+                          )}
+                        >
+                          <Button
+                            type="submit"
+                            variant="outline"
+                            size="icon"
+                            disabled={offset + index === result.total - 1}
+                            aria-label={`Đưa ${category.name} xuống dưới`}
+                          >
+                            <ArrowDown aria-hidden="true" />
+                          </Button>
+                        </form>
+                      </div>
+                      <span className="text-muted-foreground text-sm whitespace-nowrap">
+                        {category._count.products} sản phẩm
+                      </span>
+                      <ConfirmAction
+                        action={deleteCategoryAction.bind(null, category.id)}
+                        triggerLabel="Xóa"
+                        title={`Xóa danh mục “${category.name}”?`}
+                        description={
+                          category._count.products > 0
+                            ? `${category._count.products} sản phẩm sẽ được chuyển sang trạng thái chưa phân loại. Sản phẩm không bị xóa.`
+                            : "Danh mục sẽ bị xóa khỏi quầy hàng. Thao tác này không thể hoàn tác."
+                        }
+                        confirmLabel="Xóa danh mục"
+                        triggerClassName="text-destructive"
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
           <Pagination
             pathname="/admin/categories"

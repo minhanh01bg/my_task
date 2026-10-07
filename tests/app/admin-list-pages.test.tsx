@@ -1,5 +1,9 @@
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { ToastProvider } from "@/components/ui/toast";
+import { saveCategoryAction } from "@/app/(management)/admin/categories/actions";
 
 import CategoriesPage from "@/app/(management)/admin/categories/page";
 import CustomersPage from "@/app/(management)/admin/customers/page";
@@ -64,6 +68,14 @@ vi.mock("@/server/db/prisma", () => ({
     storefrontPromotion: { findMany: vi.fn(), count: vi.fn() },
     order: { findUnique: vi.fn() },
   },
+}));
+
+vi.mock("@/app/(management)/admin/categories/actions", () => ({
+  saveCategoryAction: vi
+    .fn()
+    .mockResolvedValue({ ok: true, message: "Đã thêm danh mục." }),
+  moveCategoryAction: vi.fn(),
+  deleteCategoryAction: vi.fn(),
 }));
 
 const EMPTY_PAGE = { items: [], total: 0, page: 1, pageSize: 20 };
@@ -318,7 +330,9 @@ describe("/admin/categories", () => {
     vi.mocked(prisma.category.findMany).mockResolvedValue([]);
     vi.mocked(prisma.category.count).mockResolvedValue(0);
     const { container } = render(
-      await CategoriesPage({ searchParams: Promise.resolve({}) }),
+      <ToastProvider>
+        {await CategoriesPage({ searchParams: Promise.resolve({}) })}
+      </ToastProvider>,
     );
     expect(
       screen.getByRole("heading", { level: 1, name: "Danh mục" }),
@@ -357,10 +371,12 @@ describe("admin catalog page navigation", () => {
         _count: { products: 0 },
       },
     ] as unknown as Awaited<ReturnType<typeof prisma.category.findMany>>);
-    const { container } = render(
-      await CategoriesPage({
-        searchParams: Promise.resolve({ page: "2", view: "all" }),
-      }),
+    render(
+      <ToastProvider>
+        {await CategoriesPage({
+          searchParams: Promise.resolve({ page: "2", view: "all" }),
+        })}
+      </ToastProvider>,
     );
     expect(
       screen.getByRole("button", { name: "Đưa Danh mục 21 lên trên" }),
@@ -368,10 +384,17 @@ describe("admin catalog page navigation", () => {
     expect(
       screen.getByRole("button", { name: "Đưa Danh mục 22 xuống dưới" }),
     ).toBeEnabled();
-    expect(screen.getByText("Danh sách (42)")).toBeInTheDocument();
-    expect(container.querySelector('input[name="sortOrder"]')).toHaveValue(
-      "43",
+    expect(screen.getByText("Danh mục hiện có (42)")).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.type(
+      screen.getByRole("textbox", { name: "Tên danh mục mới" }),
+      "Nhóm mới",
     );
+    await user.click(screen.getByRole("button", { name: "Thêm danh mục" }));
+    expect(await screen.findByText("Đã thêm danh mục.")).toBeVisible();
+    expect(
+      vi.mocked(saveCategoryAction).mock.calls[0][0].get("sortOrder"),
+    ).toBe("43");
     expect(screen.getByRole("link", { name: "Trang trước" })).toHaveAttribute(
       "href",
       "/admin/categories?view=all&page=1",

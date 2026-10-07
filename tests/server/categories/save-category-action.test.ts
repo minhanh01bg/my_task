@@ -28,10 +28,14 @@ describe("saveCategoryAction — xử lý khoảng trắng và tên danh mục",
     formData.set("name", "    ");
     formData.set("sortOrder", "1");
 
-    await saveCategoryAction(formData);
+    const result = await saveCategoryAction(formData);
 
     const countAfter = await prisma.category.count();
     expect(countAfter).toBe(countBefore);
+    expect(result).toMatchObject({
+      ok: false,
+      fieldErrors: { name: expect.any(String) },
+    });
   });
 
   it("tự động trim tên danh mục khi lưu", async () => {
@@ -39,12 +43,24 @@ describe("saveCategoryAction — xử lý khoảng trắng và tên danh mục",
     formData.set("name", "   Test Category Trimmed   ");
     formData.set("sortOrder", "2");
 
-    await saveCategoryAction(formData);
+    const result = await saveCategoryAction(formData);
 
     const saved = await prisma.category.findFirst({
       where: { name: "Test Category Trimmed" },
     });
+    expect(result).toMatchObject({ ok: true });
     expect(saved).not.toBeNull();
     expect(saved?.name).toBe("Test Category Trimmed");
+  });
+  it("từ chối tên quá dài và trả lỗi tại ô tên", async () => {
+    const count = await prisma.category.count();
+    const data = new FormData();
+    data.set("name", "Test Category " + "a".repeat(120));
+    data.set("sortOrder", "1");
+    expect(await saveCategoryAction(data)).toMatchObject({
+      ok: false,
+      fieldErrors: { name: expect.any(String) },
+    });
+    expect(await prisma.category.count()).toBe(count);
   });
 });
