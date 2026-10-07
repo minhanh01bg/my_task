@@ -9,25 +9,36 @@ test.beforeEach(async ({ page }) => {
   await page.waitForURL("**/pos");
 });
 
-test("desktop: parent toggles children, active child opens automatically and keyboard collapses", async ({
+test("desktop: parent opens campaign in one click, separate toggle and current child work", async ({
   page,
 }) => {
   const nav = page.getByRole("navigation", {
     name: "Điều hướng quản lý",
     exact: true,
   });
-  const parent = nav.getByRole("button", { name: "Khuyến mãi", exact: true });
-  await expect(parent).toHaveAttribute("aria-expanded", "false");
+  const parent = nav.getByRole("link", { name: "Khuyến mãi", exact: true });
+  const toggle = nav.getByRole("button", {
+    name: "Mở/thu mục con Khuyến mãi",
+    exact: true,
+  });
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
   await expect(
     nav.getByRole("link", { name: "Mã giảm giá", exact: true }),
   ).toHaveCount(0);
-  await parent.click();
+  await toggle.click();
   await expect(page).toHaveURL(/\/pos$/);
-  await nav
-    .getByRole("link", { name: "Chiến dịch khuyến mãi", exact: true })
-    .click();
+  await expect(
+    nav.getByRole("link", { name: "Mã giảm giá", exact: true }),
+  ).toBeVisible();
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await parent.focus();
+  await page.keyboard.press("Space");
+  await expect(page).toHaveURL(/\/pos$/);
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await page.keyboard.press("Enter");
   await page.waitForURL("**/admin/promotions");
-  await expect(parent).toHaveAttribute("aria-expanded", "true");
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await nav.getByRole("link", { name: "Mã giảm giá", exact: true }).click();
   await page.waitForURL("**/admin/promotions/vouchers");
   await expect(
@@ -37,14 +48,14 @@ test("desktop: parent toggles children, active child opens automatically and key
     nav.getByRole("link", { name: "Chiến dịch khuyến mãi", exact: true }),
   ).not.toHaveAttribute("aria-current");
   await page.reload();
-  await expect(parent).toHaveAttribute("aria-expanded", "true");
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await page.screenshot({
     path: "/tmp/sidebar-group-desktop.png",
     animations: "disabled",
   });
-  await parent.focus();
+  await toggle.focus();
   await page.keyboard.press("Space");
-  await expect(parent).toHaveAttribute("aria-expanded", "false");
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
   await expect(
     nav.getByRole("link", { name: "Mã giảm giá", exact: true }),
   ).toHaveCount(0);
@@ -53,7 +64,7 @@ test("desktop: parent toggles children, active child opens automatically and key
     nav.getByRole("link", { name: "Đánh giá", exact: true }),
   ).toBeFocused();
   await page.keyboard.press("Shift+Tab");
-  await expect(parent).toBeFocused();
+  await expect(toggle).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(
     nav.getByRole("link", { name: "Mã giảm giá", exact: true }),
@@ -68,7 +79,7 @@ test("compact: keeps trigger focus, opens flyout, Escape returns focus and child
     exact: true,
   });
   const parent = nav.getByRole("button", { name: "Khuyến mãi", exact: true });
-  await parent.focus();
+  await nav.getByRole("link", { name: "Khuyến mãi", exact: true }).focus();
   await page.evaluate(() =>
     document
       .querySelector<HTMLButtonElement>(
@@ -83,7 +94,7 @@ test("compact: keeps trigger focus, opens flyout, Escape returns focus and child
         (await page.locator("#admin-desktop-sidebar").boundingBox())!.width,
     )
     .toBe(72);
-  await page.keyboard.press("Enter");
+  await page.keyboard.press("Space");
   const flyout = page.getByRole("dialog", { name: "Khuyến mãi", exact: true });
   await expect(
     flyout.getByRole("link", { name: "Mã giảm giá", exact: true }),
@@ -119,7 +130,9 @@ test("compact: keeps trigger focus, opens flyout, Escape returns focus and child
   await page.waitForURL("**/admin/promotions/vouchers");
   await expect(flyout).toHaveCount(0);
   await page.getByRole("button", { name: "Mở rộng thanh điều hướng" }).click();
-  await expect(parent).toHaveAttribute("aria-expanded", "true");
+  await expect(
+    nav.getByRole("button", { name: "Mở/thu mục con Khuyến mãi", exact: true }),
+  ).toHaveAttribute("aria-expanded", "true");
   await expect(
     nav.getByRole("link", { name: "Mã giảm giá", exact: true }),
   ).toHaveAttribute("aria-current", "page");
@@ -131,9 +144,13 @@ test("mobile: parent expands inside menu, child closes sheet and current group o
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Mở toàn bộ menu quản lý" }).click();
   const menu = page.getByRole("dialog", { name: "Menu quản lý", exact: true });
-  const parent = menu.getByRole("button", { name: "Khuyến mãi", exact: true });
+  const parent = menu.getByRole("button", {
+    name: "Mở/thu mục con Khuyến mãi",
+    exact: true,
+  });
   await expect(parent).toHaveAttribute("aria-expanded", "false");
   await parent.click();
+  await expect(page).toHaveURL(/\/pos$/);
   await expect(menu).toBeVisible();
   await page.screenshot({
     path: "/tmp/sidebar-group-mobile.png",
@@ -152,4 +169,15 @@ test("mobile: parent expands inside menu, child closes sheet and current group o
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+});
+
+test("mobile: parent reaches campaign in one click and closes menu", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Mở toàn bộ menu quản lý" }).click();
+  const menu = page.getByRole("dialog", { name: "Menu quản lý", exact: true });
+  await menu.getByRole("link", { name: "Khuyến mãi", exact: true }).click();
+  await page.waitForURL("**/admin/promotions");
+  await expect(menu).toHaveCount(0);
 });

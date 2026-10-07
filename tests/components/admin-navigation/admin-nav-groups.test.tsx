@@ -30,11 +30,11 @@ function sidebar() {
   return screen.getByRole("navigation", { name: "Điều hướng quản lý" });
 }
 
-it("opens and collapses promotion children without navigating the parent", async () => {
+it("opens and collapses promotion children using a separate toggle", async () => {
   const user = userEvent.setup();
   render(<AdminNav />);
   const nav = within(sidebar());
-  const parent = nav.getByRole("button", { name: "Khuyến mãi" });
+  const parent = nav.getByRole("button", { name: "Mở/thu mục con Khuyến mãi" });
   expect(parent).toHaveAttribute("aria-expanded", "false");
   expect(
     nav.queryByRole("link", { name: "Mã giảm giá" }),
@@ -61,10 +61,9 @@ it("automatically opens the active group on route changes and marks only the cur
   route.pathname = "/admin/promotions/vouchers";
   view.rerender(<AdminNav />);
   const nav = within(sidebar());
-  expect(nav.getByRole("button", { name: "Khuyến mãi" })).toHaveAttribute(
-    "aria-expanded",
-    "true",
-  );
+  expect(
+    nav.getByRole("button", { name: "Mở/thu mục con Khuyến mãi" }),
+  ).toHaveAttribute("aria-expanded", "true");
   expect(nav.getByRole("link", { name: "Mã giảm giá" })).toHaveAttribute(
     "aria-current",
     "page",
@@ -97,7 +96,7 @@ it("opens a named flyout from the compact icon and returns focus on Escape", asy
 it("keeps the group trigger focused while resizing and closes the mobile menu after selecting a child", async () => {
   const user = userEvent.setup();
   render(<AdminNav />);
-  const parent = within(sidebar()).getByRole("button", { name: "Khuyến mãi" });
+  const parent = within(sidebar()).getByRole("link", { name: "Khuyến mãi" });
   parent.focus();
   fireEvent.keyDown(screen.getByRole("separator"), { key: "Home" });
   expect(parent).toHaveFocus();
@@ -105,7 +104,9 @@ it("keeps the group trigger focused while resizing and closes the mobile menu af
     screen.getByRole("button", { name: "Mở toàn bộ menu quản lý" }),
   );
   const menu = screen.getByRole("dialog", { name: "Menu quản lý" });
-  await user.click(within(menu).getByRole("button", { name: "Khuyến mãi" }));
+  await user.click(
+    within(menu).getByRole("button", { name: "Mở/thu mục con Khuyến mãi" }),
+  );
   fireEvent.click(within(menu).getByRole("link", { name: "Mã giảm giá" }));
   await waitFor(() =>
     expect(
@@ -140,4 +141,53 @@ it("does not reopen an old flyout after expanding and collapsing the sidebar", a
       screen.queryByRole("dialog", { name: "Khuyến mãi" }),
     ).not.toBeInTheDocument(),
   );
+});
+
+it("opens the campaign page in one click and reveals children from the parent link", async () => {
+  render(<AdminNav />);
+  const nav = within(sidebar());
+  const parent = nav.getByRole("link", { name: "Khuyến mãi" });
+  expect(parent).toHaveAttribute("href", "/admin/promotions");
+  fireEvent.click(parent);
+  expect(nav.getByRole("link", { name: "Mã giảm giá" })).toBeVisible();
+  expect(
+    nav.getByRole("button", { name: "Mở/thu mục con Khuyến mãi" }),
+  ).toHaveAttribute("aria-expanded", "true");
+});
+
+it("closes the mobile menu when navigating directly from the parent link", async () => {
+  const user = userEvent.setup();
+  render(<AdminNav />);
+  await user.click(
+    screen.getByRole("button", { name: "Mở toàn bộ menu quản lý" }),
+  );
+  const menu = screen.getByRole("dialog", { name: "Menu quản lý" });
+  const parent = within(menu).getByRole("link", {
+    name: "Khuyến mãi",
+  });
+  expect(parent).toHaveAttribute("href", "/admin/promotions");
+  fireEvent.click(parent);
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("dialog", { name: "Menu quản lý" }),
+    ).not.toBeInTheDocument(),
+  );
+});
+
+it("keeps Space as native link behavior in expanded mode and uses it to open the compact flyout", async () => {
+  const user = userEvent.setup();
+  render(<AdminNav />);
+  const nav = within(sidebar());
+  const parent = nav.getByRole("link", { name: "Khuyến mãi" });
+  parent.focus();
+  await user.keyboard(" ");
+  expect(
+    nav.getByRole("button", { name: "Mở/thu mục con Khuyến mãi" }),
+  ).toHaveAttribute("aria-expanded", "false");
+  fireEvent.keyDown(screen.getByRole("separator"), { key: "Home" });
+  expect(parent).toHaveFocus();
+  await user.keyboard(" ");
+  expect(
+    await screen.findByRole("dialog", { name: "Khuyến mãi" }),
+  ).toBeVisible();
 });

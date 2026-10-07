@@ -268,33 +268,58 @@ function NavGroup({
         if (compact) setFlyoutOpen(open);
       }}
     >
-      <PopoverTrigger
-        aria-label={item.label}
-        aria-haspopup={compact ? "dialog" : undefined}
-        aria-expanded={compact ? flyoutOpen : expanded}
-        aria-controls={compact ? undefined : contentId}
-        onClick={() => {
-          if (!compact) setExpanded((open) => !open);
-        }}
-        className={cn(
-          "admin-sidebar-link hover:bg-accent/12 focus-visible:ring-ring flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold transition-colors focus-visible:ring-3 focus-visible:outline-none",
-          active && "bg-primary/10 text-primary",
+      <div className="relative">
+        <PopoverTrigger
+          nativeButton={false}
+          render={<Link href={item.href} />}
+          role={compact ? "button" : "link"}
+          aria-label={item.label}
+          aria-haspopup={compact ? "dialog" : undefined}
+          aria-expanded={compact ? flyoutOpen : undefined}
+          onKeyDown={(event) => {
+            if (!compact && event.key === " ") event.preventBaseUIHandler();
+          }}
+          onKeyUp={(event) => {
+            if (!compact && event.key === " ") event.preventBaseUIHandler();
+          }}
+          onClick={(event) => {
+            if (compact) {
+              event.preventDefault();
+            } else {
+              setExpanded(true);
+              onNavigate?.();
+            }
+          }}
+          className={cn(
+            "admin-sidebar-link hover:bg-accent/12 focus-visible:ring-ring flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold transition-colors focus-visible:ring-3 focus-visible:outline-none",
+            !compact && "pr-12",
+            active && "bg-primary/10 text-primary",
+          )}
+        >
+          <item.icon aria-hidden="true" className="size-5 shrink-0" />
+          <span className="admin-sidebar-label min-w-0 truncate">
+            {item.label}
+          </span>
+        </PopoverTrigger>
+        {!compact && (
+          <button
+            type="button"
+            aria-label={`Mở/thu mục con ${item.label}`}
+            aria-expanded={expanded}
+            aria-controls={contentId}
+            onClick={() => setExpanded((open) => !open)}
+            className="hover:bg-accent/12 focus-visible:ring-ring absolute top-1 right-1 flex size-10 items-center justify-center rounded-lg focus-visible:ring-3 focus-visible:outline-none"
+          >
+            <IconChevronDown
+              aria-hidden="true"
+              className={cn(
+                "size-4 transition-transform duration-200 motion-reduce:transition-none",
+                expanded && "rotate-180",
+              )}
+            />
+          </button>
         )}
-      >
-        <item.icon aria-hidden="true" className="size-5 shrink-0" />
-        <span className="admin-sidebar-label min-w-0 truncate">
-          {item.label}
-        </span>
-        <span className="admin-sidebar-label ml-auto shrink-0">
-          <IconChevronDown
-            aria-hidden="true"
-            className={cn(
-              "size-4 transition-transform duration-200 motion-reduce:transition-none",
-              expanded && "rotate-180",
-            )}
-          />
-        </span>
-      </PopoverTrigger>
+      </div>
       <div
         id={contentId}
         aria-hidden={!visible}
