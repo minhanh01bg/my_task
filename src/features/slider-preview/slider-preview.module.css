@@ -693,3 +693,225 @@
     height: 147px;
   }
 }
+
+/* Phương án 03: chữ lớn, dải ảnh xòe quanh một tâm ở phía dưới. */
+.under-the-radar {
+  display: grid;
+  grid-template-columns: 43% 57%;
+  grid-template-rows: 75px 320px 225px;
+  min-height: 700px;
+  color: #19372a;
+  background: #e7eea4;
+}
+.under-the-radar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(#2e522614 0.7px, transparent 0.7px);
+  background-size: 7px 7px;
+  pointer-events: none;
+}
+.under-the-radar .heroTop {
+  grid-column: 1 / -1;
+  border-bottom: 1px solid #294e2726;
+}
+.under-the-radar .heroHeading {
+  grid-column: 1;
+  grid-row: 2;
+  text-align: left;
+  padding: 37px 0 0 48px;
+}
+.under-the-radar .eyebrow {
+  color: #486239;
+  font-size: 8px;
+  letter-spacing: 0.13em;
+  margin-bottom: 24px;
+}
+.under-the-radar .heroHeading h1 {
+  font-size: clamp(58px, 6.2vw, 88px);
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: -0.08em;
+}
+.under-the-radar .heroHeading em {
+  font-family: inherit;
+  font-style: normal;
+  font-weight: 800;
+  color: #31532e;
+  letter-spacing: -0.08em;
+}
+.under-the-radar .heroHeading > p {
+  max-width: 290px;
+  margin: 22px 25px 0 0;
+  font-size: 12px;
+}
+.under-the-radar .stage {
+  grid-column: 2;
+  grid-row: 2 / 4;
+  height: 100%;
+  min-width: 0;
+  perspective: none;
+}
+.under-the-radar .stageGlow {
+  width: 520px;
+  height: 390px;
+  top: 80px;
+  background: radial-gradient(ellipse, #80944326, transparent 70%);
+}
+.under-the-radar .productCard {
+  width: 244px;
+  height: 322px;
+  left: calc(50% - 122px);
+  top: 72px;
+  background: #fff9df;
+  border: 1px solid #617a3633;
+  padding: 18px;
+  transform-origin: 50% 630px;
+  box-shadow: 0 20px 45px #27482924;
+  transform: rotateZ(calc(var(--offset) * 15deg))
+    translateY(calc(var(--distance) * 8px))
+    scale(calc(1 - var(--distance) * 0.035));
+}
+.under-the-radar .productCard[data-offset="0"] {
+  transform: translateY(-10px) rotateZ(-2deg);
+  background: #fffdf1;
+  box-shadow: 0 30px 60px #294a2838;
+}
+.under-the-radar .productImage {
+  height: 202px;
+  margin: 12px 0;
+  border-radius: 7px;
+}
+.under-the-radar .productCard:not([data-offset="0"]) .cardCategory {
+  opacity: 0.6;
+}
+.under-the-radar .productDetails {
+  grid-column: 1;
+  grid-row: 3;
+  text-align: left;
+  margin: 25px 30px 65px 48px;
+}
+.under-the-radar .productDetails h2 {
+  font-size: 20px;
+  margin-top: 8px;
+}
+.under-the-radar .actions {
+  justify-content: flex-start;
+  gap: 12px;
+  margin-top: 19px;
+}
+.under-the-radar .primaryAction {
+  border-radius: 9px;
+  background: #234832;
+  color: #fffcec;
+  gap: 21px;
+}
+.under-the-radar .secondaryAction {
+  color: #3c5535;
+}
+.under-the-radar .dragHint {
+  bottom: 37px;
+  opacity: 0.65;
+}
+.under-the-radar .controls {
+  border-top: 1px solid #294e2726;
+  padding-top: 14px;
+  bottom: 21px;
+}
+.under-the-radar .controlButtons > button {
+  border-color: #294e2740;
+}
+.under-the-radar .controlButtons > button:hover:not(:disabled) {
+  background: #294e270d;
+}
+@media (max-width: 900px) and (min-width: 641px) {
+  .under-the-radar .heroHeading {
+    padding-left: 30px;
+  }
+  .under-the-radar .heroHeading h1 {
+    font-size: 61px;
+  }
+  .under-the-radar .productDetails {
+    margin-left: 30px;
+  }
+  .under-the-radar .productCard {
+    width: 216px;
+    left: calc(50% - 108px);
+    transform-origin: 50% 520px;
+  }
+}
+@media (max-width: 640px) {
+  .under-the-radar {
+    display: flex;
+    flex-direction: column;
+    min-height: 830px;
+  }
+  .under-the-radar .heroTop {
+    padding: 20px;
+  }
+  .under-the-radar .heroHeading {
+    padding: 27px 22px 0;
+    text-align: left;
+  }
+  .under-the-radar .eyebrow {
+    font-size: 7px;
+    margin-bottom: 18px;
+  }
+  .under-the-radar .heroHeading h1 {
+    font-size: clamp(49px, 14vw, 62px);
+  }
+  .under-the-radar .heroHeading > p {
+    max-width: 265px;
+    margin: 17px 0 0;
+    font-size: 10px;
+  }
+  .under-the-radar .stage {
+    height: 320px;
+    flex: none;
+    margin-top: 15px;
+  }
+  .under-the-radar .productCard {
+    width: 188px;
+    height: 254px;
+    left: calc(50% - 94px);
+    top: 30px;
+    padding: 13px;
+    transform-origin: 50% 450px;
+    transform: rotateZ(calc(var(--offset) * 18deg))
+      translateY(calc(var(--distance) * 6px))
+      scale(calc(1 - var(--distance) * 0.04));
+  }
+  .under-the-radar .productImage {
+    height: 143px;
+    margin: 9px 0;
+  }
+  .under-the-radar .productDetails {
+    margin: 12px 22px 120px;
+  }
+  .under-the-radar .productDetails h2 {
+    font-size: 17px;
+  }
+  .under-the-radar .actions {
+    margin-top: 14px;
+    gap: 10px;
+  }
+  .under-the-radar .dragHint {
+    bottom: 0;
+  }
+  .under-the-radar .controls {
+    left: 22px;
+    right: 22px;
+    bottom: 19px;
+  }
+  .under-the-radar .dots {
+    top: -37px;
+  }
+}
+
+@media (max-width: 640px) {
+  .under-the-radar .stage {
+    height: 350px;
+    overflow: hidden;
+  }
+}
