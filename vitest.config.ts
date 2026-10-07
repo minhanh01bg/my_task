@@ -13,6 +13,9 @@ export default defineConfig({
     globalSetup: ["./vitest.global-setup.ts"],
     env: {
       DATABASE_URL: TEST_DATABASE_URL,
+      // API fixtures run locally; never inherit deployment proxy headers from .env.
+      // Proxy security tests supply explicit options or their own environment fixture.
+      TRUSTED_PROXY_MODE: "none",
     },
     // Several test files talk to the SAME sqlite file and delete/reseed
     // shared tables in beforeEach — running files in parallel would race.
