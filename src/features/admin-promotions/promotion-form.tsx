@@ -1,364 +1,346 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import Image from "next/image";
+import type { StorefrontPromotion } from "@prisma/client";
 import {
-  ArrowRight,
-  Check,
-  Eye,
-  Monitor,
-  Smartphone,
-  Sparkles,
-  X,
-} from "lucide-react";
+  IconCalendar,
+  IconCheck,
+  IconLoader2,
+  IconPhoto,
+  IconPlus,
+} from "@tabler/icons-react";
+import { useId, useRef, useState, useTransition } from "react";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { savePromotionAction } from "@/app/(management)/admin/promotions/actions";
+import { InputField } from "@/components/shared/input-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import type { StorefrontPromotion } from "@prisma/client";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/toast";
+import { promotionActionSchema } from "@/types/storefront";
 
-import { DropdownField } from "@/components/kit/dropdown-field";
-import { savePromotionAction } from "@/app/(management)/admin/promotions/actions";
-import type { PromotionActionResult } from "@/types/storefront";
+import { PROMOTION_PLACEMENTS } from "./promotion-placement";
+import { PromotionPreview } from "./promotion-preview";
 
-const PLACEMENT_OPTIONS = [
-  {
-    value: "announcement",
-    label: "Thanh thông báo trên cùng (Announcement bar)",
-    description: "Dải chữ thông báo nổi bật trên cùng",
-  },
-  {
-    value: "hero",
-    label: "Banner lớn trang chủ (Hero banner)",
-    description: "Banner nổi bật ngay đầu trang chủ",
-  },
-  {
-    value: "banner",
-    label: "Banner phụ (Banner)",
-    description: "Banner quảng cáo các vị trí phụ",
-  },
-] as const;
-
-interface PromotionFormProps {
-  initialData?: StorefrontPromotion | null;
-  onSuccess?: () => void;
+function initialValues(data?: StorefrontPromotion | null) {
+  return {
+    title: data?.title ?? "",
+    body: data?.body ?? "",
+    imageUrl: data?.imageUrl ?? "",
+    ctaLabel: data?.ctaLabel ?? "",
+    ctaHref: data?.ctaHref ?? "",
+    placement: data?.placement ?? "announcement",
+    priority: String(data?.priority ?? 0),
+    startsAt: data?.startsAt ? data.startsAt.toISOString().slice(0, 16) : "",
+    endsAt: data?.endsAt ? data.endsAt.toISOString().slice(0, 16) : "",
+    isActive: data?.isActive ?? true,
+  };
 }
 
-export function PromotionForm({ initialData, onSuccess }: PromotionFormProps) {
-  const [state, formAction, pending] = useActionState<
-    PromotionActionResult | null,
-    FormData
-  >(async (prevState, formData) => {
-    const res = await savePromotionAction(prevState, formData);
-    if (res.ok && onSuccess) {
-      onSuccess();
+type Values = ReturnType<typeof initialValues>;
+type Field = keyof Values;
+function validationErrors(values: Values) {
+  const parsed = promotionActionSchema.safeParse(values);
+  const errors: Partial<Record<Field, string>> = {};
+  if (!parsed.success)
+    for (const issue of parsed.error.issues) {
+      const field = issue.path[0] as Field;
+      if (field in values && !errors[field]) errors[field] = issue.message;
     }
-    return res;
-  }, null);
+  return errors;
+}
 
-  const [title, setTitle] = useState(initialData?.title ?? "");
-  const [body, setBody] = useState(initialData?.body ?? "");
-  const [placement, setPlacement] = useState(
-    initialData?.placement ?? "announcement",
-  );
-  const [imageUrl, setImageUrl] = useState(initialData?.imageUrl ?? "");
-  const [ctaLabel, setCtaLabel] = useState(initialData?.ctaLabel ?? "");
-  const [ctaHref, setCtaHref] = useState(initialData?.ctaHref ?? "");
-  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">(
-    "desktop",
-  );
+export function PromotionForm({
+  initialData,
+  onSuccess,
+}: {
+  initialData?: StorefrontPromotion | null;
+  onSuccess?: () => void;
+}) {
+  const prefix = useId();
+  const formRef = useRef<HTMLFormElement>(null);
+  const [values, setValues] = useState(() => initialValues(initialData));
+  const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
+  const [formError, setFormError] = useState<string>();
+  const [pending, startTransition] = useTransition();
+  const toast = useToast();
+  const focusError = (fieldErrors: Partial<Record<Field, string>>) => {
+    const field = Object.keys(fieldErrors).find(
+      (field) => fieldErrors[field as Field],
+    );
+    if (field)
+      formRef.current?.querySelector<HTMLElement>(`[name="${field}"]`)?.focus();
+  };
+  function update<K extends Field>(field: K, value: Values[K]) {
+    const next = { ...values, [field]: value };
+    setValues(next);
+    setFormError(undefined);
+    if (Object.values(errors).some(Boolean)) setErrors(validationErrors(next));
+  }
+  function textProps(field: Exclude<Field, "isActive">, label: string) {
+    return {
+      id: `${prefix}-${field}`,
+      name: field,
+      label,
+      value: values[field],
+      error: errors[field],
+      readOnly: pending,
+      className: "h-11",
+      onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+        update(field, event.target.value),
+      onBlur: () =>
+        setErrors((previous) => ({
+          ...previous,
+          [field]: validationErrors(values)[field],
+        })),
+    };
+  }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1.2fr_1fr]">
-      {/* Form Fields */}
-      <form action={formAction} className="space-y-6">
-        {initialData?.id ? (
-          <input type="hidden" name="id" value={initialData.id} />
-        ) : null}
-
-        {state ? (
-          state.ok ? (
-            <Alert variant="success" role="status" className="p-4">
-              <Check aria-hidden="true" />
-              <AlertDescription>{state.message}</AlertDescription>
-            </Alert>
-          ) : (
-            <Alert variant="destructive" className="p-4">
-              <X aria-hidden="true" />
-              <AlertDescription>{state.error}</AlertDescription>
-            </Alert>
-          )
-        ) : null}
-
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {initialData
-                ? "Chỉnh sửa chiến dịch"
-                : "Tạo chiến dịch khuyến mãi mới"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="promo-title">
-                Tiêu đề khuyến mãi <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="promo-title"
-                name="title"
+    <div className="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+      <Card className="min-w-0">
+        <CardHeader>
+          <CardTitle>
+            {initialData ? "Chỉnh sửa chiến dịch" : "Tạo chiến dịch mới"}
+          </CardTitle>
+          <p className="text-muted-foreground text-sm">
+            Soạn nội dung, chọn vị trí và xem trước trước khi lưu.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form
+            ref={formRef}
+            noValidate
+            aria-busy={pending}
+            aria-label={initialData ? "Chỉnh sửa chiến dịch" : "Tạo chiến dịch"}
+            className="space-y-6"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (pending) return;
+              setFormError(undefined);
+              const fieldErrors = validationErrors(values);
+              setErrors(fieldErrors);
+              if (Object.keys(fieldErrors).length) {
+                focusError(fieldErrors);
+                return;
+              }
+              const data = new FormData();
+              for (const [field, value] of Object.entries(values))
+                data.set(field, String(value));
+              if (initialData) data.set("id", initialData.id);
+              startTransition(async () => {
+                try {
+                  const result = await savePromotionAction(null, data);
+                  if (!result.ok) {
+                    setErrors(result.fieldErrors ?? {});
+                    setFormError(
+                      Object.keys(result.fieldErrors ?? {}).length
+                        ? undefined
+                        : result.error,
+                    );
+                    focusError(result.fieldErrors ?? {});
+                    return;
+                  }
+                  toast.add({ title: result.message, type: "success" });
+                  if (!initialData) setValues(initialValues());
+                  onSuccess?.();
+                } catch {
+                  setFormError("Không thể lưu chiến dịch. Vui lòng thử lại.");
+                }
+              });
+            }}
+          >
+            {formError ? (
+              <p
+                role="alert"
+                className="border-destructive/20 bg-destructive/5 text-destructive rounded-lg border p-3 text-sm"
+              >
+                {formError}
+              </p>
+            ) : null}
+            <section className="space-y-4" aria-label="Nội dung chiến dịch">
+              <InputField
+                {...textProps("title", "Tiêu đề khuyến mãi (bắt buộc)")}
                 required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="VD: Miễn phí giao hàng tháng 9"
-                maxLength={200}
+                placeholder="Ví dụ: Ưu đãi cuối tuần"
+                hint="Tiêu đề ngắn, nêu rõ ưu đãi. Tối đa 200 ký tự."
               />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="promo-body">Nội dung chi tiết</Label>
-              <textarea
-                id="promo-body"
-                name="body"
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                placeholder="VD: Áp dụng cho đơn hàng từ 200.000 ₫ khi đặt qua online store"
-                rows={3}
-                maxLength={1000}
-                className="border-input bg-background w-full rounded-xl border p-3 text-sm outline-none focus-visible:ring-2"
-              />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="promo-placement">Vị trí hiển thị</Label>
-                <DropdownField
-                  id="promo-placement"
-                  name="placement"
-                  value={placement}
-                  onValueChange={(val) => {
-                    if (val) setPlacement(val);
-                  }}
-                  size="sm"
-                  aria-label="Vị trí hiển thị"
-                  options={PLACEMENT_OPTIONS}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="promo-priority">Thứ tự ưu tiên</Label>
-                <Input
-                  id="promo-priority"
-                  name="priority"
-                  type="number"
-                  defaultValue={initialData?.priority ?? 0}
-                  placeholder="Số lớn hơn được ưu tiên trước"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="promo-image">
-                Đường dẫn hình ảnh (cho Hero/Banner)
-              </Label>
-              <Input
-                id="promo-image"
-                name="imageUrl"
-                type="url"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="VD: https://images.unsplash.com/... hoặc ảnh hợp lệ"
-              />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="promo-cta-label">Nhãn nút CTA</Label>
-                <Input
-                  id="promo-cta-label"
-                  name="ctaLabel"
-                  value={ctaLabel}
-                  onChange={(e) => setCtaLabel(e.target.value)}
-                  placeholder="VD: Mua ngay, Xem ưu đãi"
-                  maxLength={50}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="promo-cta-href">
-                  Đường dẫn CTA (nội bộ hoặc HTTPS)
-                </Label>
-                <Input
-                  id="promo-cta-href"
-                  name="ctaHref"
-                  value={ctaHref}
-                  onChange={(e) => setCtaHref(e.target.value)}
-                  placeholder="VD: /shop#catalog hoặc https://..."
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="promo-starts-at">
-                  Thời gian bắt đầu (tùy chọn)
-                </Label>
-                <Input
-                  id="promo-starts-at"
-                  name="startsAt"
-                  type="datetime-local"
-                  defaultValue={
-                    initialData?.startsAt
-                      ? new Date(initialData.startsAt)
-                          .toISOString()
-                          .slice(0, 16)
-                      : ""
-                  }
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="promo-ends-at">
-                  Thời gian kết thúc (tùy chọn)
-                </Label>
-                <Input
-                  id="promo-ends-at"
-                  name="endsAt"
-                  type="datetime-local"
-                  defaultValue={
-                    initialData?.endsAt
-                      ? new Date(initialData.endsAt).toISOString().slice(0, 16)
-                      : ""
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="pt-2">
-              <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  name="isActive"
-                  value="true"
-                  defaultChecked={initialData ? initialData.isActive : true}
-                  className="h-4 w-4 rounded"
-                />
-                <span>Kích hoạt chiến dịch ngay</span>
-              </label>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Button type="submit" disabled={pending}>
-          {pending
-            ? "Đang lưu chiến dịch…"
-            : initialData
-              ? "Cập nhật chiến dịch"
-              : "Tạo chiến dịch"}
-        </Button>
-      </form>
-
-      {/* Live Preview Panel */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <Eye className="text-primary h-4 w-4" />
-            <span>Xem trước trực tiếp</span>
-          </div>
-
-          <div className="border-border bg-muted/40 flex items-center gap-1 rounded-lg border p-1 text-xs">
-            <button
-              type="button"
-              onClick={() => setPreviewDevice("desktop")}
-              className={`flex items-center gap-1 rounded-md px-2 py-1 ${
-                previewDevice === "desktop"
-                  ? "bg-background text-foreground font-semibold shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Monitor className="h-3.5 w-3.5" />
-              <span>Máy tính</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setPreviewDevice("mobile")}
-              className={`flex items-center gap-1 rounded-md px-2 py-1 ${
-                previewDevice === "mobile"
-                  ? "bg-background text-foreground font-semibold shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Smartphone className="h-3.5 w-3.5" />
-              <span>Di động</span>
-            </button>
-          </div>
-        </div>
-
-        <div
-          className={`border-border bg-muted/20 mx-auto overflow-hidden rounded-2xl border p-4 ${
-            previewDevice === "mobile" ? "max-w-sm" : "w-full"
-          }`}
-        >
-          <div className="text-muted-foreground mb-3 text-xs">
-            Giao diện{" "}
-            {placement === "announcement" ? "thanh thông báo" : "banner hero"}:
-          </div>
-
-          {placement === "announcement" ? (
-            <div className="border-primary/20 bg-primary/10 text-primary rounded-xl border p-3 text-center text-xs font-medium">
-              <div className="flex flex-wrap items-center justify-center gap-1.5">
-                <span className="inline-flex items-center gap-1 font-bold">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  <span>{title || "Tiêu đề thông báo khuyến mãi"}</span>
-                </span>
-                {body ? (
-                  <span className="text-primary/80">— {body}</span>
-                ) : null}
-                {ctaLabel ? (
-                  <span className="ml-1 font-bold underline">{ctaLabel} →</span>
-                ) : null}
-              </div>
-            </div>
-          ) : (
-            <div className="from-primary/90 to-primary text-primary-foreground relative overflow-hidden rounded-2xl bg-gradient-to-r p-5 shadow-sm">
               <div className="space-y-2">
-                <span className="bg-primary-foreground/20 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold">
-                  <Sparkles className="h-3 w-3" />
-                  <span>Khuyến mãi đặc biệt</span>
-                </span>
-                <h3 className="text-lg font-bold sm:text-xl">
-                  {title || "Tiêu đề banner lớn"}
-                </h3>
-                {body ? (
-                  <p className="text-primary-foreground/90 text-xs leading-relaxed">
-                    {body}
+                <Label htmlFor={`${prefix}-body`}>Nội dung chi tiết</Label>
+                <Textarea
+                  id={`${prefix}-body`}
+                  name="body"
+                  value={values.body}
+                  readOnly={pending}
+                  rows={3}
+                  placeholder="Ví dụ: Miễn phí giao hàng cho đơn từ 200.000 ₫"
+                  aria-invalid={!!errors.body}
+                  aria-describedby={
+                    errors.body ? `${prefix}-body-error` : undefined
+                  }
+                  onChange={(event) => update("body", event.target.value)}
+                  onBlur={() =>
+                    setErrors((previous) => ({
+                      ...previous,
+                      body: validationErrors(values).body,
+                    }))
+                  }
+                />
+                {errors.body ? (
+                  <p
+                    role="alert"
+                    id={`${prefix}-body-error`}
+                    className="text-destructive text-sm"
+                  >
+                    {errors.body}
                   </p>
                 ) : null}
-                {ctaLabel ? (
-                  <div className="pt-2">
-                    <span className="bg-background text-foreground inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold shadow-xs">
-                      <span>{ctaLabel}</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </span>
-                  </div>
-                ) : null}
               </div>
-              {imageUrl ? (
-                <div className="relative mt-3 aspect-video w-full overflow-hidden rounded-xl">
-                  <Image
-                    src={imageUrl}
-                    alt={title || "Preview"}
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
+            </section>
+            <section
+              className="space-y-4 border-t pt-5"
+              aria-labelledby={`${prefix}-display`}
+            >
+              <h3
+                id={`${prefix}-display`}
+                className="flex items-center gap-2 font-semibold"
+              >
+                <IconPhoto className="text-primary size-4" aria-hidden="true" />
+                Hiển thị trên cửa hàng
+              </h3>
+              <fieldset disabled={pending}>
+                <legend className="mb-2 text-sm font-medium">
+                  Vị trí hiển thị
+                </legend>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {PROMOTION_PLACEMENTS.map(
+                    ({ value, label, description, icon: Icon }) => (
+                      <label
+                        key={value}
+                        className={`has-focus-visible:ring-ring/50 flex min-w-0 cursor-pointer flex-col gap-2 rounded-xl border p-3 text-sm has-focus-visible:ring-3 ${values.placement === value ? "border-primary bg-primary/5 text-primary" : "text-muted-foreground hover:bg-muted/50"}`}
+                      >
+                        <input
+                          type="radio"
+                          name="placement"
+                          value={value}
+                          checked={values.placement === value}
+                          onChange={() => update("placement", value)}
+                          className="sr-only"
+                        />
+                        <Icon className="size-5" aria-hidden="true" />
+                        <span className="font-semibold">{label}</span>
+                        <span className="text-muted-foreground text-xs leading-relaxed">
+                          {description}
+                        </span>
+                      </label>
+                    ),
+                  )}
                 </div>
-              ) : null}
+              </fieldset>
+              <InputField
+                {...textProps("imageUrl", "Đường dẫn hình ảnh")}
+                inputMode="url"
+                placeholder="/uploads/uu-dai.jpg hoặc https://…"
+                hint="Ảnh dùng cho banner. Chấp nhận ảnh nội bộ hoặc URL HTTPS công khai."
+              />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <InputField
+                  {...textProps("ctaLabel", "Nội dung nút")}
+                  placeholder="Ví dụ: Xem ưu đãi"
+                />
+                <InputField
+                  {...textProps("ctaHref", "Đường dẫn nút")}
+                  inputMode="url"
+                  placeholder="Ví dụ: /shop#catalog"
+                  hint="Đường dẫn nội bộ hoặc HTTPS."
+                />
+              </div>
+            </section>
+            <section
+              className="space-y-4 border-t pt-5"
+              aria-labelledby={`${prefix}-schedule`}
+            >
+              <h3
+                id={`${prefix}-schedule`}
+                className="flex items-center gap-2 font-semibold"
+              >
+                <IconCalendar
+                  className="text-primary size-4"
+                  aria-hidden="true"
+                />
+                Lịch chạy & mức ưu tiên
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <InputField
+                  {...textProps("startsAt", "Thời gian bắt đầu")}
+                  type="datetime-local"
+                />
+                <InputField
+                  {...textProps("endsAt", "Thời gian kết thúc")}
+                  type="datetime-local"
+                />
+              </div>
+              <p className="text-muted-foreground text-xs">
+                Để trống lịch chạy nếu muốn hiển thị không giới hạn thời gian.
+              </p>
+              <InputField
+                {...textProps("priority", "Thứ tự ưu tiên")}
+                type="number"
+                step={1}
+                hint="Số lớn hơn được hiển thị trước."
+                className="h-11 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
+              <label className="bg-muted/40 flex cursor-pointer items-start gap-3 rounded-xl border p-4">
+                <Checkbox
+                  name="isActive"
+                  checked={values.isActive}
+                  disabled={pending}
+                  onCheckedChange={(checked) => update("isActive", checked)}
+                />
+                <span className="space-y-1">
+                  <span className="block text-sm font-semibold">
+                    Kích hoạt chiến dịch ngay
+                  </span>
+                  <span className="text-muted-foreground block text-xs">
+                    Chiến dịch đã bật sẽ hiển thị khi đến lịch chạy.
+                  </span>
+                </span>
+              </label>
+            </section>
+            <div className="border-t pt-4">
+              <Button
+                type="submit"
+                disabled={pending}
+                className="h-11 w-full sm:w-auto"
+              >
+                {pending ? (
+                  <IconLoader2
+                    className="motion-safe:animate-spin"
+                    aria-hidden="true"
+                  />
+                ) : initialData ? (
+                  <IconCheck aria-hidden="true" />
+                ) : (
+                  <IconPlus aria-hidden="true" />
+                )}
+                {pending
+                  ? "Đang lưu chiến dịch…"
+                  : initialData
+                    ? "Cập nhật chiến dịch"
+                    : "Tạo chiến dịch"}
+              </Button>
             </div>
-          )}
-        </div>
-      </div>
+          </form>
+        </CardContent>
+      </Card>
+      <PromotionPreview
+        title={values.title}
+        body={values.body}
+        placement={values.placement}
+        imageUrl={values.imageUrl}
+        ctaLabel={values.ctaLabel}
+      />
     </div>
   );
 }

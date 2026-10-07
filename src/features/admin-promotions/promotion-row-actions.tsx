@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  IconLoader2,
+  IconPlayerPause,
+  IconPlayerPlay,
+} from "@tabler/icons-react";
 import { useState, useTransition } from "react";
 
 import {
@@ -7,6 +12,7 @@ import {
   togglePromotionActiveAction,
 } from "@/app/(management)/admin/promotions/actions";
 import { ConfirmAction } from "@/components/shared/confirm-action";
+import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import type { PromotionActionResult } from "@/types/storefront";
 
@@ -25,33 +31,67 @@ export function PromotionRowActions({
   title,
   isActive,
 }: PromotionRowActionsProps) {
+  const toast = useToast();
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
 
   function report(result: PromotionActionResult) {
     setError(result.ok ? "" : result.error);
+    toast.add({
+      title: result.ok ? result.message : result.error,
+      type: result.ok ? "success" : "error",
+    });
   }
 
   function toggle() {
     startTransition(async () => {
-      report(await togglePromotionActiveAction(id, !isActive));
+      setError("");
+      try {
+        report(await togglePromotionActiveAction(id, !isActive));
+      } catch {
+        const message =
+          "Không thể đổi trạng thái chiến dịch. Vui lòng thử lại.";
+        setError(message);
+        toast.add({ title: message, type: "error" });
+      }
     });
   }
 
   async function remove() {
-    report(await deletePromotionAction(id));
+    try {
+      report(await deletePromotionAction(id));
+    } catch {
+      const message = "Không thể xóa chiến dịch. Vui lòng thử lại.";
+      setError(message);
+      toast.add({ title: message, type: "error" });
+    }
   }
 
   return (
-    <div className="flex flex-col items-start gap-1.5 sm:items-end">
+    <fieldset
+      disabled={pending}
+      aria-label={`Thao tác chiến dịch ${title}`}
+      aria-busy={pending}
+      className="min-w-0 space-y-2"
+    >
       <div className="flex flex-wrap items-center gap-2">
         <Button
           type="button"
           variant="outline"
-          size="sm"
+          className="h-11"
           disabled={pending}
           onClick={toggle}
         >
+          {pending ? (
+            <IconLoader2
+              aria-hidden="true"
+              className="motion-safe:animate-spin"
+            />
+          ) : isActive ? (
+            <IconPlayerPause aria-hidden="true" />
+          ) : (
+            <IconPlayerPlay aria-hidden="true" />
+          )}
           {isActive ? "Tạm dừng" : "Kích hoạt"}
         </Button>
         <ConfirmAction
@@ -60,7 +100,7 @@ export function PromotionRowActions({
           title={`Xóa chiến dịch “${title}”?`}
           description="Chiến dịch khuyến mãi sẽ bị xóa vĩnh viễn và không còn hiển thị trên cửa hàng online nữa."
           confirmLabel="Xóa chiến dịch"
-          triggerClassName="text-destructive hover:bg-destructive/10 h-8 px-3 text-sm"
+          triggerClassName="text-destructive hover:bg-destructive/10 h-11 px-3 text-sm"
         />
       </div>
       {error ? (
@@ -68,6 +108,6 @@ export function PromotionRowActions({
           {error}
         </p>
       ) : null}
-    </div>
+    </fieldset>
   );
 }

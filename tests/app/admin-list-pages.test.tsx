@@ -346,7 +346,9 @@ describe("/admin/promotions", () => {
     vi.mocked(prisma.storefrontPromotion.findMany).mockResolvedValue([]);
     vi.mocked(prisma.storefrontPromotion.count).mockResolvedValue(0);
     const { container } = render(
-      await AdminPromotionsPage({ searchParams: Promise.resolve({}) }),
+      <ToastProvider>
+        {await AdminPromotionsPage({ searchParams: Promise.resolve({}) })}
+      </ToastProvider>,
     );
     emptyState(container, "Chưa có chiến dịch khuyến mãi nào");
   });
@@ -409,9 +411,11 @@ describe("admin catalog page navigation", () => {
     vi.mocked(prisma.storefrontPromotion.count).mockResolvedValue(42);
     vi.mocked(prisma.storefrontPromotion.findMany).mockResolvedValue([]);
     render(
-      await AdminPromotionsPage({
-        searchParams: Promise.resolve({ page: "2", view: "all" }),
-      }),
+      <ToastProvider>
+        {await AdminPromotionsPage({
+          searchParams: Promise.resolve({ page: "2", view: "all" }),
+        })}
+      </ToastProvider>,
     );
     expect(screen.getByText("Danh sách chiến dịch (42)")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Trang sau" })).toHaveAttribute(
