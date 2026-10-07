@@ -65,6 +65,16 @@ describe("Admin Promotion Management Actions", () => {
       ).toBe(false);
     });
 
+    it("từ chối thời gian không hợp lệ trước khi ghi DB", () => {
+      const parsed = promotionActionSchema.safeParse({
+        title: "Lịch chạy",
+        startsAt: "not-a-date",
+      });
+      expect(parsed.success).toBe(false);
+      if (!parsed.success)
+        expect(parsed.error.flatten().fieldErrors.startsAt).toBeDefined();
+    });
+
     it("từ chối khi ngày kết thúc trước ngày bắt đầu", () => {
       expect(
         promotionActionSchema.safeParse({
@@ -143,6 +153,17 @@ describe("Admin Promotion Management Actions", () => {
           version: 1,
         },
       });
+    });
+
+    it("trả lỗi từng ô và không ghi chiến dịch khi thông tin sai", async () => {
+      const data = new FormData();
+      data.set("title", "   ");
+      data.set("ctaHref", "javascript:alert(1)");
+      expect(await savePromotionAction(null, data)).toMatchObject({
+        ok: false,
+        fieldErrors: { title: expect.any(String), ctaHref: expect.any(String) },
+      });
+      expect(await prisma.storefrontPromotion.count()).toBe(0);
     });
 
     it("tạo mới và chỉnh sửa chiến dịch thành công kèm audit log", async () => {

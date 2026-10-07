@@ -43,7 +43,13 @@ export async function savePromotionAction(
   if (!parsed.success) {
     const errorMsg =
       parsed.error.issues[0]?.message ?? "Thông tin khuyến mãi không hợp lệ";
-    return { ok: false, error: errorMsg };
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const field = issue.path[0];
+      if (typeof field === "string" && !fieldErrors[field])
+        fieldErrors[field] = issue.message;
+    }
+    return { ok: false, error: errorMsg, fieldErrors };
   }
 
   const { id, ...data } = parsed.data;

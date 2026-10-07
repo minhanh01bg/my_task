@@ -141,7 +141,7 @@ export const promotionActionSchema = z
     imageUrl: z
       .string()
       .trim()
-      .max(500)
+      .max(500, "Đường dẫn hình ảnh tối đa 500 ký tự")
       .optional()
       .transform((v) => v || null)
       .refine(
@@ -183,7 +183,7 @@ export const promotionActionSchema = z
     ctaHref: z
       .string()
       .trim()
-      .max(500)
+      .max(500, "Đường dẫn nút tối đa 500 ký tự")
       .optional()
       .transform((v) => v || null)
       .refine(
@@ -197,12 +197,23 @@ export const promotionActionSchema = z
     startsAt: z
       .string()
       .optional()
+      .refine(
+        (value) => !value || Number.isFinite(new Date(value).getTime()),
+        "Thời gian bắt đầu không hợp lệ",
+      )
       .transform((v) => (v ? new Date(v) : null)),
     endsAt: z
       .string()
       .optional()
+      .refine(
+        (value) => !value || Number.isFinite(new Date(value).getTime()),
+        "Thời gian kết thúc không hợp lệ",
+      )
       .transform((v) => (v ? new Date(v) : null)),
-    priority: z.coerce.number().int().default(0),
+    priority: z.coerce
+      .number({ error: "Thứ tự ưu tiên không hợp lệ" })
+      .int("Thứ tự ưu tiên phải là số nguyên")
+      .default(0),
     isActive: z.boolean().default(true),
   })
   .strict()
@@ -223,7 +234,11 @@ export type PromotionActionInput = z.infer<typeof promotionActionSchema>;
 
 export type PromotionActionResult =
   | { ok: true; message: string; promotionId?: string }
-  | { ok: false; error: string };
+  | {
+      ok: false;
+      error: string;
+      fieldErrors?: Partial<Record<keyof PromotionActionInput, string>>;
+    };
 
 /** Phản hồi `GET /api/storefront/session` — chỉ hai cờ, không lộ danh tính. */
 export const storefrontSessionSchema = z
