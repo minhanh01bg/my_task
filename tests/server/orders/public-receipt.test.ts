@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { prisma } from "@/server/db/prisma";
 import {
@@ -10,6 +10,19 @@ import {
   setReceiptRateLimiter,
 } from "@/server/orders/public-receipt";
 import type { RateLimiter } from "@/server/security/rate-limit";
+
+// Keep receipt lookup tests independent of the deployment's trusted proxy settings.
+vi.mock("@/config/env", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/config/env")>();
+  return {
+    ...actual,
+    env: {
+      ...actual.env,
+      TRUSTED_PROXY_MODE: "custom",
+      TRUSTED_CLIENT_IP_HEADER: "x-real-ip",
+    },
+  };
+});
 
 const testProductId = "receipt-test-product";
 
@@ -182,7 +195,7 @@ describe("Public Receipt Lookup Security (Task 12)", () => {
     const randomNonce3 = randomBytes(32).toString("hex");
 
     const dummyReq = new Request("https://example.com/order-success/test", {
-      headers: { "x-forwarded-for": "203.0.113.10" },
+      headers: { "x-real-ip": "203.0.113.10" },
     });
 
     expect(await getPublicReceipt(randomNonce1, dummyReq)).toBeNull();
