@@ -16,15 +16,22 @@ import {
   IconTicket as Ticket,
   IconUsers as Users,
   IconX as X,
+  IconChevronDown,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Sheet,
   SheetClose,
@@ -140,7 +147,23 @@ function clampSidebarWidth(width: number) {
   return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, width));
 }
 
-type NavItem = (typeof NAV)[number];
+type NavItem = {
+  href: string;
+  label: string;
+  shortLabel: string;
+  icon: typeof Gauge;
+  nested?: boolean;
+};
+
+const TOP_LEVEL_NAV = NAV.filter((item) => !("nested" in item && item.nested));
+const PROMOTION_CHILDREN: NavItem[] = [
+  {
+    ...NAV.find((item) => item.href === "/admin/promotions")!,
+    label: "Chiến dịch khuyến mãi",
+    nested: true,
+  },
+  NAV.find((item) => item.href === "/admin/promotions/vouchers")!,
+];
 
 /** /pos va /admin (Tong quan) chi sang khi khop chinh xac. */
 const EXACT_MATCH_HREFS = new Set(["/pos", "/admin"]);
@@ -178,11 +201,14 @@ function NavLink({
       onClick={onNavigate}
       className={cn(
         "admin-sidebar-link hover:bg-accent/12 focus-visible:ring-ring aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground flex min-h-12 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-colors focus-visible:ring-3 focus-visible:outline-none",
-        !compact && "nested" in item && item.nested && "pl-8",
+        !compact && item.nested && "min-h-11 gap-2 text-[13px] font-medium",
         compact && "relative",
       )}
     >
-      <item.icon aria-hidden="true" className="size-5 shrink-0" />
+      <item.icon
+        aria-hidden="true"
+        className={cn("size-5 shrink-0", item.nested && "size-4")}
+      />
       <span className="admin-sidebar-label min-w-0 truncate">{item.label}</span>
       {compact && badge ? (
         <span className="pointer-events-none absolute top-0.5 right-0.5 origin-top-right scale-75">
@@ -200,6 +226,103 @@ function NavLink({
         {item.label}
       </TooltipContent>
     </Tooltip>
+  );
+}
+
+function NavGroup({
+  item,
+  currentHref,
+  compact = false,
+  onNavigate,
+}: {
+  item: NavItem;
+  currentHref?: string;
+  compact?: boolean;
+  onNavigate?: () => void;
+}) {
+  const active = PROMOTION_CHILDREN.some((child) => child.href === currentHref);
+  const [expanded, setExpanded] = useState(active);
+  const [flyoutOpen, setFlyoutOpen] = useState(false);
+  // Leave icon mode without retaining a popup that would reopen on the next resize.
+  if (!compact && flyoutOpen) setFlyoutOpen(false);
+  const contentId = useId();
+  const visible = expanded && !compact;
+  const children = (nested: boolean) =>
+    PROMOTION_CHILDREN.map((child) => (
+      <li key={child.href}>
+        <NavLink
+          item={{ ...child, nested }}
+          active={child.href === currentHref}
+          onNavigate={() => {
+            setFlyoutOpen(false);
+            onNavigate?.();
+          }}
+        />
+      </li>
+    ));
+
+  return (
+    <Popover
+      open={compact && flyoutOpen}
+      onOpenChange={(open) => {
+        if (compact) setFlyoutOpen(open);
+      }}
+    >
+      <PopoverTrigger
+        aria-label={item.label}
+        aria-haspopup={compact ? "dialog" : undefined}
+        aria-expanded={compact ? flyoutOpen : expanded}
+        aria-controls={compact ? undefined : contentId}
+        onClick={() => {
+          if (!compact) setExpanded((open) => !open);
+        }}
+        className={cn(
+          "admin-sidebar-link hover:bg-accent/12 focus-visible:ring-ring flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold transition-colors focus-visible:ring-3 focus-visible:outline-none",
+          active && "bg-primary/10 text-primary",
+        )}
+      >
+        <item.icon aria-hidden="true" className="size-5 shrink-0" />
+        <span className="admin-sidebar-label min-w-0 truncate">
+          {item.label}
+        </span>
+        <span className="admin-sidebar-label ml-auto shrink-0">
+          <IconChevronDown
+            aria-hidden="true"
+            className={cn(
+              "size-4 transition-transform duration-200 motion-reduce:transition-none",
+              expanded && "rotate-180",
+            )}
+          />
+        </span>
+      </PopoverTrigger>
+      <div
+        id={contentId}
+        aria-hidden={!visible}
+        inert={!visible}
+        className={cn(
+          "grid transition-[grid-template-rows,opacity] duration-200 ease-out motion-reduce:transition-none",
+          visible ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+        )}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <ul
+            aria-label="Chức năng khuyến mãi"
+            className="border-primary/15 mt-1.5 ml-5 space-y-1 border-l pl-1"
+          >
+            {children(true)}
+          </ul>
+        </div>
+      </div>
+      <PopoverContent
+        side="right"
+        align="start"
+        sideOffset={12}
+        className="w-64 p-2"
+      >
+        <PopoverTitle className="px-3 py-2 text-sm">{item.label}</PopoverTitle>
+        <ul className="space-y-1">{children(false)}</ul>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -388,16 +511,25 @@ export function AdminNav({
             )}
           >
             <ul className="flex flex-col gap-1.5">
-              {NAV.map((item) => (
+              {TOP_LEVEL_NAV.map((item) => (
                 <li key={item.href}>
-                  <NavLink
-                    item={item}
-                    active={item.href === currentHref}
-                    compact={compact}
-                    badge={
-                      item.href === "/admin/products" ? productsBadge : null
-                    }
-                  />
+                  {item.href === "/admin/promotions" ? (
+                    <NavGroup
+                      key={pathname}
+                      item={item}
+                      currentHref={currentHref}
+                      compact={compact}
+                    />
+                  ) : (
+                    <NavLink
+                      item={item}
+                      active={item.href === currentHref}
+                      compact={compact}
+                      badge={
+                        item.href === "/admin/products" ? productsBadge : null
+                      }
+                    />
+                  )}
                 </li>
               ))}
             </ul>
@@ -490,16 +622,25 @@ export function AdminNav({
           </SheetHeader>
           <nav aria-label="Toàn bộ chức năng quản lý">
             <ul className="grid grid-cols-1 gap-1 min-[420px]:grid-cols-2">
-              {NAV.map((item) => (
+              {TOP_LEVEL_NAV.map((item) => (
                 <li key={item.href}>
-                  <NavLink
-                    item={item}
-                    active={item.href === currentHref}
-                    onNavigate={() => setMenuOpen(false)}
-                    badge={
-                      item.href === "/admin/products" ? productsBadge : null
-                    }
-                  />
+                  {item.href === "/admin/promotions" ? (
+                    <NavGroup
+                      key={pathname}
+                      item={item}
+                      currentHref={currentHref}
+                      onNavigate={() => setMenuOpen(false)}
+                    />
+                  ) : (
+                    <NavLink
+                      item={item}
+                      active={item.href === currentHref}
+                      onNavigate={() => setMenuOpen(false)}
+                      badge={
+                        item.href === "/admin/products" ? productsBadge : null
+                      }
+                    />
+                  )}
                 </li>
               ))}
             </ul>

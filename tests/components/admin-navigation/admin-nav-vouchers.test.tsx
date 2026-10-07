@@ -24,14 +24,14 @@ describe("AdminNav — Mã giảm giá", () => {
     const links = within(sidebar).getAllByRole("link");
     const labels = links.map((link) => link.textContent);
     expect(labels.indexOf("Mã giảm giá")).toBe(
-      labels.indexOf("Khuyến mãi") + 1,
+      labels.indexOf("Chiến dịch khuyến mãi") + 1,
     );
 
     const vouchers = within(sidebar).getByRole("link", { name: "Mã giảm giá" });
     expect(vouchers).toHaveAttribute("href", "/admin/promotions/vouchers");
     expect(vouchers).toHaveAttribute("aria-current", "page");
     expect(
-      within(sidebar).getByRole("link", { name: "Khuyến mãi" }),
+      within(sidebar).getByRole("link", { name: "Chiến dịch khuyến mãi" }),
     ).not.toHaveAttribute("aria-current");
   });
 });
