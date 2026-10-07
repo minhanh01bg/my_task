@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
 
+test.beforeEach(async ({ page }) => {
+  await page.setExtraHTTPHeaders({ "X-Real-IP": "1.1.1.1" });
+});
+
 test("trang goc chuyen huong vinh vien sang cua hang", async ({ page }) => {
   // "/" la diem vao cong khai: redirect 308 (next.config.ts) sang /shop.
   // POS van o /pos va chi mo sau dang nhap.

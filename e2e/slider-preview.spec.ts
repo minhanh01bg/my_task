@@ -101,7 +101,7 @@ for (const variant of variants) {
   });
 }
 
-test("switches all three previews without replacing the live shop slider", async ({
+test("switches all three previews and returns to the Spectra storefront", async ({
   page,
 }) => {
   await page.goto("/shop/slider-preview");
@@ -121,7 +121,7 @@ test("switches all three previews without replacing the live shop slider", async
   await page.getByRole("link", { name: "Về cửa hàng" }).click();
   await expect(page).toHaveURL(/\/shop$/);
   await expect(
-    page.getByRole("region", { name: "Khuyến mãi nổi bật" }),
+    page.getByRole("region", { name: "Slider Spectra" }),
   ).toBeVisible();
 });
 

@@ -14,6 +14,7 @@ import { PromotionBanner } from "@/features/online-store/promotion-banner";
 import { StoreFooter } from "@/features/online-store/store-footer";
 import { StoreHeader } from "@/features/online-store/store-header";
 import type { OnlineProduct } from "@/features/online-store/types";
+import { buildPreviewSlides as buildProductSlides } from "@/features/slider-preview/preview-slides";
 import {
   localBusinessJsonLd,
   organizationJsonLd,
@@ -107,6 +108,7 @@ export default async function ShopPage() {
         <PromotionBanner promotions={heroPromotions} placement="hero" />
       </div>
       <HeroSection
+        productSlides={buildProductSlides(catalog)}
         storeName={storeProfile.name}
         tagline="Hàng thiết yếu, đặt nhanh tại nhà"
         hotline={storeProfile.hotline}
