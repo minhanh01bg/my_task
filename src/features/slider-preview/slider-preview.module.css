@@ -403,6 +403,8 @@
 }
 .page a:focus-visible,
 .page button:focus-visible,
+.hero a:focus-visible,
+.hero button:focus-visible,
 .hero:focus-visible {
   outline: 3px solid #e39a37;
   outline-offset: 4px;
@@ -580,7 +582,10 @@
 @media (prefers-reduced-motion: reduce) {
   .page *,
   .page *::before,
-  .page *::after {
+  .page *::after,
+  .hero *,
+  .hero *::before,
+  .hero *::after {
     transition: none !important;
     animation: none !important;
   }
