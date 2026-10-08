@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 import { useOnlineCart } from "./cart-context";
 import { CartDrawer } from "./cart-drawer";
-import { AdminAccessLink, SessionAwareActions } from "./session-aware-actions";
+import { SessionAwareActions } from "./session-aware-actions";
 import { WishlistDrawer } from "./wishlist-drawer";
 
 export function StoreHeader({
@@ -100,7 +100,6 @@ export function StoreHeader({
             </Button>
           </div>
         </div>
-        <AdminAccessLink />
       </header>
       <CartDrawer shipping={shipping} />
       <WishlistDrawer open={wishlistOpen} onOpenChange={setWishlistOpen} />

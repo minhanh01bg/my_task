@@ -80,8 +80,8 @@ describe("StoreHeader session island", () => {
     renderHeader();
 
     expect(
-      screen.getByRole("link", { name: "Đăng nhập quản trị" }),
-    ).toHaveAttribute("href", "/login?next=%2Fadmin");
+      screen.queryByRole("link", { name: "Đăng nhập quản trị" }),
+    ).not.toBeInTheDocument();
 
     expect(
       screen.getByRole("button", { name: /tài khoản khách hàng/i }),

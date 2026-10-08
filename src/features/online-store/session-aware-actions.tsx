@@ -37,29 +37,6 @@ export function useStorefrontSession(): StorefrontSession {
   return session;
 }
 
-export function AdminAccessLink() {
-  const { isAdmin } = useStorefrontSession();
-
-  if (isAdmin) return null;
-
-  return (
-    <nav
-      aria-label="Truy cập quản trị cửa hàng"
-      className="border-border border-t"
-    >
-      <div className="mx-auto flex max-w-6xl justify-end px-4 sm:px-6">
-        <Link
-          href="/login?next=%2Fadmin"
-          className="text-muted-foreground hover:text-primary focus-visible:ring-ring inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-        >
-          <ShieldCheck aria-hidden="true" className="size-4" />
-          Đăng nhập quản trị
-        </Link>
-      </div>
-    </nav>
-  );
-}
-
 /**
  * "Quản trị" và "Tài khoản" dài khác nhau: cùng min-width (>= nút dài hơn) để
  * đổi khách → admin không xô lệch header. Dưới `sm` chỉ còn icon nên đã bằng nhau.
