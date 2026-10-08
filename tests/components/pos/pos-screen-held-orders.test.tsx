@@ -62,21 +62,20 @@ describe("PosScreen — mở lại đơn đang giữ", () => {
     expect(held[0]?.lines[0]?.name).toBe("Dép lào");
   });
 
-  it("màn hình hẹp có thanh tính tiền cố định mở hộp thanh toán", async () => {
+  it("nút thanh toán trong đơn mở hộp thanh toán đúng tổng tiền", async () => {
     useCartStore.setState({ lines: [line("Dép lào", 85_000)] });
     render(<PosScreen catalog={CATALOG} bankAccount={null} storeName="Tiệm" />);
 
-    const bar = screen.getByTestId("pos-mobile-checkout");
-    expect(bar).toHaveTextContent("85.000");
+    expect(screen.getByTestId("cart-total")).toHaveTextContent("85.000");
 
-    fireEvent.click(screen.getByRole("button", { name: /tính tiền/i }));
+    fireEvent.click(screen.getByRole("button", { name: /thanh toán/i }));
     expect(await screen.findByTestId("payment-total")).toHaveTextContent(
       "85.000",
     );
   });
 
-  it("giỏ trống thì không hiện thanh tính tiền", () => {
+  it("giỏ trống thì nút thanh toán bị vô hiệu hóa", () => {
     render(<PosScreen catalog={CATALOG} bankAccount={null} storeName="Tiệm" />);
-    expect(screen.queryByTestId("pos-mobile-checkout")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /thanh toán/i })).toBeDisabled();
   });
 });
