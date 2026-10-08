@@ -32,18 +32,23 @@ const schema = z.object({
   stock: z.coerce.number(),
   aliases: z.string().nullable(),
   imageUrl: z
-    .union([
-      z.literal(""),
-      z.string().regex(/^\/uploads\/products\/[a-zA-Z0-9.-]+$/),
-      z
-        .string()
-        .url("Ảnh phải là một đường dẫn hợp lệ")
-        .refine(
-          (value) =>
-            value.startsWith("https://") || value.startsWith("http://"),
-          "Ảnh phải dùng đường dẫn http hoặc https",
-        ),
-    ])
+    .union(
+      [
+        z.literal(""),
+        z
+          .string()
+          .regex(/^\/(?:uploads\/)?products\/[a-zA-Z0-9][a-zA-Z0-9.-]*$/),
+        z
+          .string()
+          .url("Ảnh phải là một đường dẫn hợp lệ")
+          .refine(
+            (value) =>
+              value.startsWith("https://") || value.startsWith("http://"),
+            "Ảnh phải dùng đường dẫn http hoặc https",
+          ),
+      ],
+      { error: "Đường dẫn ảnh sản phẩm không hợp lệ" },
+    )
     .nullable(),
 });
 
