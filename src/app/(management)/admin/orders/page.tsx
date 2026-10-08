@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
+import { Eye, MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
 import { ReceiptText, SearchX } from "lucide-react";
 
 import {
@@ -15,7 +15,7 @@ import { DateField } from "@/components/kit/date-field";
 import { DropdownField } from "@/components/kit/dropdown-field";
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -56,6 +56,22 @@ function OrderCodeLink({ order }: { order: AdminOrderListItem }) {
       className="hover:text-primary focus-visible:ring-ring rounded font-bold break-all underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
     >
       {order.code}
+    </Link>
+  );
+}
+
+function ViewOrder({ order }: { order: AdminOrderListItem }) {
+  return (
+    <Link
+      href={`/admin/orders/${order.id}`}
+      aria-label={`Xem đơn ${order.code}`}
+      className={buttonVariants({
+        variant: "outline",
+        className: "min-h-11 gap-2 px-3",
+      })}
+    >
+      <Eye aria-hidden="true" className="size-4" weight="bold" />
+      Xem đơn
     </Link>
   );
 }
@@ -251,7 +267,10 @@ export default async function OrdersPage({
                       <span className="text-base font-bold tabular-nums">
                         <Money amount={order.total} />
                       </span>
-                      <CancelOrder order={order} />
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <ViewOrder order={order} />
+                        <CancelOrder order={order} />
+                      </div>
                     </div>
                   </li>
                 ))}
@@ -293,7 +312,10 @@ export default async function OrdersPage({
                           <Money amount={order.total} />
                         </TableCell>
                         <TableCell className="text-right">
-                          <CancelOrder order={order} />
+                          <div className="flex flex-wrap items-center justify-end gap-2">
+                            <ViewOrder order={order} />
+                            <CancelOrder order={order} />
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

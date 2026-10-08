@@ -133,6 +133,35 @@ describe("/admin/orders", () => {
     emptyState(container, "Không tìm thấy đơn phù hợp");
   });
 
+  it.each([
+    { status: "paid", channel: "pos", fulfillmentStatus: null },
+    { status: "debt", channel: "pos", fulfillmentStatus: null },
+    { status: "pending", channel: "online", fulfillmentStatus: "pending" },
+    { status: "cancelled", channel: "online", fulfillmentStatus: "cancelled" },
+    { status: "paid", channel: "online", fulfillmentStatus: "completed" },
+  ])(
+    "luôn có nút Xem đơn ở thẻ và bảng cho $status/$fulfillmentStatus",
+    async (state) => {
+      vi.mocked(listOrders).mockResolvedValue({
+        ...EMPTY_PAGE,
+        items: [{ ...order, ...state }],
+        total: 1,
+      });
+      const { container } = render(
+        await OrdersPage({ searchParams: Promise.resolve({}) }),
+      );
+      const { cards, table } = layouts(container);
+      for (const layout of [cards, table]) {
+        const viewLink = within(layout).getByRole("link", {
+          name: "Xem đơn DH-102",
+        });
+        expect(viewLink).toHaveTextContent("Xem đơn");
+        expect(viewLink).toHaveAttribute("href", "/admin/orders/o1");
+        expect(viewLink).toHaveClass("min-h-11");
+      }
+    },
+  );
+
   it("co don thi hien the tren dien thoai va bang tu sm, chi mot truy van", async () => {
     vi.mocked(listOrders).mockResolvedValue({
       ...EMPTY_PAGE,
