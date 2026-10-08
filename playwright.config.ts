@@ -47,6 +47,10 @@ export default defineConfig({
       DATABASE_URL,
       CANONICAL_ORIGIN: process.env.PLAYWRIGHT_CANONICAL_ORIGIN ?? BASE_URL,
       ...(PRODUCTION_DIR ? { NEXT_DIST_DIR: PRODUCTION_DIR } : {}),
+      // Fixture login attempts must use separate Redis keys from production.
+      RATE_LIMIT_KEY_SECRET:
+        process.env.PLAYWRIGHT_RATE_LIMIT_KEY_SECRET ??
+        "playwright-only-rate-limit-secret-at-least-32-chars",
       SESSION_SECRET:
         process.env.SESSION_SECRET ??
         "playwright-only-session-secret-at-least-32-chars",
