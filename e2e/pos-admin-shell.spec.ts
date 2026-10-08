@@ -76,33 +76,48 @@ test("quầy dùng menu admin, chuyển mục giữ giỏ và ẩn/hiện sideba
   ).toHaveText("120.000");
 });
 
-test("mobile: menu admin và thanh tính tiền không che nhau", async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  const nav = page.getByRole("navigation", {
-    name: "Điều hướng quản lý trên điện thoại",
+for (const width of [320, 390, 820]) {
+  test(`màn hình ${width}px: chỉ một nút thanh toán trong đơn`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.getByRole("combobox").fill("nhot");
+    await page
+      .getByRole("option")
+      .getByText("Nhớt Castrol Power1 0.8L")
+      .click();
+    await expect(page.getByTestId("pos-mobile-checkout")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Tính tiền", exact: true }),
+    ).toHaveCount(0);
+    const checkout = page.getByRole("button", { name: /thanh toán/i });
+    await expect(checkout).toHaveCount(1);
+    await checkout.scrollIntoViewIfNeeded();
+    await expect(checkout).toBeInViewport();
+    if (width < 768) {
+      const nav = page.getByRole("navigation", {
+        name: "Điều hướng quản lý trên điện thoại",
+      });
+      await expect(nav).toBeVisible();
+      const menuBox = await nav.boundingBox();
+      const checkoutBox = await checkout.boundingBox();
+      expect(checkoutBox!.y + checkoutBox!.height).toBeLessThanOrEqual(
+        menuBox!.y,
+      );
+    }
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(width);
+    await page.screenshot({
+      path: `/tmp/pos-single-checkout-${width}.png`,
+      fullPage: true,
+    });
+    await checkout.click();
+    await expect(
+      page.getByRole("button", { name: "Đúng số tiền", exact: true }),
+    ).toBeVisible();
   });
-  await expect(nav).toBeVisible();
-  await page.getByRole("combobox").fill("nhot");
-  await page.getByRole("option").getByText("Nhớt Castrol Power1 0.8L").click();
-  const checkout = page.getByTestId("pos-mobile-checkout");
-  await expect(
-    checkout.getByRole("button", { name: "Tính tiền" }),
-  ).toBeInViewport();
-  const menuBox = await nav.boundingBox();
-  const checkoutBox = await checkout.boundingBox();
-  expect(checkoutBox!.y + checkoutBox!.height).toBeLessThanOrEqual(menuBox!.y);
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  ).toBe(true);
-  await test.info().attach("Quầy trong layout admin mobile", {
-    body: await page.screenshot(),
-    contentType: "image/png",
-  });
-});
+}
 
 test("production offline: tải lại quầy giữ giỏ rồi thanh toán và đồng bộ", async ({
   page,

@@ -53,6 +53,21 @@ describe("PosScreen — in hoá đơn sau khi thanh toán", () => {
     });
   });
 
+  it("chỉ có một nút thanh toán trong đơn và F4 vẫn mở thanh toán", async () => {
+    render(<PosScreen catalog={CATALOG} bankAccount={null} storeName="Tiệm" />);
+    expect(
+      screen.queryByRole("button", { name: "Tính tiền" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId("pos-mobile-checkout")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /thanh toán/i })).toHaveLength(
+      1,
+    );
+    fireEvent.keyDown(window, { key: "F4" });
+    expect(
+      await screen.findByRole("button", { name: "Đúng số tiền" }),
+    ).toBeInTheDocument();
+  });
+
   it("màn hình thanh toán thành công có nút In hoá đơn với đúng giỏ vừa bán", async () => {
     render(<PosScreen catalog={CATALOG} bankAccount={null} storeName="Tiệm" />);
 
