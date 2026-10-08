@@ -107,7 +107,7 @@ export default async function OrderDetailPage({
         <ArrowLeft aria-hidden="true" className="size-4" /> Quay lại đơn hàng
       </Link>
 
-      <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
+      <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:gap-4">
         <PageHeader
           eyebrow="Chi tiết đơn hàng"
           title={order.code}
@@ -115,7 +115,7 @@ export default async function OrderDetailPage({
             dateStyle: "long",
             timeStyle: "short",
           }).format(order.createdAt)}
-          className="min-w-0 flex-1"
+          className="w-full min-w-0 sm:flex-1"
         />
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <PrintReceiptButton
