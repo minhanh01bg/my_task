@@ -202,21 +202,24 @@ function FormContent({
     );
 
   const inputClass =
-    "border-input bg-background h-12 w-full rounded-xl border px-3 outline-none focus-visible:ring-3";
+    "border-input bg-background h-12 w-full min-w-0 rounded-xl border px-3 text-base outline-none focus-visible:ring-3";
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      <Link href="/shop" className="text-primary font-bold">
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
+      <Link
+        href="/shop"
+        className="text-primary inline-flex min-h-11 items-center font-bold"
+      >
         ← Quay lại cửa hàng
       </Link>
-      <h1 className="font-heading mt-5 text-4xl font-bold">
+      <h1 className="font-heading mt-3 text-3xl font-bold sm:mt-5 sm:text-4xl">
         Thông tin đặt hàng
       </h1>
       <form
         onSubmit={submit}
-        className="mt-8 grid gap-8 lg:grid-cols-[1fr_24rem]"
+        className="mt-6 grid min-w-0 grid-cols-1 gap-6 sm:mt-8 sm:gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_24rem]"
       >
-        <div className="space-y-6">
-          <section className="border-border rounded-2xl border p-5">
+        <div className="min-w-0 space-y-6">
+          <section className="border-border rounded-2xl border p-4 sm:p-5">
             <h2 className="text-xl font-bold">Liên hệ</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <label className="font-bold">
@@ -224,6 +227,7 @@ function FormContent({
                 <input
                   required
                   name="contactName"
+                  autoComplete="name"
                   minLength={2}
                   className={`${inputClass} mt-2`}
                 />
@@ -233,16 +237,18 @@ function FormContent({
                 <input
                   required
                   name="contactPhone"
+                  type="tel"
+                  autoComplete="tel"
                   inputMode="tel"
                   className={`${inputClass} mt-2`}
                 />
               </label>
             </div>
           </section>
-          <section className="border-border rounded-2xl border p-5">
+          <section className="border-border rounded-2xl border p-4 sm:p-5">
             <h2 className="text-xl font-bold">Nhận hàng</h2>
-            <div className="mt-4 flex gap-3">
-              <label className="border-border flex min-h-11 flex-1 items-center gap-2 rounded-xl border p-3">
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="border-border flex min-h-12 min-w-0 items-center gap-3 rounded-xl border p-3">
                 <input
                   type="radio"
                   checked={fulfillment === "delivery"}
@@ -250,7 +256,7 @@ function FormContent({
                 />{" "}
                 Giao tận nơi
               </label>
-              <label className="border-border flex min-h-11 flex-1 items-center gap-2 rounded-xl border p-3">
+              <label className="border-border flex min-h-12 min-w-0 items-center gap-3 rounded-xl border p-3">
                 <input
                   type="radio"
                   checked={fulfillment === "pickup"}
@@ -274,7 +280,9 @@ function FormContent({
                     <span className="text-muted-foreground font-semibold">
                       Địa chỉ nhận hàng:
                     </span>
-                    <p className="mt-1 font-medium">{formattedAddress}</p>
+                    <p className="mt-1 font-medium [overflow-wrap:anywhere]">
+                      {formattedAddress}
+                    </p>
                   </div>
                 ) : null}
 
@@ -284,6 +292,7 @@ function FormContent({
                   </span>
                   <DropdownField
                     aria-label="Khung giờ giao"
+                    wrapLabels
                     name="deliverySlot"
                     value={deliverySlot}
                     onValueChange={(val) => {
@@ -366,7 +375,7 @@ function FormContent({
               </div>
             ) : null}
           </section>
-          <section className="border-border rounded-2xl border p-5">
+          <section className="border-border rounded-2xl border p-4 sm:p-5">
             <h2 className="text-xl font-bold">Thanh toán</h2>
             <label className="mt-4 flex min-h-11 items-center gap-2">
               <input
@@ -391,22 +400,24 @@ function FormContent({
             </label>
           </section>
         </div>
-        <aside className="border-border surface-panel h-fit rounded-2xl border p-5 lg:sticky lg:top-24">
+        <aside className="border-border surface-panel h-fit min-w-0 rounded-2xl border p-4 sm:p-5 lg:sticky lg:top-24">
           <h2 className="text-xl font-bold">Đơn hàng</h2>
           <ul className="mt-4 divide-y">
             {lines.map((line) => (
               <li key={line.id} className="py-4">
                 <div className="flex justify-between gap-3">
-                  <span className="font-bold">{line.name}</span>
+                  <span className="min-w-0 font-bold [overflow-wrap:anywhere]">
+                    {line.name}
+                  </span>
                   <button
                     type="button"
                     onClick={() => remove(line.id)}
-                    className="text-destructive min-h-11"
+                    className="text-destructive min-h-11 min-w-11 shrink-0 rounded-lg"
                   >
                     Xóa
                   </button>
                 </div>
-                <div className="mt-2 flex items-center justify-between">
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
                   <input
                     aria-label={`Số lượng ${line.name}`}
                     type="number"
@@ -419,7 +430,7 @@ function FormContent({
                     }
                     className="border-input h-11 w-24 rounded-lg border px-2"
                   />
-                  <strong>
+                  <strong className="ml-auto whitespace-nowrap tabular-nums">
                     {formatVnd(Math.round(line.price * line.quantity))} ₫
                   </strong>
                 </div>
@@ -428,24 +439,30 @@ function FormContent({
           </ul>
 
           <div className="border-border/60 mt-4 space-y-2 border-t pt-4">
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between gap-3 text-sm">
               <span className="text-muted-foreground">Tạm tính:</span>
-              <span className="font-semibold">{formatVnd(subtotal)} ₫</span>
+              <span className="shrink-0 font-semibold tabular-nums">
+                {formatVnd(subtotal)} ₫
+              </span>
             </div>
 
             {appliedVoucher && appliedVoucher.discount > 0 ? (
-              <div className="text-success flex justify-between text-sm font-semibold">
-                <span>Giảm giá ({appliedVoucher.code}):</span>
-                <span>- {formatVnd(appliedVoucher.discount)} ₫</span>
+              <div className="text-success flex justify-between gap-3 text-sm font-semibold">
+                <span className="min-w-0 [overflow-wrap:anywhere]">
+                  Giảm giá ({appliedVoucher.code}):
+                </span>
+                <span className="shrink-0 tabular-nums">
+                  - {formatVnd(appliedVoucher.discount)} ₫
+                </span>
               </div>
             ) : null}
             {isDelivery ? (
               <div
                 data-testid="checkout-shipping-fee"
-                className="flex justify-between text-sm"
+                className="flex justify-between gap-3 text-sm"
               >
                 <span className="text-muted-foreground">Phí giao hàng:</span>
-                <span className="font-semibold">
+                <span className="shrink-0 font-semibold tabular-nums">
                   {shippingFee > 0 ? `${formatVnd(shippingFee)} ₫` : "Miễn phí"}
                 </span>
               </div>
@@ -453,26 +470,35 @@ function FormContent({
             {isDelivery && shippingDiscount > 0 && appliedVoucher ? (
               <div
                 data-testid="checkout-shipping-discount"
-                className="text-success flex justify-between text-sm font-semibold"
+                className="text-success flex justify-between gap-3 text-sm font-semibold"
               >
-                <span>Miễn phí giao hàng ({appliedVoucher.code}):</span>
-                <span>- {formatVnd(shippingDiscount)} ₫</span>
+                <span className="min-w-0 [overflow-wrap:anywhere]">
+                  Miễn phí giao hàng ({appliedVoucher.code}):
+                </span>
+                <span className="shrink-0 tabular-nums">
+                  - {formatVnd(shippingDiscount)} ₫
+                </span>
               </div>
             ) : null}
 
             <VoucherField
               id="checkout-voucher"
               voucher={voucher}
-              className="mt-3 border-t border-dashed pt-3"
+              className="mt-3 border-t border-dashed pt-3 [&_button]:h-11 [&_input]:h-11 [&_input]:text-base [&_p]:[overflow-wrap:anywhere]"
             />
           </div>
 
-          <div className="mt-4 flex justify-between border-t pt-4 text-xl font-bold">
+          <div className="mt-4 flex flex-wrap items-baseline justify-between gap-2 border-t pt-4 text-lg font-bold sm:text-xl">
             <span>Tổng cộng</span>
-            <span>{formatVnd(finalTotal)} ₫</span>
+            <span className="ml-auto whitespace-nowrap tabular-nums">
+              {formatVnd(finalTotal)} ₫
+            </span>
           </div>
           {error ? (
-            <p role="alert" className="text-destructive mt-4">
+            <p
+              role="alert"
+              className="text-destructive mt-4 [overflow-wrap:anywhere]"
+            >
               {error}
             </p>
           ) : null}

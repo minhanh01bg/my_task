@@ -76,7 +76,7 @@ export function AddressFields({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
         <span className="text-muted-foreground text-sm">
           {value.isManual
             ? "Đang ở chế độ nhập tay tự do"
@@ -85,7 +85,7 @@ export function AddressFields({
         <button
           type="button"
           onClick={toggleManual}
-          className="text-primary text-sm font-medium hover:underline"
+          className="text-primary min-h-11 shrink-0 text-sm font-medium hover:underline"
         >
           {value.isManual ? "Chọn từ danh mục" : "Nhập thủ công"}
         </button>
@@ -123,6 +123,7 @@ export function AddressFields({
             <DropdownField
               id={provinceInputId}
               aria-label="Tỉnh/thành phố"
+              wrapLabels
               placeholder="-- Chọn Tỉnh/Thành phố --"
               value={value.provinceCode}
               onValueChange={(code) => {
@@ -154,6 +155,7 @@ export function AddressFields({
           <DropdownField
             id={wardInputId}
             aria-label="Phường/xã"
+            wrapLabels
             placeholder={
               value.provinceCode
                 ? "-- Chọn Phường/Xã --"
