@@ -62,8 +62,10 @@ for (const width of [320, 360, 390, 768, 1024, 1440]) {
     ).toBeEnabled();
     await expectNoHorizontalOverflow(page);
 
-    await page.getByRole("combobox", { name: "Tỉnh/thành phố" }).click();
-    const popup = page.locator('[data-slot="select-content"]');
+    await page
+      .getByRole("combobox", { name: "Tỉnh/thành phố" })
+      .fill("bac ninh");
+    const popup = page.locator('[data-slot="address-options"]');
     await expect(popup).toBeVisible();
     const bounds = await popup.boundingBox();
     expect(bounds!.x).toBeGreaterThanOrEqual(0);
@@ -71,7 +73,7 @@ for (const width of [320, 360, 390, 768, 1024, 1440]) {
     await page
       .getByRole("option", { name: "Thành phố Bắc Ninh", exact: true })
       .click();
-    await page.getByRole("combobox", { name: "Phường/xã" }).click();
+    await page.getByRole("combobox", { name: "Phường/xã" }).fill("bac giang");
     await page
       .getByRole("option", { name: "Phường Bắc Giang", exact: true })
       .click();
@@ -169,5 +171,43 @@ test("mobile checkout applies voucher and retains details after a rejected order
   await expectNoHorizontalOverflow(page);
   await page.getByRole("button", { name: "Gỡ mã", exact: true }).click();
   await expect(page.locator("aside")).toContainText("300.000 ₫");
+  await expectNoHorizontalOverflow(page);
+});
+
+test("address search handles keyboard, empty results and province changes", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/checkout");
+  const province = page.getByRole("combobox", { name: "Tỉnh/thành phố" });
+  const ward = page.getByRole("combobox", { name: "Phường/xã" });
+  await expect(ward).toBeDisabled();
+  await province.fill("  BAC   NINH  ");
+  await expect(page.getByRole("option")).toHaveCount(1);
+  await province.press("ArrowDown");
+  await province.press("Enter");
+  await expect(province).toHaveValue("Thành phố Bắc Ninh");
+  await ward.fill("dong ky");
+  await page.getByRole("option", { name: "Xã Đồng Kỳ", exact: true }).click();
+  await province.fill("");
+  await expect(ward).toBeDisabled();
+  await expect(ward).toHaveValue("");
+  await province.fill("khongtontai");
+  await expect(page.getByText("Không tìm thấy địa chỉ phù hợp.")).toBeVisible();
+  await expect(page.getByRole("option")).toHaveCount(0);
+  await province.fill("ha noi");
+  await page
+    .getByRole("option", { name: "Thành phố Hà Nội", exact: true })
+    .click();
+  await ward.fill("bac giang");
+  await expect(page.getByText("Không tìm thấy địa chỉ phù hợp.")).toBeVisible();
+  await ward.fill("ba dinh");
+  await page
+    .getByRole("option", { name: "Phường Ba Đình", exact: true })
+    .click();
+  await page.getByLabel(/Số nhà, tên đường/).fill("12 Lê Lợi");
+  await expect(page.getByTestId("address-summary")).toContainText(
+    "Phường Ba Đình, Thành phố Hà Nội",
+  );
   await expectNoHorizontalOverflow(page);
 });
