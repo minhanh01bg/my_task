@@ -54,8 +54,7 @@ describe("CheckoutForm - Structured Address & Experience", () => {
     user: ReturnType<typeof userEvent.setup>,
   ) {
     const trigger = screen.getByRole("combobox", { name: triggerLabel });
-    fireEvent.pointerDown(trigger);
-    fireEvent.click(trigger);
+    await user.click(trigger);
     const option = await screen.findByRole("option", { name: optionText });
     await user.click(option);
   }
@@ -71,12 +70,12 @@ describe("CheckoutForm - Structured Address & Experience", () => {
     await selectDropdown(/tỉnh\/thành phố/i, /Thành phố Bắc Ninh/i, user);
     expect(ward).not.toBeDisabled();
     await selectDropdown(/phường\/xã/i, /^Phường Bắc Giang$/, user);
-    expect(ward).toHaveTextContent("Phường Bắc Giang");
+    expect(ward).toHaveValue("Phường Bắc Giang");
     await selectDropdown(/tỉnh\/thành phố/i, /Thành phố Hà Nội/i, user);
-    expect(ward).not.toHaveTextContent("Phường Bắc Giang");
+    expect(ward).toHaveValue("");
     expect(ward).not.toBeDisabled();
     await selectDropdown(/phường\/xã/i, /^Phường Ba Đình$/, user);
-    expect(ward).toHaveTextContent("Phường Ba Đình");
+    expect(ward).toHaveValue("Phường Ba Đình");
   }, 20_000);
 
   it("summary địa chỉ hai cấp không có huyện", async () => {

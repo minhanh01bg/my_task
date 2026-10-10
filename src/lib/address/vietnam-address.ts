@@ -5,7 +5,7 @@ import type {
 
 import dataset from "./vietnam-administrative.json";
 
-/** Snapshot Cục Thống kê ngày 06/10/2026; xã/phường trực thuộc cấp tỉnh. */
+/** Snapshot Cục Thống kê ngày 09/10/2026; xã/phường trực thuộc cấp tỉnh. */
 export function getProvinces(): AdministrativeProvince[] {
   return dataset.provinces;
 }

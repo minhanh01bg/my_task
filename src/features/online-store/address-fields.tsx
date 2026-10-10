@@ -3,7 +3,7 @@
 import { useId, useMemo } from "react";
 
 import { getProvinces, getWards } from "@/lib/address/vietnam-address";
-import { DropdownField } from "@/components/kit/dropdown-field";
+import { AddressCombobox } from "@/components/kit/address-combobox";
 
 export interface AddressState {
   provinceCode: string;
@@ -101,9 +101,9 @@ export function AddressFields({
         <input type="hidden" name="wardCode" value={value.wardCode} />
       ) : null}
 
-      <div className="grid gap-4">
+      <div className="grid min-w-0 grid-cols-1 gap-4">
         {/* Tỉnh / Thành phố */}
-        <div>
+        <div className="min-w-0">
           <label htmlFor={provinceInputId} className="block font-bold">
             Tỉnh/thành phố <span className="text-destructive">*</span>
           </label>
@@ -120,17 +120,13 @@ export function AddressFields({
               className={`${inputClass} mt-2`}
             />
           ) : (
-            <DropdownField
+            <AddressCombobox
               id={provinceInputId}
-              aria-label="Tỉnh/thành phố"
-              wrapLabels
-              placeholder="-- Chọn Tỉnh/Thành phố --"
+              label="Tỉnh/thành phố"
+              placeholder="Gõ tìm tỉnh/thành phố"
               value={value.provinceCode}
-              onValueChange={(code) => {
-                if (code) handleProvinceSelect(code);
-              }}
+              onValueChange={handleProvinceSelect}
               options={provinceOptions}
-              className="mt-2"
             />
           )}
         </div>
@@ -152,22 +148,18 @@ export function AddressFields({
             className={`${inputClass} mt-2`}
           />
         ) : (
-          <DropdownField
+          <AddressCombobox
             id={wardInputId}
-            aria-label="Phường/xã"
-            wrapLabels
+            label="Phường/xã"
             placeholder={
               value.provinceCode
-                ? "-- Chọn Phường/Xã --"
-                : "-- Vui lòng chọn Tỉnh/Thành phố trước --"
+                ? "Gõ tìm phường/xã/đặc khu"
+                : "Chọn tỉnh/thành phố trước"
             }
             value={value.wardCode}
-            onValueChange={(code) => {
-              if (code) handleWardSelect(code);
-            }}
+            onValueChange={handleWardSelect}
             options={wardOptions}
             disabled={!value.provinceCode || wards.length === 0}
-            className="mt-2"
           />
         )}
       </div>
