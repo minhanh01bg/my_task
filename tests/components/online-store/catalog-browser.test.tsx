@@ -97,7 +97,9 @@ describe("CatalogBrowser", () => {
 
     expect(screen.getByText("Bánh mì")).toBeInTheDocument();
 
-    const inStockCheckbox = screen.getByLabelText(/chỉ hiện còn hàng/i);
+    const inStockCheckbox = screen.getByRole("checkbox", {
+      name: /chỉ hiện còn hàng/i,
+    });
     await user.click(inStockCheckbox);
 
     expect(screen.getByText("Cà phê sữa")).toBeInTheDocument();

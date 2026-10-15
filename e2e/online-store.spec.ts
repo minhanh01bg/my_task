@@ -1,5 +1,26 @@
 import { expect, test } from "@playwright/test";
 
+test("checkbox còn hàng đồng bộ URL và hỗ trợ bàn phím khi giảm chuyển động", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/shop");
+  const checkbox = page.getByRole("checkbox", { name: "Chỉ hiện còn hàng" });
+  await expect(checkbox).not.toBeChecked();
+  await page.getByText("Chỉ hiện còn hàng", { exact: true }).click();
+  await expect(checkbox).toBeChecked();
+  await expect(page).toHaveURL(/inStock=true/);
+  await expect(checkbox.locator('[data-slot="checkbox-indicator"]')).toHaveCSS(
+    "opacity",
+    "1",
+  );
+  await checkbox.focus();
+  await page.keyboard.press("Space");
+  await expect(checkbox).not.toBeChecked();
+  await expect(page).not.toHaveURL(/inStock=true/);
+  await expect(checkbox).toHaveCSS("transition-duration", "0s");
+});
+
 test("khách truy cập cửa hàng công khai và tìm sản phẩm", async ({ page }) => {
   await page.goto("/shop");
   await expect(

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { RotateCcw, Search, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { CheckboxField } from "@/components/kit/checkbox-field";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownField } from "@/components/kit/dropdown-field";
@@ -186,19 +187,12 @@ export function CatalogFilters({
       <div className="border-border bg-card/60 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4 text-sm shadow-2xs">
         <div className="flex flex-wrap items-center gap-4">
           {/* In Stock toggle */}
-          <label
-            htmlFor={inStockCheckboxId}
-            className="flex cursor-pointer items-center gap-2 font-medium select-none"
-          >
-            <input
-              id={inStockCheckboxId}
-              type="checkbox"
-              checked={filter.inStock}
-              onChange={(e) => handleUpdate({ inStock: e.target.checked })}
-              className="accent-primary size-4 rounded"
-            />
-            <span>Chỉ hiện còn hàng</span>
-          </label>
+          <CheckboxField
+            id={inStockCheckboxId}
+            label="Chỉ hiện còn hàng"
+            checked={filter.inStock}
+            onCheckedChange={(checked) => handleUpdate({ inStock: checked })}
+          />
 
           {/* Price range inputs and quick presets */}
           <div className="flex flex-wrap items-center gap-2">

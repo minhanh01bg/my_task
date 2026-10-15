@@ -1,5 +1,7 @@
 export { avatarHue, initials } from "./avatar-color";
 export { ChipToggle } from "./chip-toggle";
+export { CheckboxField } from "./checkbox-field";
+export type { CheckboxFieldProps } from "./checkbox-field";
 export { CollapsibleFormCard } from "./collapsible-form-card";
 export { DataTableShell } from "./data-table-shell";
 export { DateField } from "./date-field";

@@ -25,6 +25,44 @@ test.describe("UI kit gallery", () => {
         new RegExp(`\\b${scheme}\\b`),
       );
 
+      const checkboxes = page.locator("section").filter({
+        has: page.getByRole("heading", { name: "Checkbox", exact: true }),
+      });
+      await checkboxes.scrollIntoViewIfNeeded();
+      const checkbox = checkboxes.getByRole("checkbox", {
+        name: "Chưa chọn",
+        exact: true,
+      });
+      await expect(checkbox).not.toBeChecked();
+      await checkboxes.getByText("Chưa chọn", { exact: true }).click();
+      await expect(checkbox).toBeChecked();
+      await expect(
+        checkbox.locator('[data-slot="checkbox-indicator"]'),
+      ).toHaveCSS("opacity", "1");
+      await page.keyboard.press("Space");
+      await expect(checkbox).not.toBeChecked();
+      await expect(
+        checkbox.locator('[data-slot="checkbox-indicator"]'),
+      ).toHaveCSS("opacity", "0");
+      await expect(
+        checkboxes.getByRole("checkbox", {
+          name: "Chọn một phần",
+          exact: true,
+        }),
+      ).toHaveAttribute("aria-checked", "mixed");
+      await checkboxes.getByText("Vô hiệu hoá", { exact: true }).click();
+      await expect(
+        checkboxes.getByRole("checkbox", { name: "Vô hiệu hoá", exact: true }),
+      ).not.toBeChecked();
+      await checkboxes.screenshot({
+        path: `e2e/screenshots/checkboxes-${scheme}.png`,
+      });
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await expect(checkbox).toHaveCSS("transition-duration", "0s");
+      await expect(
+        checkbox.locator('[data-slot="checkbox-indicator"]'),
+      ).toHaveCSS("transition-duration", "0s");
+
       const notifications = page.locator("section").filter({
         has: page.getByRole("heading", { name: "Thông báo", exact: true }),
       });

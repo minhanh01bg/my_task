@@ -5,6 +5,7 @@ import { Check, MoreHorizontal, Pencil, Trash2, X } from "lucide-react";
 
 import {
   ChipToggle,
+  CheckboxField,
   CollapsibleFormCard,
   DataTableShell,
   DateField,
@@ -26,7 +27,6 @@ import {
 } from "@/components/kit";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -365,9 +365,7 @@ export default function KitGalleryPage() {
               <PopoverTitle>Lọc đơn hàng</PopoverTitle>
               <PopoverDescription>Chọn trạng thái cần xem.</PopoverDescription>
             </PopoverHeader>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox defaultChecked /> Đã thanh toán
-            </label>
+            <CheckboxField label="Đã thanh toán" defaultChecked />
           </PopoverContent>
         </Popover>
       </Section>
@@ -412,15 +410,25 @@ export default function KitGalleryPage() {
 
       <Section title="Checkbox">
         <div className="flex flex-wrap items-center gap-6">
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <Checkbox defaultChecked /> Đã chọn
-          </label>
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <Checkbox indeterminate /> Chọn một phần
-          </label>
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <Checkbox disabled /> Vô hiệu hoá
-          </label>
+          <CheckboxField label="Chưa chọn" />
+          <CheckboxField label="Đã chọn" defaultChecked />
+          <CheckboxField label="Chọn một phần" indeterminate />
+          <CheckboxField label="Vô hiệu hoá" disabled />
+          <CheckboxField label="Đã chọn, vô hiệu hoá" defaultChecked disabled />
+          <CheckboxField label="Lựa chọn cần kiểm tra" aria-invalid="true" />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <CheckboxField
+            variant="card"
+            label="Kích hoạt chiến dịch ngay"
+            description="Chiến dịch đã bật sẽ hiển thị khi đến lịch chạy."
+            defaultChecked
+          />
+          <CheckboxField
+            variant="card"
+            label="Chỉ hiện còn hàng"
+            description="Ẩn sản phẩm hết hàng khỏi kết quả tìm kiếm."
+          />
         </div>
       </Section>
 

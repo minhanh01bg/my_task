@@ -11,10 +11,10 @@ import {
 import { useId, useRef, useState, useTransition } from "react";
 
 import { savePromotionAction } from "@/app/(management)/admin/promotions/actions";
+import { CheckboxField } from "@/components/kit/checkbox-field";
 import { InputField } from "@/components/shared/input-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
@@ -302,22 +302,15 @@ export function PromotionForm({
                 hint="Số lớn hơn được hiển thị trước."
                 className="h-11 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               />
-              <label className="bg-muted/40 flex cursor-pointer items-start gap-3 rounded-xl border p-4">
-                <Checkbox
-                  name="isActive"
-                  checked={values.isActive}
-                  disabled={pending}
-                  onCheckedChange={(checked) => update("isActive", checked)}
-                />
-                <span className="space-y-1">
-                  <span className="block text-sm font-semibold">
-                    Kích hoạt chiến dịch ngay
-                  </span>
-                  <span className="text-muted-foreground block text-xs">
-                    Chiến dịch đã bật sẽ hiển thị khi đến lịch chạy.
-                  </span>
-                </span>
-              </label>
+              <CheckboxField
+                variant="card"
+                name="isActive"
+                label="Kích hoạt chiến dịch ngay"
+                description="Chiến dịch đã bật sẽ hiển thị khi đến lịch chạy."
+                checked={values.isActive}
+                disabled={pending}
+                onCheckedChange={(checked) => update("isActive", checked)}
+              />
             </section>
             <div className="border-t pt-4">
               <Button
