@@ -15,6 +15,7 @@ const eslintConfig = defineConfig([
     "coverage/**",
     "playwright-report/**",
     ".agents/**",
+    ".worktrees/**",
     ".tmp-ui-ux-pro-max/**",
     ".crawl/**",
     ".omc/**",
