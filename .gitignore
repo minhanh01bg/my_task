@@ -68,3 +68,8 @@ prisma/*.db
 /e2e/screenshots/
 .crawl/
 .omc/
+
+# log của scripts/agent
+/.agent-logs/
+# ảnh/file người dùng gửi qua bot ccgram
+/.ccgram-uploads/
