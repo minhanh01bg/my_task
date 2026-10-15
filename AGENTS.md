@@ -12,6 +12,14 @@ This file provides guidance to agents when working with code in this repository.
 - Vitest global setup always pushes Prisma schema to `prisma/test.db`; files are deliberately serial because they mutate that shared SQLite DB.
 - Playwright global setup deletes transactional/catalog fixtures and reseeds; it preserves `Setting`. Override its occupied port with `PLAYWRIGHT_PORT`.
 
+## Agent scripts (prefer over raw commands)
+
+- `scripts/agent/verify.sh [--fast|--test <file> [-t name]]` — lint/types/vitest gate with compact errors.
+- `scripts/agent/e2e.sh [spec...] [--prod <dir>]` — isolated Playwright run (own DB, port, distDir); `--clean-stale` lists leftover fixture DBs.
+- `scripts/agent/release.sh status|build|promote|rollback|prune` — fresh-dir build + smoke; ask the user before `promote`/`rollback`.
+- `scripts/agent/ship.sh -m "type(scope): subject" -- <paths>` — commit only listed paths, then push.
+- Skills in `.claude/skills/` (`agent-tools` index, `verify`, `e2e`, `release`, `ship`, `plan-task`); full logs in `.agent-logs/`.
+
 ## Project invariants
 
 - SQLite runs through ONE pooled connection (`connection_limit=1`, WAL, `busy_timeout` set in `src/server/db/prisma.ts`). Inside `prisma.$transaction(async (tx) => ...)` use only `tx`; touching the root `prisma` client there deadlocks until `maxWait`. Keep interactive transactions short: they block every other query in the process.
