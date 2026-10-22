@@ -4,13 +4,18 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    # changesets/action đẩy nhánh changeset-release/main và mở Version PR.
     permissions:
       contents: write
       pull-requests: write
     steps:
+      # Giữ credential mặc định: job này push nhánh release.
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
@@ -25,10 +30,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Create Release PR or Publish
+      # Ứng dụng private: chỉ tạo Version PR, không npm publish.
+      - name: Create Release PR
         uses: changesets/action@v1
         with:
           version: pnpm changeset version
-          publish: pnpm changeset publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
