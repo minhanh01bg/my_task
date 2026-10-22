@@ -311,3 +311,34 @@ export async function revokeAllAdminSessions(
     });
   }
 }
+
+const PASSWORD_FINGERPRINT_KEY = "admin.passwordFingerprint";
+
+/**
+ * Revokes every session of the identity when the store password hash differs
+ * from the one seen at the previous successful login, so rotating
+ * STORE_PASSWORD_HASH logs out other devices at the next login. Only a
+ * truncated sha256 of the hash is stored; the first call just records it.
+ * Revocation runs before the fingerprint is saved, so a failure retries on the
+ * next login instead of skipping the revoke.
+ */
+export async function revokeAdminSessionsOnPasswordChange(
+  identityId: string,
+  passwordHash: string,
+): Promise<void> {
+  const fingerprint = createHash("sha256")
+    .update(passwordHash, "utf8")
+    .digest("hex")
+    .slice(0, 16);
+  const stored = await prisma.setting.findUnique({
+    where: { key: PASSWORD_FINGERPRINT_KEY },
+    select: { value: true },
+  });
+  if (stored?.value === fingerprint) return;
+  if (stored) await revokeAllAdminSessions(identityId);
+  await prisma.setting.upsert({
+    where: { key: PASSWORD_FINGERPRINT_KEY },
+    create: { key: PASSWORD_FINGERPRINT_KEY, value: fingerprint },
+    update: { value: fingerprint },
+  });
+}

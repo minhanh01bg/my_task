@@ -8,7 +8,9 @@ import {
   createAdminSession,
   hashPassword,
   SESSION_COOKIE,
+  verifySession,
 } from "@/server/auth/session";
+import { prisma } from "@/server/db/prisma";
 import {
   createRateLimiter,
   type RateLimitStore,
@@ -59,11 +61,15 @@ beforeEach(async () => {
     await hashPassword("matkhau-cua-hang");
 });
 
-afterEach(() => {
+afterEach(async () => {
   setAdminLoginLimiter(null);
   (env as Record<string, unknown>).STORE_PASSWORD_HASH = originalPasswordHash;
   (env as Record<string, unknown>).CANONICAL_ORIGIN = originalCanonicalOrigin;
   adminCookieOptions.secure = originalSecure;
+  // Each test hashes the password with a fresh salt; don't leak the fingerprint.
+  await prisma.setting.deleteMany({
+    where: { key: "admin.passwordFingerprint" },
+  });
 });
 
 function makeRequest(
@@ -271,5 +277,41 @@ describe("POST /api/auth/login", () => {
     expect(cookieHeader).toContain(SESSION_COOKIE);
     expect(cookieHeader).toContain("Secure");
     expect(cookieHeader).not.toContain(oldSession);
+  });
+
+  describe("session revocation on login", () => {
+    const login = (password: string, cookie?: string) =>
+      POST(makeRequest({ password }, cookie ? { cookie } : {}));
+
+    it("revokes only the session presented in the cookie", async () => {
+      // Record the current password first so a rotation is not in play.
+      expect((await login("matkhau-cua-hang")).status).toBe(200);
+      const { token: presented } = await createAdminSession();
+      const { token: otherDevice } = await createAdminSession();
+
+      const res = await login(
+        "matkhau-cua-hang",
+        `${SESSION_COOKIE}=${presented}`,
+      );
+
+      expect(res.status).toBe(200);
+      expect(await verifySession(presented)).toBe(false);
+      expect(await verifySession(otherDevice)).toBe(true);
+    });
+
+    it("revokes every admin session once the store password changes", async () => {
+      expect((await login("matkhau-cua-hang")).status).toBe(200);
+      const { token: otherDevice } = await createAdminSession();
+      expect(await verifySession(otherDevice)).toBe(true);
+
+      (env as Record<string, unknown>).STORE_PASSWORD_HASH =
+        await hashPassword("mat-khau-moi");
+      const res = await login("mat-khau-moi");
+
+      expect(res.status).toBe(200);
+      expect(await verifySession(otherDevice)).toBe(false);
+      const fresh = res.cookies.get(SESSION_COOKIE)?.value;
+      expect(fresh && (await verifySession(fresh))).toBe(true);
+    });
   });
 });

@@ -7,10 +7,13 @@ import {
   checkAdminLoginRateLimit,
   resetAdminLoginRateLimit,
 } from "@/server/auth/rate-limit";
+import { resolveAdminSessionToken } from "@/server/auth/require-admin-session";
 import {
   adminCookieOptionsForRequest,
   createAdminSession,
   ensureDefaultAdminIdentity,
+  revokeAdminSession,
+  revokeAdminSessionsOnPasswordChange,
   SESSION_COOKIE,
   verifyPassword,
 } from "@/server/auth/session";
@@ -107,6 +110,9 @@ export async function POST(request: Request) {
     await resetAdminLoginRateLimit(request);
 
     const adminIdentity = await ensureDefaultAdminIdentity();
+    // The presented session is replaced below, so it must not stay valid.
+    await revokeAdminSession(await resolveAdminSessionToken(request));
+    await revokeAdminSessionsOnPasswordChange(adminIdentity.id, storeHash);
     const { token } = await createAdminSession(adminIdentity.id);
 
     // Rotate/replace any presented admin session cookie with new DB-backed session
