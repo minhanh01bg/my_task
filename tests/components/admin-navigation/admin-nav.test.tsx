@@ -266,6 +266,49 @@ describe("AdminNav", () => {
     fetchMock.mockRestore();
   });
 
+  it("chỉ xoá cache service worker sau khi đăng xuất thành công (WEB-7h)", async () => {
+    const postMessage = vi.fn();
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: {
+        controller: null,
+        getRegistration: async () => ({ active: { postMessage } }),
+      },
+    });
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(null, { status: 500 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true })));
+    render(<AdminNav />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Mở toàn bộ menu quản lý" }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Menu quản lý" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Đăng xuất" }));
+    const confirmation = screen.getByRole("dialog", {
+      name: "Đăng xuất khỏi quản lý?",
+    });
+
+    fireEvent.click(
+      within(confirmation).getByRole("button", { name: "Đăng xuất" }),
+    );
+    expect(await within(confirmation).findByRole("alert")).toHaveTextContent(
+      "Không thể đăng xuất. Vui lòng thử lại.",
+    );
+    expect(postMessage).not.toHaveBeenCalled();
+
+    fireEvent.click(
+      within(confirmation).getByRole("button", { name: "Đăng xuất" }),
+    );
+    await waitFor(() => {
+      expect(postMessage).toHaveBeenCalledWith({ type: "pos:clear-caches" });
+    });
+
+    fetchMock.mockRestore();
+    Reflect.deleteProperty(navigator, "serviceWorker");
+  });
+
   it("menu đầy đủ là Sheet trượt lên từ cạnh dưới", () => {
     render(<AdminNav />);
 

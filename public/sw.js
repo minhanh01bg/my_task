@@ -99,3 +99,31 @@ self.addEventListener("fetch", (event) => {
       : shellStrategy(event.request),
   );
 });
+
+// Khop voi CLEAR_SW_CACHES_MESSAGE trong service-worker-registrar.tsx.
+const CLEAR_CACHES_MESSAGE = "pos:clear-caches";
+
+/**
+ * Dang xuat: xoa moi cache phan hoi cua POS (ke ca version cu) de may dung
+ * chung khong mo lai /pos cua phien truoc khi mat mang. Chi dung Cache
+ * Storage — hang doi don offline nam trong IndexedDB va phai con nguyen.
+ */
+function clearResponseCaches() {
+  return caches
+    .keys()
+    .then((keys) =>
+      Promise.all(
+        keys
+          .filter(
+            (key) =>
+              key.startsWith("pos-shell-") || key.startsWith("pos-images-"),
+          )
+          .map((key) => caches.delete(key)),
+      ),
+    );
+}
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type !== CLEAR_CACHES_MESSAGE) return;
+  event.waitUntil(clearResponseCaches());
+});

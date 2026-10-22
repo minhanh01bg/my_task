@@ -2,6 +2,24 @@
 
 import { useEffect } from "react";
 
+// Khớp với CLEAR_CACHES_MESSAGE trong public/sw.js.
+const CLEAR_SW_CACHES_MESSAGE = "pos:clear-caches";
+
+/**
+ * Sau khi đăng xuất, báo service worker xoá cache /pos của phiên cũ. Không
+ * bao giờ ném lỗi: thiếu service worker thì cũng không có cache để xoá.
+ */
+export async function clearServiceWorkerCaches(): Promise<void> {
+  try {
+    if (!("serviceWorker" in navigator)) return;
+    const registration = await navigator.serviceWorker.getRegistration();
+    const worker = registration?.active ?? navigator.serviceWorker.controller;
+    worker?.postMessage({ type: CLEAR_SW_CACHES_MESSAGE });
+  } catch {
+    // Trình duyệt chặn service worker (chế độ riêng tư, iframe): bỏ qua.
+  }
+}
+
 export function ServiceWorkerRegistrar() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;

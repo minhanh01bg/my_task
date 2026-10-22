@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 const source = readFileSync(
   path.resolve(__dirname, "../../../public/sw.js"),
@@ -55,4 +55,70 @@ describe("vong doi cache giao dien", () => {
     expect(source).toContain('cache: "reload"');
     expect(source).toContain('cache: "no-store"');
   });
+});
+
+type MessageListener = (event: {
+  data: unknown;
+  waitUntil: (promise: Promise<unknown>) => void;
+}) => void;
+
+/** Chay ca sw.js voi self/caches/indexedDB gia de bat cac listener. */
+function loadWorker() {
+  const listeners = new Map<string, MessageListener>();
+  const cacheStorage = {
+    keys: vi.fn(async () => [
+      "pos-shell-v4",
+      "pos-images-v4",
+      "pos-shell-v3",
+      "other-app-cache",
+    ]),
+    delete: vi.fn(async () => true),
+  };
+  const indexedDB = { open: vi.fn(), deleteDatabase: vi.fn() };
+  const workerSelf = {
+    addEventListener: (type: string, listener: MessageListener) =>
+      listeners.set(type, listener),
+    skipWaiting: vi.fn(),
+    clients: { claim: vi.fn() },
+  };
+  new Function("self", "caches", "indexedDB", source)(
+    workerSelf,
+    cacheStorage,
+    indexedDB,
+  );
+  return { listeners, cacheStorage, indexedDB };
+}
+
+describe("xoa cache khi dang xuat (WEB-7h)", () => {
+  it("xoa moi cache shell/anh cua POS nhung khong dung den IndexedDB", async () => {
+    const { listeners, cacheStorage, indexedDB } = loadWorker();
+    const waitUntil = vi.fn();
+
+    listeners.get("message")!({
+      data: { type: "pos:clear-caches" },
+      waitUntil,
+    });
+
+    expect(waitUntil).toHaveBeenCalledTimes(1);
+    await waitUntil.mock.calls[0][0];
+    expect(
+      cacheStorage.delete.mock.calls.map(([key]: unknown[]) => key),
+    ).toEqual(["pos-shell-v4", "pos-images-v4", "pos-shell-v3"]);
+    // Hang doi don offline nam trong IndexedDB: dang xuat khong duoc lam mat don.
+    expect(indexedDB.open).not.toHaveBeenCalled();
+    expect(indexedDB.deleteDatabase).not.toHaveBeenCalled();
+  });
+
+  it.each([null, "pos:clear-caches", { type: "other" }])(
+    "bo qua message khong dung dinh dang: %j",
+    (data) => {
+      const { listeners, cacheStorage } = loadWorker();
+      const waitUntil = vi.fn();
+
+      listeners.get("message")!({ data, waitUntil });
+
+      expect(waitUntil).not.toHaveBeenCalled();
+      expect(cacheStorage.keys).not.toHaveBeenCalled();
+    },
+  );
 });
