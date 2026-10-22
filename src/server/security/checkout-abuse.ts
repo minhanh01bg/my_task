@@ -145,9 +145,10 @@ export async function checkPostParseAbuse(
       };
     }
 
+    // Without a verifier no token can be checked, so the challenge fails closed.
     const isValid = options.verifyChallenge
       ? await options.verifyChallenge(challengeToken)
-      : challengeToken.length > 10;
+      : false;
 
     if (!isValid) {
       return {

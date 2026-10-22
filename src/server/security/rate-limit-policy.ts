@@ -69,6 +69,17 @@ export const POLICIES = {
     ],
   },
   /**
+   * Tra voucher khi khong xac dinh duoc IP (proxy cau hinh sai): moi request
+   * dung chung mot bucket co ngan sach bang mot subnet. Fail-closed de cau
+   * hinh sai khong mo duong do ma.
+   */
+  voucherUnresolvedIp: {
+    name: "voucher-unresolved-ip",
+    failClosed: true,
+    timeoutMs: 1000,
+    buckets: [{ name: "global-misses", limit: 150, windowSeconds: 300 }],
+  },
+  /**
    * Gui danh gia san pham: 5 lan/tai khoan/24h + chan burst theo IP. Fail-open:
    * da bat buoc dang nhap, limiter loi khong nen chan khach that.
    */

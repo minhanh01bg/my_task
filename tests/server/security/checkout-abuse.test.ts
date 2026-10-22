@@ -376,5 +376,23 @@ describe("Checkout Layered Anti-Abuse", () => {
       );
       expect(resValidToken.ok).toBe(true);
     });
+
+    it("fails closed when the challenge is enabled without a verifier", async () => {
+      const limiter = createRateLimiter({ store: new FakeStore(), secret });
+
+      const res = await checkPostParseAbuse(
+        mockOrder,
+        makeRequest({
+          "cf-turnstile-response": "long-but-never-verified-token",
+        }),
+        { limiter, challengeEnabled: true },
+      );
+
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.status).toBe(403);
+        expect(res.error).toBe("challenge_failed");
+      }
+    });
   });
 });
