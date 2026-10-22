@@ -23,6 +23,7 @@ import {
   type OpenDebtItem,
 } from "@/server/admin/list-debts";
 import { parsePageParam } from "@/server/admin/pagination";
+import { requireAdminSession } from "@/server/auth/require-admin-session";
 
 import { DebtPaymentForm } from "./debt-payment-form";
 
@@ -93,6 +94,8 @@ interface DebtsPageProps {
 }
 
 export default async function DebtsPage({ searchParams }: DebtsPageProps) {
+  await requireAdminSession({ redirectToLogin: true });
+
   const params = searchParams ? await searchParams : {};
 
   const [debtPage, customersPage, settledPage] = await Promise.all([

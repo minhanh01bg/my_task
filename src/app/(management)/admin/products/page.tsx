@@ -28,6 +28,7 @@ import {
   listProducts,
 } from "@/server/admin/list-products";
 import { parsePageParam } from "@/server/admin/pagination";
+import { requireAdminSession } from "@/server/auth/require-admin-session";
 
 import { ProductDialog } from "./product-dialog";
 import { ProductFilters } from "./product-filters";
@@ -48,6 +49,8 @@ export default async function ProductsPage({
     page?: string;
   }>;
 }) {
+  await requireAdminSession({ redirectToLogin: true });
+
   const {
     q = "",
     edit,

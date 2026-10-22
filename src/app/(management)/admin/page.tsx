@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { PageHeader } from "@/components/kit";
 import { DashboardSection } from "@/features/admin-dashboard/dashboard-section";
 import { DashboardSkeleton } from "@/features/admin-dashboard/dashboard-skeleton";
+import { requireAdminSession } from "@/server/auth/require-admin-session";
 
 export const dynamic = "force-dynamic";
 
@@ -11,11 +12,13 @@ export const metadata: Metadata = {
   title: "Tổng quan",
 };
 
-export default function AdminDashboardPage({
+export default async function AdminDashboardPage({
   searchParams,
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 } = {}) {
+  await requireAdminSession({ redirectToLogin: true });
+
   return (
     <div className="space-y-6">
       <PageHeader

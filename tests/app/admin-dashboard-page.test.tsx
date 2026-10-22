@@ -8,9 +8,13 @@ import {
   getDashboardSummary,
   type DashboardSummary,
 } from "@/server/admin/dashboard";
+import { requireAdminSession } from "@/server/auth/require-admin-session";
 
 vi.mock("@/server/admin/dashboard", () => ({
   getDashboardSummary: vi.fn(),
+}));
+vi.mock("@/server/auth/require-admin-session", () => ({
+  requireAdminSession: vi.fn(),
 }));
 
 const summary: DashboardSummary = {
@@ -59,10 +63,22 @@ describe("Trang tổng quan /admin", () => {
     vi.mocked(getDashboardSummary).mockReset();
   });
 
-  it("hien tieu de ngay va khung xuong trong luc cho so lieu", () => {
+  it("chua dang nhap thi chuyen huong, khong doc so lieu", async () => {
+    vi.mocked(requireAdminSession).mockRejectedValueOnce(
+      new Error("NEXT_REDIRECT:/login"),
+    );
+
+    await expect(AdminDashboardPage()).rejects.toThrow("NEXT_REDIRECT:/login");
+    expect(requireAdminSession).toHaveBeenCalledWith({
+      redirectToLogin: true,
+    });
+    expect(getDashboardSummary).not.toHaveBeenCalled();
+  });
+
+  it("hien tieu de ngay va khung xuong trong luc cho so lieu", async () => {
     vi.mocked(getDashboardSummary).mockReturnValue(new Promise(() => {}));
 
-    render(<AdminDashboardPage />);
+    render(await AdminDashboardPage());
 
     expect(
       screen.getByRole("heading", { level: 1, name: "Tổng quan" }),

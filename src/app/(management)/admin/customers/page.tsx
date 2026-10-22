@@ -32,6 +32,7 @@ import {
   type AdminCustomerListItem,
 } from "@/server/admin/list-customers";
 import { parsePageParam } from "@/server/admin/pagination";
+import { requireAdminSession } from "@/server/auth/require-admin-session";
 
 import { toggleCustomerAccountAction } from "./actions";
 
@@ -101,6 +102,8 @@ interface CustomersPageProps {
 export default async function CustomersPage({
   searchParams,
 }: CustomersPageProps) {
+  await requireAdminSession({ redirectToLogin: true });
+
   const params = searchParams ? await searchParams : {};
   const q = params?.q?.trim() ?? "";
 

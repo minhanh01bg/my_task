@@ -25,6 +25,7 @@ import {
   listProductCategories,
   listProducts,
 } from "@/server/admin/list-products";
+import { requireAdminSession } from "@/server/auth/require-admin-session";
 import { prisma } from "@/server/db/prisma";
 
 vi.mock("next/navigation", () => ({
@@ -453,6 +454,31 @@ describe("admin catalog page navigation", () => {
     );
     expect(screen.getByText("Trang 2/3")).toBeInTheDocument();
   });
+});
+
+describe("chưa đăng nhập", () => {
+  it.each([
+    ["/admin/customers", () => CustomersPage({}), listCustomers],
+    ["/admin/debts", () => DebtsPage({}), listDebts],
+    [
+      "/admin/products",
+      () => ProductsPage({ searchParams: Promise.resolve({}) }),
+      listProducts,
+    ],
+  ] as const)(
+    "%s chuyển về /login trước khi đọc dữ liệu",
+    async (_path, renderPage, loader) => {
+      vi.mocked(requireAdminSession).mockRejectedValueOnce(
+        new Error("NEXT_REDIRECT:/login"),
+      );
+
+      await expect(renderPage()).rejects.toThrow("NEXT_REDIRECT:/login");
+      expect(requireAdminSession).toHaveBeenCalledWith({
+        redirectToLogin: true,
+      });
+      expect(loader).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe("/admin/reports", () => {
