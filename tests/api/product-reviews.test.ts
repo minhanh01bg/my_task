@@ -40,12 +40,17 @@ const context = (id = REVIEW_PRODUCT_ID) => ({
 
 let token: string;
 
-function postRequest(body: unknown, cookie?: string) {
+function postRequest(
+  body: unknown,
+  cookie?: string,
+  headers: Record<string, string> = {},
+) {
   return new Request(URL_BASE, {
     method: "POST",
     headers: {
       "content-type": "application/json",
       ...(cookie ? { cookie } : {}),
+      ...headers,
     },
     body: JSON.stringify(body),
   });
@@ -76,6 +81,31 @@ describe("POST /api/online/products/[id]/reviews", () => {
     expect(response.status).toBe(400);
     expect((await response.json()).message).toMatch(/không nhập mã HTML/);
     expect(await prisma.productReview.count()).toBe(0);
+  });
+
+  it.each([
+    [{ origin: "https://evil.example" }],
+    [{ origin: "null" }],
+    [{ "sec-fetch-site": "cross-site" }],
+  ])("403 khi yêu cầu đến từ nguồn khác %j", async (headers) => {
+    const response = await POST(
+      postRequest(validBody, `customer_session=${token}`, headers),
+      context(),
+    );
+    expect(response.status).toBe(403);
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(await prisma.productReview.count()).toBe(0);
+  });
+
+  it("chấp nhận Origin cùng site", async () => {
+    const response = await POST(
+      postRequest(validBody, `customer_session=${token}`, {
+        origin: "https://example.com",
+        "sec-fetch-site": "same-origin",
+      }),
+      context(),
+    );
+    expect(response.status).toBe(201);
   });
 
   it("401 khi chưa đăng nhập", async () => {
@@ -189,7 +219,20 @@ describe("GET /api/online/products/[id]/reviews", () => {
     const second = await GET(new Request(`${URL_BASE}?page=2`), context());
     expect((await second.json()).items).toHaveLength(1);
 
-    const bogus = await GET(new Request(`${URL_BASE}?page=abc`), context());
-    expect((await bogus.json()).page).toBe(1);
+    const noPage = await GET(new Request(URL_BASE), context());
+    expect((await noPage.json()).page).toBe(1);
   });
+
+  it.each(["abc", "", "0", "-1", "1.5", "1e400", "99999999"])(
+    "400 khi page=%j không hợp lệ",
+    async (page) => {
+      const response = await GET(
+        new Request(`${URL_BASE}?page=${encodeURIComponent(page)}`),
+        context(),
+      );
+      expect(response.status).toBe(400);
+      expect(response.headers.get("cache-control")).toContain("no-store");
+      expect((await response.json()).message).toBeTruthy();
+    },
+  );
 });

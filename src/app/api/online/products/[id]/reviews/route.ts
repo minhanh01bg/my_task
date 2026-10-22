@@ -1,14 +1,21 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { logger } from "@/lib/logger";
 import { resolveCustomerSessionToken } from "@/server/customer-auth/session";
+import { hasSafeMutationOrigin } from "@/server/http/origin";
 import { readJsonBody } from "@/server/http/read-json-body";
 import { createReview } from "@/server/reviews/create-review";
 import { listProductReviews } from "@/server/reviews/list-reviews";
 import { checkReviewRateLimit } from "@/server/reviews/review-rate-limit";
-import { createReviewInputSchema, reviewPageQuerySchema } from "@/types/review";
+import { createReviewInputSchema } from "@/types/review";
 
 const NO_STORE = { "Cache-Control": "private, no-store" };
+
+/** `page` sai kieu → 400 thay vi am tham ve trang 1 (client luon gui so nguyen). */
+const pageQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).max(10_000).default(1),
+});
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -21,10 +28,16 @@ function readSessionCookie(request: Request): string | null {
 
 export async function GET(request: Request, { params }: RouteContext) {
   const { id } = await params;
-  const { page } = reviewPageQuerySchema.parse({
+  const query = pageQuerySchema.safeParse({
     page: new URL(request.url).searchParams.get("page") ?? undefined,
   });
-  const data = await listProductReviews(id, page);
+  if (!query.success) {
+    return NextResponse.json(
+      { message: "Trang đánh giá không hợp lệ" },
+      { status: 400, headers: NO_STORE },
+    );
+  }
+  const data = await listProductReviews(id, query.data.page);
   return NextResponse.json(data, {
     headers: { "Cache-Control": "public, max-age=0, s-maxage=30" },
   });
@@ -32,6 +45,13 @@ export async function GET(request: Request, { params }: RouteContext) {
 
 export async function POST(request: Request, { params }: RouteContext) {
   const { id } = await params;
+
+  if (!hasSafeMutationOrigin(request)) {
+    return NextResponse.json(
+      { message: "Nguồn gốc yêu cầu không hợp lệ" },
+      { status: 403, headers: NO_STORE },
+    );
+  }
 
   const session = await resolveCustomerSessionToken(readSessionCookie(request));
   if (!session) {
