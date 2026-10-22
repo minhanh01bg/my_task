@@ -95,4 +95,17 @@ describe("createOnlineOrder", () => {
     expect(await prisma.order.count({ where: { channel: "online" } })).toBe(0);
     expect(await prisma.adminNotification.count()).toBe(0);
   });
+
+  it("từ chối số lượng lẻ ngay cả khi bỏ qua schema", async () => {
+    await expect(createOnlineOrder(input(1.5))).rejects.toMatchObject({
+      name: "OnlineOrderError",
+      code: "INVALID_QUANTITY",
+      productIds: [productId],
+    });
+    expect(await prisma.order.count({ where: { channel: "online" } })).toBe(0);
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+    });
+    expect(product?.stock).toBe(10);
+  });
 });

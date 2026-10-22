@@ -101,4 +101,23 @@ describe("onlineCheckoutSchema", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("đơn online chỉ nhận số lượng nguyên", () => {
+    for (const quantity of [0.5, 1.5, 0.0001]) {
+      const result = onlineCheckoutSchema.safeParse({
+        ...valid,
+        lines: [{ productId: "product-1", quantity }],
+      });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0]?.message).toBe(
+        "Số lượng phải là số nguyên",
+      );
+    }
+    expect(
+      onlineCheckoutSchema.safeParse({
+        ...valid,
+        lines: [{ productId: "product-1", quantity: 3 }],
+      }).success,
+    ).toBe(true);
+  });
 });

@@ -14,7 +14,9 @@ export function normalizePhone(value: string): string {
 export const onlineCartLineSchema = z
   .object({
     productId: z.string().trim().min(1).max(100),
-    quantity: z.number().finite().positive().max(999),
+    // Product.unit la text tu do, khong co co "ban le" — online chi ban so nguyen
+    // (POS van ban duoc so luong le qua /api/orders).
+    quantity: z.number().int("Số lượng phải là số nguyên").positive().max(999),
   })
   .strict();
 
@@ -121,7 +123,8 @@ export class OnlineOrderError extends Error {
       | "OUT_OF_STOCK"
       | "PRODUCT_UNAVAILABLE"
       | "IDEMPOTENCY_CONFLICT"
-      | "VOUCHER_INVALID",
+      | "VOUCHER_INVALID"
+      | "INVALID_QUANTITY",
     message: string,
     public readonly productIds: string[] = [],
   ) {

@@ -191,6 +191,20 @@ export async function createOnlineOrder(
     };
   }
 
+  // Khong tin schema o route: moi caller deu phai gui so luong nguyen duong.
+  const fractional = input.lines
+    .filter(
+      (line) => !Number.isSafeInteger(line.quantity) || line.quantity <= 0,
+    )
+    .map((line) => line.productId);
+  if (fractional.length) {
+    throw new OnlineOrderError(
+      "INVALID_QUANTITY",
+      "Số lượng phải là số nguyên",
+      fractional,
+    );
+  }
+
   const products = await prisma.product.findMany({
     where: { id: { in: input.lines.map((line) => line.productId) } },
     select: {
