@@ -8,10 +8,12 @@ const RELATIVE_BASE = "https://relative.invalid";
 const INTERNAL_IPV4_RANGES: ReadonlyArray<readonly [string, number]> = [
   ["0.0.0.0", 8],
   ["10.0.0.0", 8],
+  ["100.64.0.0", 10], // carrier-grade NAT
   ["127.0.0.0", 8],
   ["169.254.0.0", 16],
   ["172.16.0.0", 12],
   ["192.168.0.0", 16],
+  ["198.18.0.0", 15], // benchmarking
 ];
 
 /**
@@ -88,19 +90,28 @@ function isInternalIPv6(groups: number[]): boolean {
   const [first] = groups;
   // fc00::/7 unique local, fe80::/10 link local
   if ((first & 0xfe00) === 0xfc00 || (first & 0xffc0) === 0xfe80) return true;
+  const embeddedIPv4 = ((groups[6] << 16) | groups[7]) >>> 0;
   // ::, ::1, IPv4-compatible (::a.b.c.d) and IPv4-mapped (::ffff:a.b.c.d)
   if (
     groups.slice(0, 5).every((group) => group === 0) &&
     (groups[5] === 0 || groups[5] === 0xffff)
   ) {
-    return isInternalIPv4(((groups[6] << 16) | groups[7]) >>> 0);
+    return isInternalIPv4(embeddedIPv4);
+  }
+  // NAT64 well-known prefix 64:ff9b::/96 is translated to the embedded IPv4
+  if (
+    first === 0x64 &&
+    groups[1] === 0xff9b &&
+    groups.slice(2, 6).every((group) => group === 0)
+  ) {
+    return isInternalIPv4(embeddedIPv4);
   }
   return false;
 }
 
 /**
- * True for loopback, private, link-local and unspecified addresses and for
- * localhost-style names. An IPv6 literal that cannot be parsed counts as
+ * True for loopback, private, link-local, carrier-grade NAT, benchmarking and
+ * unspecified addresses (also behind NAT64) and for localhost-style names. An IPv6 literal that cannot be parsed counts as
  * internal (fail closed).
  */
 export function isInternalHost(hostname: string): boolean {

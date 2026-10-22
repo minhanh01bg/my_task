@@ -40,6 +40,18 @@ describe("isInternalHost (WEB-7c)", () => {
     "[::ffff:7f00:1]",
     "::ffff:a9fe:a9fe",
     "::ffff:10.0.0.1",
+    // Carrier-grade NAT 100.64.0.0/10 and benchmark 198.18.0.0/15
+    "100.64.0.1",
+    "100.127.255.255",
+    "198.18.0.1",
+    "198.19.255.255",
+    "::ffff:100.64.0.1",
+    // NAT64 64:ff9b::/96 with an internal embedded IPv4
+    "64:ff9b::127.0.0.1",
+    "64:ff9b::a9fe:a9fe",
+    "[64:ff9b::7f00:1]",
+    "64:ff9b:0:0:0:0:10.0.0.1",
+    "64:ff9b::100.64.0.1",
   ])("blocks %s", (host) => {
     expect(isInternalHost(host)).toBe(true);
   });
@@ -56,6 +68,12 @@ describe("isInternalHost (WEB-7c)", () => {
     "169.255.0.1",
     "2606:4700::1111",
     "::ffff:8.8.8.8",
+    "100.63.255.255",
+    "100.128.0.1",
+    "198.17.255.255",
+    "198.20.0.1",
+    "64:ff9b::8.8.8.8",
+    "64:ff9b::808:808",
   ])("allows public host %s", (host) => {
     expect(isInternalHost(host)).toBe(false);
   });
@@ -80,6 +98,9 @@ describe("isPublicHttpsUrl (WEB-7a)", () => {
     "https://[::1]/a.png",
     "https://[::ffff:127.0.0.1]/a.png",
     "https://169.254.169.254/latest/meta-data",
+    "https://100.64.0.1/a.png",
+    "https://198.18.0.1/a.png",
+    "https://[64:ff9b::169.254.169.254]/latest/meta-data",
     "not a url",
   ])("rejects %s", (value) => {
     expect(isPublicHttpsUrl(value)).toBe(false);
