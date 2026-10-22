@@ -229,9 +229,10 @@ describe("voucher server actions", () => {
     );
     const formData = new FormData();
     formData.set("code", "ABC");
-    await expect(saveVoucherAction(null, formData)).rejects.toThrow(
-      requireAdminModule.AdminUnauthorizedError,
-    );
+    expect(await saveVoucherAction(null, formData)).toEqual({
+      ok: false,
+      error: "Yêu cầu quyền quản trị",
+    });
   });
 
   describe("với quyền admin", () => {

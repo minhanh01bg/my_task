@@ -6,15 +6,24 @@ import { z } from "zod";
 z.config({ jitless: true });
 
 import { isPublicHttpsUrl } from "@/lib/safe-url";
+import {
+  ADMIN_UNAUTHORIZED_MESSAGE,
+  adminEntityIdSchema,
+  authorizeAdminAction,
+  INVALID_INPUT_MESSAGE,
+  isRecordNotFound,
+} from "@/server/admin/admin-action";
 import { revalidatePublic } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
-import {
-  AdminUnauthorizedError,
-  requireAdminSession,
-} from "@/server/auth/require-admin-session";
 import { saveProductImage } from "@/server/products/save-image";
 import { saveProduct, softDeleteProduct } from "@/server/products/save-product";
+import type { AdminActionResult } from "@/types/admin-action";
+
+const PRODUCT_NOT_FOUND = {
+  ok: false as const,
+  message: "Không tìm thấy sản phẩm",
+};
 
 const quickUpdateSchema = z.object({
   id: z.string().min(1),
@@ -52,13 +61,8 @@ const schema = z.object({
 });
 
 export async function saveProductAction(formData: FormData) {
-  try {
-    await requireAdminSession();
-  } catch (error) {
-    if (error instanceof AdminUnauthorizedError) {
-      return { ok: false as const, message: "Yêu cầu quyền quản trị" };
-    }
-    throw error;
+  if (!(await authorizeAdminAction())) {
+    return { ok: false as const, message: ADMIN_UNAUTHORIZED_MESSAGE };
   }
 
   const raw = {
@@ -79,7 +83,7 @@ export async function saveProductAction(formData: FormData) {
   if (!parsed.success) {
     return {
       ok: false as const,
-      message: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+      message: parsed.error.issues[0]?.message ?? INVALID_INPUT_MESSAGE,
     };
   }
 
@@ -107,13 +111,8 @@ export async function saveProductAction(formData: FormData) {
 }
 
 export async function quickUpdateProductAction(formData: FormData) {
-  try {
-    await requireAdminSession();
-  } catch (error) {
-    if (error instanceof AdminUnauthorizedError) {
-      return { ok: false as const, message: "Yêu cầu quyền quản trị" };
-    }
-    throw error;
+  if (!(await authorizeAdminAction())) {
+    return { ok: false as const, message: ADMIN_UNAUTHORIZED_MESSAGE };
   }
 
   const parsed = quickUpdateSchema.safeParse({
@@ -125,14 +124,19 @@ export async function quickUpdateProductAction(formData: FormData) {
   if (!parsed.success) {
     return {
       ok: false as const,
-      message: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+      message: parsed.error.issues[0]?.message ?? INVALID_INPUT_MESSAGE,
     };
   }
 
-  await prisma.product.update({
-    where: { id: parsed.data.id, deletedAt: null },
-    data: { price: parsed.data.price, stock: parsed.data.stock },
-  });
+  try {
+    await prisma.product.update({
+      where: { id: parsed.data.id, deletedAt: null },
+      data: { price: parsed.data.price, stock: parsed.data.stock },
+    });
+  } catch (error) {
+    if (isRecordNotFound(error)) return PRODUCT_NOT_FOUND;
+    throw error;
+  }
   revalidatePublic(CACHE_TAGS.catalog, CACHE_TAGS.product(parsed.data.id));
 
   revalidatePath("/admin/products");
@@ -141,9 +145,24 @@ export async function quickUpdateProductAction(formData: FormData) {
   return { ok: true as const };
 }
 
-export async function deleteProductAction(id: string) {
-  await requireAdminSession();
-  await softDeleteProduct(id);
+export async function deleteProductAction(
+  id: string,
+): Promise<AdminActionResult> {
+  if (!(await authorizeAdminAction())) {
+    return { ok: false, message: ADMIN_UNAUTHORIZED_MESSAGE };
+  }
+
+  const parsed = adminEntityIdSchema.safeParse(id);
+  if (!parsed.success) return { ok: false, message: INVALID_INPUT_MESSAGE };
+
+  try {
+    await softDeleteProduct(parsed.data);
+  } catch (error) {
+    if (isRecordNotFound(error)) return PRODUCT_NOT_FOUND;
+    throw error;
+  }
   revalidatePath("/admin/products");
   revalidatePath("/pos");
+
+  return { ok: true };
 }

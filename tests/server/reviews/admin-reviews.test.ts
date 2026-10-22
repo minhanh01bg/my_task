@@ -114,7 +114,10 @@ describe("admin reviews", () => {
     vi.spyOn(requireAdminModule, "requireAdminSession").mockRejectedValue(
       new requireAdminModule.AdminUnauthorizedError(),
     );
-    await expect(deleteReviewAction(reviewIds[0]!)).rejects.toThrow();
+    expect(await deleteReviewAction(reviewIds[0]!)).toEqual({
+      ok: false,
+      error: "Yêu cầu quyền quản trị",
+    });
     expect(await prisma.productReview.count()).toBe(2);
   });
 });

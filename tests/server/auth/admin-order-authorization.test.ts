@@ -8,6 +8,11 @@ import {
 } from "@/server/auth/require-admin-session";
 import { createAdminSession, SESSION_COOKIE } from "@/server/auth/session";
 import { CUSTOMER_SESSION_COOKIE } from "@/server/customer-auth/session";
+import { cancelOrder } from "@/server/orders/cancel-order";
+import {
+  markOnlineOrderPaid,
+  transitionOnlineOrder,
+} from "@/server/orders/update-online-order";
 
 const mockCookies = new Map<string, string>();
 const mockRedirect = vi.fn();
@@ -45,6 +50,26 @@ vi.mock("@/server/orders/update-online-order", () => ({
   markOnlineOrderPaid: vi.fn().mockResolvedValue({ id: "mock-order" }),
 }));
 
+const UNAUTHORIZED = { ok: false, message: "Yêu cầu quyền quản trị" };
+
+async function expectRefusedWithoutWrites() {
+  await expect(
+    adminOrderActions.cancelOrderAction("order-123"),
+  ).resolves.toEqual(UNAUTHORIZED);
+
+  await expect(
+    adminOrderActions.transitionOnlineOrderAction("order-123", "confirmed"),
+  ).resolves.toEqual(UNAUTHORIZED);
+
+  await expect(
+    adminOrderActions.markOnlineOrderPaidAction("order-123"),
+  ).resolves.toEqual(UNAUTHORIZED);
+
+  expect(cancelOrder).not.toHaveBeenCalled();
+  expect(transitionOnlineOrder).not.toHaveBeenCalled();
+  expect(markOnlineOrderPaid).not.toHaveBeenCalled();
+}
+
 describe("Admin Order Authorization (Task 9)", () => {
   beforeEach(() => {
     mockCookies.clear();
@@ -65,52 +90,22 @@ describe("Admin Order Authorization (Task 9)", () => {
   });
 
   describe("Server Action direct invocation authorization", () => {
-    it("rejects anonymous caller with AdminUnauthorizedError and executes no writes", async () => {
+    it("refuses anonymous caller with { ok: false } and executes no writes", async () => {
       mockCookies.clear();
 
-      await expect(
-        adminOrderActions.cancelOrderAction("order-123"),
-      ).rejects.toThrow(AdminUnauthorizedError);
-
-      await expect(
-        adminOrderActions.transitionOnlineOrderAction("order-123", "confirmed"),
-      ).rejects.toThrow(AdminUnauthorizedError);
-
-      await expect(
-        adminOrderActions.markOnlineOrderPaidAction("order-123"),
-      ).rejects.toThrow(AdminUnauthorizedError);
+      await expectRefusedWithoutWrites();
     });
 
     it("rejects customer session cookie and never treats customer as admin", async () => {
       mockCookies.set(CUSTOMER_SESSION_COOKIE, "valid-customer-session-token");
 
-      await expect(
-        adminOrderActions.cancelOrderAction("order-123"),
-      ).rejects.toThrow(AdminUnauthorizedError);
-
-      await expect(
-        adminOrderActions.transitionOnlineOrderAction("order-123", "confirmed"),
-      ).rejects.toThrow(AdminUnauthorizedError);
-
-      await expect(
-        adminOrderActions.markOnlineOrderPaidAction("order-123"),
-      ).rejects.toThrow(AdminUnauthorizedError);
+      await expectRefusedWithoutWrites();
     });
 
     it("rejects invalid or tampered admin session cookie", async () => {
       mockCookies.set(SESSION_COOKIE, "tampered-admin-token");
 
-      await expect(
-        adminOrderActions.cancelOrderAction("order-123"),
-      ).rejects.toThrow(AdminUnauthorizedError);
-
-      await expect(
-        adminOrderActions.transitionOnlineOrderAction("order-123", "confirmed"),
-      ).rejects.toThrow(AdminUnauthorizedError);
-
-      await expect(
-        adminOrderActions.markOnlineOrderPaidAction("order-123"),
-      ).rejects.toThrow(AdminUnauthorizedError);
+      await expectRefusedWithoutWrites();
     });
 
     it("allows execution when caller presents a valid admin session cookie", async () => {
@@ -119,15 +114,15 @@ describe("Admin Order Authorization (Task 9)", () => {
 
       await expect(
         adminOrderActions.cancelOrderAction("order-123"),
-      ).resolves.not.toThrow();
+      ).resolves.toEqual({ ok: true });
 
       await expect(
         adminOrderActions.transitionOnlineOrderAction("order-123", "confirmed"),
-      ).resolves.not.toThrow();
+      ).resolves.toEqual({ ok: true });
 
       await expect(
         adminOrderActions.markOnlineOrderPaidAction("order-123"),
-      ).resolves.not.toThrow();
+      ).resolves.toEqual({ ok: true });
     });
   });
 

@@ -7,6 +7,7 @@ import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
 
 import { cancelOrder } from "./cancel-order";
+import { OrderStatusError } from "./order-status-error";
 import {
   canTransitionOnlineOrder,
   isOnlineOrderStatus,
@@ -35,10 +36,16 @@ export async function transitionOnlineOrder(
       !order.fulfillmentStatus ||
       !isOnlineOrderStatus(order.fulfillmentStatus)
     ) {
-      throw new Error("Không tìm thấy đơn online");
+      throw new OrderStatusError(
+        "ORDER_NOT_FOUND",
+        "Không tìm thấy đơn online",
+      );
     }
     if (!canTransitionOnlineOrder(order.fulfillmentStatus, next)) {
-      throw new Error("Chuyển trạng thái không hợp lệ");
+      throw new OrderStatusError(
+        "INVALID_TRANSITION",
+        "Chuyển trạng thái không hợp lệ",
+      );
     }
     if (next === "cancelled") {
       const cancelled = await cancelOrder(orderId, tx);
@@ -82,8 +89,12 @@ export async function markOnlineOrderPaid(orderId: string) {
       },
     });
     if (!order || order.channel !== "online")
-      throw new Error("Không tìm thấy đơn online");
-    if (order.status === "cancelled") throw new Error("Đơn đã hủy");
+      throw new OrderStatusError(
+        "ORDER_NOT_FOUND",
+        "Không tìm thấy đơn online",
+      );
+    if (order.status === "cancelled")
+      throw new OrderStatusError("ORDER_CANCELLED", "Đơn đã hủy");
     await tx.payment.updateMany({
       where: { orderId, receivedAt: null },
       data: { receivedAt: new Date() },

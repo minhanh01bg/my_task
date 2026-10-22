@@ -1,8 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
-import { requireAdminSession } from "@/server/auth/require-admin-session";
+import {
+  ADMIN_UNAUTHORIZED_MESSAGE,
+  adminEntityIdSchema,
+  authorizeAdminAction,
+  INVALID_INPUT_MESSAGE,
+} from "@/server/admin/admin-action";
 import {
   createVoucher,
   deleteVoucher,
@@ -12,6 +18,20 @@ import {
 import { voucherInputSchema, type VoucherActionResult } from "@/types/voucher";
 
 const VOUCHERS_PATH = "/admin/promotions/vouchers";
+
+const UNAUTHORIZED: VoucherActionResult = {
+  ok: false,
+  error: ADMIN_UNAUTHORIZED_MESSAGE,
+};
+const INVALID_INPUT: VoucherActionResult = {
+  ok: false,
+  error: INVALID_INPUT_MESSAGE,
+};
+
+const toggleSchema = z.object({
+  id: adminEntityIdSchema,
+  isActive: z.boolean(),
+});
 
 function safeRevalidatePath(path: string) {
   try {
@@ -36,7 +56,9 @@ export async function saveVoucherAction(
   _prevState: unknown,
   formData: FormData,
 ): Promise<VoucherActionResult> {
-  const { identity } = await requireAdminSession();
+  const session = await authorizeAdminAction();
+  if (!session) return UNAUTHORIZED;
+  const { identity } = session;
 
   const isActive = field(formData, "isActive");
   const parsed = voucherInputSchema.safeParse({
@@ -72,8 +94,14 @@ export async function toggleVoucherActiveAction(
   id: string,
   isActive: boolean,
 ): Promise<VoucherActionResult> {
-  const { identity } = await requireAdminSession();
-  const result = await toggleVoucher(id, isActive, {
+  const session = await authorizeAdminAction();
+  if (!session) return UNAUTHORIZED;
+  const { identity } = session;
+
+  const parsed = toggleSchema.safeParse({ id, isActive });
+  if (!parsed.success) return INVALID_INPUT;
+
+  const result = await toggleVoucher(parsed.data.id, parsed.data.isActive, {
     identityId: identity?.id,
   });
   if (result.ok) safeRevalidatePath(VOUCHERS_PATH);
@@ -83,8 +111,16 @@ export async function toggleVoucherActiveAction(
 export async function deleteVoucherAction(
   id: string,
 ): Promise<VoucherActionResult> {
-  const { identity } = await requireAdminSession();
-  const result = await deleteVoucher(id, { identityId: identity?.id });
+  const session = await authorizeAdminAction();
+  if (!session) return UNAUTHORIZED;
+  const { identity } = session;
+
+  const parsedId = adminEntityIdSchema.safeParse(id);
+  if (!parsedId.success) return INVALID_INPUT;
+
+  const result = await deleteVoucher(parsedId.data, {
+    identityId: identity?.id,
+  });
   if (result.ok) safeRevalidatePath(VOUCHERS_PATH);
   return result;
 }

@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { requireAdminSession } from "@/server/auth/require-admin-session";
+import {
+  ADMIN_UNAUTHORIZED_MESSAGE,
+  authorizeAdminAction,
+} from "@/server/admin/admin-action";
 import {
   deleteReview,
   setReviewStatus,
@@ -12,6 +15,7 @@ import {
 import { REVIEW_STATUSES } from "@/types/review";
 
 const REVIEWS_PATH = "/admin/reviews";
+const UNAUTHORIZED = { ok: false as const, error: ADMIN_UNAUTHORIZED_MESSAGE };
 
 const reviewIdSchema = z.string().trim().min(1).max(64);
 const reviewStatusSchema = z.enum(REVIEW_STATUSES);
@@ -28,7 +32,9 @@ export async function setReviewStatusAction(
   id: string,
   status: string,
 ): Promise<ReviewActionResult> {
-  const { identity } = await requireAdminSession();
+  const session = await authorizeAdminAction();
+  if (!session) return UNAUTHORIZED;
+  const { identity } = session;
   const parsedId = reviewIdSchema.safeParse(id);
   const parsedStatus = reviewStatusSchema.safeParse(status);
   if (!parsedId.success || !parsedStatus.success) {
@@ -44,7 +50,9 @@ export async function setReviewStatusAction(
 export async function deleteReviewAction(
   id: string,
 ): Promise<ReviewActionResult> {
-  const { identity } = await requireAdminSession();
+  const session = await authorizeAdminAction();
+  if (!session) return UNAUTHORIZED;
+  const { identity } = session;
   const parsedId = reviewIdSchema.safeParse(id);
   if (!parsedId.success) return { ok: false, error: "Yêu cầu không hợp lệ" };
   const result = await deleteReview(parsedId.data, {

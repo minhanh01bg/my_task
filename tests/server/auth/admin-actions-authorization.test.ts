@@ -12,11 +12,11 @@ import {
 } from "@/app/(management)/admin/categories/actions";
 import { recordDebtPaymentAction } from "@/app/(management)/admin/debts/actions";
 import { POST as uploadProductImage } from "@/app/api/products/images/route";
-import { AdminUnauthorizedError } from "@/server/auth/require-admin-session";
 import { createAdminSession, SESSION_COOKIE } from "@/server/auth/session";
 import { prisma } from "@/server/db/prisma";
 
 const mockCookies = new Map<string, string>();
+const UNAUTHORIZED = { ok: false, message: "Yêu cầu quyền quản trị" };
 
 vi.mock("next/headers", () => ({
   cookies: async () => ({
@@ -66,33 +66,28 @@ describe("Admin Server Actions and Route Authorization", () => {
       }
     });
 
-    it("deleteProductAction: ném ngoại lệ khi chưa đăng nhập", async () => {
-      await expect(deleteProductAction("prod-1")).rejects.toThrow(
-        AdminUnauthorizedError,
-      );
+    it("deleteProductAction: từ chối khi chưa đăng nhập", async () => {
+      expect(await deleteProductAction("prod-1")).toEqual(UNAUTHORIZED);
     });
   });
 
   describe("Category Actions Authorization", () => {
-    it("saveCategoryAction: ném ngoại lệ khi chưa đăng nhập", async () => {
+    it("saveCategoryAction: từ chối khi chưa đăng nhập", async () => {
       const formData = new FormData();
       formData.set("name", "Danh mục test");
 
-      await expect(saveCategoryAction(formData)).rejects.toThrow(
-        AdminUnauthorizedError,
-      );
+      expect(await saveCategoryAction(formData)).toEqual({
+        ok: false,
+        error: "Yêu cầu quyền quản trị",
+      });
     });
 
-    it("deleteCategoryAction: ném ngoại lệ khi chưa đăng nhập", async () => {
-      await expect(deleteCategoryAction("cat-1")).rejects.toThrow(
-        AdminUnauthorizedError,
-      );
+    it("deleteCategoryAction: từ chối khi chưa đăng nhập", async () => {
+      expect(await deleteCategoryAction("cat-1")).toEqual(UNAUTHORIZED);
     });
 
-    it("moveCategoryAction: ném ngoại lệ khi chưa đăng nhập", async () => {
-      await expect(moveCategoryAction("cat-1", "up")).rejects.toThrow(
-        AdminUnauthorizedError,
-      );
+    it("moveCategoryAction: từ chối khi chưa đăng nhập", async () => {
+      expect(await moveCategoryAction("cat-1", "up")).toEqual(UNAUTHORIZED);
     });
   });
 

@@ -26,9 +26,10 @@ describe("Admin Promotion Management Actions", () => {
     const formData = new FormData();
     formData.set("title", "Khuyến Mãi Mới");
 
-    await expect(savePromotionAction(null, formData)).rejects.toThrow(
-      requireAdminModule.AdminUnauthorizedError,
-    );
+    expect(await savePromotionAction(null, formData)).toEqual({
+      ok: false,
+      error: "Yêu cầu quyền quản trị",
+    });
   });
 
   describe("promotionActionSchema validation", () => {

@@ -4,6 +4,8 @@ import { revalidatePublic } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
 
+import { OrderStatusError } from "./order-status-error";
+
 export interface CancelOrderResult {
   /** false khi don khong ton tai hoac da huy tu truoc (khong ghi gi). */
   cancelled: boolean;
@@ -38,7 +40,10 @@ export async function cancelOrder(
     }
 
     if (order.fulfillmentStatus === "completed") {
-      throw new Error("Không thể hủy đơn hàng đã hoàn tất");
+      throw new OrderStatusError(
+        "ORDER_COMPLETED",
+        "Không thể hủy đơn hàng đã hoàn tất",
+      );
     }
 
     await tx.order.update({

@@ -5,6 +5,7 @@ import {
 } from "@tabler/icons-react";
 
 import { EmptyState, PageHeader, Pagination } from "@/components/kit";
+import { ActionForm } from "@/components/shared/action-form";
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -89,7 +90,7 @@ export default async function CategoriesPage({
                         className="flex gap-1"
                         aria-label={`Sắp xếp ${category.name}`}
                       >
-                        <form
+                        <ActionForm
                           action={moveCategoryAction.bind(
                             null,
                             category.id,
@@ -105,8 +106,8 @@ export default async function CategoriesPage({
                           >
                             <ArrowUp aria-hidden="true" />
                           </Button>
-                        </form>
-                        <form
+                        </ActionForm>
+                        <ActionForm
                           action={moveCategoryAction.bind(
                             null,
                             category.id,
@@ -122,7 +123,7 @@ export default async function CategoriesPage({
                           >
                             <ArrowDown aria-hidden="true" />
                           </Button>
-                        </form>
+                        </ActionForm>
                       </div>
                       <span className="text-muted-foreground text-sm whitespace-nowrap">
                         {category._count.products} sản phẩm

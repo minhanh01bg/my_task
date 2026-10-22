@@ -7,6 +7,7 @@ import {
   OrderStatusBadge,
   PageHeader,
 } from "@/components/kit";
+import { ActionForm } from "@/components/shared/action-form";
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PrintReceiptButton } from "@/features/orders/print-receipt-button";
@@ -331,7 +332,7 @@ export default async function OrderDetailPage({
             </dl>
             <div className="flex flex-col flex-wrap gap-2.5 pt-2 sm:flex-row sm:gap-3">
               {order.status === "pending" ? (
-                <form
+                <ActionForm
                   className="w-full sm:w-auto"
                   action={markOnlineOrderPaidAction.bind(null, order.id)}
                 >
@@ -342,7 +343,7 @@ export default async function OrderDetailPage({
                   >
                     Đánh dấu đã thanh toán
                   </Button>
-                </form>
+                </ActionForm>
               ) : null}
               {onlineStatus
                 ? getNextOnlineOrderStatuses(onlineStatus).map((next) =>
@@ -361,7 +362,7 @@ export default async function OrderDetailPage({
                         triggerClassName="text-destructive font-semibold"
                       />
                     ) : (
-                      <form
+                      <ActionForm
                         key={next}
                         className="w-full sm:w-auto"
                         action={transitionOnlineOrderAction.bind(
@@ -377,7 +378,7 @@ export default async function OrderDetailPage({
                         >
                           {ONLINE_ORDER_STATUS_LABELS[next]}
                         </Button>
-                      </form>
+                      </ActionForm>
                     ),
                   )
                 : null}

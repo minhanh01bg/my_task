@@ -14,9 +14,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import type { AdminActionResult } from "@/types/admin-action";
 
 interface ConfirmActionProps {
-  action: () => Promise<void>;
+  /** Trả `{ ok: false }` thì giữ hộp thoại mở và hiện `message`. */
+  action: () => Promise<void | AdminActionResult>;
   triggerLabel: string;
   title: string;
   description: string;
@@ -40,11 +42,22 @@ export function ConfirmAction({
 }: ConfirmActionProps) {
   const [open, setOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState("");
+
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (!next) setError("");
+  }
 
   async function handleConfirm() {
     setIsPending(true);
+    setError("");
     try {
-      await action();
+      const result = await action();
+      if (result && !result.ok) {
+        setError(result.message);
+        return;
+      }
       setOpen(false);
     } finally {
       setIsPending(false);
@@ -52,7 +65,7 @@ export function ConfirmAction({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         render={
           <Button
@@ -80,6 +93,11 @@ export function ConfirmAction({
             {description}
           </DialogDescription>
         </DialogHeader>
+        {error ? (
+          <p role="alert" className="text-destructive text-sm font-medium">
+            {error}
+          </p>
+        ) : null}
         <DialogFooter className="-mx-6 -mb-6 p-5">
           <DialogClose render={<Button type="button" variant="outline" />}>
             Quay lại

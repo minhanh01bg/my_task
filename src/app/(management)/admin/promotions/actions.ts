@@ -1,14 +1,39 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
+import {
+  ADMIN_UNAUTHORIZED_MESSAGE,
+  adminEntityIdSchema,
+  authorizeAdminAction,
+  INVALID_INPUT_MESSAGE,
+  isRecordNotFound,
+} from "@/server/admin/admin-action";
 import { logAdminAction } from "@/server/auth/admin-audit";
-import { requireAdminSession } from "@/server/auth/require-admin-session";
 import { revalidatePublic } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
 import { promotionActionSchema } from "@/types/storefront";
 import type { PromotionActionResult } from "@/types/storefront";
+
+const UNAUTHORIZED: PromotionActionResult = {
+  ok: false,
+  error: ADMIN_UNAUTHORIZED_MESSAGE,
+};
+const INVALID_INPUT: PromotionActionResult = {
+  ok: false,
+  error: INVALID_INPUT_MESSAGE,
+};
+const NOT_FOUND: PromotionActionResult = {
+  ok: false,
+  error: "Không tìm thấy chiến dịch khuyến mãi",
+};
+
+const toggleSchema = z.object({
+  id: adminEntityIdSchema,
+  isActive: z.boolean(),
+});
 
 function safeRevalidatePath(path: string) {
   try {
@@ -22,7 +47,9 @@ export async function savePromotionAction(
   _prevState: unknown,
   formData: FormData,
 ): Promise<PromotionActionResult> {
-  const { identity } = await requireAdminSession();
+  const session = await authorizeAdminAction();
+  if (!session) return UNAUTHORIZED;
+  const { identity } = session;
 
   const raw = {
     id: (formData.get("id") as string) || undefined,
@@ -55,10 +82,15 @@ export async function savePromotionAction(
   const { id, ...data } = parsed.data;
 
   if (id) {
-    const updated = await prisma.storefrontPromotion.update({
-      where: { id },
-      data,
-    });
+    try {
+      await prisma.storefrontPromotion.update({
+        where: { id },
+        data,
+      });
+    } catch (error) {
+      if (isRecordNotFound(error)) return NOT_FOUND;
+      throw error;
+    }
 
     await logAdminAction({
       identityId: identity?.id,
@@ -75,7 +107,7 @@ export async function savePromotionAction(
     return {
       ok: true,
       message: "Cập nhật chiến dịch khuyến mãi thành công",
-      promotionId: updated.id,
+      promotionId: id,
     };
   }
 
@@ -106,19 +138,29 @@ export async function togglePromotionActiveAction(
   id: string,
   isActive: boolean,
 ): Promise<PromotionActionResult> {
-  const { identity } = await requireAdminSession();
+  const session = await authorizeAdminAction();
+  if (!session) return UNAUTHORIZED;
+  const { identity } = session;
 
-  await prisma.storefrontPromotion.update({
-    where: { id },
-    data: { isActive },
-  });
+  const parsed = toggleSchema.safeParse({ id, isActive });
+  if (!parsed.success) return INVALID_INPUT;
+
+  try {
+    await prisma.storefrontPromotion.update({
+      where: { id: parsed.data.id },
+      data: { isActive: parsed.data.isActive },
+    });
+  } catch (error) {
+    if (isRecordNotFound(error)) return NOT_FOUND;
+    throw error;
+  }
 
   await logAdminAction({
     identityId: identity?.id,
     action: "promotion.toggle",
     entityType: "promotion",
-    entityId: id,
-    metadata: { isActive },
+    entityId: parsed.data.id,
+    metadata: { isActive: parsed.data.isActive },
   });
 
   revalidatePublic(CACHE_TAGS.promotions);
@@ -127,24 +169,36 @@ export async function togglePromotionActiveAction(
 
   return {
     ok: true,
-    message: isActive ? "Đã bật khuyến mãi" : "Đã tạm dừng khuyến mãi",
+    message: parsed.data.isActive
+      ? "Đã bật khuyến mãi"
+      : "Đã tạm dừng khuyến mãi",
   };
 }
 
 export async function deletePromotionAction(
   id: string,
 ): Promise<PromotionActionResult> {
-  const { identity } = await requireAdminSession();
+  const session = await authorizeAdminAction();
+  if (!session) return UNAUTHORIZED;
+  const { identity } = session;
 
-  await prisma.storefrontPromotion.delete({
-    where: { id },
-  });
+  const parsedId = adminEntityIdSchema.safeParse(id);
+  if (!parsedId.success) return INVALID_INPUT;
+
+  try {
+    await prisma.storefrontPromotion.delete({
+      where: { id: parsedId.data },
+    });
+  } catch (error) {
+    if (isRecordNotFound(error)) return NOT_FOUND;
+    throw error;
+  }
 
   await logAdminAction({
     identityId: identity?.id,
     action: "promotion.delete",
     entityType: "promotion",
-    entityId: id,
+    entityId: parsedId.data,
   });
 
   revalidatePublic(CACHE_TAGS.promotions);
