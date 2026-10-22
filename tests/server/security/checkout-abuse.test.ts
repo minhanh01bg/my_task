@@ -221,7 +221,7 @@ describe("Checkout Layered Anti-Abuse", () => {
     });
   });
 
-  describe("Post-parse checks run in parallel", () => {
+  describe("Post-parse checks run narrow to broad", () => {
     const allowed: RateLimitDecision = {
       allowed: true,
       remaining: 1,
@@ -256,21 +256,23 @@ describe("Checkout Layered Anti-Abuse", () => {
       for (let i = 0; i < 10; i++) await Promise.resolve();
     }
 
-    it("checks phone and product velocity concurrently", async () => {
+    it("checks the phone before product velocity", async () => {
       const { limiter, started, releaseAll } = gatedLimiter({});
 
       const pending = checkPostParseAbuse(mockOrder, makeRequest(), {
         limiter,
       });
       await flushMicrotasks();
-
-      expect(started.sort()).toEqual(["checkout-phone", "checkout-product"]);
+      expect(started).toEqual(["checkout-phone"]);
+      releaseAll();
+      await flushMicrotasks();
+      expect(started).toEqual(["checkout-phone", "checkout-product"]);
       releaseAll();
       expect(await pending).toEqual({ ok: true });
     });
 
-    it("reports the phone denial when both phone and product are limited", async () => {
-      const { limiter, releaseAll } = gatedLimiter({
+    it("does not consume product velocity once the phone bucket is exceeded", async () => {
+      const { limiter, started, releaseAll } = gatedLimiter({
         "checkout-phone": limited,
         "checkout-product": limited,
       });
@@ -282,6 +284,7 @@ describe("Checkout Layered Anti-Abuse", () => {
       releaseAll();
 
       const res = await pending;
+      expect(started).toEqual(["checkout-phone"]);
       expect(res.ok).toBe(false);
       if (!res.ok) {
         expect(res.status).toBe(429);
@@ -299,6 +302,8 @@ describe("Checkout Layered Anti-Abuse", () => {
       const pending = checkPostParseAbuse(mockOrder, makeRequest(), {
         limiter,
       });
+      await flushMicrotasks();
+      releaseAll();
       await flushMicrotasks();
       releaseAll();
 

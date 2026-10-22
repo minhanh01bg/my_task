@@ -11,6 +11,8 @@ export interface RateLimitStore {
     now?: number,
   ): Promise<{ count: number; ttlSeconds: number }>;
   delete?(key: string): Promise<void>;
+  /** Refunds one unit; must not recreate an expired key. */
+  decrement?(key: string): Promise<void>;
 }
 
 export class UpstashRedisStore implements RateLimitStore {
@@ -22,6 +24,14 @@ if current == 1 then
 end
 local ttl = redis.call('TTL', KEYS[1])
 return { current, ttl }
+`;
+  // DECR on a missing key would create it without a TTL, so only touch live keys.
+  private static readonly DECREMENT_SCRIPT = `
+local current = tonumber(redis.call('GET', KEYS[1]))
+if current and current > 0 then
+  return redis.call('DECR', KEYS[1])
+end
+return 0
 `;
 
   constructor(url?: string, token?: string) {
@@ -64,6 +74,10 @@ return { current, ttl }
   async delete(key: string): Promise<void> {
     await this.redis.del(key);
   }
+
+  async decrement(key: string): Promise<void> {
+    await this.redis.eval(UpstashRedisStore.DECREMENT_SCRIPT, [key], []);
+  }
 }
 
 class MemoryRateLimitStore implements RateLimitStore {
@@ -87,6 +101,11 @@ class MemoryRateLimitStore implements RateLimitStore {
 
   async delete(key: string): Promise<void> {
     this.map.delete(key);
+  }
+
+  async decrement(key: string, now = Date.now()): Promise<void> {
+    const entry = this.map.get(key);
+    if (entry && entry.expiresAt > now && entry.count > 0) entry.count -= 1;
   }
 }
 
@@ -191,6 +210,42 @@ export interface RateLimiter {
     targets: RateLimitTarget[],
   ): Promise<RateLimitDecision>;
   reset?(policy: RateLimitPolicy, target: RateLimitTarget): Promise<void>;
+  /**
+   * Refunds one unit that `check()` consumed on each target, e.g. so a
+   * successful login does not count toward a failure budget. Best-effort:
+   * store errors are swallowed.
+   */
+  release?(policy: RateLimitPolicy, targets: RateLimitTarget[]): Promise<void>;
+}
+
+const LIMITER_UNAVAILABLE = {
+  allowed: false,
+  reason: "limiter_unavailable",
+  retryAfterSeconds: 60,
+  limit: 0,
+  remaining: 0,
+} as const satisfies RateLimitDecision;
+
+const LIMITER_BYPASSED = {
+  allowed: true,
+  remaining: 1,
+  limit: 1,
+  resetInSeconds: 60,
+} as const satisfies RateLimitDecision;
+
+/** The shared process store, or `null` when production Redis is unavailable. */
+function resolveDefaultStore(): RateLimitStore | null {
+  if (process.env.NODE_ENV !== "production") {
+    return getGlobalDevMemoryStore();
+  }
+  if (!env.UPSTASH_REDIS_REST_URL || !env.UPSTASH_REDIS_REST_TOKEN) {
+    return null;
+  }
+  try {
+    return getGlobalUpstashStore();
+  } catch {
+    return null;
+  }
 }
 
 export function createRateLimiter(
@@ -201,6 +256,15 @@ export function createRateLimiter(
     env.RATE_LIMIT_KEY_SECRET ??
     "dev-test-rate-limit-secret-32-characters";
 
+  const keyFor = (policy: RateLimitPolicy, target: RateLimitTarget) =>
+    deriveRateLimitKey(
+      "v1",
+      `${policy.name}:${target.bucketName}`,
+      target.dimension,
+      target.identifier,
+      secret,
+    );
+
   return {
     async check(
       policy: RateLimitPolicy,
@@ -208,85 +272,30 @@ export function createRateLimiter(
     ): Promise<RateLimitDecision> {
       const timeoutMs = options.timeoutMs ?? policy.timeoutMs ?? 1500;
 
-      // Lazy instantiate production store if not provided
-      let store = options.store;
+      const store = options.store ?? resolveDefaultStore();
       if (!store) {
-        if (process.env.NODE_ENV !== "production") {
-          store = getGlobalDevMemoryStore();
-        } else if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
-          try {
-            store = getGlobalUpstashStore();
-          } catch {
-            if (policy.failClosed) {
-              return {
-                allowed: false,
-                reason: "limiter_unavailable",
-                retryAfterSeconds: 60,
-                limit: 0,
-                remaining: 0,
-              };
-            }
-            return {
-              allowed: true,
-              remaining: 1,
-              limit: 1,
-              resetInSeconds: 60,
-            };
-          }
-        } else {
-          if (policy.failClosed) {
-            return {
-              allowed: false,
-              reason: "limiter_unavailable",
-              retryAfterSeconds: 60,
-              limit: 0,
-              remaining: 0,
-            };
-          }
-          return {
-            allowed: true,
-            remaining: 1,
-            limit: 1,
-            resetInSeconds: 60,
-          };
-        }
+        return policy.failClosed ? LIMITER_UNAVAILABLE : LIMITER_BYPASSED;
       }
 
       try {
-        const checkWithTimeout = async () => {
+        const checkWithTimeout = async (): Promise<RateLimitDecision> => {
           let minRemaining = Infinity;
-          let maxRetryAfter = 0;
           let overallLimit = 0;
-          let isExceeded = false;
           let maxTtl = 0;
 
-          const lookups = targets.flatMap((target) => {
+          // Targets are listed narrowest first (ip, subnet, global). Stop at
+          // the first exceeded bucket so traffic already blocked on a narrow
+          // bucket never drains the broader budgets shared with everyone else.
+          for (const target of targets) {
             const bucketConfig = policy.buckets.find(
               (b) => b.name === target.bucketName,
             );
-            return bucketConfig ? [{ target, bucketConfig }] : [];
-          });
+            if (!bucketConfig) continue;
 
-          // Buckets are independent keys, so increment them concurrently.
-          // Promise.all rejects on the first failure, which keeps the
-          // fail-closed/fail-open handling below unchanged.
-          const results = await Promise.all(
-            lookups.map(({ target, bucketConfig }) =>
-              store.incrementAndGetTtl(
-                deriveRateLimitKey(
-                  "v1",
-                  `${policy.name}:${target.bucketName}`,
-                  target.dimension,
-                  target.identifier,
-                  secret,
-                ),
-                bucketConfig.windowSeconds,
-              ),
-            ),
-          );
-
-          lookups.forEach(({ bucketConfig }, index) => {
-            const result = results[index];
+            const result = await store.incrementAndGetTtl(
+              keyFor(policy, target),
+              bucketConfig.windowSeconds,
+            );
             overallLimit = bucketConfig.limit;
 
             if (
@@ -298,34 +307,25 @@ export function createRateLimiter(
               throw new Error("Malformed limiter result");
             }
 
-            const remaining = Math.max(0, bucketConfig.limit - result.count);
-            if (remaining < minRemaining) {
-              minRemaining = remaining;
-            }
-            if (result.ttlSeconds > maxTtl) {
-              maxTtl = result.ttlSeconds;
-            }
-
             if (result.count > bucketConfig.limit) {
-              isExceeded = true;
-              if (result.ttlSeconds > maxRetryAfter) {
-                maxRetryAfter = result.ttlSeconds;
-              }
+              return {
+                allowed: false,
+                reason: "rate_limited",
+                retryAfterSeconds: Math.max(1, result.ttlSeconds),
+                limit: bucketConfig.limit,
+                remaining: 0,
+              };
             }
-          });
 
-          if (isExceeded) {
-            return {
-              allowed: false as const,
-              reason: "rate_limited" as const,
-              retryAfterSeconds: Math.max(1, maxRetryAfter),
-              limit: overallLimit,
-              remaining: 0 as const,
-            };
+            minRemaining = Math.min(
+              minRemaining,
+              bucketConfig.limit - result.count,
+            );
+            maxTtl = Math.max(maxTtl, result.ttlSeconds);
           }
 
           return {
-            allowed: true as const,
+            allowed: true,
             remaining: minRemaining === Infinity ? 0 : minRemaining,
             limit: overallLimit,
             resetInSeconds: maxTtl,
@@ -334,21 +334,7 @@ export function createRateLimiter(
 
         return await withTimeout(checkWithTimeout(), timeoutMs);
       } catch {
-        if (policy.failClosed) {
-          return {
-            allowed: false,
-            reason: "limiter_unavailable",
-            retryAfterSeconds: 60,
-            limit: 0,
-            remaining: 0,
-          };
-        }
-        return {
-          allowed: true,
-          remaining: 1,
-          limit: 1,
-          resetInSeconds: 60,
-        };
+        return policy.failClosed ? LIMITER_UNAVAILABLE : LIMITER_BYPASSED;
       }
     },
 
@@ -356,29 +342,28 @@ export function createRateLimiter(
       policy: RateLimitPolicy,
       target: RateLimitTarget,
     ): Promise<void> {
-      let store = options.store;
-      if (!store) {
-        if (process.env.NODE_ENV !== "production") {
-          store = getGlobalDevMemoryStore();
-        } else if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
-          try {
-            store = getGlobalUpstashStore();
-          } catch {
-            return;
-          }
-        } else {
-          return;
-        }
+      const store = options.store ?? resolveDefaultStore();
+      if (typeof store?.delete === "function") {
+        await store.delete(keyFor(policy, target));
       }
-      if (typeof store.delete === "function") {
-        const key = deriveRateLimitKey(
-          "v1",
-          `${policy.name}:${target.bucketName}`,
-          target.dimension,
-          target.identifier,
-          secret,
+    },
+
+    async release(
+      policy: RateLimitPolicy,
+      targets: RateLimitTarget[],
+    ): Promise<void> {
+      const store = options.store ?? resolveDefaultStore();
+      if (typeof store?.decrement !== "function") return;
+      const timeoutMs = options.timeoutMs ?? policy.timeoutMs ?? 1500;
+      try {
+        await withTimeout(
+          Promise.all(
+            targets.map((target) => store.decrement?.(keyFor(policy, target))),
+          ),
+          timeoutMs,
         );
-        await store.delete(key);
+      } catch {
+        // A lost refund only means the attempt keeps counting, as before.
       }
     },
   };

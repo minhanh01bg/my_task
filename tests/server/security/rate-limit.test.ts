@@ -82,6 +82,14 @@ class FakeRedisStore implements RateLimitStore {
     const ttlSeconds = Math.max(1, Math.ceil((entry.expiresAt - now) / 1000));
     return { count: entry.count, ttlSeconds };
   }
+
+  async decrement(key: string): Promise<void> {
+    if (this.shouldThrow) {
+      throw new Error("Network error connecting to Redis REST API");
+    }
+    const entry = this.map.get(key);
+    if (entry && entry.count > 0) entry.count -= 1;
+  }
 }
 
 describe("Distributed Rate Limiter", () => {
@@ -259,65 +267,152 @@ describe("Distributed Rate Limiter", () => {
     });
   });
 
-  describe("Parallel bucket evaluation", () => {
+  describe("Narrow-to-broad bucket evaluation", () => {
     const threeBucketPolicy: RateLimitPolicy = {
-      name: "parallel",
+      name: "layered",
       failClosed: true,
       buckets: [
-        { name: "ip", limit: 10, windowSeconds: 60 },
+        { name: "ip", limit: 2, windowSeconds: 60 },
         { name: "subnet", limit: 50, windowSeconds: 60 },
-        { name: "global", limit: 100, windowSeconds: 60 },
+        { name: "global", limit: 3, windowSeconds: 60 },
       ],
     };
-    const targets: RateLimitTarget[] = [
-      { bucketName: "ip", dimension: "ip", identifier: "198.51.100.9" },
+    const targetsFor = (ip: string): RateLimitTarget[] => [
+      { bucketName: "ip", dimension: "ip", identifier: ip },
       {
         bucketName: "subnet",
         dimension: "subnet",
-        identifier: "198.51.100.0/24",
+        identifier: `${ip.split(".").slice(0, 3).join(".")}.0/24`,
       },
       { bucketName: "global", dimension: "global", identifier: "global" },
     ];
 
-    it("increments every bucket of one check concurrently", async () => {
+    /** Sums stored counts per bucket name (`rl:v1:<policy>:<bucket>:...`). */
+    function countsByBucket(store: FakeRedisStore): Record<string, number> {
+      const counts: Record<string, number> = {};
+      for (const [key, entry] of store.map) {
+        const bucket = key.split(":")[3];
+        counts[bucket] = (counts[bucket] ?? 0) + entry.count;
+      }
+      return counts;
+    }
+
+    it("checks buckets one at a time, narrowest first", async () => {
       const store = new GatedStore();
       const limiter = createRateLimiter({ store, secret: testSecret });
 
-      const pending = limiter.check(threeBucketPolicy, targets);
-      await flushMicrotasks();
-
-      expect(store.inFlight).toBe(3);
-      store.releaseAll();
+      const pending = limiter.check(threeBucketPolicy, targetsFor("1.2.3.4"));
+      for (let step = 0; step < 3; step++) {
+        await flushMicrotasks();
+        expect(store.inFlight).toBe(1);
+        store.releaseAll();
+      }
 
       const decision = await pending;
       expect(decision.allowed).toBe(true);
-      expect(store.maxInFlight).toBe(3);
+      expect(store.maxInFlight).toBe(1);
       if (decision.allowed) {
-        expect(decision.remaining).toBe(9);
-        expect(decision.limit).toBe(100);
+        expect(decision.remaining).toBe(1);
       }
     });
 
-    it("still evaluates all buckets and denies when any single one is exceeded", async () => {
-      // The subnet bucket (middle target) is already at its limit.
-      const store = new GatedStore({ "parallel:subnet": 50 });
+    it("stops at the first exceeded bucket without touching broader ones", async () => {
+      const store = new FakeRedisStore();
       const limiter = createRateLimiter({ store, secret: testSecret });
 
-      const pending = limiter.check(threeBucketPolicy, targets);
-      await flushMicrotasks();
-      expect(store.inFlight).toBe(3);
-      store.releaseAll();
+      const decisions = [];
+      for (let i = 0; i < 5; i++) {
+        decisions.push(
+          await limiter.check(threeBucketPolicy, targetsFor("198.51.100.9")),
+        );
+      }
 
-      const decision = await pending;
+      expect(decisions.map((d) => d.allowed)).toEqual([
+        true,
+        true,
+        false,
+        false,
+        false,
+      ]);
+      const denied = decisions[2];
+      if (!denied.allowed) {
+        expect(denied.reason).toBe("rate_limited");
+        expect(denied.limit).toBe(2);
+      }
+      // A blocked IP must not drain the subnet/global budgets shared with
+      // everyone else.
+      expect(countsByBucket(store)).toEqual({ ip: 5, subnet: 2, global: 2 });
+
+      // So another client is still served.
+      const other = await limiter.check(
+        threeBucketPolicy,
+        targetsFor("203.0.113.1"),
+      );
+      expect(other.allowed).toBe(true);
+    });
+
+    it("denies on a broad bucket once enough distinct clients pass the narrow ones", async () => {
+      const store = new FakeRedisStore();
+      const limiter = createRateLimiter({ store, secret: testSecret });
+
+      for (const ip of ["192.0.2.1", "198.51.100.1", "203.0.113.1"]) {
+        expect(
+          (await limiter.check(threeBucketPolicy, targetsFor(ip))).allowed,
+        ).toBe(true);
+      }
+
+      const decision = await limiter.check(
+        threeBucketPolicy,
+        targetsFor("203.0.113.2"),
+      );
       expect(decision.allowed).toBe(false);
       if (!decision.allowed) {
-        expect(decision.reason).toBe("rate_limited");
+        expect(decision.limit).toBe(3);
         expect(decision.retryAfterSeconds).toBe(60);
       }
-      // Every bucket was still incremented exactly once.
-      expect([...store.counts.values()].sort((a, b) => a - b)).toEqual([
-        1, 1, 51,
-      ]);
+    });
+
+    it("release refunds one unit on the listed buckets only", async () => {
+      const store = new FakeRedisStore();
+      const limiter = createRateLimiter({ store, secret: testSecret });
+      const targets = targetsFor("198.51.100.9");
+
+      await limiter.check(threeBucketPolicy, targets);
+      await limiter.check(threeBucketPolicy, targets);
+      await limiter.release?.(threeBucketPolicy, targets.slice(1));
+
+      expect(countsByBucket(store)).toEqual({ ip: 2, subnet: 1, global: 1 });
+    });
+
+    it("release is best-effort when the store fails", async () => {
+      const store = new FakeRedisStore();
+      const limiter = createRateLimiter({ store, secret: testSecret });
+      await limiter.check(threeBucketPolicy, targetsFor("198.51.100.9"));
+      store.shouldThrow = true;
+
+      await expect(
+        limiter.release?.(threeBucketPolicy, targetsFor("198.51.100.9")),
+      ).resolves.toBeUndefined();
+    });
+
+    it("release on the default in-memory store refunds without going negative", async () => {
+      const limiter = createRateLimiter({ secret: testSecret });
+      const policy: RateLimitPolicy = {
+        name: `memory-release-${Date.now()}`,
+        failClosed: true,
+        buckets: [{ name: "global", limit: 1, windowSeconds: 60 }],
+      };
+      const target: RateLimitTarget = {
+        bucketName: "global",
+        dimension: "global",
+        identifier: "global",
+      };
+
+      expect((await limiter.check(policy, [target])).allowed).toBe(true);
+      await limiter.release?.(policy, [target]);
+      await limiter.release?.(policy, [target]);
+      expect((await limiter.check(policy, [target])).allowed).toBe(true);
+      expect((await limiter.check(policy, [target])).allowed).toBe(false);
     });
   });
 

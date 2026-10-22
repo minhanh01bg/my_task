@@ -36,6 +36,11 @@ class MockStore implements RateLimitStore {
     const ttlSeconds = Math.max(1, Math.ceil((entry.expiresAt - now) / 1000));
     return { count: entry.count, ttlSeconds };
   }
+
+  async decrement(key: string): Promise<void> {
+    const entry = this.map.get(key);
+    if (entry && entry.count > 0) entry.count -= 1;
+  }
 }
 
 let store: MockStore;
@@ -172,6 +177,57 @@ describe("POST /api/auth/login", () => {
     expect(res11.headers.get("retry-after")).toBeDefined();
     const json = await res11.json();
     expect(json.message).toBe("Vui lòng thử lại sau");
+  });
+
+  describe("shared subnet/global budgets", () => {
+    let originalProxyMode: unknown;
+
+    beforeEach(() => {
+      originalProxyMode = env.TRUSTED_PROXY_MODE;
+      (env as Record<string, unknown>).TRUSTED_PROXY_MODE = "cloudflare";
+    });
+
+    afterEach(() => {
+      (env as Record<string, unknown>).TRUSTED_PROXY_MODE = originalProxyMode;
+    });
+
+    const attempt = (password: string, ip: string) =>
+      POST(makeRequest({ password }, { "cf-connecting-ip": ip }));
+
+    it("lets the owner log in from another IP after one IP floods wrong passwords", async () => {
+      for (let i = 0; i < 40; i++) {
+        await attempt("wrong-password", "198.51.100.10");
+      }
+
+      const res = await attempt("matkhau-cua-hang", "203.0.113.20");
+      expect(res.status).toBe(200);
+    });
+
+    it("still blocks a brute force spread across many IPs", async () => {
+      for (let i = 1; i <= 30; i++) {
+        const res = await attempt("wrong-password", `198.51.${i}.7`);
+        expect(res.status).toBe(401);
+      }
+
+      const res = await attempt("wrong-password", "203.0.113.20");
+      expect(res.status).toBe(429);
+    });
+
+    it("does not count successful logins toward the shared failure budget", async () => {
+      for (let i = 1; i <= 29; i++) {
+        expect((await attempt("wrong-password", `198.51.${i}.7`)).status).toBe(
+          401,
+        );
+      }
+      for (let i = 1; i <= 5; i++) {
+        expect((await attempt("matkhau-cua-hang", `192.0.2.${i}`)).status).toBe(
+          200,
+        );
+      }
+
+      const res = await attempt("wrong-password", "203.0.113.20");
+      expect(res.status).toBe(401);
+    });
   });
 
   it("fails closed with 503 when distributed limiter is unavailable", async () => {

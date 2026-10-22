@@ -85,4 +85,15 @@ describe("Production Upstash store lifecycle", () => {
     expect(redisMock.evalCalls).toBe(12);
     expect(redisMock.delCalls).toBe(1);
   });
+
+  it("refunds released buckets through the shared Redis client", async () => {
+    const { createRateLimiter } = await import("@/server/security/rate-limit");
+    const limiter = createRateLimiter();
+
+    await limiter.check(policy, targets);
+    await limiter.release?.(policy, targets.slice(1));
+
+    expect(redisMock.constructed).toBe(1);
+    expect(redisMock.evalCalls).toBe(5);
+  });
 });

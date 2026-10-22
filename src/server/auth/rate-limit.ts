@@ -41,6 +41,12 @@ export type AdminLoginCheckResult =
 /**
  * Checks admin login attempts against IP, subnet, and global rate limits
  * before expensive password verification or database lookups.
+ *
+ * Buckets are consumed narrow → broad: once an IP is blocked its extra
+ * attempts no longer reach the subnet/global buckets, so one client cannot
+ * lock the owner out everywhere. The subnet/global units consumed here are
+ * refunded by `resetAdminLoginRateLimit()` on success, so those shared
+ * budgets only count failed logins (distributed brute force).
  */
 export async function checkAdminLoginRateLimit(
   request: Request,
@@ -123,5 +129,15 @@ export async function resetAdminLoginRateLimit(
       dimension: "ip",
       identifier: ipResult.ip,
     });
+  }
+  if (typeof limiter.release === "function") {
+    await limiter.release(POLICIES.adminLogin, [
+      {
+        bucketName: "subnet-attempts",
+        dimension: "subnet",
+        identifier: ipResult.subnet,
+      },
+      { bucketName: "global-attempts", dimension: "global", identifier: "all" },
+    ]);
   }
 }
