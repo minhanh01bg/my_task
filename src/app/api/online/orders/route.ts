@@ -5,6 +5,7 @@ import { readJsonBody } from "@/server/http/read-json-body";
 import {
   createOpaqueToken,
   digestOpaqueToken,
+  readCustomerSessionToken,
   resolveCustomerSessionToken,
 } from "@/server/customer-auth/session";
 import {
@@ -19,6 +20,19 @@ import {
   checkPostParseAbuse,
   checkPreParseAbuse,
 } from "@/server/security/checkout-abuse";
+
+/** A cookie that does not decode cannot be a secret we issued. */
+function readCheckoutRecoverySecret(request: Request): string | null {
+  const encoded = request.headers
+    .get("cookie")
+    ?.match(/(?:^|;\s*)checkout_recovery=([^;]+)/)?.[1];
+  if (!encoded) return null;
+  try {
+    return decodeURIComponent(encoded);
+  } catch {
+    return null;
+  }
+}
 
 export async function POST(request: Request) {
   // Layer 1: Hard streamed body limit (64 KB cap & content-type check)
@@ -78,21 +92,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const cookieHeader = request.headers.get("cookie") ?? "";
-    const customerToken = cookieHeader.match(
-      /(?:^|;\s*)customer_session=([^;]+)/,
-    )?.[1];
     const session = await resolveCustomerSessionToken(
-      customerToken ? decodeURIComponent(customerToken) : null,
+      readCustomerSessionToken(request),
     );
 
-    let recoverySecret = cookieHeader.match(
-      /(?:^|;\s*)checkout_recovery=([^;]+)/,
-    )?.[1];
+    let recoverySecret = readCheckoutRecoverySecret(request);
     let isNewRecoverySecret = false;
-    if (recoverySecret) {
-      recoverySecret = decodeURIComponent(recoverySecret);
-    } else if (!session) {
+    if (!recoverySecret && !session) {
       recoverySecret = createRecoverySecret();
       isNewRecoverySecret = true;
     }

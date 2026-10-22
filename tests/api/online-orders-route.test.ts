@@ -332,6 +332,73 @@ describe("POST /api/online/orders (Task 4 & Task 5: Hard limits and Anti-Abuse)"
       expect(body.data.order.receiptUrl).not.toContain("DH0001");
     });
 
+    it("treats a malformed customer_session cookie as a guest instead of failing (AUTH-11)", async () => {
+      vi.spyOn(
+        createOnlineOrderModule,
+        "createOnlineOrder",
+      ).mockResolvedValueOnce({
+        order: {
+          id: "order-1",
+          code: "DH0001",
+          subtotal: 100_000,
+          discount: 0,
+          total: 100_000,
+          status: "pending",
+          hasStockWarning: false,
+        },
+        duplicated: false,
+      });
+
+      const req = new Request("https://example.com/api/online/orders", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie: "customer_session=%E0",
+        },
+        body: JSON.stringify(samplePayload),
+      });
+
+      const response = await POST(req);
+      expect(response.status).toBe(201);
+      const body = await response.json();
+      expect(body.data.order.accessUrl).toMatch(/^\/orders\/guest\//);
+    });
+
+    it("replaces a malformed checkout_recovery cookie with a fresh secret (AUTH-11)", async () => {
+      const createSpy = vi
+        .spyOn(createOnlineOrderModule, "createOnlineOrder")
+        .mockResolvedValueOnce({
+          order: {
+            id: "order-1",
+            code: "DH0001",
+            subtotal: 100_000,
+            discount: 0,
+            total: 100_000,
+            status: "pending",
+            hasStockWarning: false,
+          },
+          duplicated: false,
+        });
+
+      const req = new Request("https://example.com/api/online/orders", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie: "checkout_recovery=%E0",
+        },
+        body: JSON.stringify(samplePayload),
+      });
+
+      const response = await POST(req);
+      expect(response.status).toBe(201);
+      expect(response.headers.get("set-cookie")).toContain(
+        "checkout_recovery=",
+      );
+      const secret = createSpy.mock.calls[0]?.[1]?.guestRecovery?.secret;
+      expect(secret).toBeTruthy();
+      expect(secret).not.toBe("%E0");
+    });
+
     it("logs only the error class and code for unexpected failures (WEB-6)", async () => {
       const consoleErrorSpy = vi
         .spyOn(console, "error")
