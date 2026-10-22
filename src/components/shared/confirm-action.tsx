@@ -14,7 +14,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import type { AdminActionResult } from "@/types/admin-action";
+import { reportClientError } from "@/lib/client-log";
+import {
+  ACTION_FAILED_MESSAGE,
+  type AdminActionResult,
+} from "@/types/admin-action";
 
 interface ConfirmActionProps {
   /** Trả `{ ok: false }` thì giữ hộp thoại mở và hiện `message`. */
@@ -59,6 +63,10 @@ export function ConfirmAction({
         return;
       }
       setOpen(false);
+    } catch (error) {
+      // Mất mạng hoặc server action ném lỗi: giữ hộp thoại để thử lại.
+      reportClientError(error, "shared.confirm-action");
+      setError(ACTION_FAILED_MESSAGE);
     } finally {
       setIsPending(false);
     }

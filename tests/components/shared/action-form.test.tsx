@@ -3,6 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { ActionForm } from "@/components/shared/action-form";
+import { reportClientError } from "@/lib/client-log";
+
+vi.mock("@/lib/client-log", () => ({ reportClientError: vi.fn() }));
 
 describe("ActionForm", () => {
   it("action trả { ok: false } thì hiện thông báo dưới nút", async () => {
@@ -25,6 +28,27 @@ describe("ActionForm", () => {
       "Chuyển trạng thái không hợp lệ",
     );
     expect(action).toHaveBeenCalledTimes(1);
+  });
+
+  it("action ném lỗi (mất mạng) thì hiện thông báo thay vì làm sập trang", async () => {
+    const user = userEvent.setup();
+    const failure = new TypeError("Failed to fetch");
+    const action = vi.fn().mockRejectedValue(failure);
+    render(
+      <ActionForm action={action}>
+        <button type="submit">Hủy đơn</button>
+      </ActionForm>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Hủy đơn" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Không thực hiện được, vui lòng thử lại.",
+    );
+    expect(reportClientError).toHaveBeenCalledWith(
+      failure,
+      "shared.action-form",
+    );
   });
 
   it("action thành công thì xoá thông báo lỗi cũ", async () => {

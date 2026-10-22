@@ -3,6 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { ConfirmAction } from "@/components/shared/confirm-action";
+import { reportClientError } from "@/lib/client-log";
+
+vi.mock("@/lib/client-log", () => ({ reportClientError: vi.fn() }));
 
 function renderConfirm(action: Parameters<typeof ConfirmAction>[0]["action"]) {
   render(
@@ -34,6 +37,28 @@ describe("ConfirmAction", () => {
     );
     expect(screen.getByText("Xóa danh mục “Bánh”?")).toBeInTheDocument();
     expect(action).toHaveBeenCalledTimes(1);
+  });
+
+  it("action ném lỗi (mất mạng) thì giữ hộp thoại, báo lỗi và gửi Sentry", async () => {
+    const user = userEvent.setup();
+    const failure = new TypeError("Failed to fetch");
+    const action = vi.fn().mockRejectedValue(failure);
+    renderConfirm(action);
+
+    await user.click(screen.getByRole("button", { name: "Xóa" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Xóa danh mục" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Không thực hiện được, vui lòng thử lại.",
+    );
+    expect(screen.getByText("Xóa danh mục “Bánh”?")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Xóa danh mục" })).toBeEnabled();
+    expect(reportClientError).toHaveBeenCalledWith(
+      failure,
+      "shared.confirm-action",
+    );
   });
 
   it("action thành công thì đóng hộp thoại, không báo lỗi", async () => {
