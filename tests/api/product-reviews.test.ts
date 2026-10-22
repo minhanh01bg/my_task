@@ -114,6 +114,16 @@ describe("POST /api/online/products/[id]/reviews", () => {
     expect(await prisma.productReview.count()).toBe(0);
   });
 
+  it("401 (không phải 500) khi cookie phiên sai mã hóa", async () => {
+    const response = await POST(
+      postRequest(validBody, "customer_session=%E0"),
+      context(),
+    );
+    expect(response.status).toBe(401);
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(await prisma.productReview.count()).toBe(0);
+  });
+
   it("tạo đánh giá cho khách đã đăng nhập và trả điểm tổng hợp mới", async () => {
     const response = await POST(
       postRequest(validBody, `customer_session=${token}`),

@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { logger } from "@/lib/logger";
-import { resolveCustomerSessionToken } from "@/server/customer-auth/session";
+import {
+  readCustomerSessionToken,
+  resolveCustomerSessionToken,
+} from "@/server/customer-auth/session";
 import { hasSafeMutationOrigin } from "@/server/http/origin";
 import { readJsonBody } from "@/server/http/read-json-body";
 import { createReview } from "@/server/reviews/create-review";
@@ -18,13 +21,6 @@ const pageQuerySchema = z.object({
 });
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-function readSessionCookie(request: Request): string | null {
-  const raw = request.headers
-    .get("cookie")
-    ?.match(/(?:^|;\s*)customer_session=([^;]+)/)?.[1];
-  return raw ? decodeURIComponent(raw) : null;
-}
 
 export async function GET(request: Request, { params }: RouteContext) {
   const { id } = await params;
@@ -53,7 +49,9 @@ export async function POST(request: Request, { params }: RouteContext) {
     );
   }
 
-  const session = await resolveCustomerSessionToken(readSessionCookie(request));
+  const session = await resolveCustomerSessionToken(
+    readCustomerSessionToken(request),
+  );
   if (!session) {
     return NextResponse.json(
       { message: "Vui lòng đăng nhập để gửi đánh giá" },
