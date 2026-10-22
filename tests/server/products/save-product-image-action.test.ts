@@ -41,6 +41,36 @@ describe("saveProductAction — xử lý lưu và bỏ ảnh sản phẩm", () =
     expect(saved?.imageUrl).toBe("/uploads/products/test-image-123.webp");
   });
 
+  it.each(["/uploads/0123abcd.webp", "https://cdn.example.com/a.webp"])(
+    "chấp nhận ảnh %s (WEB-7a)",
+    async (imageUrl) => {
+      vi.spyOn(requireAdminModule, "requireAdminSession").mockResolvedValue({
+        authorized: true,
+        identity: {
+          id: "admin-1",
+          username: "admin",
+          role: "admin",
+          version: 1,
+        },
+      });
+      const formData = new FormData();
+      Object.entries({
+        name: "Test Image Product Valid",
+        unit: "gói",
+        price: "1000",
+        costPrice: "0",
+        stock: "1",
+        imageUrl,
+      }).forEach(([key, value]) => formData.set(key, value));
+
+      expect(await saveProductAction(formData)).toEqual({ ok: true });
+      const saved = await prisma.product.findFirst({
+        where: { name: "Test Image Product Valid" },
+      });
+      expect(saved?.imageUrl).toBe(imageUrl);
+    },
+  );
+
   it("đổi danh mục sản phẩm có ảnh mặc định mà không làm mất ảnh", async () => {
     vi.spyOn(requireAdminModule, "requireAdminSession").mockResolvedValue({
       authorized: true,
@@ -89,6 +119,13 @@ describe("saveProductAction — xử lý lưu và bỏ ảnh sản phẩm", () =
     "/products/sub/secret.webp",
     "/other/image.webp",
     "javascript:alert(1)",
+    // WEB-7a: chỉ https công khai hoặc đường dẫn nội bộ
+    "http://example.com/a.webp",
+    "//evil.com/a.webp",
+    "data:image/png;base64,AAAA",
+    "https://127.0.0.1/a.webp",
+    "https://[::1]/a.webp",
+    "https://user:pass@example.com/a.webp",
   ])(
     "từ chối đường dẫn ảnh không hợp lệ %s bằng thông báo tiếng Việt",
     async (imageUrl) => {

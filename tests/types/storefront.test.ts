@@ -210,6 +210,50 @@ describe("publicPromotionSchema", () => {
     ).toBe(false);
   });
 
+  it.each(["//evil.com", "/\\evil.com", "///evil.com"])(
+    "từ chối CTA %s trỏ ra domain ngoài (WEB-7b)",
+    (ctaHref) => {
+      expect(
+        publicPromotionSchema.safeParse({
+          id: "promo-open-redirect",
+          title: "Open redirect",
+          ctaHref,
+          placement: "hero",
+          priority: 0,
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    "//evil.com/banner.png",
+    "javascript:alert(1)",
+    "https://127.0.0.1/banner.png",
+  ])("từ chối ảnh banner không an toàn %s (WEB-7a)", (imageUrl) => {
+    expect(
+      publicPromotionSchema.safeParse({
+        id: "promo-bad-image",
+        title: "Ảnh xấu",
+        imageUrl,
+        placement: "banner",
+        priority: 0,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("chấp nhận CTA nội bộ dạng /shop/... và ảnh /uploads/...", () => {
+    expect(
+      publicPromotionSchema.safeParse({
+        id: "promo-ok",
+        title: "Bánh mì",
+        imageUrl: "/uploads/promo.jpg",
+        ctaHref: "/shop/banh-mi",
+        placement: "banner",
+        priority: 0,
+      }).success,
+    ).toBe(true);
+  });
+
   it("từ chối copy quá dài vượt quá ngưỡng an toàn UI", () => {
     const result = publicPromotionSchema.safeParse({
       id: "promo-long",

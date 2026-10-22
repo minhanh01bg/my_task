@@ -131,6 +131,44 @@ describe("Admin Promotion Management Actions", () => {
         }).success,
       ).toBe(false);
     });
+
+    it.each([
+      "//evil.com/banner.png",
+      "/\\evil.com/banner.png",
+      "javascript:alert(1)",
+      "data:image/png;base64,AAAA",
+      "https://169.254.169.254/latest/meta-data",
+      "https://172.20.0.5/banner.png",
+      "https://[::1]/banner.png",
+      "https://[::ffff:127.0.0.1]/banner.png",
+      "https://2130706433/banner.png",
+      "https://0x7f.0.0.1/banner.png",
+      "https://api.localhost/banner.png",
+    ])("từ chối imageUrl %s (WEB-7a/c)", (imageUrl) => {
+      expect(
+        promotionActionSchema.safeParse({ title: "Ảnh xấu", imageUrl }).success,
+      ).toBe(false);
+    });
+
+    it.each(["//evil.com", "/\\evil.com", "///evil.com"])(
+      "từ chối ctaHref %s trỏ ra domain ngoài (WEB-7b)",
+      (ctaHref) => {
+        expect(
+          promotionActionSchema.safeParse({ title: "Open redirect", ctaHref })
+            .success,
+        ).toBe(false);
+      },
+    );
+
+    it.each(["/shop/banh-mi", "/shop#catalog", "https://facebook.com/anphat"])(
+      "chấp nhận ctaHref %s",
+      (ctaHref) => {
+        expect(
+          promotionActionSchema.safeParse({ title: "CTA hợp lệ", ctaHref })
+            .success,
+        ).toBe(true);
+      },
+    );
   });
 
   describe("Thao tác CRUD với quyền admin", () => {

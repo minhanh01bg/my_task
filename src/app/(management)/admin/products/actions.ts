@@ -5,6 +5,7 @@ import { z } from "zod";
 
 z.config({ jitless: true });
 
+import { isPublicHttpsUrl } from "@/lib/safe-url";
 import { revalidatePublic } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
@@ -35,17 +36,15 @@ const schema = z.object({
     .union(
       [
         z.literal(""),
+        // /products/<file> (anh mau) va /uploads/[products/]<file> (anh tai len)
         z
           .string()
-          .regex(/^\/(?:uploads\/)?products\/[a-zA-Z0-9][a-zA-Z0-9.-]*$/),
-        z
-          .string()
-          .url("Ảnh phải là một đường dẫn hợp lệ")
-          .refine(
-            (value) =>
-              value.startsWith("https://") || value.startsWith("http://"),
-            "Ảnh phải dùng đường dẫn http hoặc https",
+          .regex(
+            /^\/(?:products\/|uploads\/(?:products\/)?)[a-zA-Z0-9][a-zA-Z0-9.-]*$/,
           ),
+        z
+          .string()
+          .refine(isPublicHttpsUrl, "Ảnh phải dùng đường dẫn https công khai"),
       ],
       { error: "Đường dẫn ảnh sản phẩm không hợp lệ" },
     )

@@ -1,6 +1,13 @@
 import { z } from "zod";
 
+import { isPublicHttpsUrl, isSafeRelativePath } from "@/lib/safe-url";
+
 z.config({ jitless: true });
+
+/** Duong dan noi bo an toan hoac URL HTTPS cong khai (khong localhost/IP noi bo). */
+function isSafePromotionUrl(value: string): boolean {
+  return isSafeRelativePath(value) || isPublicHttpsUrl(value);
+}
 
 export const catalogSortEnum = z.enum([
   "relevance",
@@ -106,13 +113,21 @@ export const publicPromotionSchema = z
     id: z.string().min(1),
     title: z.string().trim().min(1).max(200),
     body: z.string().trim().max(1000).optional(),
-    imageUrl: z.string().trim().max(500).optional(),
+    imageUrl: z
+      .string()
+      .trim()
+      .max(500)
+      .refine(isSafePromotionUrl, {
+        message:
+          "imageUrl phải là đường dẫn nội bộ (bắt đầu bằng /) hoặc URL HTTPS công khai",
+      })
+      .optional(),
     ctaLabel: z.string().trim().max(50).optional(),
     ctaHref: z
       .string()
       .trim()
       .max(500)
-      .refine((href) => href.startsWith("/") || href.startsWith("https://"), {
+      .refine(isSafePromotionUrl, {
         message:
           "ctaHref phải là đường dẫn nội bộ (bắt đầu bằng /) hoặc URL HTTPS an toàn",
       })
@@ -144,36 +159,10 @@ export const promotionActionSchema = z
       .max(500, "Đường dẫn hình ảnh tối đa 500 ký tự")
       .optional()
       .transform((v) => v || null)
-      .refine(
-        (url) => {
-          if (!url) return true;
-          if (url.startsWith("/")) return true;
-          if (url.startsWith("https://")) {
-            try {
-              const parsed = new URL(url);
-              const host = parsed.hostname.toLowerCase();
-              if (
-                host === "localhost" ||
-                host === "127.0.0.1" ||
-                host === "::1" ||
-                host.startsWith("192.168.") ||
-                host.startsWith("10.") ||
-                host.endsWith(".local")
-              ) {
-                return false;
-              }
-              return true;
-            } catch {
-              return false;
-            }
-          }
-          return false;
-        },
-        {
-          message:
-            "Đường dẫn hình ảnh phải là đường dẫn nội bộ (bắt đầu bằng /) hoặc URL HTTPS công khai",
-        },
-      ),
+      .refine((url) => !url || isSafePromotionUrl(url), {
+        message:
+          "Đường dẫn hình ảnh phải là đường dẫn nội bộ (bắt đầu bằng /) hoặc URL HTTPS công khai",
+      }),
     ctaLabel: z
       .string()
       .trim()
@@ -186,13 +175,10 @@ export const promotionActionSchema = z
       .max(500, "Đường dẫn nút tối đa 500 ký tự")
       .optional()
       .transform((v) => v || null)
-      .refine(
-        (href) => !href || href.startsWith("/") || href.startsWith("https://"),
-        {
-          message:
-            "Liên kết CTA phải là đường dẫn nội bộ (bắt đầu bằng /) hoặc URL HTTPS an toàn",
-        },
-      ),
+      .refine((href) => !href || isSafePromotionUrl(href), {
+        message:
+          "Liên kết CTA phải là đường dẫn nội bộ (bắt đầu bằng /) hoặc URL HTTPS an toàn",
+      }),
     placement: promotionPlacementEnum.default("announcement"),
     startsAt: z
       .string()
