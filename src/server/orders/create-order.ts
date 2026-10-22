@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 
 import { logger } from "@/lib/logger";
-import { roundVnd } from "@/lib/money";
+import { multiplyMoney, roundVnd } from "@/lib/money";
 import { calculateCart } from "@/lib/pricing/calculate";
 import type { CartLine } from "@/lib/pricing/types";
 import { revalidatePublic } from "@/server/cache/public-cache";
@@ -99,6 +99,14 @@ export interface CreateOrderResult {
   };
   /** true khi don da ton tai tu truoc (gui lai lan hai) — khong tao moi. */
   duplicated: boolean;
+}
+
+/**
+ * Giam gia khong am va khong vuot so tien no giam (thanh tien dong / tien
+ * hang): `discount` luu lai luon la so that, `subtotal - discount = total`.
+ */
+function clampDiscount(discount: number, max: number): number {
+  return Math.min(Math.max(0, roundVnd(discount)), Math.max(0, max));
 }
 
 /**
@@ -314,12 +322,18 @@ export async function createOrder(
     unitPrice: line.unitPrice,
     originalPrice: line.originalPrice,
     quantity: line.quantity,
-    discount: line.discount,
+    discount: clampDiscount(
+      line.discount,
+      multiplyMoney(line.unitPrice, line.quantity),
+    ),
     unit: line.unit,
     isService: line.isService,
   }));
 
-  const totals = calculateCart(cartLines, input.orderDiscount ?? 0);
+  const totals = calculateCart(
+    cartLines,
+    clampDiscount(input.orderDiscount ?? 0, calculateCart(cartLines).subtotal),
+  );
   const money = applyVoucherToTotals(
     totals,
     input.voucher,
@@ -327,6 +341,19 @@ export async function createOrder(
   );
   const payments = settlePayments(input.payments, money.total);
   const status = input.initialStatus ?? resolveStatus(payments);
+
+  if (input.customerId) {
+    const customer = await prisma.customer.findUnique({
+      where: { id: input.customerId },
+      select: { id: true },
+    });
+    if (!customer) {
+      throw new OrderValidationError(
+        "CUSTOMER_NOT_FOUND",
+        "Không tìm thấy khách hàng",
+      );
+    }
+  }
 
   const stockLines = input.lines.filter(
     (line) => !line.isService && line.productId,

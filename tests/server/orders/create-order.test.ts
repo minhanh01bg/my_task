@@ -612,3 +612,97 @@ describe("createOrder — doi chieu thanh toan voi tong server tinh lai", () => 
     expect(second.order.id).toBe(first.order.id);
   });
 });
+
+describe("createOrder — chan giam gia va khach hang", () => {
+  const CUSTOMER_NAME = "Khách kiểm thử createOrder";
+
+  beforeEach(async () => {
+    await prisma.customer.deleteMany({ where: { name: CUSTOMER_NAME } });
+  });
+
+  afterAll(async () => {
+    await prisma.customer.deleteMany({ where: { name: CUSTOMER_NAME } });
+  });
+
+  it("giam gia toan don vuot tien hang bi chan bang tien hang", async () => {
+    const product = await seedProduct();
+
+    const result = await createOrder({
+      clientId: "clamp-order-discount",
+      lines: [cashLine(product.id)],
+      orderDiscount: 1_000_000,
+      payments: [{ method: "cash", amount: 0 }],
+    });
+
+    expect(result.order).toMatchObject({
+      subtotal: 30000,
+      discount: 30000,
+      total: 0,
+    });
+  });
+
+  it("giam gia dong vuot thanh tien dong bi chan, tong khop subtotal - discount", async () => {
+    const product = await seedProduct();
+
+    const result = await createOrder({
+      clientId: "clamp-line-discount",
+      lines: [
+        cashLine(product.id, { discount: 999_999 }),
+        cashLine(product.id, { quantity: 1 }),
+      ],
+      orderDiscount: 5000,
+      payments: [{ method: "cash", amount: 10000 }],
+    });
+
+    const items = await prisma.orderItem.findMany({
+      where: { orderId: result.order.id },
+      orderBy: { quantity: "desc" },
+      select: { discount: true, lineTotal: true },
+    });
+    expect(items).toEqual([
+      { discount: 30000, lineTotal: 0 },
+      { discount: 0, lineTotal: 15000 },
+    ]);
+    expect(result.order).toMatchObject({
+      subtotal: 15000,
+      discount: 5000,
+      total: 10000,
+    });
+  });
+
+  it("customerId khong ton tai bi tu choi bang loi nghiep vu", async () => {
+    const product = await seedProduct();
+
+    await expect(
+      createOrder({
+        clientId: "missing-customer",
+        lines: [cashLine(product.id)],
+        payments: [{ method: "debt", amount: 30000 }],
+        customerId: "khong-ton-tai",
+      }),
+    ).rejects.toMatchObject({
+      name: "OrderValidationError",
+      code: "CUSTOMER_NOT_FOUND",
+    });
+    expect(await prisma.order.count()).toBe(0);
+  });
+
+  it("customerId ton tai thi gan vao don", async () => {
+    const product = await seedProduct();
+    const customer = await prisma.customer.create({
+      data: { name: CUSTOMER_NAME },
+    });
+
+    const result = await createOrder({
+      clientId: "known-customer",
+      lines: [cashLine(product.id)],
+      payments: [{ method: "debt", amount: 30000 }],
+      customerId: customer.id,
+    });
+
+    const order = await prisma.order.findUniqueOrThrow({
+      where: { id: result.order.id },
+    });
+    expect(order.customerId).toBe(customer.id);
+  });
+});
