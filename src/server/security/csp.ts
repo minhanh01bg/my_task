@@ -141,6 +141,44 @@ export function buildCspHeader(options?: CspOptions): CspHeaderResult {
   };
 }
 
+/**
+ * Directives that need neither a nonce nor a hash, so they are safe on
+ * static/ISR pages and can be enforced while the full policy is report-only.
+ */
+const BASELINE_DIRECTIVES =
+  "object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'";
+
+/**
+ * Builds the CSP headers for next.config.ts. In production the baseline is
+ * always enforced, whatever CSP_MODE says; the full policy keeps following
+ * CSP_MODE (report-only, enforce or disabled).
+ */
+export function buildCspHeaders(
+  options?: CspOptions,
+): { key: string; value: string }[] {
+  const full = buildCspHeader(options);
+  const headers =
+    full.headerName && full.headerValue
+      ? [{ key: full.headerName, value: full.headerValue }]
+      : [];
+
+  const isDev = options?.isDev ?? process.env.NODE_ENV === "development";
+  if (isDev || full.headerName === "Content-Security-Policy") {
+    return headers;
+  }
+
+  const reportUri = options?.reportUri ?? "/api/csp-report";
+  return [
+    {
+      key: "Content-Security-Policy",
+      value: reportUri
+        ? `${BASELINE_DIRECTIVES}; report-uri ${reportUri}`
+        : BASELINE_DIRECTIVES,
+    },
+    ...headers,
+  ];
+}
+
 const CSP_SPECIAL_KEYWORDS = new Set([
   "eval",
   "inline",
@@ -178,44 +216,88 @@ function stripQueryAndHash(urlStr: string): string {
   }
 }
 
+const MAX_REPORT_FIELD_LENGTH = 512;
+const MAX_REPORTS_PER_REQUEST = 5;
+
+/** Reporting API (application/reports+json) names → report-uri names. */
+const REPORTING_API_FIELDS = new Map([
+  ["documentURL", "document-uri"],
+  ["effectiveDirective", "effective-directive"],
+  ["blockedURL", "blocked-uri"],
+  ["disposition", "disposition"],
+  ["statusCode", "status-code"],
+  ["sourceFile", "source-file"],
+  ["lineNumber", "line-number"],
+  ["columnNumber", "column-number"],
+]);
+
+const URI_FIELDS = new Set(["document-uri", "blocked-uri", "source-file"]);
+const TEXT_FIELDS = new Set(["violated-directive", "effective-directive"]);
+const NUMBER_FIELDS = new Set(["status-code", "line-number", "column-number"]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 /**
- * Sanitizes incoming CSP violation reports before logging or storing.
- * Removes sensitive tokens, query params, hashes, and normalizes guest capability paths.
+ * Sanitizes one CSP violation report before logging or storing. Keeps only
+ * whitelisted fields, strips query strings and fragments from URIs,
+ * normalizes guest capability paths and truncates every string. Accepts the
+ * legacy `{ "csp-report": {...} }` body or a Reporting API report body.
  */
 export function sanitizeCspReport(rawReport: unknown): Record<string, unknown> {
-  if (!rawReport || typeof rawReport !== "object") {
+  if (!isRecord(rawReport)) {
     return {};
   }
 
-  const body =
-    "csp-report" in rawReport &&
-    typeof (rawReport as Record<string, unknown>)["csp-report"] === "object"
-      ? ((rawReport as Record<string, unknown>)["csp-report"] as Record<
-          string,
-          unknown
-        >)
-      : (rawReport as Record<string, unknown>);
+  const wrapped = rawReport["csp-report"];
+  const body = "csp-report" in rawReport ? wrapped : rawReport;
+  if (!isRecord(body)) {
+    return {};
+  }
 
   const sanitized: Record<string, unknown> = {};
 
-  for (const [key, value] of Object.entries(body)) {
-    if (typeof value === "string") {
-      if (
-        key === "document-uri" ||
-        key === "blocked-uri" ||
-        key === "source-file" ||
-        key === "referrer"
-      ) {
-        // Strip query string and fragment, then apply sensitive path normalization
-        const stripped = stripQueryAndHash(value);
-        sanitized[key] = normalizeSafePath(stripped);
-      } else {
-        sanitized[key] = value;
-      }
-    } else {
+  for (const [rawKey, value] of Object.entries(body)) {
+    const key = REPORTING_API_FIELDS.get(rawKey) ?? rawKey;
+    if (URI_FIELDS.has(key) && typeof value === "string") {
+      sanitized[key] = normalizeSafePath(stripQueryAndHash(value)).slice(
+        0,
+        MAX_REPORT_FIELD_LENGTH,
+      );
+    } else if (TEXT_FIELDS.has(key) && typeof value === "string") {
+      sanitized[key] = value.slice(0, MAX_REPORT_FIELD_LENGTH);
+    } else if (
+      key === "disposition" &&
+      (value === "enforce" || value === "report")
+    ) {
+      sanitized[key] = value;
+    } else if (
+      NUMBER_FIELDS.has(key) &&
+      Number.isSafeInteger(value) &&
+      (value as number) >= 0
+    ) {
       sanitized[key] = value;
     }
   }
 
   return sanitized;
+}
+
+/**
+ * Reads the sanitized violations out of a report body: a legacy report-uri
+ * object, or a Reporting API batch (only `csp-violation` entries, capped so
+ * one request cannot fan out into many log lines).
+ */
+export function extractCspReports(raw: unknown): Record<string, unknown>[] {
+  if (Array.isArray(raw)) {
+    return raw
+      .filter(
+        (entry): entry is Record<string, unknown> =>
+          isRecord(entry) && entry.type === "csp-violation",
+      )
+      .slice(0, MAX_REPORTS_PER_REQUEST)
+      .map((entry) => sanitizeCspReport(entry.body));
+  }
+  return isRecord(raw) ? [sanitizeCspReport(raw)] : [];
 }

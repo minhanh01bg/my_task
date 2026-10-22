@@ -2,9 +2,26 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildCspHeader,
+  buildCspHeaders,
+  extractCspReports,
   parseCspDirectives,
   sanitizeCspReport,
 } from "@/server/security/csp";
+
+const BASELINE_DIRECTIVES = {
+  "object-src": ["'none'"],
+  "base-uri": ["'self'"],
+  "frame-ancestors": ["'none'"],
+  "form-action": ["'self'"],
+  "report-uri": ["/api/csp-report"],
+};
+
+function headerValue(
+  headers: { key: string; value: string }[],
+  key: string,
+): string | undefined {
+  return headers.find((header) => header.key === key)?.value;
+}
 
 describe("Content Security Policy (Task 14)", () => {
   describe("buildCspHeader", () => {
@@ -140,6 +157,63 @@ describe("Content Security Policy (Task 14)", () => {
     });
   });
 
+  describe("buildCspHeaders (WEB-3)", () => {
+    it.each(["report-only", "disabled"] as const)(
+      "production %s mode still enforces the baseline policy",
+      (mode) => {
+        const headers = buildCspHeaders({ isDev: false, mode });
+
+        const enforced = headerValue(headers, "Content-Security-Policy");
+        expect(parseCspDirectives(enforced)).toEqual(BASELINE_DIRECTIVES);
+      },
+    );
+
+    it("keeps the full report-only policy next to the enforced baseline", () => {
+      const headers = buildCspHeaders({ isDev: false, mode: "report-only" });
+
+      expect(headers.map((header) => header.key).sort()).toEqual([
+        "Content-Security-Policy",
+        "Content-Security-Policy-Report-Only",
+      ]);
+      expect(headerValue(headers, "Content-Security-Policy-Report-Only")).toBe(
+        buildCspHeader({ isDev: false, mode: "report-only" }).headerValue,
+      );
+    });
+
+    it("sends a single full policy in enforce mode", () => {
+      const headers = buildCspHeaders({ isDev: false, mode: "enforce" });
+
+      expect(headers).toEqual([
+        {
+          key: "Content-Security-Policy",
+          value: buildCspHeader({ isDev: false, mode: "enforce" }).headerValue,
+        },
+      ]);
+      const directives = parseCspDirectives(headers[0].value);
+      for (const [directive, values] of Object.entries(BASELINE_DIRECTIVES)) {
+        expect(directives[directive]).toEqual(values);
+      }
+    });
+
+    it("never needs a nonce, so static and ISR pages keep working", () => {
+      const headers = buildCspHeaders({ isDev: false, mode: "report-only" });
+      for (const { value } of headers) {
+        expect(value).not.toContain("nonce-");
+      }
+    });
+
+    it("leaves development unchanged", () => {
+      expect(buildCspHeaders({ isDev: true, mode: "report-only" })).toEqual([
+        {
+          key: "Content-Security-Policy-Report-Only",
+          value: buildCspHeader({ isDev: true, mode: "report-only" })
+            .headerValue,
+        },
+      ]);
+      expect(buildCspHeaders({ isDev: true, mode: "disabled" })).toEqual([]);
+    });
+  });
+
   describe("sanitizeCspReport", () => {
     it("strips sensitive tokens and queries from document-uri and blocked-uri", () => {
       const rawReport = {
@@ -228,6 +302,150 @@ describe("Content Security Policy (Task 14)", () => {
       const sanitized = sanitizeCspReport(rawReport);
       expect(sanitized["source-file"]).toBe("/_next/static/chunks/app.js");
       expect(sanitized["source-file"]).not.toContain("placeholder.internal");
+    });
+
+    it("keeps only whitelisted fields (WEB-4)", () => {
+      const sanitized = sanitizeCspReport({
+        "csp-report": {
+          "document-uri": "https://shop.example.com/admin",
+          referrer: "https://shop.example.com/login?next=/admin",
+          "violated-directive": "script-src-elem",
+          "effective-directive": "script-src-elem",
+          "original-policy": "default-src 'self'",
+          "script-sample": "alert(document.cookie)",
+          "blocked-uri": "inline",
+          disposition: "enforce",
+          "status-code": 200,
+          "source-file": "https://shop.example.com/_next/static/a.js",
+          "line-number": 12,
+          "column-number": 34,
+          "x-injected": "<script>",
+        },
+      });
+
+      expect(sanitized).toEqual({
+        "document-uri": "https://shop.example.com/admin",
+        "violated-directive": "script-src-elem",
+        "effective-directive": "script-src-elem",
+        "blocked-uri": "inline",
+        disposition: "enforce",
+        "status-code": 200,
+        "source-file": "https://shop.example.com/_next/static/a.js",
+        "line-number": 12,
+        "column-number": 34,
+      });
+    });
+
+    it("ignores prototype keys from parsed JSON", () => {
+      const sanitized = sanitizeCspReport(
+        JSON.parse(
+          '{"csp-report":{"__proto__":{"polluted":true},"constructor":"x","violated-directive":"img-src"}}',
+        ),
+      );
+
+      expect(sanitized).toEqual({ "violated-directive": "img-src" });
+      expect(Object.getPrototypeOf(sanitized)).toBe(Object.prototype);
+    });
+
+    it("drops values with the wrong type or an unknown disposition", () => {
+      const sanitized = sanitizeCspReport({
+        "csp-report": {
+          "violated-directive": { nested: "object" },
+          disposition: "monitor",
+          "status-code": "200",
+          "line-number": -1,
+          "column-number": 1.5,
+          "blocked-uri": ["https://a.example"],
+        },
+      });
+
+      expect(sanitized).toEqual({});
+    });
+
+    it("truncates long strings after stripping the query string", () => {
+      const longPath = `/${"a".repeat(2_000)}`;
+      const sanitized = sanitizeCspReport({
+        "csp-report": {
+          "document-uri": `https://shop.example.com${longPath}?token=secret`,
+          "violated-directive": "x".repeat(2_000),
+        },
+      });
+
+      expect(sanitized["document-uri"]).toHaveLength(512);
+      expect(sanitized["document-uri"]).not.toContain("token");
+      expect(sanitized["violated-directive"]).toHaveLength(512);
+    });
+
+    it("ignores a null csp-report wrapper instead of throwing", () => {
+      expect(sanitizeCspReport({ "csp-report": null })).toEqual({});
+    });
+  });
+
+  describe("extractCspReports", () => {
+    it("reads a legacy report-uri body", () => {
+      expect(
+        extractCspReports({
+          "csp-report": {
+            "document-uri": "https://shop.example.com/shop?q=1",
+            "violated-directive": "img-src",
+          },
+        }),
+      ).toEqual([
+        {
+          "document-uri": "https://shop.example.com/shop",
+          "violated-directive": "img-src",
+        },
+      ]);
+    });
+
+    it("maps Reporting API csp-violation entries and skips other types", () => {
+      const reports = extractCspReports([
+        {
+          type: "csp-violation",
+          url: "https://shop.example.com/pos?session=abc",
+          user_agent: "Mozilla/5.0",
+          body: {
+            documentURL: "https://shop.example.com/pos?session=abc",
+            effectiveDirective: "connect-src",
+            blockedURL: "https://evil.example/collect?c=secret",
+            disposition: "report",
+            statusCode: 200,
+            sourceFile: "https://shop.example.com/_next/static/b.js?v=1",
+            lineNumber: 1,
+            columnNumber: 99,
+            sample: "fetch('https://evil.example')",
+            originalPolicy: "default-src 'self'",
+          },
+        },
+        { type: "deprecation", body: { message: "old api" } },
+      ]);
+
+      expect(reports).toEqual([
+        {
+          "document-uri": "https://shop.example.com/pos",
+          "effective-directive": "connect-src",
+          "blocked-uri": "https://evil.example/collect",
+          disposition: "report",
+          "status-code": 200,
+          "source-file": "https://shop.example.com/_next/static/b.js",
+          "line-number": 1,
+          "column-number": 99,
+        },
+      ]);
+    });
+
+    it("caps how many reports a single request can produce", () => {
+      const entry = {
+        type: "csp-violation",
+        body: { effectiveDirective: "img-src" },
+      };
+      expect(extractCspReports(Array(50).fill(entry))).toHaveLength(5);
+    });
+
+    it("returns nothing for non-object bodies", () => {
+      expect(extractCspReports("text")).toEqual([]);
+      expect(extractCspReports(null)).toEqual([]);
+      expect(extractCspReports(42)).toEqual([]);
     });
   });
 });
