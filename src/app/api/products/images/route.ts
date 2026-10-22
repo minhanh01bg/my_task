@@ -3,12 +3,19 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { NextResponse } from "next/server";
-import sharp from "sharp";
 
 import { hasAdminSession } from "@/server/auth/require-admin-session";
 import { hasSafeMutationOrigin } from "@/server/http/origin";
+import {
+  IMAGE_TOO_LARGE_MESSAGE,
+  openUploadedImage,
+} from "@/server/products/save-image";
 
+// nginx client_max_body_size 10m dựa trên giới hạn này.
 const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
+// Phần bao multipart (boundary, header của part) cộng thêm vào ảnh.
+const MAX_REQUEST_BYTES = MAX_IMAGE_SIZE + 64 * 1024;
+const MAX_OUTPUT_DIMENSION = 2000;
 
 export async function POST(request: Request) {
   if (!(await hasAdminSession(request))) {
@@ -22,6 +29,14 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { ok: false, message: "Nguồn gốc yêu cầu không hợp lệ" },
       { status: 403 },
+    );
+  }
+
+  // Chặn trước khi formData() đệm cả body vào bộ nhớ.
+  if (Number(request.headers.get("content-length")) > MAX_REQUEST_BYTES) {
+    return NextResponse.json(
+      { ok: false, message: "Ảnh phải nhỏ hơn 8 MB." },
+      { status: 413 },
     );
   }
 
@@ -51,20 +66,28 @@ export async function POST(request: Request) {
   const buffer = Buffer.from(await blob.arrayBuffer());
 
   // Kiem tra noi dung anh thuc te qua sharp de tranh file gia mao
+  const opened = await openUploadedImage(buffer);
+  if (!opened.ok) {
+    return opened.reason === "too_large"
+      ? NextResponse.json(
+          { ok: false, message: IMAGE_TOO_LARGE_MESSAGE },
+          { status: 413 },
+        )
+      : NextResponse.json(
+          { ok: false, message: "Tệp tải lên không phải là ảnh hợp lệ." },
+          { status: 415 },
+        );
+  }
+
   let output: Buffer;
   try {
-    const img = sharp(buffer);
-    const metadata = await img.metadata();
-    if (
-      !metadata.format ||
-      !["jpeg", "png", "webp", "gif"].includes(metadata.format)
-    ) {
-      return NextResponse.json(
-        { ok: false, message: "Tệp tải lên không phải là ảnh hợp lệ." },
-        { status: 415 },
-      );
-    }
-    output = await img.webp({ quality: 85 }).toBuffer();
+    output = await opened.image
+      .resize(MAX_OUTPUT_DIMENSION, MAX_OUTPUT_DIMENSION, {
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .webp({ quality: 85 })
+      .toBuffer();
   } catch {
     return NextResponse.json(
       { ok: false, message: "Tệp tải lên không phải là ảnh hợp lệ." },

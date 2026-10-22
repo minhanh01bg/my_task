@@ -70,6 +70,35 @@ describe("saveProductImage", () => {
     expect(meta.height).toBe(IMAGE_SIZE);
   });
 
+  it("tu choi noi dung SVG du client khai image/png (WEB-5)", async () => {
+    const svg = new File(
+      [
+        '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>',
+      ],
+      "logo.png",
+      { type: "image/png" },
+    );
+
+    const result = await saveProductImage(svg);
+
+    expect(result.ok).toBe(false);
+  });
+
+  it("tu choi anh co canh lon hon 8000px (WEB-5)", async () => {
+    const buffer = await sharp({
+      create: { width: 8001, height: 1, channels: 3, background: "#fff" },
+    })
+      .png()
+      .toBuffer();
+
+    const result = await saveProductImage(
+      new File([new Uint8Array(buffer)], "dai.png", { type: "image/png" }),
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.message).toMatch(/quá lớn/);
+  });
+
   it("hai lan luu ra hai duong dan khac nhau", async () => {
     const first = await saveProductImage(await pngFile());
     const second = await saveProductImage(await pngFile());
