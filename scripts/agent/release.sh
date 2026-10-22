@@ -54,10 +54,13 @@ running_dist() {
 # Cần thiết: NEXT_PUBLIC_* được inline lúc build và service override .env.
 load_service_env() {
   local raw kv n=0
+  local -a kvs=()
   raw=$(systemctl --user show "$SERVICE" -p Environment --value 2>/dev/null) || true
   [[ -n "$raw" ]] || die "không đọc được Environment của $SERVICE"
   [[ "$raw" == *\"* ]] && say "⚠ Environment có giá trị chứa khoảng trắng/quote — kiểm tra lại parse"
-  for kv in $raw; do
+  # Tách theo khoảng trắng nhưng không glob (giá trị chứa * ? [ không bị mở rộng).
+  read -r -a kvs <<<"$raw"
+  for kv in "${kvs[@]}"; do
     [[ "$kv" == *=* ]] || continue
     [[ "${kv%%=*}" == NEXT_DIST_DIR ]] && continue
     export "${kv%%=*}=${kv#*=}"; n=$((n + 1))
@@ -136,6 +139,7 @@ switch_to() { # <dir> <previous> <stepname>
 
 cmd_status() {
   local do_smoke=0 live prev run d age size mark tag
+  local -a dirs=()
   [[ "${1:-}" == --smoke ]] && do_smoke=1
   live=$(conf_dist); prev=$(conf_prev); run=$(running_dist)
   say "service: $SERVICE $("${SYSTEMCTL[@]}" is-active "$SERVICE" 2>/dev/null) since $("${SYSTEMCTL[@]}" show "$SERVICE" -p ActiveEnterTimestamp --value 2>/dev/null)"
@@ -144,7 +148,8 @@ cmd_status() {
   say "previous: ${prev:-<không rõ>}"
   say "HEAD:    $(git rev-parse --short HEAD) $( [[ -n "$(git status --porcelain)" ]] && echo '(dirty)') schema=$(schema_hash)"
   say "dirs:"
-  for d in $(ls -1td .next-release-* .next-e2e-* 2>/dev/null); do
+  mapfile -t dirs < <(ls -1td .next-release-* .next-e2e-* 2>/dev/null)
+  for d in "${dirs[@]}"; do
     [[ -d "$d" ]] || continue
     age=$(human_age "$(stat -c %Y "$d")")
     size=$(du -sh "$d" 2>/dev/null | cut -f1)
@@ -328,7 +333,7 @@ cmd_rollback() {
 
 cmd_prune() {
   local keep=2 yes=0 live prev d kept=0 total=0 sz
-  local -a del=()
+  local -a del=() dirs=()
   while (($#)); do
     case "$1" in
       --keep) keep="${2:-}"; shift ;;
@@ -341,7 +346,8 @@ cmd_prune() {
   [[ "$keep" =~ ^[0-9]+$ ]] || die "--keep cần số"
   live=$(conf_dist); prev=$(conf_prev)
   [[ -n "$live" ]] || die "không xác định được live dir — từ chối prune"
-  for d in $(ls -1td .next-release-* 2>/dev/null); do
+  mapfile -t dirs < <(ls -1td .next-release-* 2>/dev/null)
+  for d in "${dirs[@]}"; do
     [[ -d "$d" ]] || continue
     [[ "$d" == "$live" || "$d" == "$prev" ]] && continue
     if ((kept < keep)); then kept=$((kept + 1)); continue; fi
