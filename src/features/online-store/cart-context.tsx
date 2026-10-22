@@ -19,6 +19,31 @@ import type {
 
 const STORAGE_KEY = "online-cart-v1";
 
+/**
+ * Don online chi nhan so luong nguyen (`z.number().int()`) nhung ton kho co
+ * the le (2.5 kg), nen so luong toi da la phan nguyen cua ton kho.
+ */
+function maxWholeQuantity(stock: number) {
+  return Number.isFinite(stock) ? Math.floor(stock) : 0;
+}
+
+function clampWholeQuantity(quantity: number, stock: number) {
+  const whole = Number.isFinite(quantity) ? Math.floor(quantity) : 1;
+  return Math.max(1, Math.min(maxWholeQuantity(stock), whole));
+}
+
+/** Gio luu tu ban cu co the co so luong le; dong khong mua duoc thi bo. */
+function readSavedLines(): OnlineCartLine[] {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  const parsed: unknown = saved ? JSON.parse(saved) : [];
+  if (!Array.isArray(parsed)) return [];
+  return parsed.flatMap((line: OnlineCartLine | null) =>
+    typeof line?.id === "string" && maxWholeQuantity(line.stock) >= 1
+      ? [{ ...line, quantity: clampWholeQuantity(line.quantity, line.stock) }]
+      : [],
+  );
+}
+
 interface CartContextValue {
   lines: OnlineCartLine[];
   hydrated: boolean;
@@ -48,8 +73,7 @@ export function OnlineCartProvider({
   const [lines, setLines] = useState<OnlineCartLine[]>(() => {
     if (typeof window === "undefined") return [];
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? (JSON.parse(saved) as OnlineCartLine[]) : [];
+      return readSavedLines();
     } catch {
       localStorage.removeItem(STORAGE_KEY);
       return [];
@@ -87,8 +111,11 @@ export function OnlineCartProvider({
 
   const add = useCallback(
     (product: OnlineProduct, qtyToAdd: number = 1): CartMutationResult => {
-      const qty = Math.max(1, qtyToAdd);
-      if (product.stock <= 0) {
+      const qty = Number.isFinite(qtyToAdd)
+        ? Math.max(1, Math.floor(qtyToAdd))
+        : 1;
+      const maxQuantity = maxWholeQuantity(product.stock);
+      if (maxQuantity < 1) {
         const result: CartMutationResult = {
           status: "unavailable",
           productId: product.id,
@@ -104,23 +131,22 @@ export function OnlineCartProvider({
       const found = currentLines.find((line) => line.id === product.id);
 
       if (found) {
-        if (found.quantity >= product.stock) {
+        if (found.quantity >= maxQuantity) {
           const result: CartMutationResult = {
             status: "capped",
             productId: product.id,
             productName: product.name,
             quantity: found.quantity,
-            maxAvailable: product.stock,
+            maxAvailable: maxQuantity,
             message: "Đã đạt số lượng tối đa trong kho",
           };
           setFeedback(result);
           return result;
         }
 
-        const nextQuantity = Math.min(product.stock, found.quantity + qty);
+        const nextQuantity = Math.min(maxQuantity, found.quantity + qty);
         const isCapped =
-          nextQuantity === product.stock &&
-          found.quantity + qty > product.stock;
+          nextQuantity === maxQuantity && found.quantity + qty > maxQuantity;
         setLines((current) =>
           current.map((line) =>
             line.id === product.id ? { ...line, quantity: nextQuantity } : line,
@@ -133,7 +159,7 @@ export function OnlineCartProvider({
           quantity: nextQuantity,
           ...(isCapped
             ? {
-                maxAvailable: product.stock,
+                maxAvailable: maxQuantity,
                 message: "Đã đạt số lượng tối đa trong kho",
               }
             : {}),
@@ -142,7 +168,7 @@ export function OnlineCartProvider({
         return result;
       }
 
-      const initialQty = Math.min(product.stock, qty);
+      const initialQty = Math.min(maxQuantity, qty);
       setLines((current) => [...current, { ...product, quantity: initialQty }]);
       const result: CartMutationResult = {
         status: "added",
@@ -160,10 +186,7 @@ export function OnlineCartProvider({
     setLines((current) =>
       current.map((line) =>
         line.id === id
-          ? {
-              ...line,
-              quantity: Math.max(0.01, Math.min(line.stock, quantity)),
-            }
+          ? { ...line, quantity: clampWholeQuantity(quantity, line.stock) }
           : line,
       ),
     );
@@ -181,9 +204,9 @@ export function OnlineCartProvider({
           item.id === line.id
             ? {
                 ...item,
-                quantity: Math.min(
-                  item.stock,
+                quantity: clampWholeQuantity(
                   Math.max(item.quantity, line.quantity),
+                  item.stock,
                 ),
               }
             : item,

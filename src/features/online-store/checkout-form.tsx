@@ -421,9 +421,9 @@ function FormContent({
                   <input
                     aria-label={`Số lượng ${line.name}`}
                     type="number"
-                    min="0.01"
-                    max={line.stock}
-                    step="0.01"
+                    min="1"
+                    max={Math.floor(line.stock)}
+                    step="1"
                     value={line.quantity}
                     onChange={(event) =>
                       setQuantity(line.id, Number(event.target.value))

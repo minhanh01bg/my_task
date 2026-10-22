@@ -48,6 +48,22 @@ describe("CheckoutForm - Structured Address & Experience", () => {
     ).toBeInTheDocument();
   });
 
+  it("ô số lượng chỉ nhận số nguyên, tối đa phần nguyên tồn kho", () => {
+    localStorage.setItem(
+      "online-cart-v1",
+      JSON.stringify([{ ...mockCartItems[0], stock: 2.5 }]),
+    );
+    render(<CheckoutForm />);
+
+    const input = screen.getByLabelText("Số lượng Cà phê Robusta");
+    expect(input).toHaveAttribute("min", "1");
+    expect(input).toHaveAttribute("step", "1");
+    expect(input).toHaveAttribute("max", "2");
+
+    fireEvent.change(input, { target: { value: "1.5" } });
+    expect(input).toHaveValue(1);
+  });
+
   async function selectDropdown(
     triggerLabel: RegExp,
     optionText: RegExp,

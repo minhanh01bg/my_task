@@ -222,7 +222,7 @@ export function CartDrawer({ shipping }: CartDrawerProps) {
             <ul className="divide-border divide-y">
               {lines.map((line, index) => {
                 const lineTotal = line.price * line.quantity;
-                const isMaxStock = line.quantity >= line.stock;
+                const isMaxStock = line.quantity >= Math.floor(line.stock);
                 const isMinQuantity = line.quantity <= 1;
 
                 return (
