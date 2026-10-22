@@ -11,3 +11,21 @@ UMask=0077
 TimeoutStartSec=7min
 NoNewPrivileges=true
 PrivateTmp=true
+# Nhóm dưới cần mount namespace: user manager hiện tại (systemd 249) bỏ qua im
+# lặng, chỉ có hiệu lực ở system unit hoặc user manager dựng được namespace.
+# Khi đó chỉ ghi được thư mục backup và thư mục SQLite (WAL cần ghi -shm dù mở
+# mode=ro). Thư mục backup phải có sẵn: install -d -m 700 ~/.local/state/my-task-backups
+# DATABASE_URL trỏ ra ngoài prisma/ thì thêm thư mục đó vào ReadWritePaths.
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ccgram/.local/state/my-task-backups /home/ccgram/my_task/prisma
+ProtectKernelTunables=true
+ProtectControlGroups=true
+# Seccomp: chạy được trong user unit nhờ NoNewPrivileges.
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictNamespaces=true
+SystemCallArchitectures=native
+# Không dùng CapabilityBoundingSet=/ProtectKernelModules=: user unit không drop được
+# capability (exit 218). Không bật MemoryDenyWriteExecute: Node (V8 JIT) cần W+X.
