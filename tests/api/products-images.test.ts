@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { readFile, rm } from "node:fs/promises";
+import { readdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { crc32, deflateSync } from "node:zlib";
 
@@ -9,6 +9,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/products/images/route";
 import * as requireAdminModule from "@/server/auth/require-admin-session";
 import * as originModule from "@/server/http/origin";
+import * as saveImageModule from "@/server/products/save-image";
 
 // 1x1 transparent PNG buffer
 const TINY_PNG = Buffer.from(
@@ -83,6 +84,71 @@ function uploadRequest(bytes: Buffer, headers: Record<string, string> = {}) {
     headers,
     body: formData,
   });
+}
+
+const BOUNDARY = "----chunked-upload-test";
+
+/**
+ * Multipart body streamed without Content-Length (chunked): a small valid
+ * image part followed by `paddingBytes` of an extra text field, so only the
+ * total body — not the image — exceeds the limit.
+ */
+function chunkedUploadRequest(paddingBytes: number) {
+  const encoder = new TextEncoder();
+  const head = Buffer.concat([
+    encoder.encode(
+      `--${BOUNDARY}\r\nContent-Disposition: form-data; name="image"; filename="tiny.png"\r\nContent-Type: image/png\r\n\r\n`,
+    ),
+    TINY_PNG,
+    encoder.encode(
+      `\r\n--${BOUNDARY}\r\nContent-Disposition: form-data; name="padding"\r\n\r\n`,
+    ),
+  ]);
+  const tail = encoder.encode(`\r\n--${BOUNDARY}--\r\n`);
+  const padding = new Uint8Array(256 * 1024).fill(97);
+
+  const state = { cancelled: false, bytesPulled: 0 };
+  let paddingLeft = paddingBytes;
+  let stage: "head" | "padding" | "tail" | "done" = "head";
+
+  const stream = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      let chunk: Uint8Array;
+      if (stage === "head") {
+        chunk = new Uint8Array(head);
+        stage = paddingLeft > 0 ? "padding" : "tail";
+      } else if (stage === "padding") {
+        chunk = padding.subarray(0, Math.min(padding.length, paddingLeft));
+        paddingLeft -= chunk.byteLength;
+        if (paddingLeft === 0) stage = "tail";
+      } else if (stage === "tail") {
+        chunk = tail;
+        stage = "done";
+      } else {
+        controller.close();
+        return;
+      }
+      state.bytesPulled += chunk.byteLength;
+      controller.enqueue(chunk);
+    },
+    cancel() {
+      state.cancelled = true;
+    },
+  });
+
+  const request = new Request("http://localhost:3000/api/products/images", {
+    method: "POST",
+    headers: { "content-type": `multipart/form-data; boundary=${BOUNDARY}` },
+    body: stream,
+    // @ts-expect-error duplex required for streaming bodies in node fetch/undici
+    duplex: "half",
+  });
+  expect(request.headers.get("content-length")).toBeNull();
+  return { request, state };
+}
+
+async function listUploads(): Promise<string[]> {
+  return readdir(UPLOAD_DIR).catch(() => []);
 }
 
 async function storedMetadata(response: Response) {
@@ -182,6 +248,57 @@ describe("POST /api/products/images — kiểm tra upload ảnh an toàn", () =>
       expect(res.status).toBe(413);
       expect(formDataSpy).not.toHaveBeenCalled();
       expect(request.bodyUsed).toBe(false);
+    });
+
+    it("cắt body chunked không có Content-Length khi vượt giới hạn, không lưu ảnh", async () => {
+      const openSpy = vi.spyOn(saveImageModule, "openUploadedImage");
+      const before = await listUploads();
+      const paddingBytes = 12 * 1024 * 1024;
+      const { request, state } = chunkedUploadRequest(paddingBytes);
+
+      const res = await POST(request);
+
+      expect(res.status).toBe(413);
+      expect((await res.json()).message).toBe("Ảnh phải nhỏ hơn 8 MB.");
+      expect(state.cancelled).toBe(true);
+      expect(state.bytesPulled).toBeLessThan(paddingBytes);
+      expect(openSpy).not.toHaveBeenCalled();
+      expect(await listUploads()).toEqual(before);
+    });
+
+    it("vẫn nhận ảnh gửi chunked khi body dưới giới hạn", async () => {
+      const { request } = chunkedUploadRequest(1024);
+
+      const res = await POST(request);
+
+      expect(res.status).toBe(200);
+      expect((await storedMetadata(res)).format).toBe("webp");
+    });
+
+    it("body multipart hỏng trả 400", async () => {
+      const request = new Request("http://localhost:3000/api/products/images", {
+        method: "POST",
+        headers: {
+          "content-type": `multipart/form-data; boundary=${BOUNDARY}`,
+        },
+        body: "không phải multipart",
+      });
+
+      const res = await POST(request);
+
+      expect(res.status).toBe(400);
+      expect((await res.json()).ok).toBe(false);
+    });
+
+    it("thiếu body trả 400", async () => {
+      const request = new Request("http://localhost:3000/api/products/images", {
+        method: "POST",
+      });
+
+      const res = await POST(request);
+
+      expect(res.status).toBe(400);
+      expect((await res.json()).message).toBe("Vui lòng chọn một ảnh.");
     });
 
     it("từ chối ảnh có cạnh lớn hơn 8000px", async () => {

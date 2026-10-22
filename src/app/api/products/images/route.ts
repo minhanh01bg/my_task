@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 
 import { hasAdminSession } from "@/server/auth/require-admin-session";
 import { hasSafeMutationOrigin } from "@/server/http/origin";
+import { readLimitedBody } from "@/server/http/read-limited-body";
 import {
   IMAGE_TOO_LARGE_MESSAGE,
   openUploadedImage,
@@ -32,15 +33,32 @@ export async function POST(request: Request) {
     );
   }
 
-  // Chặn trước khi formData() đệm cả body vào bộ nhớ.
-  if (Number(request.headers.get("content-length")) > MAX_REQUEST_BYTES) {
-    return NextResponse.json(
-      { ok: false, message: "Ảnh phải nhỏ hơn 8 MB." },
-      { status: 413 },
-    );
+  // Content-Length chỉ chặn sớm; body chunked không khai độ dài bị cắt ngay
+  // khi vượt giới hạn, trước khi đệm hết vào bộ nhớ.
+  const body = await readLimitedBody(request, MAX_REQUEST_BYTES);
+  if (!body.ok) {
+    return body.reason === "payload_too_large"
+      ? NextResponse.json(
+          { ok: false, message: "Ảnh phải nhỏ hơn 8 MB." },
+          { status: 413 },
+        )
+      : NextResponse.json(
+          { ok: false, message: "Vui lòng chọn một ảnh." },
+          { status: 400 },
+        );
   }
 
-  const formData = await request.formData();
+  let formData: FormData;
+  try {
+    formData = await new Response(body.bytes, {
+      headers: { "content-type": request.headers.get("content-type") ?? "" },
+    }).formData();
+  } catch {
+    return NextResponse.json(
+      { ok: false, message: "Dữ liệu tải lên không hợp lệ." },
+      { status: 400 },
+    );
+  }
   const image = formData.get("image");
 
   if (
