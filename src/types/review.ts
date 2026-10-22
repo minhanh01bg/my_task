@@ -42,10 +42,6 @@ export const createReviewInputSchema = z.strictObject({
 
 export type CreateReviewInput = z.infer<typeof createReviewInputSchema>;
 
-export const reviewPageQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).max(10_000).catch(1),
-});
-
 /** Đánh giá công khai — JSON-serializable (createdAt dạng ISO). */
 export interface PublicReview {
   id: string;
