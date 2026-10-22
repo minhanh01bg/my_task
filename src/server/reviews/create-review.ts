@@ -57,7 +57,7 @@ function isUniqueViolation(error: unknown): boolean {
 /**
  * Tao danh gia cho khach da dang nhap. Moi tai khoan chi co mot danh gia cho
  * moi san pham (`@@unique([productId, accountId])`): neu da co thi CAP NHAT
- * (rating/noi dung/da mua, hien lai neu dang an) thay vi tao moi. Ten hien thi
+ * (rating/noi dung/da mua; danh gia bi an van an) thay vi tao moi. Ten hien thi
  * lay tu tai khoan; ghi review + tinh lai aggregate trong cung transaction,
  * revalidate cache sau khi commit.
  */
@@ -109,10 +109,11 @@ export async function createReview(params: {
         content: parsed.data.content,
         isVerifiedPurchase,
       };
+      // Giu nguyen `status`: danh gia admin da an khong duoc tu hien lai.
       const saved = existing
         ? await tx.productReview.update({
             where: { id: existing.id },
-            data: { ...data, status: "published" },
+            data,
             select: publicReviewSelect,
           })
         : await tx.productReview.create({

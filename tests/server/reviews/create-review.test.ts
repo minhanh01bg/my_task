@@ -181,7 +181,7 @@ describe("createReview — mỗi tài khoản một đánh giá / sản phẩm",
     expect(product).toEqual({ ratingAvg: 5, ratingCount: 1 });
   });
 
-  it("đánh giá bị ẩn được hiển thị lại khi khách gửi lại", async () => {
+  it("đánh giá bị ẩn vẫn bị ẩn khi khách gửi lại", async () => {
     const first = await createReview({
       productId: REVIEW_PRODUCT_ID,
       accountId,
@@ -198,12 +198,22 @@ describe("createReview — mỗi tài khoản một đánh giá / sản phẩm",
       accountId,
       input: { rating: 4, content: "Nội dung đã chỉnh sửa lại" },
     });
-    expect(second.ok && second.summary).toEqual({ avg: 4, count: 1 });
+    expect(second.ok && second.updated).toBe(true);
+    expect(second.ok && second.summary).toEqual({ avg: 0, count: 0 });
     const row = await prisma.productReview.findUniqueOrThrow({
       where: { id: first.review.id },
-      select: { status: true },
+      select: { status: true, rating: true, content: true },
     });
-    expect(row.status).toBe("published");
+    expect(row).toEqual({
+      status: "hidden",
+      rating: 4,
+      content: "Nội dung đã chỉnh sửa lại",
+    });
+    const product = await prisma.product.findUniqueOrThrow({
+      where: { id: REVIEW_PRODUCT_ID },
+      select: { ratingAvg: true, ratingCount: true },
+    });
+    expect(product).toEqual({ ratingAvg: 0, ratingCount: 0 });
   });
 
   it("DB chặn hai đánh giá cùng tài khoản cho cùng sản phẩm", async () => {
