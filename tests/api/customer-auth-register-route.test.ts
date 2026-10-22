@@ -153,6 +153,45 @@ describe("POST /api/customer-auth/register", () => {
     expect(json.message).toBe("Dịch vụ tạm thời không khả dụng");
   });
 
+  it("rejects cross-site registrations without creating an account", async () => {
+    const res = await POST(
+      makeRequest(
+        { phone: testPhone, displayName: "New User", password: "password123" },
+        { origin: "https://attacker.example" },
+      ),
+    );
+
+    expect(res.status).toBe(403);
+    expect(res.headers.get("cache-control")).toContain("no-store");
+    const created = await prisma.customerAccount.findUnique({
+      where: { phoneNormalized: normalizedPhone },
+    });
+    expect(created).toBeNull();
+  });
+
+  it("limits registrations per phone with their own bucket", async () => {
+    const attempt = () =>
+      POST(
+        makeRequest({
+          phone: testPhone,
+          displayName: "New User",
+          password: "password123",
+        }),
+      );
+
+    for (let i = 0; i < 5; i++) {
+      expect((await attempt()).status).toBe(200);
+    }
+    const blocked = await attempt();
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers.get("retry-after")).toBeTruthy();
+    expect(
+      Array.from(store.map.keys()).some((key) =>
+        key.startsWith("rl:v1:customer-auth:phone-attempts:"),
+      ),
+    ).toBe(false);
+  });
+
   it("returns 413 when request body exceeds maximum allowed size", async () => {
     const largePayload = {
       phone: testPhone,

@@ -136,6 +136,23 @@ export async function resolveCustomerSessionToken(token?: string | null) {
   });
 }
 
+/**
+ * Reads the session token from the request's Cookie header. A value that is
+ * not valid percent-encoding counts as no session, so callers answer 401
+ * instead of crashing in decodeURIComponent.
+ */
+export function readCustomerSessionToken(request: Request): string | null {
+  const encoded = request.headers
+    .get("cookie")
+    ?.match(/(?:^|;\s*)customer_session=([^;]+)/)?.[1];
+  if (!encoded) return null;
+  try {
+    return decodeURIComponent(encoded);
+  } catch {
+    return null;
+  }
+}
+
 export async function getOptionalCustomerSession() {
   const token = (await cookies()).get(CUSTOMER_SESSION_COOKIE)?.value;
   return resolveCustomerSessionToken(token);

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   checkCustomerAuthAccount,
   checkCustomerAuthPreCheck,
+  checkCustomerRegisterAccount,
   resetCustomerAuthAccount,
 } from "@/server/customer-auth/rate-limit";
 import {
@@ -191,6 +192,23 @@ describe("Distributed Customer Auth Rate Limiting (Task 7)", () => {
       expect(key).not.toContain(phone);
       expect(key).not.toContain("0912345678");
     }
+  });
+
+  it("keeps registration and login phone budgets separate", async () => {
+    const store = new FakeRedisStore();
+    const limiter = createRateLimiter({ store, secret: "s".repeat(32) });
+    const phone = "0912345678";
+
+    for (let i = 0; i < 5; i++) {
+      expect((await checkCustomerRegisterAccount(phone, limiter)).ok).toBe(
+        true,
+      );
+    }
+    const blocked = await checkCustomerRegisterAccount(phone, limiter);
+    expect(blocked.ok).toBe(false);
+    if (!blocked.ok) expect(blocked.status).toBe(429);
+
+    expect((await checkCustomerAuthAccount(phone, limiter)).ok).toBe(true);
   });
 
   it("resets only the phone bucket on successful login without erasing IP/subnet history", async () => {

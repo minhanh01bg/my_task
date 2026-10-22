@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 
+import { hasSafeMutationOrigin } from "@/server/http/origin";
 import { readJsonBody } from "@/server/http/read-json-body";
-import { verifyCustomerPassword } from "@/server/customer-auth/password";
+import {
+  DUMMY_CUSTOMER_PASSWORD_HASH,
+  verifyCustomerPassword,
+} from "@/server/customer-auth/password";
 import {
   checkCustomerAuthAccount,
   checkCustomerAuthPreCheck,
@@ -18,6 +22,16 @@ import { customerLoginSchema } from "@/types/customer-auth";
 const GENERIC_ERROR = { message: "Số điện thoại hoặc mật khẩu không đúng" };
 
 export async function POST(request: Request) {
+  if (!hasSafeMutationOrigin(request)) {
+    return NextResponse.json(
+      { message: "Yêu cầu không hợp lệ" },
+      {
+        status: 403,
+        headers: { "Cache-Control": "private, no-store" },
+      },
+    );
+  }
+
   // Layer 1: Streamed body cap (16 KB)
   const bodyResult = await readJsonBody(request, { maxBytes: 16_000 });
   if (!bodyResult.ok) {
@@ -54,7 +68,7 @@ export async function POST(request: Request) {
     });
   }
 
-  // Layer 4: Velocity check on normalized phone number
+  // Layer 4: Velocity check on normalized phone number (cleared on success)
   const accountCheck = await checkCustomerAuthAccount(parsed.data.phone);
   if (!accountCheck.ok) {
     const headers: Record<string, string> = {
@@ -79,12 +93,16 @@ export async function POST(request: Request) {
     },
   });
 
-  const valid =
-    account &&
-    !account.disabledAt &&
-    (await verifyCustomerPassword(parsed.data.password, account.passwordHash));
+  const usableAccount = account && !account.disabledAt ? account : null;
 
-  if (!valid || !account) {
+  // Always run exactly one scrypt verification, against a dummy hash when
+  // there is no usable account, so timing does not reveal which phones exist.
+  const passwordMatches = await verifyCustomerPassword(
+    parsed.data.password,
+    usableAccount?.passwordHash ?? DUMMY_CUSTOMER_PASSWORD_HASH,
+  );
+
+  if (!usableAccount || !passwordMatches) {
     return NextResponse.json(GENERIC_ERROR, {
       status: 401,
       headers: { "Cache-Control": "private, no-store" },
@@ -94,9 +112,9 @@ export async function POST(request: Request) {
   // Reset the account-level failure counter on successful login
   await resetCustomerAuthAccount(parsed.data.phone);
 
-  const session = await createCustomerSession(account.id);
+  const session = await createCustomerSession(usableAccount.id);
   const response = NextResponse.json(
-    { data: { account: { displayName: account.displayName } } },
+    { data: { account: { displayName: usableAccount.displayName } } },
     {
       status: 200,
       headers: { "Cache-Control": "private, no-store" },
@@ -106,9 +124,10 @@ export async function POST(request: Request) {
     request.headers.get("x-forwarded-proto") === "https" ||
     request.url.startsWith("https:");
 
+  // HTTPS can only add Secure; it never relaxes the production default.
   response.cookies.set(CUSTOMER_SESSION_COOKIE, session.token, {
     ...customerCookieOptions,
-    secure: isHttps,
+    secure: customerCookieOptions.secure || isHttps,
   });
   return response;
 }

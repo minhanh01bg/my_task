@@ -1,15 +1,26 @@
 import { NextResponse } from "next/server";
 
+import { hasSafeMutationOrigin } from "@/server/http/origin";
 import { readJsonBody } from "@/server/http/read-json-body";
 import { hashCustomerPassword } from "@/server/customer-auth/password";
 import {
-  checkCustomerAuthAccount,
   checkCustomerAuthPreCheck,
+  checkCustomerRegisterAccount,
 } from "@/server/customer-auth/rate-limit";
 import { registerCustomerAccountWithOptionalSession } from "@/server/customer-auth/session";
 import { customerRegisterSchema } from "@/types/customer-auth";
 
 export async function POST(request: Request) {
+  if (!hasSafeMutationOrigin(request)) {
+    return NextResponse.json(
+      { message: "Yêu cầu không hợp lệ" },
+      {
+        status: 403,
+        headers: { "Cache-Control": "private, no-store" },
+      },
+    );
+  }
+
   // Layer 1: Streamed body cap (16 KB)
   const bodyResult = await readJsonBody(request, { maxBytes: 16_000 });
   if (!bodyResult.ok) {
@@ -49,8 +60,8 @@ export async function POST(request: Request) {
     );
   }
 
-  // Layer 4: Velocity check on normalized phone number
-  const accountCheck = await checkCustomerAuthAccount(parsed.data.phone);
+  // Layer 4: Velocity check on normalized phone number (separate from login)
+  const accountCheck = await checkCustomerRegisterAccount(parsed.data.phone);
   if (!accountCheck.ok) {
     const headers: Record<string, string> = {
       "Cache-Control": "private, no-store",

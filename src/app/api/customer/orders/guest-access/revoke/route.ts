@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { resolveCustomerSessionToken } from "@/server/customer-auth/session";
+import {
+  readCustomerSessionToken,
+  resolveCustomerSessionToken,
+} from "@/server/customer-auth/session";
 import { hasSafeMutationOrigin } from "@/server/http/origin";
 import { readJsonBody } from "@/server/http/read-json-body";
 import { revokeGuestAccess } from "@/server/orders/order-access";
@@ -23,11 +26,8 @@ export async function POST(request: Request) {
   }
 
   // Layer 2: Authentication
-  const cookie = request.headers
-    .get("cookie")
-    ?.match(/(?:^|;\s*)customer_session=([^;]+)/)?.[1];
   const session = await resolveCustomerSessionToken(
-    cookie ? decodeURIComponent(cookie) : null,
+    readCustomerSessionToken(request),
   );
 
   if (!session) {

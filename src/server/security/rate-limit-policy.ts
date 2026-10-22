@@ -45,6 +45,7 @@ export const POLICIES = {
       { name: "ip-attempts", limit: 20, windowSeconds: 900 },
       { name: "subnet-attempts", limit: 100, windowSeconds: 900 },
       { name: "phone-attempts", limit: 5, windowSeconds: 900 },
+      { name: "phone-register", limit: 5, windowSeconds: 900 },
       { name: "global-attempts", limit: 10000, windowSeconds: 900 },
     ],
   },

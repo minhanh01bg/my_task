@@ -102,20 +102,37 @@ export async function checkCustomerAuthPreCheck(
 }
 
 /**
- * Account-specific velocity check evaluated on normalized phone number
- * after schema parsing and before password verification or registration writes.
+ * Login velocity check on the normalized phone number, run before password
+ * verification. It reserves one unit of the phone's failure budget up front
+ * so parallel guesses cannot all slip past the limit; a successful login
+ * clears the bucket via `resetCustomerAuthAccount()`, so only failures count.
  */
 export async function checkCustomerAuthAccount(
   phoneNormalized: string,
   injectedLimiter?: RateLimiter,
 ): Promise<CustomerAuthCheckResult> {
+  return checkPhoneBucket("phone-attempts", phoneNormalized, injectedLimiter);
+}
+
+/**
+ * Registration velocity check on the normalized phone number. It uses its own
+ * bucket so registrations for a phone never lock that phone out of login.
+ */
+export async function checkCustomerRegisterAccount(
+  phoneNormalized: string,
+  injectedLimiter?: RateLimiter,
+): Promise<CustomerAuthCheckResult> {
+  return checkPhoneBucket("phone-register", phoneNormalized, injectedLimiter);
+}
+
+async function checkPhoneBucket(
+  bucketName: "phone-attempts" | "phone-register",
+  phoneNormalized: string,
+  injectedLimiter?: RateLimiter,
+): Promise<CustomerAuthCheckResult> {
   const limiter = getLimiter(injectedLimiter);
   const decision = await limiter.check(POLICIES.customerAuth, [
-    {
-      bucketName: "phone-attempts",
-      dimension: "phone",
-      identifier: phoneNormalized,
-    },
+    { bucketName, dimension: "phone", identifier: phoneNormalized },
   ]);
 
   if (!decision.allowed) {
@@ -181,14 +198,4 @@ export function consumeCustomerAuthAttempt(
   if (current.count >= 10) return false;
   current.count += 1;
   return true;
-}
-
-/**
- * @deprecated Unsafe client IP resolver that trusts client-supplied x-forwarded-for.
- * Use resolveTrustedClientIp from "@/server/http/client-ip" instead.
- */
-export function getRequestIp(request: Request): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local"
-  );
 }

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { resolveCustomerSessionToken } from "@/server/customer-auth/session";
+import {
+  readCustomerSessionToken,
+  resolveCustomerSessionToken,
+} from "@/server/customer-auth/session";
 import { hasSafeMutationOrigin } from "@/server/http/origin";
 import { readJsonBody } from "@/server/http/read-json-body";
 import { markCustomerNotificationsRead } from "@/server/notifications/customer-notifications";
@@ -17,11 +20,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const cookie = request.headers
-    .get("cookie")
-    ?.match(/(?:^|;\s*)customer_session=([^;]+)/)?.[1];
   const session = await resolveCustomerSessionToken(
-    cookie ? decodeURIComponent(cookie) : null,
+    readCustomerSessionToken(request),
   );
 
   if (!session) {

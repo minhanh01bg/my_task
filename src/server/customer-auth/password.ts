@@ -19,6 +19,15 @@ const VERSION = "scrypt-v1";
 const KEY_LENGTH = 64;
 const OPTIONS = { N: 16_384, r: 8, p: 1 } as const;
 
+/**
+ * Hash of a random, discarded password made with OPTIONS. Login verifies
+ * against it when the phone has no usable account, so a missing or disabled
+ * account costs the same scrypt run as a real one. Regenerate it whenever
+ * OPTIONS change.
+ */
+export const DUMMY_CUSTOMER_PASSWORD_HASH =
+  "scrypt-v1$16384$8$1$eiRudYFqD-WYWDuR2fEJ-Q$K1v62Jtlq_m4XRo-nXehIFW3pOKsDwQblUyHk7HOhNtgp-vunDbNb-Xj0yVuEdWLodeuk3BO2lLjIoznXQ2bjQ";
+
 export async function hashCustomerPassword(password: string): Promise<string> {
   const salt = randomBytes(16);
   const derived = await scrypt(password, salt, OPTIONS);

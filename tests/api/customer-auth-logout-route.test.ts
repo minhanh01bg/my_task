@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/customer-auth/logout/route";
 import { CUSTOMER_SESSION_COOKIE } from "@/server/customer-auth/session";
 
-vi.mock("@/server/customer-auth/session", () => ({
-  CUSTOMER_SESSION_COOKIE: "customer_session",
+vi.mock("@/server/customer-auth/session", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/server/customer-auth/session")>()),
   revokeCustomerSession: vi.fn(),
 }));
 

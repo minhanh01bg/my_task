@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { hasSafeMutationOrigin } from "@/server/http/origin";
 import {
   CUSTOMER_SESSION_COOKIE,
+  readCustomerSessionToken,
   revokeCustomerSession,
 } from "@/server/customer-auth/session";
 
@@ -12,10 +13,8 @@ export async function POST(request: Request) {
       { message: "Yêu cầu không hợp lệ" },
       { status: 403 },
     );
-  const cookie = request.headers
-    .get("cookie")
-    ?.match(/(?:^|;\s*)customer_session=([^;]+)/)?.[1];
-  await revokeCustomerSession(cookie ? decodeURIComponent(cookie) : null);
+  // An undecodable cookie has no session to revoke, but still gets cleared.
+  await revokeCustomerSession(readCustomerSessionToken(request));
   const response = NextResponse.json({ ok: true });
   response.cookies.set(CUSTOMER_SESSION_COOKIE, "", {
     httpOnly: true,

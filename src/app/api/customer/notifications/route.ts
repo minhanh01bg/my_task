@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 
-import { resolveCustomerSessionToken } from "@/server/customer-auth/session";
+import {
+  readCustomerSessionToken,
+  resolveCustomerSessionToken,
+} from "@/server/customer-auth/session";
 import { listCustomerNotifications } from "@/server/notifications/customer-notifications";
 import { customerNotificationsQuerySchema } from "@/types/customer-notification";
 
 export async function GET(request: Request) {
-  const cookie = request.headers
-    .get("cookie")
-    ?.match(/(?:^|;\s*)customer_session=([^;]+)/)?.[1];
   const session = await resolveCustomerSessionToken(
-    cookie ? decodeURIComponent(cookie) : null,
+    readCustomerSessionToken(request),
   );
 
   if (!session) {
