@@ -115,6 +115,31 @@ describe("flushQueue", () => {
     expect(queued[0]?.lastError).toContain("Sản phẩm đã xoá");
   });
 
+  it.each([
+    [401, "Chưa đăng nhập"],
+    [403, "Origin không hợp lệ"],
+  ])(
+    "het phien/bi chan (%i) thi GIU don da thu tien trong hang doi",
+    async (status, message) => {
+      await enqueueOrder(payload("c1"));
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status,
+          json: async () => ({ message }),
+        }),
+      );
+
+      const result = await flushQueue();
+
+      expect(result).toEqual({ sent: 0, failed: 1 });
+      const queued = await listQueuedOrders();
+      expect(queued.map((item) => item.clientId)).toEqual(["c1"]);
+      expect(queued[0]?.lastError).toBe(message);
+    },
+  );
+
   it("mot don loi khong chan cac don sau", async () => {
     await enqueueOrder(payload("c1"));
     await enqueueOrder(payload("c2"));

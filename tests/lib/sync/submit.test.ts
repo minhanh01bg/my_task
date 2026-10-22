@@ -103,6 +103,28 @@ describe("submitOrder", () => {
     expect(queued[0]?.lastError).toContain("Sản phẩm đã xoá");
   });
 
+  it.each([401, 403])(
+    "het phien (%i) thi xep hang doi de gui lai, khong coi la bi tu choi",
+    async (status) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status,
+          json: async () => ({ message: "Chưa đăng nhập" }),
+        }),
+      );
+
+      const result = await submitOrder(payload());
+
+      expect(result.synced).toBe(false);
+      expect(result.rejected).toBeUndefined();
+      const queued = await listQueuedOrders();
+      expect(queued.map((item) => item.clientId)).toEqual(["c1"]);
+      expect(queued[0]?.lastError).toBe("Chưa đăng nhập");
+    },
+  );
+
   it("gui dung endpoint va dung payload", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,

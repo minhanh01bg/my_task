@@ -1,47 +1,83 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { hasAdminSession } from "@/server/auth/require-admin-session";
+import { hasSafeMutationOrigin } from "@/server/http/origin";
+import { readJsonBody } from "@/server/http/read-json-body";
 import { createOrder } from "@/server/orders/create-order";
 
-const lineSchema = z.object({
-  productId: z.string().nullable(),
-  name: z.string().min(1),
-  unitPrice: z.number().int().min(0),
-  originalPrice: z.number().int().min(0),
-  quantity: z.number().positive(),
-  discount: z.number().int().min(0).default(0),
-  unit: z.string().default("cái"),
-  isService: z.boolean().default(false),
-});
+/** Đơn 200 dòng thực tế chỉ vài chục KB; quá mức này gần như chắc chắn là lạm dụng. */
+const MAX_ORDER_BODY_BYTES = 128_000;
+/** Trần cho mọi số tiền VND (1 tỷ) — chặn số khổng lồ làm tràn tổng/báo cáo. */
+const MAX_VND = 1_000_000_000;
 
-const paymentSchema = z.object({
-  method: z.enum(["cash", "transfer", "debt"]),
-  amount: z.number().int().min(0),
-  receivedAt: z.coerce.date().nullable().optional(),
-  note: z.string().nullable().optional(),
-});
+const moneySchema = z.number().int().min(0).max(MAX_VND);
 
-const bodySchema = z.object({
-  clientId: z.string().min(1),
-  preferredCode: z
-    .string()
-    .regex(/^DH\d+$/)
-    .nullable()
-    .optional(),
-  channel: z.enum(["pos", "online"]).default("pos"),
-  lines: z.array(lineSchema).min(1),
-  orderDiscount: z.number().int().min(0).default(0),
-  payments: z.array(paymentSchema).min(1),
-  customerId: z.string().nullable().optional(),
-  note: z.string().nullable().optional(),
-});
+const lineSchema = z
+  .object({
+    productId: z.string().max(100).nullable(),
+    name: z.string().min(1).max(300),
+    unitPrice: moneySchema,
+    originalPrice: moneySchema,
+    quantity: z.number().finite().positive().max(100_000),
+    discount: moneySchema.default(0),
+    unit: z.string().max(50).default("cái"),
+    isService: z.boolean().default(false),
+  })
+  .strict();
+
+const paymentSchema = z
+  .object({
+    method: z.enum(["cash", "transfer", "debt"]),
+    amount: moneySchema,
+    receivedAt: z.coerce.date().nullable().optional(),
+    note: z.string().max(500).nullable().optional(),
+  })
+  .strict();
+
+const bodySchema = z
+  .object({
+    clientId: z.string().min(1).max(100),
+    preferredCode: z
+      .string()
+      .max(30)
+      .regex(/^DH\d+$/)
+      .nullable()
+      .optional(),
+    channel: z.enum(["pos", "online"]).default("pos"),
+    lines: z.array(lineSchema).min(1).max(200),
+    orderDiscount: moneySchema.default(0),
+    payments: z.array(paymentSchema).min(1).max(10),
+    customerId: z.string().max(100).nullable().optional(),
+    note: z.string().max(1000).nullable().optional(),
+  })
+  .strict();
 
 export async function POST(request: Request) {
-  const parsed = bodySchema.safeParse(await request.json().catch(() => null));
+  if (!(await hasAdminSession(request))) {
+    return NextResponse.json({ message: "Chưa đăng nhập" }, { status: 401 });
+  }
+
+  if (!hasSafeMutationOrigin(request)) {
+    return NextResponse.json(
+      { message: "Nguồn gốc yêu cầu không hợp lệ" },
+      { status: 403 },
+    );
+  }
+
+  const body = await readJsonBody(request, { maxBytes: MAX_ORDER_BODY_BYTES });
+  if (!body.ok) {
+    return NextResponse.json(
+      { message: body.message },
+      { status: body.status },
+    );
+  }
+
+  const parsed = bodySchema.safeParse(body.data);
 
   if (!parsed.success) {
     return NextResponse.json(
-      { message: "Dữ liệu đơn hàng không hợp lệ", issues: parsed.error.issues },
+      { message: "Dữ liệu đơn hàng không hợp lệ" },
       { status: 400 },
     );
   }
