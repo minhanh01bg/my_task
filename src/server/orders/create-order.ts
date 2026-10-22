@@ -13,6 +13,7 @@ import { OnlineOrderError } from "@/types/online-order";
 
 import { generateOrderCode } from "./order-code";
 import { nextOrderSequence } from "./order-sequence";
+import { OrderValidationError } from "./order-validation-error";
 
 /** So lan chay transaction toi da khi dung unique `Order.code`. */
 const MAX_CODE_ATTEMPTS = 3;
@@ -98,6 +99,60 @@ export interface CreateOrderResult {
   };
   /** true khi don da ton tai tu truoc (gui lai lan hai) — khong tao moi. */
   duplicated: boolean;
+}
+
+/**
+ * Doi chieu thanh toan voi tong do server tinh lai: tong cac khoan phai du tong
+ * don. Phan du chi duoc la tien thua cua tien mat — tru vao khoan tien mat (tu
+ * khoan cuoi) de so tien luu lai bang dung so da thu, cong no/bao cao khong bi
+ * thoi phong. Chuyen khoan/ghi no du thi tu choi. Khoan tien mat bi tru het
+ * thi bo, khong luu dong 0d.
+ */
+function settlePayments(
+  payments: CreateOrderPayment[],
+  total: number,
+): CreateOrderPayment[] {
+  if (
+    payments.some(
+      (payment) => !Number.isSafeInteger(payment.amount) || payment.amount < 0,
+    )
+  ) {
+    throw new OrderValidationError(
+      "PAYMENT_INVALID",
+      "Số tiền thanh toán không hợp lệ",
+    );
+  }
+
+  const paid = payments.reduce((sum, payment) => sum + payment.amount, 0);
+  if (paid < total) {
+    throw new OrderValidationError(
+      "PAYMENT_SHORT",
+      "Số tiền thanh toán chưa đủ tổng đơn",
+    );
+  }
+
+  let change = paid - total;
+  const cash = payments
+    .filter((payment) => payment.method === "cash")
+    .reduce((sum, payment) => sum + payment.amount, 0);
+  if (change > cash) {
+    throw new OrderValidationError(
+      "PAYMENT_OVERPAID",
+      "Chuyển khoản hoặc ghi nợ vượt quá tổng đơn",
+    );
+  }
+
+  const settled = [...payments];
+  for (let index = settled.length - 1; index >= 0 && change > 0; index -= 1) {
+    const payment = settled[index]!;
+    if (payment.method !== "cash") continue;
+    const deducted = Math.min(payment.amount, change);
+    settled[index] = { ...payment, amount: payment.amount - deducted };
+    change -= deducted;
+  }
+  return settled.filter(
+    (payment, index) => payment.amount > 0 || payments[index]!.amount === 0,
+  );
 }
 
 function resolveStatus(payments: CreateOrderPayment[]): string {
@@ -221,7 +276,8 @@ async function consumeVoucherUse(
  * /api/orders, don online sau nay goi truc tiep.
  *
  * Ba dam bao quan trong:
- * 1. Server tinh lai toan bo tien bang calculateCart — khong tin so client gui.
+ * 1. Server tinh lai toan bo tien bang calculateCart — khong tin so client gui;
+ *    thanh toan phai du tong da tinh lai (xem `settlePayments`).
  * 2. Idempotent theo clientId — mang chap chon gui hai lan chi tao mot don.
  * 3. Khong bao gio tu choi don vi het hang — cho ton am va danh dau canh bao.
  */
@@ -269,7 +325,8 @@ export async function createOrder(
     input.voucher,
     input.online?.shippingFee ?? 0,
   );
-  const status = input.initialStatus ?? resolveStatus(input.payments);
+  const payments = settlePayments(input.payments, money.total);
+  const status = input.initialStatus ?? resolveStatus(payments);
 
   const stockLines = input.lines.filter(
     (line) => !line.isService && line.productId,
@@ -360,7 +417,7 @@ export async function createOrder(
               })),
             },
             payments: {
-              create: input.payments.map((payment) => ({
+              create: payments.map((payment) => ({
                 method: payment.method,
                 amount: payment.amount,
                 receivedAt:

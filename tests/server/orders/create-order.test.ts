@@ -10,6 +10,7 @@ import {
 } from "vitest";
 
 import { logger } from "@/lib/logger";
+import { listDebts } from "@/server/admin/list-debts";
 import { getSalesAnalytics } from "@/server/admin/sales-analytics";
 import { prisma as appPrisma } from "@/server/db/prisma";
 import { createOrder } from "@/server/orders/create-order";
@@ -442,7 +443,7 @@ describe("createOrder", () => {
         cashLine(service.id, { isService: true }),
         { ...cashLine(product.id), productId: null, isService: true },
       ],
-      payments: [],
+      payments: [{ method: "cash", amount: 90000 }],
     });
     await prisma.product.update({
       where: { id: product.id },
@@ -467,5 +468,147 @@ describe("createOrder", () => {
     expect(
       analytics.topQuantity.reduce((sum, row) => sum + row.quantity, 0),
     ).toBe(6);
+  });
+});
+
+describe("createOrder — doi chieu thanh toan voi tong server tinh lai", () => {
+  async function storedPayments(orderId: string) {
+    return prisma.payment.findMany({
+      where: { orderId },
+      orderBy: { createdAt: "asc" },
+      select: { method: true, amount: true },
+    });
+  }
+
+  async function expectRejected(
+    payments: Parameters<typeof createOrder>[0]["payments"],
+    code: string,
+  ) {
+    const product = await seedProduct({ stock: 10 });
+    await expect(
+      createOrder({
+        clientId: `pay-${code}-${payments.length}`,
+        lines: [cashLine(product.id)],
+        payments,
+      }),
+    ).rejects.toMatchObject({ name: "OrderValidationError", code });
+    expect(await prisma.order.count()).toBe(0);
+    expect(await prisma.payment.count()).toBe(0);
+    const after = await prisma.product.findUniqueOrThrow({
+      where: { id: product.id },
+    });
+    expect(after.stock).toBe(10);
+  }
+
+  it("tu choi don ghi 0d du tong la 30.000d", async () => {
+    await expectRejected([{ method: "cash", amount: 0 }], "PAYMENT_SHORT");
+  });
+
+  it("tu choi don khong co khoan thanh toan nao", async () => {
+    await expectRejected([], "PAYMENT_SHORT");
+  });
+
+  it("tu choi ghi no thieu so voi tong don", async () => {
+    await expectRejected([{ method: "debt", amount: 1000 }], "PAYMENT_SHORT");
+  });
+
+  it("tu choi tien mat + chuyen khoan cong lai van thieu", async () => {
+    await expectRejected(
+      [
+        { method: "cash", amount: 10000 },
+        { method: "transfer", amount: 10000 },
+      ],
+      "PAYMENT_SHORT",
+    );
+  });
+
+  it.each(["transfer", "debt"] as const)(
+    "tu choi %s tra du so voi tong don",
+    async (method) => {
+      await expectRejected([{ method, amount: 50000 }], "PAYMENT_OVERPAID");
+    },
+  );
+
+  it("tu choi so tien am hoac le", async () => {
+    await expectRejected(
+      [
+        { method: "cash", amount: 40000 },
+        { method: "transfer", amount: -10000 },
+      ],
+      "PAYMENT_INVALID",
+    );
+  });
+
+  it("tien mat tra du: chi luu dung tong don, phan du la tien thua", async () => {
+    const product = await seedProduct();
+
+    const result = await createOrder({
+      clientId: "pay-cash-change",
+      lines: [cashLine(product.id)],
+      payments: [{ method: "cash", amount: 50000 }],
+    });
+
+    expect(result.order).toMatchObject({ total: 30000, status: "paid" });
+    expect(await storedPayments(result.order.id)).toEqual([
+      { method: "cash", amount: 30000 },
+    ]);
+  });
+
+  it("tien mat + ghi no: tien thua tru vao tien mat, cong no dung", async () => {
+    const product = await seedProduct();
+
+    const result = await createOrder({
+      clientId: "pay-cash-debt",
+      lines: [cashLine(product.id)],
+      payments: [
+        { method: "cash", amount: 20000 },
+        { method: "debt", amount: 15000 },
+      ],
+    });
+
+    expect(result.order.status).toBe("debt");
+    expect(await storedPayments(result.order.id)).toEqual([
+      { method: "cash", amount: 15000 },
+      { method: "debt", amount: 15000 },
+    ]);
+    const debts = await listDebts({});
+    expect(debts.items).toHaveLength(1);
+    expect(debts.items[0]).toMatchObject({ paid: 15000, balance: 15000 });
+  });
+
+  it("khoan tien mat bi tru het vao tien thua thi khong luu dong 0d", async () => {
+    const product = await seedProduct();
+
+    const result = await createOrder({
+      clientId: "pay-cash-dropped",
+      lines: [cashLine(product.id)],
+      payments: [
+        { method: "cash", amount: 5000 },
+        { method: "transfer", amount: 30000, receivedAt: new Date() },
+      ],
+    });
+
+    expect(result.order.status).toBe("paid");
+    expect(await storedPayments(result.order.id)).toEqual([
+      { method: "transfer", amount: 30000 },
+    ]);
+  });
+
+  it("gui lai clientId da co tra don cu truoc khi doi chieu thanh toan", async () => {
+    const product = await seedProduct();
+    const first = await createOrder({
+      clientId: "pay-idempotent",
+      lines: [cashLine(product.id)],
+      payments: [{ method: "cash", amount: 30000 }],
+    });
+
+    const second = await createOrder({
+      clientId: "pay-idempotent",
+      lines: [cashLine(product.id)],
+      payments: [],
+    });
+
+    expect(second.duplicated).toBe(true);
+    expect(second.order.id).toBe(first.order.id);
   });
 });

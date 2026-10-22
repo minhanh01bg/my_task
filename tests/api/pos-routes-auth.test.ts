@@ -23,6 +23,7 @@ import {
 } from "@/server/auth/session";
 import { prisma } from "@/server/db/prisma";
 import { createOrder } from "@/server/orders/create-order";
+import { OrderValidationError } from "@/server/orders/order-validation-error";
 
 const ORIGIN = "http://localhost";
 const FAKE_COOKIE = `${SESSION_COOKIE}=x`;
@@ -222,6 +223,43 @@ describe("POS API yêu cầu phiên quản trị đã xác minh", () => {
     expect(mockedCreateOrder).toHaveBeenCalledWith(
       expect.objectContaining({ clientId: "pos-auth-ok", channel: "pos" }),
     );
+  });
+
+  it("thanh toán không khớp tổng đơn trả 422 kèm thông báo tiếng Việt", async () => {
+    mockedCreateOrder.mockRejectedValueOnce(
+      new OrderValidationError(
+        "PAYMENT_SHORT",
+        "Số tiền thanh toán chưa đủ tổng đơn",
+      ),
+    );
+
+    const response = await createPosOrder(
+      new Request(`${ORIGIN}/api/orders`, {
+        method: "POST",
+        headers: jsonHeaders(adminCookie()),
+        body: JSON.stringify(orderPayload("pos-auth-short")),
+      }),
+    );
+
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual({
+      code: "PAYMENT_SHORT",
+      message: "Số tiền thanh toán chưa đủ tổng đơn",
+    });
+  });
+
+  it("lỗi không phải nghiệp vụ vẫn được ném tiếp", async () => {
+    mockedCreateOrder.mockRejectedValueOnce(new Error("db down"));
+
+    await expect(
+      createPosOrder(
+        new Request(`${ORIGIN}/api/orders`, {
+          method: "POST",
+          headers: jsonHeaders(adminCookie()),
+          body: JSON.stringify(orderPayload("pos-auth-crash")),
+        }),
+      ),
+    ).rejects.toThrow("db down");
   });
 
   it("POST từ Origin lạ bị 403 dù có phiên thật", async () => {

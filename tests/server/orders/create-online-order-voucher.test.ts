@@ -225,6 +225,8 @@ describe("createOrder với voucher (đường ghi đơn duy nhất)", () => {
       shippingDiscount: number;
     },
     shippingFee: number,
+    /** Tong don server se tinh — createOrder doi chieu thanh toan voi so nay. */
+    total: number,
   ) {
     return {
       clientId: randomUUID(),
@@ -241,7 +243,7 @@ describe("createOrder với voucher (đường ghi đơn duy nhất)", () => {
           isService: false,
         },
       ],
-      payments: [{ method: "cash" as const, amount: 0 }],
+      payments: [{ method: "cash" as const, amount: total }],
       initialStatus: "pending",
       autoReceiveCash: false,
       voucher: voucherInput,
@@ -263,6 +265,7 @@ describe("createOrder với voucher (đường ghi đơn duy nhất)", () => {
       onlineInput(
         { code: "FREESHIP", discount: 0, shippingDiscount: 25_000 },
         30_000,
+        205_000,
       ),
     );
     const order = await prisma.order.findUniqueOrThrow({
@@ -284,6 +287,7 @@ describe("createOrder với voucher (đường ghi đơn duy nhất)", () => {
       onlineInput(
         { code: "BIG", discount: 999_999, shippingDiscount: 50_000 },
         10_000,
+        0,
       ),
     );
     const order = await prisma.order.findUniqueOrThrow({
@@ -305,6 +309,7 @@ describe("createOrder với voucher (đường ghi đơn duy nhất)", () => {
         onlineInput(
           { code: "GIAM10", discount: 20_000, shippingDiscount: 0 },
           0,
+          180_000,
         ),
       ),
     ).rejects.toMatchObject({ code: "VOUCHER_INVALID" });

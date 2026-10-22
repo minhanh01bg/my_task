@@ -5,6 +5,7 @@ import { hasAdminSession } from "@/server/auth/require-admin-session";
 import { hasSafeMutationOrigin } from "@/server/http/origin";
 import { readJsonBody } from "@/server/http/read-json-body";
 import { createOrder } from "@/server/orders/create-order";
+import { OrderValidationError } from "@/server/orders/order-validation-error";
 
 /** Đơn 200 dòng thực tế chỉ vài chục KB; quá mức này gần như chắc chắn là lạm dụng. */
 const MAX_ORDER_BODY_BYTES = 128_000;
@@ -82,7 +83,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const result = await createOrder(parsed.data);
+  let result: Awaited<ReturnType<typeof createOrder>>;
+  try {
+    result = await createOrder(parsed.data);
+  } catch (error: unknown) {
+    if (error instanceof OrderValidationError) {
+      return NextResponse.json(
+        { code: error.code, message: error.message },
+        { status: 422 },
+      );
+    }
+    throw error;
+  }
 
   return NextResponse.json(result, { status: result.duplicated ? 200 : 201 });
 }
