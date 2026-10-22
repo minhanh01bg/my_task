@@ -52,6 +52,28 @@ describe("isInternalHost (WEB-7c)", () => {
     "[64:ff9b::7f00:1]",
     "64:ff9b:0:0:0:0:10.0.0.1",
     "64:ff9b::100.64.0.1",
+    // IPv4 multicast 224.0.0.0/4 and reserved 240.0.0.0/4 (incl. broadcast)
+    "224.0.0.1",
+    "239.255.255.250",
+    "240.0.0.1",
+    "255.255.255.255",
+    "0xffffffff",
+    "::ffff:224.0.0.1",
+    // IPv6 multicast ff00::/8
+    "ff02::1",
+    "ff05::1:3",
+    "[ff0e::1]",
+    // 6to4 2002::/16 with an internal embedded IPv4
+    "2002:7f00:1::",
+    "2002:7f00:0001::1",
+    "2002:a9fe:a9fe::1",
+    "2002:0a00:0001::",
+    "2002:c0a8:0101::1",
+    "2002:e000:1::",
+    // Teredo 2001:0::/32 is blocked whole
+    "2001:0:4136:e378:8000:63bf:3fff:fdd2",
+    "2001::80ff:fffe",
+    "[2001:0000:5ef5:79fd::1]",
   ])("blocks %s", (host) => {
     expect(isInternalHost(host)).toBe(true);
   });
@@ -74,6 +96,10 @@ describe("isInternalHost (WEB-7c)", () => {
     "198.20.0.1",
     "64:ff9b::8.8.8.8",
     "64:ff9b::808:808",
+    "223.255.255.255",
+    "2002:808:808::1",
+    "2001:4860:4860::8888",
+    "2001:1::1",
   ])("allows public host %s", (host) => {
     expect(isInternalHost(host)).toBe(false);
   });
@@ -101,6 +127,10 @@ describe("isPublicHttpsUrl (WEB-7a)", () => {
     "https://100.64.0.1/a.png",
     "https://198.18.0.1/a.png",
     "https://[64:ff9b::169.254.169.254]/latest/meta-data",
+    "https://255.255.255.255/a.png",
+    "https://[ff02::1]/a.png",
+    "https://[2002:a9fe:a9fe::]/latest/meta-data",
+    "https://[2001::80ff:fffe]/a.png",
     "not a url",
   ])("rejects %s", (value) => {
     expect(isPublicHttpsUrl(value)).toBe(false);

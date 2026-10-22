@@ -14,6 +14,8 @@ const INTERNAL_IPV4_RANGES: ReadonlyArray<readonly [string, number]> = [
   ["172.16.0.0", 12],
   ["192.168.0.0", 16],
   ["198.18.0.0", 15], // benchmarking
+  ["224.0.0.0", 4], // multicast
+  ["240.0.0.0", 4], // reserved, incl. broadcast 255.255.255.255
 ];
 
 /**
@@ -88,8 +90,22 @@ function parseIPv6(host: string): number[] | null {
 
 function isInternalIPv6(groups: number[]): boolean {
   const [first] = groups;
-  // fc00::/7 unique local, fe80::/10 link local
-  if ((first & 0xfe00) === 0xfc00 || (first & 0xffc0) === 0xfe80) return true;
+  // fc00::/7 unique local, fe80::/10 link local, ff00::/8 multicast
+  if (
+    (first & 0xfe00) === 0xfc00 ||
+    (first & 0xffc0) === 0xfe80 ||
+    (first & 0xff00) === 0xff00
+  ) {
+    return true;
+  }
+  // Teredo 2001:0::/32 hides the client IPv4 (bit-inverted) and relays
+  // through a third-party server; no legitimate image host needs it, so the
+  // whole prefix is blocked instead of decoding the client address.
+  if (first === 0x2001 && groups[1] === 0) return true;
+  // 6to4 2002::/16 embeds the IPv4 in groups 1-2
+  if (first === 0x2002) {
+    return isInternalIPv4(((groups[1] << 16) | groups[2]) >>> 0);
+  }
   const embeddedIPv4 = ((groups[6] << 16) | groups[7]) >>> 0;
   // ::, ::1, IPv4-compatible (::a.b.c.d) and IPv4-mapped (::ffff:a.b.c.d)
   if (
@@ -110,9 +126,10 @@ function isInternalIPv6(groups: number[]): boolean {
 }
 
 /**
- * True for loopback, private, link-local, carrier-grade NAT, benchmarking and
- * unspecified addresses (also behind NAT64) and for localhost-style names. An IPv6 literal that cannot be parsed counts as
- * internal (fail closed).
+ * True for loopback, private, link-local, carrier-grade NAT, benchmarking,
+ * multicast, reserved and unspecified addresses (also behind NAT64 or 6to4),
+ * for any Teredo address and for localhost-style names. An IPv6 literal that
+ * cannot be parsed counts as internal (fail closed).
  */
 export function isInternalHost(hostname: string): boolean {
   const host = hostname
