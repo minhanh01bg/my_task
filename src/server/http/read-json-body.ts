@@ -1,6 +1,7 @@
 export interface ReadJsonBodyOptions {
   maxBytes?: number;
-  requiredContentType?: string;
+  /** MIME essences accepted (lowercase, no parameters). Default: `application/json`. */
+  allowedContentTypes?: readonly string[];
 }
 
 export type ReadJsonBodyResult<T = unknown> =
@@ -21,6 +22,15 @@ export type ReadJsonBodyResult<T = unknown> =
     };
 
 /**
+ * MIME essence of a Content-Type header: the `type/subtype` before any
+ * parameters, trimmed and lowercased. Substring checks would let
+ * `application/jsonx` or `text/plain;application/json` through.
+ */
+function mimeEssence(contentType: string): string {
+  return contentType.split(";", 1)[0].trim().toLowerCase();
+}
+
+/**
  * Reads and parses JSON request stream with hard byte limit enforcement.
  *
  * CRITICAL SECURITY INVARIANT:
@@ -33,14 +43,13 @@ export async function readJsonBody<T = unknown>(
   options: ReadJsonBodyOptions = {},
 ): Promise<ReadJsonBodyResult<T>> {
   const maxBytes = options.maxBytes ?? 64_000;
-  const requiredContentType = options.requiredContentType ?? "application/json";
+  const allowedContentTypes = options.allowedContentTypes ?? [
+    "application/json",
+  ];
 
-  // 1. Content-Type check
+  // 1. Content-Type check (exact MIME essence)
   const contentType = request.headers.get("content-type");
-  if (
-    !contentType ||
-    !contentType.toLowerCase().includes(requiredContentType.toLowerCase())
-  ) {
+  if (!contentType || !allowedContentTypes.includes(mimeEssence(contentType))) {
     return {
       ok: false,
       status: 415,

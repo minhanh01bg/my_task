@@ -152,6 +152,63 @@ describe("readJsonBody", () => {
     }
   });
 
+  it.each([
+    "application/jsonx",
+    "text/plain;application/json",
+    "text/plain; charset=application/json",
+    "application/json-patch+json",
+    "multipart/form-data; boundary=application/json",
+  ])("rejects look-alike content-type %s with 415", async (contentType) => {
+    const req = createChunkedRequest([encoder.encode('{"a":1}')], {
+      "content-type": contentType,
+    });
+
+    const res = await readJsonBody(req);
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.status).toBe(415);
+      expect(res.error).toBe("invalid_content_type");
+    }
+  });
+
+  it.each([
+    "application/json",
+    "Application/JSON",
+    "application/json; charset=utf-8",
+    " application/json ;charset=UTF-8",
+  ])("accepts JSON content-type %s", async (contentType) => {
+    const req = createChunkedRequest([encoder.encode('{"a":1}')], {
+      "content-type": contentType,
+    });
+
+    const res = await readJsonBody<{ a: number }>(req);
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.data.a).toBe(1);
+  });
+
+  it("accepts only the listed content types when allowedContentTypes is set", async () => {
+    const options = {
+      allowedContentTypes: ["application/csp-report", "application/json"],
+    };
+
+    const cspReport = await readJsonBody(
+      createChunkedRequest([encoder.encode("{}")], {
+        "content-type": "application/csp-report",
+      }),
+      options,
+    );
+    expect(cspReport.ok).toBe(true);
+
+    const reportsJson = await readJsonBody(
+      createChunkedRequest([encoder.encode("{}")], {
+        "content-type": "application/reports+json",
+      }),
+      options,
+    );
+    expect(reportsJson.ok).toBe(false);
+    if (!reportsJson.ok) expect(reportsJson.status).toBe(415);
+  });
+
   it("rejects malformed JSON with 400", async () => {
     const req = createChunkedRequest([encoder.encode("{ invalid json }")]);
 

@@ -20,6 +20,11 @@ const mockedAuth = vi.mocked(hasAdminSession);
 const mockedList = vi.mocked(listAdminNotifications);
 const mockedRead = vi.mocked(markAdminNotificationsRead);
 
+const JSON_HEADERS = {
+  origin: "http://localhost",
+  "content-type": "application/json",
+};
+
 beforeEach(() => vi.clearAllMocks());
 
 describe("admin notification routes", () => {
@@ -69,7 +74,7 @@ describe("admin notification routes", () => {
     const invalid = await POST(
       new Request("http://localhost/api/admin/notifications/read", {
         method: "POST",
-        headers: { origin: "http://localhost" },
+        headers: JSON_HEADERS,
         body: JSON.stringify({ id: "one", extra: true }),
       }),
     );
@@ -78,10 +83,42 @@ describe("admin notification routes", () => {
     const valid = await POST(
       new Request("http://localhost/api/admin/notifications/read", {
         method: "POST",
-        headers: { origin: "http://localhost" },
+        headers: JSON_HEADERS,
         body: JSON.stringify({ id: "one" }),
       }),
     );
     expect(valid.status).toBe(200);
+  });
+
+  it("mutation đọc body có giới hạn byte và đúng Content-Type", async () => {
+    mockedAuth.mockResolvedValue(true);
+    const oversized = await POST(
+      new Request("http://localhost/api/admin/notifications/read", {
+        method: "POST",
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ id: "x".repeat(4_000) }),
+      }),
+    );
+    expect(oversized.status).toBe(413);
+    expect(oversized.headers.get("cache-control")).toBe("private, no-store");
+
+    const wrongType = await POST(
+      new Request("http://localhost/api/admin/notifications/read", {
+        method: "POST",
+        headers: { origin: "http://localhost", "content-type": "text/plain" },
+        body: JSON.stringify({ id: "one" }),
+      }),
+    );
+    expect(wrongType.status).toBe(415);
+
+    const malformed = await POST(
+      new Request("http://localhost/api/admin/notifications/read", {
+        method: "POST",
+        headers: JSON_HEADERS,
+        body: "{not json",
+      }),
+    );
+    expect(malformed.status).toBe(400);
+    expect(mockedRead).not.toHaveBeenCalled();
   });
 });
