@@ -7,3 +7,6 @@ onlyBuiltDependencies:
   - prisma
   - esbuild
   - sharp
+
+# Refuse versions published less than 24h ago (fresh supply-chain compromise window).
+minimumReleaseAge: 1440
