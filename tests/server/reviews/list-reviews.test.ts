@@ -1,18 +1,24 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { prisma } from "@/server/db/prisma";
-import { listProductReviews } from "@/server/reviews/list-reviews";
+import {
+  listProductReviews,
+  maskReviewerName,
+} from "@/server/reviews/list-reviews";
 
 import {
+  REVIEW_ACCOUNT_PHONE,
   REVIEW_OTHER_PRODUCT_ID,
   REVIEW_PRODUCT_ID,
   resetReviewFixtures,
   seedReviewFixtures,
 } from "./fixtures";
 
+let accountId: string;
+
 beforeEach(async () => {
   await resetReviewFixtures();
-  const { accountId } = await seedReviewFixtures();
+  ({ accountId } = await seedReviewFixtures());
   await prisma.productReview.createMany({
     data: [
       ...Array.from({ length: 12 }, (_, index) => ({
@@ -52,17 +58,19 @@ describe("listProductReviews", () => {
     expect(first.page).toBe(1);
     expect(first.items).toHaveLength(10);
     expect(first.items[0]).toMatchObject({
-      authorName: "Khách 12",
+      content: "Đánh giá số 12",
       rating: 4,
       isVerifiedPurchase: false,
     });
     expect(typeof first.items[0]?.createdAt).toBe("string");
-    expect(first.items.some((r) => r.authorName === "Bị ẩn")).toBe(false);
+    expect(first.items.some((r) => r.content === "Nội dung vi phạm")).toBe(
+      false,
+    );
 
     const second = await listProductReviews(REVIEW_PRODUCT_ID, 2);
-    expect(second.items.map((r) => r.authorName)).toEqual([
-      "Khách 2",
-      "Khách 1",
+    expect(second.items.map((r) => r.content)).toEqual([
+      "Đánh giá số 2",
+      "Đánh giá số 1",
     ]);
   });
 
@@ -71,4 +79,54 @@ describe("listProductReviews", () => {
     expect(result.page).toBe(2);
     expect(result.items).toHaveLength(2);
   });
+
+  it("che họ tên người đánh giá, không lộ tài khoản/số điện thoại", async () => {
+    await prisma.productReview.deleteMany();
+    await prisma.productReview.create({
+      data: {
+        productId: REVIEW_PRODUCT_ID,
+        accountId,
+        authorName: "Nguyễn Văn An",
+        rating: 5,
+        content: "Hàng chuẩn, giao nhanh",
+      },
+    });
+
+    const { items } = await listProductReviews(REVIEW_PRODUCT_ID, 1);
+    expect(items).toHaveLength(1);
+    expect(Object.keys(items[0]!).sort()).toEqual([
+      "authorName",
+      "content",
+      "createdAt",
+      "id",
+      "isVerifiedPurchase",
+      "rating",
+    ]);
+    expect(items[0]?.authorName).toBe("Nguyễn V. A.");
+    const json = JSON.stringify(items);
+    expect(json).not.toContain("Nguyễn Văn An");
+    expect(json).not.toContain(accountId);
+    expect(json).not.toContain(REVIEW_ACCOUNT_PHONE);
+  });
+});
+
+describe("maskReviewerName", () => {
+  it.each([
+    ["Nguyễn Văn An", "Nguyễn V. A."],
+    ["  Minh   Anh ", "Minh A."],
+    ["trần thị bích ngọc", "trần T. B. N."],
+    ["Nguyễn Văn An".normalize("NFD"), "Nguyễn V. A."],
+    ["Lan", "Lan"],
+    ["Minh (VIP)", "Minh V."],
+    ["Khách 12", "Khách 1."],
+  ])("%j → %j", (name, masked) => {
+    expect(maskReviewerName(name)).toBe(masked);
+  });
+
+  it.each(["", "   ", "0901234567", "+84901234567", "minh.anh@gmail.com"])(
+    "tên rỗng, số điện thoại hoặc email %j → Khách hàng",
+    (name) => {
+      expect(maskReviewerName(name)).toBe("Khách hàng");
+    },
+  );
 });

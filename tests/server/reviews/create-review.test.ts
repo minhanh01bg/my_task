@@ -70,12 +70,18 @@ describe("createReview", () => {
     expect(first.ok).toBe(true);
     if (!first.ok) return;
     expect(first.review).toMatchObject({
-      authorName: "Minh Anh",
+      authorName: "Minh A.",
       rating: 5,
       content: "Cà phê thơm, đóng gói kỹ",
       isVerifiedPurchase: false,
     });
     expect(typeof first.review.createdAt).toBe("string");
+    // DB giữ tên đầy đủ cho trang admin; chỉ bản công khai bị che.
+    const stored = await prisma.productReview.findUniqueOrThrow({
+      where: { id: first.review.id },
+      select: { authorName: true },
+    });
+    expect(stored.authorName).toBe("Minh Anh");
     expect(first.summary).toEqual({ avg: 5, count: 1 });
 
     const second = await createReview({

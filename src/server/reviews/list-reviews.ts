@@ -21,8 +21,30 @@ type PublicReviewRow = Prisma.ProductReviewGetPayload<{
   select: typeof publicReviewSelect;
 }>;
 
+/** Ten cong khai khi tu dau khong phai chu (so dien thoai, email...). */
+const ANONYMOUS_REVIEWER = "Khách hàng";
+
+/**
+ * Che ho ten cho trang cong khai: giu tu dau, cac tu sau chi con chu cai dau
+ * ("Nguyễn Văn An" → "Nguyễn V. A."). Tu dau co so/ky tu la thi an han. Trang
+ * admin (`admin-reviews.ts`) van doc `authorName` day du.
+ */
+export function maskReviewerName(name: string): string {
+  const [first, ...rest] = name.normalize("NFC").trim().split(/\s+/u);
+  if (!first || !/^[\p{L}\p{M}]+$/u.test(first)) return ANONYMOUS_REVIEWER;
+  const initials = rest.flatMap((word) => {
+    const initial = word.match(/[\p{L}\p{N}]/u)?.[0];
+    return initial ? [`${initial.toUpperCase()}.`] : [];
+  });
+  return [first, ...initials].join(" ");
+}
+
 export function toPublicReview(row: PublicReviewRow): PublicReview {
-  return { ...row, createdAt: row.createdAt.toISOString() };
+  return {
+    ...row,
+    authorName: maskReviewerName(row.authorName),
+    createdAt: row.createdAt.toISOString(),
+  };
 }
 
 /**

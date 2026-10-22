@@ -122,8 +122,15 @@ describe("POST /api/online/products/[id]/reviews", () => {
     expect(response.status).toBe(201);
     expect(response.headers.get("cache-control")).toContain("no-store");
     const body = await response.json();
-    expect(body.review).toMatchObject({ authorName: "Minh Anh", rating: 5 });
+    expect(body.review).toMatchObject({ authorName: "Minh A.", rating: 5 });
+    expect(JSON.stringify(body)).not.toContain("Minh Anh");
     expect(body.summary).toEqual({ avg: 5, count: 1 });
+
+    const list = await GET(new Request(URL_BASE), context());
+    const page = await list.json();
+    expect(page.items.map((r: { authorName: string }) => r.authorName)).toEqual(
+      ["Minh A."],
+    );
   });
 
   it("400 khi dữ liệu không hợp lệ", async () => {
