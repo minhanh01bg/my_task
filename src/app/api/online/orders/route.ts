@@ -185,11 +185,11 @@ export async function POST(request: Request) {
         ? String((error as { code: unknown }).code)
         : "INTERNAL_ERROR";
 
+    // No error.message: Prisma messages can echo customer phone/name values.
     logger.error("online_order_create_failed", {
       correlationId,
       errorClass,
       errorCode,
-      errorMessage: error instanceof Error ? error.message : "Unknown error",
     });
     return NextResponse.json(
       {

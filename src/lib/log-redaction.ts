@@ -1,7 +1,56 @@
-import type { Breadcrumb, ErrorEvent } from "@sentry/nextjs";
+import type { Breadcrumb, ErrorEvent, Event } from "@sentry/nextjs";
 
 const SENSITIVE_KEY_REGEX =
-  /(?:password|passwd|token|secret|authorization|cookie|session|phone|address|nonce|recovery|hmackey|keysecret|creditcard|cvv)/i;
+  /(?:password|passwd|token|secret|authorization|cookie|session|phone|address|nonce|recovery|hmackey|keysecret|creditcard|cvv|e-?mail|api[-_]?key)/i;
+
+/**
+ * Short words matched as whole words of a camelCase/snake_case key, so
+ * "otpCode" and "SENTRY_DSN" match but "footprint" does not.
+ */
+const SENSITIVE_KEY_WORDS = new Set(["otp", "dsn", "note", "notes"]);
+
+/**
+ * Person names are matched on the whole key so "errorName" or "productName"
+ * stay readable in logs.
+ */
+const PERSON_NAME_KEYS = new Set([
+  "name",
+  "fullname",
+  "firstname",
+  "lastname",
+  "username",
+  "displayname",
+  "customername",
+  "contactname",
+  "recipientname",
+  "receivername",
+]);
+
+/** Request headers kept on Sentry events; everything else is dropped. */
+const SAFE_REQUEST_HEADERS = new Set([
+  "accept",
+  "accept-language",
+  "content-length",
+  "content-type",
+  "host",
+  "user-agent",
+]);
+
+/** Span attributes that carry only the query string or fragment. */
+const SPAN_QUERY_ATTRIBUTES = new Set([
+  "http.query",
+  "http.fragment",
+  "url.query",
+  "url.fragment",
+]);
+
+/** Span attributes holding a URL or request target. */
+const SPAN_URL_ATTRIBUTES = new Set([
+  "url",
+  "url.full",
+  "http.url",
+  "http.target",
+]);
 
 const SENSITIVE_PATH_PATTERNS = [
   {
@@ -33,7 +82,19 @@ export function normalizeSafePath(input: string): string {
 }
 
 export function isSensitiveKey(key: string): boolean {
-  return SENSITIVE_KEY_REGEX.test(key);
+  if (SENSITIVE_KEY_REGEX.test(key)) return true;
+  if (PERSON_NAME_KEYS.has(key.toLowerCase().replace(/[-_\s]/g, ""))) {
+    return true;
+  }
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .some((word) => SENSITIVE_KEY_WORDS.has(word));
+}
+
+function stripQueryAndHash(url: string): string {
+  return url.replace(/[?#][\s\S]*$/, "");
 }
 
 /**
@@ -107,7 +168,8 @@ export function redactLogData(
       continue;
     }
 
-    if (isSensitiveKey(key) && (typeof val !== "object" || val === null)) {
+    // Whole value: an object or array under a sensitive key is PII as well.
+    if (isSensitiveKey(key)) {
       result[key] = "[REDACTED]";
       continue;
     }
@@ -135,59 +197,98 @@ export function sanitizeSentryBreadcrumb(
 
 /**
  * Central Sentry event scrubber for beforeSend.
- * Completely strips request bodies, redacts headers/cookies, normalizes URLs,
- * and cleans user and extra fields.
+ * Strips request bodies, query strings, cookies and non-allowlisted headers,
+ * normalizes URLs, and cleans user and extra fields.
  */
 export function sanitizeSentryEvent(event: ErrorEvent): ErrorEvent | null {
-  if (event.request) {
-    // 1. Completely delete request payload data
-    if (event.request.data) {
-      delete (event.request as Record<string, unknown>).data;
+  return sanitizeEventCommon(event);
+}
+
+/**
+ * Sentry transaction scrubber for beforeSendTransaction. Applies the same
+ * request/user cleanup as error events, then cleans the transaction name and
+ * the URL/query attributes of every span.
+ */
+export function sanitizeSentryTransaction<T extends Event>(event: T): T | null {
+  sanitizeEventCommon(event);
+
+  if (event.transaction) {
+    event.transaction = normalizeSafePath(stripQueryAndHash(event.transaction));
+  }
+
+  const trace = event.contexts?.trace;
+  if (trace?.data) {
+    trace.data = sanitizeSpanData(trace.data);
+  }
+
+  for (const span of event.spans ?? []) {
+    // No query stripping here: SQL descriptions use "?" placeholders.
+    if (span.description) {
+      span.description = normalizeSafePath(span.description);
+    }
+    span.data = sanitizeSpanData(span.data);
+  }
+
+  return event;
+}
+
+function sanitizeSpanData<T extends Record<string, unknown>>(data: T): T {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (SPAN_QUERY_ATTRIBUTES.has(key)) continue;
+
+    const header = /^http\.(?:request|response)\.header\.(.+)$/.exec(key)?.[1];
+    if (header && !SAFE_REQUEST_HEADERS.has(header.replaceAll("_", "-"))) {
+      continue;
     }
 
-    // 2. Redact request headers
-    if (event.request.headers) {
-      const sanitizedHeaders: Record<string, string> = {};
-      for (const [k, v] of Object.entries(event.request.headers)) {
-        if (isSensitiveKey(k)) {
-          sanitizedHeaders[k] = "[REDACTED]";
-        } else {
-          sanitizedHeaders[k] = v;
-        }
-      }
-      event.request.headers = sanitizedHeaders;
+    result[key] =
+      SPAN_URL_ATTRIBUTES.has(key) && typeof value === "string"
+        ? normalizeSafePath(stripQueryAndHash(value))
+        : value;
+  }
+  return result as T;
+}
+
+function sanitizeEventCommon<T extends Event>(event: T): T {
+  const request = event.request;
+  if (request) {
+    // 1. Body, query string and cookies never leave the process
+    delete request.data;
+    delete request.query_string;
+    delete request.cookies;
+
+    // 2. Keep only allowlisted headers (drops cookie, authorization,
+    //    x-forwarded-for, referer...)
+    if (request.headers) {
+      request.headers = Object.fromEntries(
+        Object.entries(request.headers).filter(([name]) =>
+          SAFE_REQUEST_HEADERS.has(name.toLowerCase()),
+        ),
+      );
     }
 
-    // 3. Redact request cookies
-    if (event.request.cookies) {
-      const sanitizedCookies: Record<string, string> = {};
-      for (const k of Object.keys(event.request.cookies)) {
-        sanitizedCookies[k] = "[REDACTED]";
-      }
-      event.request.cookies = sanitizedCookies;
-    }
-
-    // 4. Normalize URL
-    if (event.request.url) {
-      event.request.url = normalizeSafePath(event.request.url);
+    // 3. Normalize URL without its query string
+    if (request.url) {
+      request.url = normalizeSafePath(stripQueryAndHash(request.url));
     }
   }
 
-  // 5. Sanitize user identifiers and PII
+  // 4. Sanitize user identifiers and PII
   if (event.user) {
     if (event.user.ip_address) event.user.ip_address = "[REDACTED]";
     if (event.user.email) event.user.email = "[REDACTED]";
     if (event.user.username) event.user.username = "[REDACTED]";
   }
 
-  // 6. Sanitize breadcrumbs
+  // 5. Sanitize breadcrumbs
   if (event.breadcrumbs) {
     event.breadcrumbs = event.breadcrumbs.map(
       (b) => sanitizeSentryBreadcrumb(b)!,
     );
   }
 
-  // 7. Sanitize extra payload
+  // 6. Sanitize extra payload
   if (event.extra && typeof event.extra === "object") {
     event.extra = redactLogData(event.extra) as Record<string, unknown>;
   }

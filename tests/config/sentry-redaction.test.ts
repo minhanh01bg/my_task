@@ -1,10 +1,13 @@
-import type { Breadcrumb, ErrorEvent } from "@sentry/nextjs";
+import type { Breadcrumb, ErrorEvent, Event } from "@sentry/nextjs";
 import { describe, expect, it } from "vitest";
 
 import {
   sanitizeSentryBreadcrumb,
   sanitizeSentryEvent,
+  sanitizeSentryTransaction,
 } from "@/lib/log-redaction";
+
+type TransactionEvent = Event & { type: "transaction" };
 
 describe("Sentry Telemetry Redaction (Task 13)", () => {
   it("removes request body data completely in beforeSend", () => {
@@ -27,7 +30,7 @@ describe("Sentry Telemetry Redaction (Task 13)", () => {
     expect(sanitized?.request?.data).toBeUndefined();
   });
 
-  it("redacts cookies and authorization headers from request headers", () => {
+  it("strips cookies and all but allowlisted request headers (WEB-6)", () => {
     const event: ErrorEvent = {
       type: undefined,
       event_id: "test-event-2",
@@ -36,7 +39,10 @@ describe("Sentry Telemetry Redaction (Task 13)", () => {
         headers: {
           authorization: "Bearer secret-token-123",
           cookie: "customer_session=abc; checkout_recovery=xyz",
-          "user-agent": "Mozilla/5.0",
+          "x-forwarded-for": "203.0.113.195",
+          referer: "https://example.com/orders/guest/cap-token?ref=mail",
+          "User-Agent": "Mozilla/5.0",
+          "content-type": "application/json",
         },
         cookies: {
           customer_session: "abc",
@@ -46,11 +52,28 @@ describe("Sentry Telemetry Redaction (Task 13)", () => {
     };
 
     const sanitized = sanitizeSentryEvent(event);
-    expect(sanitized?.request?.headers?.authorization).toBe("[REDACTED]");
-    expect(sanitized?.request?.headers?.cookie).toBe("[REDACTED]");
-    expect(sanitized?.request?.cookies?.customer_session).toBe("[REDACTED]");
-    expect(sanitized?.request?.cookies?.checkout_recovery).toBe("[REDACTED]");
-    expect(sanitized?.request?.headers?.["user-agent"]).toBe("Mozilla/5.0");
+    expect(sanitized?.request?.cookies).toBeUndefined();
+    expect(sanitized?.request?.headers).toEqual({
+      "User-Agent": "Mozilla/5.0",
+      "content-type": "application/json",
+    });
+  });
+
+  it("strips the query string from the request (WEB-6)", () => {
+    const event: ErrorEvent = {
+      type: undefined,
+      event_id: "test-event-qs",
+      request: {
+        url: "https://shop.example.com/api/orders/lookup?phone=0901234567&email=a%40b.vn#top",
+        query_string: "phone=0901234567&email=a%40b.vn",
+      },
+    };
+
+    const sanitized = sanitizeSentryEvent(event);
+    expect(sanitized?.request?.query_string).toBeUndefined();
+    expect(sanitized?.request?.url).toBe(
+      "https://shop.example.com/api/orders/lookup",
+    );
   });
 
   it("normalizes guest capability URLs and receipt URLs in event request and breadcrumbs", () => {
@@ -116,5 +139,112 @@ describe("Sentry Telemetry Redaction (Task 13)", () => {
     expect(sanitized?.data?.contactPhone).toBe("[REDACTED]");
     expect(sanitized?.data?.token).toBe("[REDACTED]");
     expect(sanitized?.data?.address).toBe("[REDACTED]");
+  });
+});
+
+describe("sanitizeSentryTransaction (WEB-6)", () => {
+  function transaction(): TransactionEvent {
+    return {
+      type: "transaction",
+      event_id: "test-transaction-1",
+      transaction:
+        "GET /orders/guest/very-secret-capability-token-12345?email=a%40b.vn",
+      request: {
+        url: "https://shop.example.com/orders/guest/very-secret-capability-token-12345?email=a%40b.vn",
+        query_string: { email: "a@b.vn" },
+        headers: { cookie: "customer_session=abc", "user-agent": "UA" },
+        cookies: { customer_session: "abc" },
+        data: { contactPhone: "0901234567" },
+      },
+      user: { id: "u1", ip_address: "203.0.113.195", email: "a@b.vn" },
+      extra: { customerName: "Nguyễn Văn A" },
+      contexts: {
+        trace: {
+          trace_id: "t1",
+          span_id: "root",
+          data: {
+            "url.query": "phone=0901234567",
+            "http.target": "/api/orders/lookup?phone=0901234567",
+            "http.request.header.cookie": "customer_session=abc",
+            "http.request.header.x_forwarded_for": "203.0.113.195",
+            "http.request.header.user_agent": "UA",
+            "http.route": "/api/orders/lookup",
+          },
+        },
+      },
+      spans: [
+        {
+          span_id: "s1",
+          trace_id: "t1",
+          start_timestamp: 0,
+          description:
+            "GET https://shop.example.com/order-success/0123456789abcdef0123456789abcdef",
+          data: {
+            "http.query": "?phone=0901234567",
+            "url.query": "phone=0901234567",
+            "http.url": "https://shop.example.com/api/x?phone=0901234567",
+            "url.full": "https://shop.example.com/api/x?phone=0901234567",
+            "http.target": "/api/x?phone=0901234567",
+            "http.method": "GET",
+          },
+        },
+        {
+          span_id: "s2",
+          trace_id: "t1",
+          start_timestamp: 0,
+          description: "SELECT * FROM `Order` WHERE `id` = ?",
+          data: { "db.system": "sqlite" },
+        },
+      ],
+    };
+  }
+
+  it("strips request query, cookies, headers and body", () => {
+    const request = sanitizeSentryTransaction(transaction())?.request;
+
+    expect(request?.query_string).toBeUndefined();
+    expect(request?.cookies).toBeUndefined();
+    expect(request?.data).toBeUndefined();
+    expect(request?.headers).toEqual({ "user-agent": "UA" });
+    expect(request?.url).toBe(
+      "https://shop.example.com/orders/guest/[REDACTED]",
+    );
+  });
+
+  it("redacts the transaction name, user and extra", () => {
+    const sanitized = sanitizeSentryTransaction(transaction());
+
+    expect(sanitized?.transaction).toBe("GET /orders/guest/[REDACTED]");
+    expect(sanitized?.user).toEqual({
+      id: "u1",
+      ip_address: "[REDACTED]",
+      email: "[REDACTED]",
+    });
+    expect(sanitized?.extra?.customerName).toBe("[REDACTED]");
+  });
+
+  it("strips query data from span attributes but keeps SQL placeholders", () => {
+    const [http, db] = sanitizeSentryTransaction(transaction())?.spans ?? [];
+
+    expect(http?.description).toBe(
+      "GET https://shop.example.com/order-success/[REDACTED]",
+    );
+    expect(http?.data).toEqual({
+      "http.url": "https://shop.example.com/api/x",
+      "url.full": "https://shop.example.com/api/x",
+      "http.target": "/api/x",
+      "http.method": "GET",
+    });
+    expect(db?.description).toBe("SELECT * FROM `Order` WHERE `id` = ?");
+  });
+
+  it("strips query and non-allowlisted headers from the root span", () => {
+    const sanitized = sanitizeSentryTransaction(transaction());
+
+    expect(sanitized?.contexts?.trace?.data).toEqual({
+      "http.target": "/api/orders/lookup",
+      "http.request.header.user_agent": "UA",
+      "http.route": "/api/orders/lookup",
+    });
   });
 });

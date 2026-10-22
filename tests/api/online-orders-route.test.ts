@@ -24,6 +24,7 @@ describe("POST /api/online/orders (Task 4 & Task 5: Hard limits and Anti-Abuse)"
 
   afterEach(() => {
     setCheckoutAbuseLimiter(null);
+    vi.restoreAllMocks();
   });
 
   it("rejects oversized declared Content-Length with 413 and no-store", async () => {
@@ -329,6 +330,47 @@ describe("POST /api/online/orders (Task 4 & Task 5: Hard limits and Anti-Abuse)"
       const body = await response.json();
       expect(body.data.order.receiptUrl).toBe(`/order-success/${mockNonce}`);
       expect(body.data.order.receiptUrl).not.toContain("DH0001");
+    });
+
+    it("logs only the error class and code for unexpected failures (WEB-6)", async () => {
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+      vi.spyOn(
+        createOnlineOrderModule,
+        "createOnlineOrder",
+      ).mockRejectedValueOnce(
+        Object.assign(
+          new Error("Unique constraint failed: phone 0901234567, Khách Hàng A"),
+          { code: "P2002" },
+        ),
+      );
+
+      const req = new Request("https://example.com/api/online/orders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(samplePayload),
+      });
+
+      const response = await POST(req);
+      expect(response.status).toBe(500);
+
+      const logged = consoleErrorSpy.mock.calls[0]?.[0] as {
+        message: string;
+        meta: Record<string, unknown>;
+      };
+      consoleErrorSpy.mockRestore();
+      expect(logged.message).toBe("online_order_create_failed");
+      expect(Object.keys(logged.meta).sort()).toEqual([
+        "correlationId",
+        "errorClass",
+        "errorCode",
+      ]);
+      expect(logged.meta).toMatchObject({
+        errorClass: "Error",
+        errorCode: "P2002",
+      });
+      expect(JSON.stringify(logged)).not.toContain("0901234567");
     });
   });
 });

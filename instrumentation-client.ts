@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import {
   sanitizeSentryBreadcrumb,
   sanitizeSentryEvent,
+  sanitizeSentryTransaction,
 } from "@/lib/log-redaction";
 
 Sentry.init({
@@ -13,4 +14,5 @@ Sentry.init({
   enabled: Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN),
   beforeBreadcrumb: sanitizeSentryBreadcrumb,
   beforeSend: sanitizeSentryEvent,
+  beforeSendTransaction: sanitizeSentryTransaction,
 });
