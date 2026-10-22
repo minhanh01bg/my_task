@@ -71,6 +71,11 @@ describe("public-cache", () => {
 
       expect(nextCache.revalidateTag).toHaveBeenCalledTimes(2);
       expect(warnSpy).toHaveBeenCalledTimes(1);
+      // Chỉ log lớp/mã lỗi, không log message thô (WEB-6).
+      expect(warnSpy.mock.calls[0]?.[1]).toEqual({
+        tag: "catalog",
+        errorClass: "Error",
+      });
     });
 
     it("bỏ qua next/cache trong Vitest", () => {
@@ -200,14 +205,11 @@ describe("public-cache", () => {
 
         expect(fn).toHaveBeenCalledTimes(2);
         expect(warnSpy).toHaveBeenCalledTimes(1);
-        expect(warnSpy).toHaveBeenCalledWith(
-          expect.any(String),
-          expect.objectContaining({
-            keyParts: ["build-fallback", "k1"],
-            code: "P2021",
-            error: "The table `main.Product` does not exist",
-          }),
-        );
+        expect(warnSpy).toHaveBeenCalledWith(expect.any(String), {
+          keyParts: ["build-fallback", "k1"],
+          errorClass: "Error",
+          errorCode: "P2021",
+        });
 
         await expect(
           cachedPublic(fn, ["build-fallback", "k2"], options),

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { logger } from "@/lib/logger";
+import { errorLogFields, logger } from "@/lib/logger";
 import { getWishlistProducts } from "@/server/storefront/wishlist-products";
 
 const NO_STORE = { "Cache-Control": "private, no-store" };
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ data: { products } }, { headers: NO_STORE });
   } catch (error: unknown) {
     logger.error("wishlist_products_failed", {
-      error: error instanceof Error ? error.message : String(error),
+      ...errorLogFields(error),
     });
     return NextResponse.json(
       { message: "Không tải được danh sách yêu thích. Vui lòng thử lại." },

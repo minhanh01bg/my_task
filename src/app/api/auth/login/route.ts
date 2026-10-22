@@ -136,7 +136,6 @@ export async function POST(request: Request) {
       correlationId,
       errorClass,
       errorCode,
-      errorMessage: error instanceof Error ? error.message : "Unknown error",
     });
 
     return NextResponse.json(

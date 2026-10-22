@@ -1,6 +1,6 @@
 import { revalidateTag, unstable_cache, updateTag } from "next/cache";
 
-import { logger } from "@/lib/logger";
+import { errorLogFields, logger } from "@/lib/logger";
 
 export interface CachedPublicOptions<T> {
   tags: string[];
@@ -27,14 +27,6 @@ function isBuildPhase(): boolean {
 
 let warnedMissingStore = false;
 const warnedBuildFallbackKeys = new Set<string>();
-
-function errorCode(error: unknown): string | undefined {
-  if (typeof error === "object" && error !== null && "code" in error) {
-    const { code } = error;
-    return typeof code === "string" ? code : undefined;
-  }
-  return undefined;
-}
 
 /**
  * Doc du lieu cong khai qua Data Cache cua Next theo tag. Ket qua phai
@@ -63,8 +55,7 @@ export async function cachedPublic<T>(
         "Không đọc được dữ liệu công khai lúc build, dùng giá trị rỗng",
         {
           keyParts,
-          code: errorCode(error),
-          error: error instanceof Error ? error.message : String(error),
+          ...errorLogFields(error),
         },
       );
     }
@@ -98,7 +89,7 @@ async function readThroughCache<T>(
       warnedMissingStore = true;
       logger.warn("unstable_cache không khả dụng, đọc trực tiếp DB", {
         keyParts,
-        error: error instanceof Error ? error.message : String(error),
+        ...errorLogFields(error),
       });
     }
     return fn();
@@ -118,7 +109,7 @@ function runForEachTag(
     } catch (error: unknown) {
       logger.warn(`${label} thất bại`, {
         tag,
-        error: error instanceof Error ? error.message : String(error),
+        ...errorLogFields(error),
       });
     }
   }

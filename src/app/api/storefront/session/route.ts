@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { logger } from "@/lib/logger";
+import { errorLogFields, logger } from "@/lib/logger";
 import { hasAdminSession } from "@/server/auth/require-admin-session";
 import { getOptionalCustomerSession } from "@/server/customer-auth/session";
 import type { StorefrontSession } from "@/types/storefront";
@@ -21,7 +21,7 @@ export async function GET() {
     body = { isAdmin, isCustomer: Boolean(customerSession) };
   } catch (error) {
     logger.error("storefront_session_resolve_failed", {
-      error: error instanceof Error ? error.message : String(error),
+      ...errorLogFields(error),
     });
     body = { isAdmin: false, isCustomer: false };
   }

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import AdminDashboardPage from "@/app/(management)/admin/page";
 import { DashboardSection } from "@/features/admin-dashboard/dashboard-section";
+import { logger } from "@/lib/logger";
 import { summarizeSales } from "@/server/admin/sales-analytics";
 import {
   getDashboardSummary,
@@ -118,6 +119,21 @@ describe("Trang tổng quan /admin", () => {
     expect(
       within(lowStock).getByRole("link", { name: /Xem tất cả/ }),
     ).toHaveAttribute("href", "/admin/products?status=low");
+  });
+
+  it("lỗi tải số liệu: ném lại, log chỉ có lớp/mã lỗi (WEB-6)", async () => {
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    vi.mocked(getDashboardSummary).mockRejectedValue(
+      Object.assign(new Error("Lỗi đơn của 0901234567"), { code: "P2024" }),
+    );
+
+    await expect(DashboardSection()).rejects.toThrow();
+
+    expect(errorSpy).toHaveBeenCalledWith("admin_dashboard_summary_failed", {
+      errorClass: "Error",
+      errorCode: "P2024",
+    });
+    errorSpy.mockRestore();
   });
 
   it("hien loi dan khi chua co don online va khong co hang sap het", async () => {

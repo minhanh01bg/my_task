@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { logger } from "@/lib/logger";
+import { errorLogFields, logger } from "@/lib/logger";
 import { readJsonBody } from "@/server/http/read-json-body";
 import { checkVoucherCode } from "@/server/vouchers/check-voucher-code";
 import { checkVoucherRateLimit } from "@/server/vouchers/voucher-rate-limit";
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ data }, { headers: NO_STORE });
   } catch (error: unknown) {
     logger.error("voucher_validate_failed", {
-      error: error instanceof Error ? error.message : String(error),
+      ...errorLogFields(error),
     });
     return NextResponse.json(
       { message: "Không kiểm tra được mã lúc này. Vui lòng thử lại." },

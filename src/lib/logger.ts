@@ -12,6 +12,25 @@ function formatMessage(level: LogLevel, message: string, meta?: unknown) {
   };
 }
 
+/**
+ * Truong log an toan cho mot loi: ten lop va ma (vd. Prisma `P2002`), khong
+ * kem `message` — thong diep Prisma co the lap lai SDT/ten khach.
+ */
+export function errorLogFields(error: unknown): {
+  errorClass: string;
+  errorCode?: string;
+} {
+  const errorClass =
+    error instanceof Error ? error.constructor.name : typeof error;
+  const code =
+    typeof error === "object" && error !== null && "code" in error
+      ? (error as { code: unknown }).code
+      : undefined;
+  return typeof code === "string" || typeof code === "number"
+    ? { errorClass, errorCode: String(code) }
+    : { errorClass };
+}
+
 export const logger = {
   info(message: string, meta?: unknown) {
     console.info(formatMessage("info", message, meta));

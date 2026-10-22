@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { logger } from "@/lib/logger";
+import { errorLogFields, logger } from "@/lib/logger";
 import {
   readCustomerSessionToken,
   resolveCustomerSessionToken,
@@ -112,7 +112,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   } catch (error: unknown) {
     logger.error("product_review_create_failed", {
       productId: id,
-      error: error instanceof Error ? error.message : String(error),
+      ...errorLogFields(error),
     });
     return NextResponse.json(
       { message: "Không gửi được đánh giá lúc này. Vui lòng thử lại." },

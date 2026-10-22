@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 
-import { logger } from "@/lib/logger";
+import { errorLogFields, logger } from "@/lib/logger";
 
 /**
  * Pragma SQLite chay mot lan khi tao client: WAL cho phep doc song song voi
@@ -48,7 +48,7 @@ export async function applySqlitePragmas(
     } catch (error) {
       logger.warn("Khong ap dung duoc pragma SQLite", {
         pragma,
-        error: error instanceof Error ? error.message : String(error),
+        ...errorLogFields(error),
       });
     }
   }

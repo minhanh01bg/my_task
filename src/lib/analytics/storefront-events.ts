@@ -2,7 +2,7 @@ import { z } from "zod";
 
 z.config({ jitless: true });
 
-import { logger } from "@/lib/logger";
+import { errorLogFields, logger } from "@/lib/logger";
 
 /**
  * Phân loại số lượng hàng thêm vào giỏ thành các khoảng (buckets) an toàn
@@ -152,8 +152,6 @@ export function trackStorefrontEvent(event: StorefrontEventPayload): void {
     }
   } catch (err: unknown) {
     // Không bao giờ throw ra ngoài UI
-    logger.warn("storefront_telemetry_error", {
-      error: err instanceof Error ? err.message : String(err),
-    });
+    logger.warn("storefront_telemetry_error", errorLogFields(err));
   }
 }

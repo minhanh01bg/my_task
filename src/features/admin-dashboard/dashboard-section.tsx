@@ -1,4 +1,4 @@
-import { logger } from "@/lib/logger";
+import { errorLogFields, logger } from "@/lib/logger";
 import { getDashboardSummary } from "@/server/admin/dashboard";
 import {
   REPORT_DAY_OPTIONS,
@@ -21,9 +21,7 @@ export async function DashboardSection({
   const days: ReportDays =
     REPORT_DAY_OPTIONS.find((option) => option === Number(value)) ?? 7;
   const summary = await getDashboardSummary(days).catch((error: unknown) => {
-    logger.error("admin_dashboard_summary_failed", {
-      errorMessage: error instanceof Error ? error.message : "Unknown error",
-    });
+    logger.error("admin_dashboard_summary_failed", errorLogFields(error));
     throw error;
   });
 

@@ -70,7 +70,11 @@ describe("applySqlitePragmas", () => {
   it("ghi logger.warn va khong nem loi khi pragma that bai", async () => {
     const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
     const client = {
-      $queryRawUnsafe: vi.fn().mockRejectedValue(new Error("disk I/O error")),
+      $queryRawUnsafe: vi.fn().mockRejectedValue(
+        Object.assign(new Error("disk I/O error at /home/khach/dev.db"), {
+          code: "SQLITE_IOERR",
+        }),
+      ),
     };
 
     await expect(
@@ -79,6 +83,12 @@ describe("applySqlitePragmas", () => {
 
     expect(client.$queryRawUnsafe).toHaveBeenCalledTimes(4);
     expect(warn).toHaveBeenCalled();
+    expect(warn.mock.calls[0]?.[1]).toEqual({
+      pragma: expect.any(String),
+      errorClass: "Error",
+      errorCode: "SQLITE_IOERR",
+    });
+    expect(JSON.stringify(warn.mock.calls)).not.toContain("/home/khach");
   });
 
   it("bo qua khi DATABASE_URL khong phai SQLite file", async () => {
