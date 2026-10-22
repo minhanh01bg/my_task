@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { SESSION_COOKIE } from "@/server/auth/constants";
+import {
+  isWellFormedAdminSessionToken,
+  SESSION_COOKIE,
+} from "@/server/auth/constants";
 import { isPublicPath } from "@/lib/auth/public-paths";
 
 export async function proxy(request: NextRequest) {
@@ -16,7 +19,8 @@ export async function proxy(request: NextRequest) {
 
   const token = request.cookies.get(SESSION_COOKIE)?.value;
 
-  if (!token) {
+  // Cookie sai dinh dang coi nhu chua dang nhap; handler van xac thuc lai qua DB.
+  if (!token || !isWellFormedAdminSessionToken(token)) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ message: "Chưa đăng nhập" }, { status: 401 });
     }
