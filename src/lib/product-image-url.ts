@@ -15,10 +15,14 @@ const LOCAL_IMAGE_PATH =
   /^\/(?:products\/|uploads\/(?:products\/)?)[a-zA-Z0-9][a-zA-Z0-9.-]*$/;
 
 /**
- * Exact https origin plus a path: no credentials, port, look-alike host,
- * whitespace or backslash for the URL parser to "repair".
+ * Same rule as next.config images.remotePatterns (`/photo-*`, where `*` is one
+ * path segment), or /_next/image answers 400 and every shop page shows a
+ * broken image: exact https origin, then a single `photo-<id>` segment and an
+ * optional query. No credentials, port, look-alike host, further segment,
+ * fragment, whitespace or backslash for the URL parser to "repair".
  */
-const UNSPLASH_IMAGE_URL = /^https:\/\/images\.unsplash\.com\/[^\s\\]*$/;
+const UNSPLASH_IMAGE_URL =
+  /^https:\/\/images\.unsplash\.com\/photo-[^\s\\/?#]+(?:\?[^\s\\#]*)?$/;
 
 export function isAllowedProductImageUrl(url: string): boolean {
   if (url.length > MAX_PRODUCT_IMAGE_URL_LENGTH) return false;
