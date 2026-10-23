@@ -70,6 +70,26 @@
 - [ ] `scripts/agent/verify.sh` (full, gồm tsc) sau khi gộp nhánh UI — không chạy ở worker này vì máy thiếu RAM.
 - [ ] Không push/merge từ worker; ghi sha vào Execution status.
 
-## Execution status
+## Execution status (2026-10-23)
 
-<điền khi xong>
+Task 1–6 đã làm và commit trên `ccg/worker-4fad71ab` (không push, không merge):
+
+| Task | Commit                                                                        |
+| ---- | ----------------------------------------------------------------------------- |
+| 1    | `81d1c1e` feat(back-in-stock): add subscriptions table and module             |
+| 2    | `2617cb9` feat(back-in-stock): deliver alerts and sweep pending subscriptions |
+| 3    | `1932220` feat(back-in-stock): send alerts after every stock increase         |
+| —    | `915c60c` style(back-in-stock): apply prettier to alert hooks and tests       |
+| 4    | `97d4a23` feat(back-in-stock): add customer subscription API                  |
+| 5    | `e3ae164` feat(admin): show back-in-stock waiting count per product           |
+| 6    | `d9aee25` docs(privacy): inventory back-in-stock subscriptions                |
+
+**Đã chạy thật** (`verify.sh --test`, từng file): `back-in-stock/subscriptions` 7/7, `back-in-stock/deliver-alerts` 18/18, `api/back-in-stock-route` 19/19, `orders/cancel-order` 12/12, `cache/write-path-invalidation` 4/4, `products/save-product` 18/18, `products/product-stock-edit` 10/10, `orders/update-online-order` 4/4, `orders/expire-stale-online-orders` 6/6, `customer-notifications` 7/7, `app/admin-lists-pagination` 17/17, `privacy/retention` 3/3. ESLint (`verify.sh --fast --only lint`) và `prettier --check` sạch trên mọi file đổi. `prisma migrate diff` (migrations → schema) rỗng.
+
+**Chưa chạy**: `tsc` toàn dự án, toàn bộ vitest, build, e2e — để Task 7 trên nhánh tích hợp.
+
+### Lệch so với spec
+
+- `softDeleteProduct` trước đây không có transaction; nay gói `update` + `backInStockSubscription.deleteMany` trong một `prisma.$transaction` mới (chỉ `tx`), rồi mới revalidate.
+- `DATA_INVENTORY`: `retentionDays: 0` kèm chú thích "event-driven" — đăng ký không có hạn theo ngày, job retention không xóa theo tuổi (spec §10 nói chỉ là tài liệu).
+- Sandbox không cho ghi vào `node_modules` dùng chung (EROFS) nên `prisma generate` chạy vào một `node_modules/@prisma/client` cục bộ trong worktree (gitignored). Nhánh tích hợp cần chạy lại `prisma generate`.
