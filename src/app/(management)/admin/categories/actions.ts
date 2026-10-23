@@ -26,7 +26,7 @@ import type { AdminActionResult } from "@/types/admin-action";
 const CATEGORY_NOT_FOUND = "Không tìm thấy danh mục.";
 
 const schema = z.object({
-  id: z.string().optional(),
+  id: adminEntityIdSchema.optional(),
   name: categoryNameSchema,
   sortOrder: z.coerce.number().int().default(0),
 });

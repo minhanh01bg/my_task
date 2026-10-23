@@ -27,7 +27,7 @@ const PRODUCT_NOT_FOUND = {
 };
 
 const quickUpdateSchema = z.object({
-  id: z.string().min(1),
+  id: adminEntityIdSchema,
   price: z.coerce
     .number()
     .int()
@@ -37,7 +37,7 @@ const quickUpdateSchema = z.object({
 });
 
 const schema = z.object({
-  id: z.string().optional(),
+  id: adminEntityIdSchema.optional(),
   name: z.string().trim().min(1, "Tên sản phẩm không được để trống"),
   sku: z.string().nullable(),
   categoryId: z.string().nullable(),
