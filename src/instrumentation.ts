@@ -4,17 +4,24 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     await import("../sentry.server.config");
 
+    // Khong chay khi `next build` hay khi chay test.
+    const isServing =
+      process.env.NEXT_PHASE !== "phase-production-build" &&
+      process.env.NODE_ENV !== "test" &&
+      !process.env.VITEST;
+
+    // Kiem tra env mot lan luc boot, truoc khi Next nhan request: chinh sach
+    // mat khau production ton PBKDF2 dong bo (ket qua cache tren globalThis cho
+    // cac bundle khac), va hash yeu thi server khong khoi dong thay vi chan
+    // event loop cua request dau tien.
+    if (isServing) await import("@/config/env");
+
     // Ap pragma SQLite (WAL, busy_timeout...) mot lan luc boot.
     await import("@/server/db/prisma").then((m) => m.prismaReady);
 
     // Tu huy don online chua thanh toan qua 24h de tra ton kho bi giu, va tinh
     // lai diem san pham chi tu danh gia da mua (mot lan, sau boot).
-    // Khong hen gio khi `next build` hay khi chay test.
-    if (
-      process.env.NEXT_PHASE !== "phase-production-build" &&
-      process.env.NODE_ENV !== "test" &&
-      !process.env.VITEST
-    ) {
+    if (isServing) {
       const { scheduleStaleOnlineOrderExpiry } =
         await import("@/server/orders/expire-stale-online-orders");
       scheduleStaleOnlineOrderExpiry();
