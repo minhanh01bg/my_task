@@ -93,3 +93,21 @@ Task 1–6 đã làm và commit trên `ccg/worker-4fad71ab` (không push, không
 - `softDeleteProduct` trước đây không có transaction; nay gói `update` + `backInStockSubscription.deleteMany` trong một `prisma.$transaction` mới (chỉ `tx`), rồi mới revalidate.
 - `DATA_INVENTORY`: `retentionDays: 0` kèm chú thích "event-driven" — đăng ký không có hạn theo ngày, job retention không xóa theo tuổi (spec §10 nói chỉ là tài liệu).
 - Sandbox không cho ghi vào `node_modules` dùng chung (EROFS) nên `prisma generate` chạy vào một `node_modules/@prisma/client` cục bộ trong worktree (gitignored). Nhánh tích hợp cần chạy lại `prisma generate`.
+
+## Review fixes (2026-10-23)
+
+Làm trên `ccg/worker-71f56648` (từ `7eaba1b`), test trước rồi mới sửa, mỗi mục một commit, không push/merge:
+
+- [x] Trần 50 đăng ký chỉ đếm sản phẩm còn bán online (khách còn hủy được) — `282d3fa`.
+- [x] Đủ hàng = tồn kho ≥ 1 (`MIN_BACK_IN_STOCK_READY_STOCK`, dùng chung cho đăng ký và gửi): tồn 0.5 vẫn đăng ký được, giữ đăng ký, không gửi — `b0bb99e`.
+- [x] Sweep ưu tiên sản phẩm có đăng ký chờ lâu nhất (`groupBy` + `_min.createdAt`, LIMIT trong SQL) thay vì theo id — `5df2ae4`.
+- [x] Test hai lượt gửi + sweep chạy song song: mỗi đăng ký đúng một thông báo — `a553967`.
+- [x] Sắp lại import `@/` trong `update-online-order.ts` — `7e41169`.
+- [x] `notification-list.tsx` dùng `BACK_IN_STOCK_NOTIFICATION_KIND` — `cf34962`.
+- [x] Chữ hộp thư theo spec §6 ("Hộp thư thông báo", "Cập nhật đơn hàng và tin báo có hàng sẽ hiển thị tại đây.") — `c732cde`.
+- [x] Test return path với token đơn khách 43 ký tự — `cbb7c61`.
+- [x] `debt-filters.test.ts` dọn đơn trong `afterAll` (làm `debt-history-pagination` lệch 24/23 khi chạy cả bộ) — `44945c5`.
+
+Đã chạy (`verify.sh --test`, từng file): `back-in-stock/subscriptions` 10/10, `back-in-stock/deliver-alerts` 21/21, `kit/notification-list-actions`, `customer-notifications/notification-button` 15/15, `lib/auth/customer-return-path`, `debts/debt-filters` rồi `admin/debt-history-pagination` (trước khi sửa: fail 24/23; sau khi sửa: pass). `verify.sh --only lint` và `--only types` pass.
+
+Còn lại: storefront vẫn coi hết hàng là `stock <= 0` (`product-detail-view.tsx`, `product-card.tsx`, `stock-badge.tsx`, …) nên tồn 0.5 hiện "Thêm vào giỏ" thay vì nút báo có hàng; chưa đổi vì không phải sửa một dòng. Nit `retention.ts` (`retentionDays: 0`) chưa làm trong lượt này.
