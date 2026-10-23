@@ -1,3 +1,5 @@
+import { pbkdf2Sync, randomBytes } from "node:crypto";
+
 import { defineConfig, devices } from "@playwright/test";
 
 /**
@@ -8,9 +10,20 @@ const PORT = Number(process.env.PLAYWRIGHT_PORT ?? 3000);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const DATABASE_URL = process.env.DATABASE_URL ?? "file:./prisma/test.db";
 const PRODUCTION_DIR = process.env.PLAYWRIGHT_PRODUCTION_DIR;
-// Hash của credential fixture `123456`; chỉ dùng cho web server e2e cục bộ/CI.
-const E2E_STORE_PASSWORD_HASH =
-  "714989c4f592fda0ff69a63ef217e4b0:98dcc3f54f21aa15273f4836302084e830fa296f505bc7187ca79c022470fc0b";
+// Mật khẩu dùng một lần cho mỗi lần chạy (production từ chối hash mẫu như
+// `123456`). Worker Playwright thừa kế process.env của tiến trình chính nên
+// spec đọc lại qua e2e/credentials.ts; mật khẩu chủ khác mật khẩu cửa hàng.
+const E2E_STORE_PASSWORD =
+  (process.env.E2E_STORE_PASSWORD ||= `e2e-store-${randomBytes(12).toString("hex")}`);
+const E2E_OWNER_PASSWORD =
+  (process.env.E2E_OWNER_PASSWORD ||= `e2e-owner-${randomBytes(12).toString("hex")}`);
+
+/** Cùng định dạng scripts/hash-password.ts, số vòng tối thiểu cho nhanh. */
+function e2ePasswordHash(password: string) {
+  const salt = randomBytes(16);
+  const derived = pbkdf2Sync(password, salt, 100_000, 32, "sha256");
+  return `pbkdf2-sha256:100000:${salt.toString("hex")}:${derived.toString("hex")}`;
+}
 
 // Global setup runs outside Next.js, so it cannot rely on Next loading .env.local.
 process.env.DATABASE_URL = DATABASE_URL;
@@ -54,8 +67,8 @@ export default defineConfig({
       SESSION_SECRET:
         process.env.SESSION_SECRET ??
         "playwright-only-session-secret-at-least-32-chars",
-      STORE_PASSWORD_HASH:
-        process.env.STORE_PASSWORD_HASH || E2E_STORE_PASSWORD_HASH,
+      STORE_PASSWORD_HASH: e2ePasswordHash(E2E_STORE_PASSWORD),
+      OWNER_PASSWORD_HASH: e2ePasswordHash(E2E_OWNER_PASSWORD),
     },
   },
 });

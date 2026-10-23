@@ -41,11 +41,20 @@ pnpm tsx scripts/hash-password.ts '<mat khau>'
   Bắt buộc ở production.
 - `OWNER_PASSWORD_HASH` — mật khẩu chủ cửa hàng, tuỳ chọn. Phải nhập mật khẩu
   này khi đổi tài khoản nhận tiền (mã ngân hàng, số tài khoản, tên chủ tài
-  khoản trong `/admin/settings`). Dùng mật khẩu khác `STORE_PASSWORD_HASH` và
-  không đưa cho nhân viên. Nếu không đặt, mọi thay đổi tài khoản nhận tiền đều
+  khoản trong `/admin/settings`). Mật khẩu chủ **phải khác** mật khẩu cửa hàng
+  (nhân viên đều biết mật khẩu cửa hàng) và không đưa cho nhân viên: nếu trùng,
+  mọi thay đổi tài khoản nhận tiền bị từ chối, và production không khởi động
+  khi hai biến dùng cùng một hash. Nếu không đặt, mọi thay đổi tài khoản nhận tiền đều
   bị từ chối; các cài đặt khác vẫn lưu bình thường. Nhập sai 5 lần trong 15 phút
   thì bị khoá tạm. Mỗi lần đổi thành công đều ghi audit log và tạo thông báo
   admin, trong đó số tài khoản được che (`****1234`).
+
+Production từ chối khởi động nếu một trong hai hash là hash mẫu từng nằm trong
+repo, hoặc là hash của mật khẩu dễ đoán (`123456`, `12345678`, `password`,
+`admin`). `pnpm tsx scripts/check-auth.ts` cho biết hash đã đặt, đúng định dạng
+và có bị từ chối hay không, nhưng không in hash ra. Playwright tự sinh mật khẩu
+ngẫu nhiên cho mỗi lần chạy (`E2E_STORE_PASSWORD`, `E2E_OWNER_PASSWORD`), nên
+e2e không cần hash nào.
 
 Đặt hash trong file env của server (đặt trong dấu nháy), rồi khởi động lại ứng
 dụng. Không commit hash hay mật khẩu vào git.

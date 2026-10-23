@@ -1,6 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { expect, test } from "@playwright/test";
 
+import { OWNER_PASSWORD, STORE_PASSWORD } from "./credentials";
+
 test("lưu tài khoản ngân hàng rồi thanh toán chuyển khoản tại quầy", async ({
   page,
 }) => {
@@ -13,12 +15,13 @@ test("lưu tài khoản ngân hàng rồi thanh toán chuyển khoản tại qu�
   page.on("pageerror", (error) => browserErrors.push(error.message));
   try {
     await page.goto("/login?next=%2Fadmin%2Fsettings");
-    await page.getByLabel("Mật khẩu cửa hàng").fill("123456");
+    await page.getByLabel("Mật khẩu cửa hàng").fill(STORE_PASSWORD);
     await page.getByRole("button", { name: "Vào bán hàng" }).click();
     await expect(page).toHaveURL(/\/admin\/settings$/);
     await page.locator("#bank-bin").fill("970423");
     await page.locator("#bank-account-number").fill("123456789");
     await page.locator("#bank-account-name").fill("NGUYEN VAN A");
+    await page.locator("#owner-password").fill(OWNER_PASSWORD);
     await page.getByRole("button", { name: "Lưu cài đặt" }).click();
     await expect(
       page.locator('[data-slot="toast"][data-type="success"]'),

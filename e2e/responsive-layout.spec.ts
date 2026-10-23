@@ -1,12 +1,16 @@
 import { expect, test } from "@playwright/test";
 
+import { STORE_PASSWORD } from "./credentials";
+
 test("các trang chính không tràn ngang ở màn hình điện thoại", async ({
   page,
 }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 320, height: 812 });
   await page.goto("/login");
-  await page.getByRole("textbox", { name: "Mật khẩu cửa hàng" }).fill("123456");
+  await page
+    .getByRole("textbox", { name: "Mật khẩu cửa hàng" })
+    .fill(STORE_PASSWORD);
   await page.getByRole("button", { name: /vào bán hàng/i }).click();
   await page.waitForURL("**/pos");
   for (const path of ["/", "/shop", "/account/login", "/login"]) {

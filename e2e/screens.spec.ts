@@ -1,5 +1,7 @@
 import { test } from "@playwright/test";
 
+import { STORE_PASSWORD } from "./credentials";
+
 /** Anh ghi vao day (da gitignore) — test-results/ bi Playwright xoa moi lan chay. */
 const SHOTS = "e2e/screenshots";
 
@@ -16,7 +18,7 @@ test.describe("anh chup man hinh", () => {
       await page.goto("/login");
       await page
         .getByRole("textbox", { name: "Mật khẩu cửa hàng" })
-        .fill("123456");
+        .fill(STORE_PASSWORD);
       await page.getByRole("button", { name: /vào bán hàng/i }).click();
       await page.waitForURL("**/pos");
 

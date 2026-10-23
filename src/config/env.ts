@@ -1,3 +1,5 @@
+import { pbkdf2Sync } from "node:crypto";
+
 import { z } from "zod";
 
 z.config({ jitless: true });
@@ -73,6 +75,52 @@ export function parsePasswordHash(hash: string): ParsedPasswordHash | null {
 
 const PASSWORD_HASH_FORMAT =
   "pbkdf2-sha256:<iterations>:<salt>:<derived> (or legacy salt:derived) PBKDF2 hash";
+
+/** Hai hash cùng số vòng, salt và derived (bỏ qua hoa/thường) là một. */
+export function passwordHashKey(hash: ParsedPasswordHash): string {
+  return `${hash.iterations}:${hash.saltHex.toLowerCase()}:${hash.derivedHex}`;
+}
+
+/**
+ * Hash từng nằm trong repo (fixture e2e/test, hướng dẫn cũ của
+ * scripts/check-auth.ts cho mật khẩu 123456, dummy lúc build): ai cũng có.
+ */
+const PUBLISHED_PASSWORD_HASHES = new Set(
+  [
+    "68bb3ab56e351d4e7e72bf8c511d76ab:cf3f01b0fa3356ff68c7d6856efc470e1b1031cb897f22ceed954207f0379db0",
+    "714989c4f592fda0ff69a63ef217e4b0:98dcc3f54f21aa15273f4836302084e830fa296f505bc7187ca79c022470fc0b",
+    "00000000000000000000000000000000:0000000000000000000000000000000000000000000000000000000000000000",
+    "0f1e2d3c4b5a69788796a5b4c3d2e1f0:1111111111111111111111111111111111111111111111111111111111111111",
+  ].map((hash) => passwordHashKey(parsePasswordHash(hash)!)),
+);
+const TRIVIAL_PASSWORDS = ["123456", "12345678", "password", "admin"];
+
+// Next có thể nạp module này ở nhiều bundle server trong cùng tiến trình:
+// mỗi hash chỉ tốn PBKDF2 một lần.
+const cacheHost = globalThis as unknown as Record<
+  symbol,
+  Map<string, boolean> | undefined
+>;
+const weakHashCache = (cacheHost[Symbol.for("env.weakPasswordHashes")] ??=
+  new Map());
+
+/** Hash mẫu đã công khai, hoặc hash của một mật khẩu dễ đoán. */
+export function isWeakPasswordHash(hash: ParsedPasswordHash): boolean {
+  const key = passwordHashKey(hash);
+  if (PUBLISHED_PASSWORD_HASHES.has(key)) return true;
+  let weak = weakHashCache.get(key);
+  if (weak === undefined) {
+    const salt = Buffer.from(hash.saltHex, "hex");
+    weak = TRIVIAL_PASSWORDS.some(
+      (password) =>
+        pbkdf2Sync(password, salt, hash.iterations, 32, "sha256").toString(
+          "hex",
+        ) === hash.derivedHex,
+    );
+    weakHashCache.set(key, weak);
+  }
+  return weak;
+}
 
 export const envSchema = z
   .object({
@@ -209,8 +257,42 @@ export const envSchema = z
     }
   });
 
+/**
+ * Thêm chính sách mật khẩu khi production chạy thật (không áp dụng cho
+ * `next build`): từ chối hash mẫu đã công khai, hash của mật khẩu dễ đoán
+ * (PBKDF2 đồng bộ, một lần lúc khởi động) và mật khẩu chủ trùng hash mật
+ * khẩu cửa hàng.
+ */
+export const runtimeEnvSchema = envSchema.superRefine((data, ctx) => {
+  if (data.NODE_ENV !== "production") return;
+  const store = parsePasswordHash(data.STORE_PASSWORD_HASH);
+  const owner = data.OWNER_PASSWORD_HASH
+    ? parsePasswordHash(data.OWNER_PASSWORD_HASH)
+    : null;
+  for (const [key, hash] of [
+    ["STORE_PASSWORD_HASH", store],
+    ["OWNER_PASSWORD_HASH", owner],
+  ] as const) {
+    if (hash && isWeakPasswordHash(hash)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${key} is a published fixture hash or hashes a trivial password; generate a new one with scripts/hash-password.ts`,
+        path: [key],
+      });
+    }
+  }
+  if (store && owner && passwordHashKey(store) === passwordHashKey(owner)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message:
+        "OWNER_PASSWORD_HASH must differ from STORE_PASSWORD_HASH (use a different owner password)",
+      path: ["OWNER_PASSWORD_HASH"],
+    });
+  }
+});
+
 export function validateEnv(rawEnv: Record<string, unknown> = process.env) {
-  return envSchema.safeParse(rawEnv);
+  return runtimeEnvSchema.safeParse(rawEnv);
 }
 
 const isBuildPhase =
@@ -239,7 +321,9 @@ const envToParse =
       }
     : process.env;
 
-const parsed = envSchema.safeParse(envToParse);
+const parsed = (isBuildPhase ? envSchema : runtimeEnvSchema).safeParse(
+  envToParse,
+);
 
 if (!parsed.success) {
   console.error(

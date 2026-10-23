@@ -1,11 +1,13 @@
 import { expect, test } from "@playwright/test";
 
+import { STORE_PASSWORD } from "./credentials";
+
 test.describe("Bán khi mất mạng", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/login");
     await page
       .getByRole("textbox", { name: "Mật khẩu cửa hàng" })
-      .fill("123456");
+      .fill(STORE_PASSWORD);
     await page.getByRole("button", { name: /vào bán hàng/i }).click();
     await page.waitForURL("**/pos");
   });

@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { STORE_PASSWORD } from "./credentials";
+
 test.beforeEach(async ({ page }) => {
   if (process.env.PLAYWRIGHT_PRODUCTION_DIR) {
     await page.setExtraHTTPHeaders({ "X-Real-IP": "1.1.1.1" });
@@ -11,7 +13,9 @@ test("admin có app shell mobile rõ ràng và menu đầy đủ truy cập đư
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/login");
-  await page.getByRole("textbox", { name: "Mật khẩu cửa hàng" }).fill("123456");
+  await page
+    .getByRole("textbox", { name: "Mật khẩu cửa hàng" })
+    .fill(STORE_PASSWORD);
   const loginButton = page.getByRole("button", { name: /vào bán hàng/i });
   await expect(loginButton).toBeEnabled();
   await loginButton.click();
@@ -95,7 +99,9 @@ test("admin thay đổi độ rộng thanh điều hướng desktop và giữ l�
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/login");
-  await page.getByRole("textbox", { name: "Mật khẩu cửa hàng" }).fill("123456");
+  await page
+    .getByRole("textbox", { name: "Mật khẩu cửa hàng" })
+    .fill(STORE_PASSWORD);
   await page.getByRole("button", { name: /vào bán hàng/i }).click();
   await page.waitForURL("**/pos");
   await page.goto("/admin/orders");
@@ -215,7 +221,9 @@ test("đăng xuất cần xác nhận, Hủy và Escape giữ phiên đăng nh�
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/login");
-  await page.getByRole("textbox", { name: "Mật khẩu cửa hàng" }).fill("123456");
+  await page
+    .getByRole("textbox", { name: "Mật khẩu cửa hàng" })
+    .fill(STORE_PASSWORD);
   await page.getByRole("button", { name: /vào bán hàng/i }).click();
   await page.waitForURL("**/pos");
   const logout = page
@@ -245,7 +253,9 @@ test("đăng xuất cần xác nhận, Hủy và Escape giữ phiên đăng nh�
 test("mobile: hủy đăng xuất giữ menu và phiên quản lý", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/login");
-  await page.getByRole("textbox", { name: "Mật khẩu cửa hàng" }).fill("123456");
+  await page
+    .getByRole("textbox", { name: "Mật khẩu cửa hàng" })
+    .fill(STORE_PASSWORD);
   await page.getByRole("button", { name: /vào bán hàng/i }).click();
   await page.waitForURL("**/pos");
   await page.getByRole("button", { name: "Mở toàn bộ menu quản lý" }).click();

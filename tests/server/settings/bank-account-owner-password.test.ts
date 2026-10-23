@@ -223,6 +223,36 @@ describe("Đổi tài khoản nhận tiền cần mật khẩu chủ", () => {
     expect(audit?.metadata).not.toContain(OWNER_PASSWORD);
   });
 
+  it("mật khẩu chủ trùng mật khẩu cửa hàng: từ chối và không đổi Setting nào", async () => {
+    const originalStoreHash = env.STORE_PASSWORD_HASH;
+    // Cung mat khau, salt khac: hai hash khac nhau nhung nhan vien van biet.
+    (env as Record<string, unknown>).STORE_PASSWORD_HASH =
+      await hashPassword(OWNER_PASSWORD);
+    try {
+      const before = await readSettings();
+
+      const result = await saveSettingsAction(
+        null,
+        settingsForm(ATTACKER_BANK, { ownerPassword: OWNER_PASSWORD }),
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        error:
+          "Mật khẩu chủ cửa hàng đang trùng mật khẩu đăng nhập cửa hàng. Hãy đặt OWNER_PASSWORD_HASH bằng một mật khẩu khác.",
+      });
+      expect(await readSettings()).toEqual(before);
+      expect(await bankNotifications()).toHaveLength(0);
+      const denied = await prisma.adminAuditEvent.findFirst({
+        where: { action: "settings.bank_account.denied" },
+        orderBy: { createdAt: "desc" },
+      });
+      expect(denied?.metadata).toContain("same_as_store");
+    } finally {
+      (env as Record<string, unknown>).STORE_PASSWORD_HASH = originalStoreHash;
+    }
+  });
+
   it("giữ nguyên tài khoản ngân hàng thì lưu được mà không cần mật khẩu chủ", async () => {
     const result = await saveSettingsAction(null, settingsForm(CURRENT_BANK));
 

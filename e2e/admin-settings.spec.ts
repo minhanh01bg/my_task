@@ -1,6 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { expect, test } from "@playwright/test";
 
+import { OWNER_PASSWORD, STORE_PASSWORD } from "./credentials";
+
 test.describe.configure({ mode: "serial" });
 
 test("admin mở được cài đặt có dữ liệu cũ sai định dạng để sửa", async ({
@@ -24,7 +26,7 @@ test("admin mở được cài đặt có dữ liệu cũ sai định dạng đ�
       });
     }
     await page.goto("/login?next=%2Fadmin%2Fsettings");
-    await page.getByLabel("Mật khẩu cửa hàng").fill("123456");
+    await page.getByLabel("Mật khẩu cửa hàng").fill(STORE_PASSWORD);
     await page.getByRole("button", { name: "Vào bán hàng" }).click();
     await expect(page).toHaveURL(/\/admin\/settings$/, { timeout: 15_000 });
     await expect(page.locator("#store-name")).toHaveValue(legacy[0].value);
@@ -68,7 +70,7 @@ test("lưu cài đặt hiện toast ở vị trí đang cuộn và khi lưu lạ
   });
   try {
     await page.goto("/login?next=%2Fadmin%2Fsettings");
-    await page.getByLabel("Mật khẩu cửa hàng").fill("123456");
+    await page.getByLabel("Mật khẩu cửa hàng").fill(STORE_PASSWORD);
     await page.getByRole("button", { name: "Vào bán hàng" }).click();
     await expect(page).toHaveURL(/\/admin\/settings$/, { timeout: 15_000 });
     await page.locator("#store-name").fill("Cửa hàng kiểm tra");
@@ -77,6 +79,8 @@ test("lưu cài đặt hiện toast ở vị trí đang cuộn và khi lưu lạ
     await page.locator("#bank-bin").fill("970423");
     await page.locator("#bank-account-number").fill("123456");
     await page.locator("#bank-account-name").fill("NGUYEN VAN A");
+    // Lan luu dau doi tai khoan nhan tien; lan sau giu nguyen nen khong can.
+    await page.locator("#owner-password").fill(OWNER_PASSWORD);
     const save = page.getByRole("button", { name: "Lưu cài đặt" });
     await save.click();
     const toast = page.locator('[data-slot="toast"][data-type="success"]');

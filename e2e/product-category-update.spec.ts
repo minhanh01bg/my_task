@@ -1,6 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { expect, test } from "@playwright/test";
 
+import { STORE_PASSWORD } from "./credentials";
+
 for (const width of [1440, 390]) {
   test(`đổi danh mục sản phẩm có ảnh mặc định ở ${width}px`, async ({
     page,
@@ -8,7 +10,7 @@ for (const width of [1440, 390]) {
     await page.setExtraHTTPHeaders({ "X-Real-IP": "1.1.1.1" });
     await page.setViewportSize({ width, height: 1000 });
     await page.goto("/login?next=%2Fadmin");
-    await page.getByLabel("Mật khẩu cửa hàng").fill("123456");
+    await page.getByLabel("Mật khẩu cửa hàng").fill(STORE_PASSWORD);
     await page.getByRole("button", { name: "Vào bán hàng" }).click();
     await expect(page).toHaveURL(/\/admin$/);
     await page.goto("/admin/products");

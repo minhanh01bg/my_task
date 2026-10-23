@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { STORE_PASSWORD } from "./credentials";
+
 test.beforeEach(async ({ page }) => {
   if (process.env.PLAYWRIGHT_PRODUCTION_DIR) {
     // Mô phỏng header của reverse proxy trên server fixture production.
@@ -8,7 +10,7 @@ test.beforeEach(async ({ page }) => {
     });
   }
   await page.goto("/login?next=%2Fpos");
-  await page.getByLabel("Mật khẩu cửa hàng").fill("123456");
+  await page.getByLabel("Mật khẩu cửa hàng").fill(STORE_PASSWORD);
   const loginResponse = page.waitForResponse(
     (response) =>
       response.url().endsWith("/api/auth/login") &&

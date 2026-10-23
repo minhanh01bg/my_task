@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { STORE_PASSWORD } from "./credentials";
+
 test("đăng nhập khách có validation riêng và không tràn màn hình", async ({
   page,
 }) => {
@@ -49,7 +51,7 @@ test("từ trang khách có thể bấm vào quản trị và đăng nhập", as
   await expect(
     page.getByText("Vui lòng nhập mật khẩu cửa hàng."),
   ).toBeVisible();
-  await page.getByLabel("Mật khẩu cửa hàng").fill("123456");
+  await page.getByLabel("Mật khẩu cửa hàng").fill(STORE_PASSWORD);
   await page.getByRole("button", { name: "Vào bán hàng" }).click();
   await expect(page).toHaveURL(/\/admin$/, { timeout: 15000 });
 });

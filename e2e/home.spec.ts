@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { STORE_PASSWORD } from "./credentials";
+
 test.beforeEach(async ({ page }) => {
   await page.setExtraHTTPHeaders({ "X-Real-IP": "1.1.1.1" });
 });
@@ -38,7 +40,7 @@ for (const width of [390, 1440]) {
     });
     await loginLink.click();
     await expect(page).toHaveURL(/\/login\?next=%2Fadmin$/);
-    await page.getByLabel("Mật khẩu cửa hàng").fill("123456");
+    await page.getByLabel("Mật khẩu cửa hàng").fill(STORE_PASSWORD);
     await page.getByRole("button", { name: "Vào bán hàng" }).click();
     await expect(page).toHaveURL(/\/admin$/);
     await expect(page.locator("#admin-main-content")).toBeVisible();

@@ -3,6 +3,8 @@ import { expect, test } from "@playwright/test";
 import { prisma } from "@/server/db/prisma";
 import { createOrder } from "@/server/orders/create-order";
 
+import { STORE_PASSWORD } from "./credentials";
+
 const fixtures: { id: string; code: string; label: string; online: boolean }[] =
   [];
 
@@ -69,7 +71,7 @@ for (const width of [1440, 390, 320]) {
       await page.setExtraHTTPHeaders({ "X-Real-IP": "1.1.1.1" });
       await page.setViewportSize({ width, height: 1000 });
       await page.goto("/login?next=%2Fadmin");
-      await page.getByLabel("Mật khẩu cửa hàng").fill("123456");
+      await page.getByLabel("Mật khẩu cửa hàng").fill(STORE_PASSWORD);
       const [loginResponse] = await Promise.all([
         page.waitForResponse(
           (response) =>

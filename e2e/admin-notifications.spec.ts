@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { STORE_PASSWORD } from "./credentials";
+
 test("API notification từ chối anonymous và customer cookie", async ({
   request,
 }) => {
@@ -16,7 +18,9 @@ test("admin thấy badge, mở panel, đọc và đi đúng order detail", async
 }) => {
   await page.setExtraHTTPHeaders({ "X-Real-IP": "1.1.1.1" });
   await page.goto("/login");
-  await page.getByRole("textbox", { name: "Mật khẩu cửa hàng" }).fill("123456");
+  await page
+    .getByRole("textbox", { name: "Mật khẩu cửa hàng" })
+    .fill(STORE_PASSWORD);
   const loginButton = page.getByRole("button", { name: /vào bán hàng/i });
   await expect(loginButton).toBeEnabled();
   await loginButton.click();
@@ -85,7 +89,9 @@ test("panel thông báo không bị sidebar cắt ở màn hình desktop hẹp",
   await page.setViewportSize({ width: 768, height: 720 });
   await page.setExtraHTTPHeaders({ "X-Real-IP": "1.1.1.1" });
   await page.goto("/login");
-  await page.getByRole("textbox", { name: "Mật khẩu cửa hàng" }).fill("123456");
+  await page
+    .getByRole("textbox", { name: "Mật khẩu cửa hàng" })
+    .fill(STORE_PASSWORD);
   await page.getByRole("button", { name: /vào bán hàng/i }).click();
   await page.waitForURL("**/pos");
   await page.goto("/admin");
@@ -112,7 +118,9 @@ test("thông báo trên điện thoại không che thanh điều hướng và v�
   await page.setViewportSize({ width: 375, height: 812 });
   await page.setExtraHTTPHeaders({ "X-Real-IP": "1.1.1.1" });
   await page.goto("/login");
-  await page.getByRole("textbox", { name: "Mật khẩu cửa hàng" }).fill("123456");
+  await page
+    .getByRole("textbox", { name: "Mật khẩu cửa hàng" })
+    .fill(STORE_PASSWORD);
   await page.getByRole("button", { name: /vào bán hàng/i }).click();
   await page.waitForURL("**/pos");
   await page.goto("/admin");
@@ -160,7 +168,9 @@ test("hộp thông báo dài cuộn bên trong và giữ tiêu đề trên deskt
     });
   });
   await page.goto("/login");
-  await page.getByRole("textbox", { name: "Mật khẩu cửa hàng" }).fill("123456");
+  await page
+    .getByRole("textbox", { name: "Mật khẩu cửa hàng" })
+    .fill(STORE_PASSWORD);
   await page.getByRole("button", { name: /vào bán hàng/i }).click();
   await page.waitForURL("**/pos");
   for (const width of [1280, 375]) {

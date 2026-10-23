@@ -1,6 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { expect, test, type Page, type Route } from "@playwright/test";
 
+import { OWNER_PASSWORD, STORE_PASSWORD } from "./credentials";
+
 // Cac ca doi cau hinh chung; chay tuan tu va khoi phuc fixture sau moi ca.
 test.describe.configure({ mode: "default" });
 const prisma = new PrismaClient();
@@ -22,7 +24,7 @@ const prefix = "QA thông báo lưu";
 
 async function login(page: Page, path: string) {
   await page.goto(`/login?next=${encodeURIComponent(path)}`);
-  await page.getByLabel("Mật khẩu cửa hàng").fill("123456");
+  await page.getByLabel("Mật khẩu cửa hàng").fill(STORE_PASSWORD);
   await page.getByRole("button", { name: "Vào bán hàng" }).click();
   await expect(page).toHaveURL(new RegExp(`${path}$`), { timeout: 15_000 });
 }
@@ -43,6 +45,7 @@ async function fillSettings(page: Page) {
   await page.locator("#bank-account-name").fill("NGUYEN VAN A");
   await page.locator("#shipping-fee").fill("25000");
   await page.locator("#free-shipping-threshold").fill("300000");
+  await page.locator("#owner-password").fill(OWNER_PASSWORD);
 }
 
 async function openCreate(page: Page, name: string) {
@@ -110,6 +113,8 @@ test.afterEach(async ({ page }) => {
       if (!settingsFieldsBefore[id])
         await page.locator(`#${id}`).fill(fallback);
     }
+    // Form xoa o mat khau chu sau moi lan gui; khoi phuc co the doi lai tai khoan.
+    await page.locator("#owner-password").fill(OWNER_PASSWORD);
     await page.getByRole("button", { name: "Lưu cài đặt" }).click();
     await expect(toast(page, "success")).toContainText(
       "Lưu cài đặt thành công",
@@ -179,6 +184,9 @@ test("cài đặt: mất mạng báo lỗi an toàn, sửa được bằng lưu 
   await expect(page.locator("#bank-account-number")).toHaveValue("123456789");
   await expect(page.getByRole("button", { name: "Lưu cài đặt" })).toBeEnabled();
   await page.unroute("**/admin/settings", failAction);
+  // Form da xoa o mat khau chu khi gui lan dau.
+  await expect(page.locator("#owner-password")).toHaveValue("");
+  await page.locator("#owner-password").fill(OWNER_PASSWORD);
   await page.getByRole("button", { name: "Lưu cài đặt" }).click();
   await expect(toast(page, "success")).toContainText("Lưu cài đặt thành công");
   await page.reload();

@@ -1,9 +1,27 @@
-import { describe, expect, it } from "vitest";
+import { pbkdf2Sync, randomBytes } from "node:crypto";
 
-import { envSchema } from "@/config/env";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { envSchema, runtimeEnvSchema } from "@/config/env";
 
 const SALT = "a1".repeat(16);
 const DERIVED = "b2".repeat(32);
+
+/** Hash PBKDF2 that, so vong toi thieu cho test nhanh. */
+function hashOf(password: string, format: "legacy" | "current" = "legacy") {
+  const salt = randomBytes(16);
+  const derived = pbkdf2Sync(password, salt, 100_000, 32, "sha256");
+  const body = `${salt.toString("hex")}:${derived.toString("hex")}`;
+  return format === "legacy" ? body : `pbkdf2-sha256:100000:${body}`;
+}
+
+// Moi hash tung nam trong repo (fixture e2e/test, scripts/check-auth.ts, dummy luc build).
+const PUBLISHED_HASHES = [
+  "68bb3ab56e351d4e7e72bf8c511d76ab:cf3f01b0fa3356ff68c7d6856efc470e1b1031cb897f22ceed954207f0379db0",
+  "714989c4f592fda0ff69a63ef217e4b0:98dcc3f54f21aa15273f4836302084e830fa296f505bc7187ca79c022470fc0b",
+  "00000000000000000000000000000000:0000000000000000000000000000000000000000000000000000000000000000",
+  "0f1e2d3c4b5a69788796a5b4c3d2e1f0:1111111111111111111111111111111111111111111111111111111111111111",
+];
 
 describe("envSchema", () => {
   const validBase = {
@@ -352,6 +370,146 @@ describe("envSchema", () => {
         }
       },
     );
+  });
+
+  describe("production runtime password policy", () => {
+    const storeHash = hashOf(randomBytes(12).toString("hex"));
+    const ownerHash = hashOf(randomBytes(12).toString("hex"), "current");
+    const runtimeProd = { ...validProd, STORE_PASSWORD_HASH: storeHash };
+
+    function issuePaths(input: Record<string, unknown>) {
+      const result = runtimeEnvSchema.safeParse(input);
+      return result.success ? [] : result.error.issues.map((i) => i.path[0]);
+    }
+
+    it("accepts distinct hashes of non-trivial passwords", () => {
+      expect(
+        issuePaths({ ...runtimeProd, OWNER_PASSWORD_HASH: ownerHash }),
+      ).toEqual([]);
+    });
+
+    it.each(PUBLISHED_HASHES)(
+      "rejects the published fixture hash %s",
+      (hash) => {
+        expect(
+          issuePaths({ ...runtimeProd, STORE_PASSWORD_HASH: hash }),
+        ).toContain("STORE_PASSWORD_HASH");
+        expect(
+          issuePaths({ ...runtimeProd, OWNER_PASSWORD_HASH: hash }),
+        ).toContain("OWNER_PASSWORD_HASH");
+        // Cung salt/derived boc trong dinh dang moi van la hash mau.
+        expect(
+          issuePaths({
+            ...runtimeProd,
+            STORE_PASSWORD_HASH: `pbkdf2-sha256:100000:${hash.toUpperCase()}`,
+          }),
+        ).toContain("STORE_PASSWORD_HASH");
+      },
+    );
+
+    it.each(["123456", "12345678", "password", "admin"])(
+      "rejects a fresh hash of the trivial password %s",
+      (password) => {
+        expect(
+          issuePaths({ ...runtimeProd, STORE_PASSWORD_HASH: hashOf(password) }),
+        ).toContain("STORE_PASSWORD_HASH");
+        expect(
+          issuePaths({
+            ...runtimeProd,
+            OWNER_PASSWORD_HASH: hashOf(password, "current"),
+          }),
+        ).toContain("OWNER_PASSWORD_HASH");
+      },
+    );
+
+    it("rejects OWNER_PASSWORD_HASH identical to STORE_PASSWORD_HASH", () => {
+      expect(
+        issuePaths({ ...runtimeProd, OWNER_PASSWORD_HASH: storeHash }),
+      ).toEqual(["OWNER_PASSWORD_HASH"]);
+      // Cung hash viet o dinh dang moi (100k vong) hoac chu hoa.
+      expect(
+        issuePaths({
+          ...runtimeProd,
+          OWNER_PASSWORD_HASH: `pbkdf2-sha256:100000:${storeHash.toUpperCase()}`,
+        }),
+      ).toEqual(["OWNER_PASSWORD_HASH"]);
+    });
+
+    it("still allows fixture hashes outside production", () => {
+      for (const nodeEnv of ["development", "test"]) {
+        expect(
+          issuePaths({
+            ...validBase,
+            NODE_ENV: nodeEnv,
+            STORE_PASSWORD_HASH: PUBLISHED_HASHES[1],
+            OWNER_PASSWORD_HASH: PUBLISHED_HASHES[1],
+          }),
+        ).toEqual([]);
+      }
+    });
+
+    it("is not part of the build-only schema", () => {
+      const result = envSchema.safeParse({
+        ...validProd,
+        STORE_PASSWORD_HASH: PUBLISHED_HASHES[2],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    describe("when the env module loads", () => {
+      const prodRuntimeEnv = {
+        NODE_ENV: "production",
+        NEXT_PHASE: undefined,
+        npm_lifecycle_event: undefined,
+        UPSTASH_REDIS_REST_URL: "https://redis.example.com",
+        UPSTASH_REDIS_REST_TOKEN: "secret-token",
+        RATE_LIMIT_KEY_SECRET: "k".repeat(32),
+        TRUSTED_PROXY_MODE: "vercel",
+        CANONICAL_ORIGIN: "https://shop.example.com",
+        OWNER_PASSWORD_HASH: undefined,
+      };
+
+      async function loadEnv(vars: Record<string, string | undefined>) {
+        vi.resetModules();
+        for (const [key, value] of Object.entries(vars)) vi.stubEnv(key, value);
+        return import("@/config/env");
+      }
+
+      afterEach(() => {
+        vi.unstubAllEnvs();
+        vi.restoreAllMocks();
+        vi.resetModules();
+      });
+
+      it("refuses to start production with a fixture hash", async () => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        await expect(
+          loadEnv({
+            ...prodRuntimeEnv,
+            STORE_PASSWORD_HASH: PUBLISHED_HASHES[1],
+          }),
+        ).rejects.toThrow("Invalid environment variables");
+      });
+
+      it("starts production with a strong hash", async () => {
+        const { env } = await loadEnv({
+          ...prodRuntimeEnv,
+          STORE_PASSWORD_HASH: storeHash,
+        });
+        expect(env.STORE_PASSWORD_HASH).toBe(storeHash);
+      });
+
+      it("skips the policy during next build", async () => {
+        const { env } = await loadEnv({
+          ...prodRuntimeEnv,
+          NEXT_PHASE: "phase-production-build",
+          UPSTASH_REDIS_REST_URL: undefined,
+          UPSTASH_REDIS_REST_TOKEN: undefined,
+          STORE_PASSWORD_HASH: undefined,
+        });
+        expect(env.STORE_PASSWORD_HASH).toBe(PUBLISHED_HASHES[2]);
+      });
+    });
   });
 
   describe("development and test validation", () => {

@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { expect, test } from "@playwright/test";
 
+import { STORE_PASSWORD } from "./credentials";
+
 const prisma = new PrismaClient();
 const name = `Kiểm tra danh mục ${randomUUID().slice(0, 8)}`;
 
@@ -17,7 +19,9 @@ test("danh mục: lỗi tại ô nhập, thêm, sửa và bố cục điện tho
   if (process.env.PLAYWRIGHT_PRODUCTION_DIR)
     await page.setExtraHTTPHeaders({ "X-Real-IP": "1.1.1.1" });
   await page.goto("/login");
-  await page.getByRole("textbox", { name: "Mật khẩu cửa hàng" }).fill("123456");
+  await page
+    .getByRole("textbox", { name: "Mật khẩu cửa hàng" })
+    .fill(STORE_PASSWORD);
   await page.getByRole("button", { name: /vào bán hàng/i }).click();
   await page.waitForURL("**/pos");
   await page.goto("/admin/categories");

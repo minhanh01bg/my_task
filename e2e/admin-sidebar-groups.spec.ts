@@ -1,10 +1,14 @@
 import { expect, test } from "@playwright/test";
 
+import { STORE_PASSWORD } from "./credentials";
+
 test.beforeEach(async ({ page }) => {
   await page.setExtraHTTPHeaders({ "X-Real-IP": "1.1.1.1" });
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/login");
-  await page.getByRole("textbox", { name: "Mật khẩu cửa hàng" }).fill("123456");
+  await page
+    .getByRole("textbox", { name: "Mật khẩu cửa hàng" })
+    .fill(STORE_PASSWORD);
   await page.getByRole("button", { name: /vào bán hàng/i }).click();
   await page.waitForURL("**/pos");
 });

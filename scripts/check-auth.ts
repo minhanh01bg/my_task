@@ -1,8 +1,51 @@
-import { prisma } from "../src/server/db/prisma";
 import {
-  ensureDefaultAdminIdentity,
-  verifyPassword,
-} from "../src/server/auth/session";
+  isWeakPasswordHash,
+  type ParsedPasswordHash,
+  parsePasswordHash,
+  passwordHashKey,
+} from "../src/config/env";
+import { prisma } from "../src/server/db/prisma";
+import { ensureDefaultAdminIdentity } from "../src/server/auth/session";
+
+const HASH_COMMAND = "pnpm tsx scripts/hash-password.ts";
+
+/** Chỉ báo trạng thái của hash; không in hash hay mật khẩu nào. */
+function reportPasswordHash(
+  name: string,
+  hash: string | undefined,
+  missingHint: string,
+): ParsedPasswordHash | null {
+  if (!hash) {
+    console.log(`   ❌ ${name}: CHƯA CẤU HÌNH (${missingHint})`);
+    console.log(
+      `      👉 Tạo hash bằng: ${HASH_COMMAND} rồi đặt ${name} trong biến môi trường của server.`,
+    );
+    return null;
+  }
+  const parsed = parsePasswordHash(hash);
+  if (!parsed) {
+    console.log(
+      `   ❌ ${name}: SAI ĐỊNH DẠNG (cần pbkdf2-sha256:<số vòng>:<salt>:<derived>)`,
+    );
+    console.log(`      👉 Tạo lại bằng: ${HASH_COMMAND}`);
+    return null;
+  }
+  console.log(
+    `   ✅ ${name}: Đã cấu hình, đúng định dạng (${parsed.iterations} vòng PBKDF2)`,
+  );
+  if (!hash.startsWith("pbkdf2-sha256:")) {
+    console.log(
+      `      ⚠️ Định dạng cũ salt:derived — nên tạo lại bằng ${HASH_COMMAND}.`,
+    );
+  }
+  if (isWeakPasswordHash(parsed)) {
+    console.log(
+      `   ❌ ${name}: là hash mẫu đã công khai hoặc của mật khẩu dễ đoán — production sẽ từ chối khởi động.`,
+    );
+    console.log(`      👉 Đặt mật khẩu mới bằng: ${HASH_COMMAND}`);
+  }
+  return parsed;
+}
 
 async function main() {
   console.log("==========================================");
@@ -11,28 +54,25 @@ async function main() {
 
   // 1. Kiểm tra biến môi trường
   console.log("1️⃣ Kiểm tra Environment Variables:");
-  const hash = process.env.STORE_PASSWORD_HASH;
   const dbUrl = process.env.DATABASE_URL;
 
   console.log(
     `   - DATABASE_URL: ${dbUrl || "(Chưa đặt, mặc định file:./dev.db)"}`,
   );
-  if (!hash) {
-    console.log("   ❌ STORE_PASSWORD_HASH: CHƯA CẤU HÌNH!");
-    console.log("      👉 Hãy thêm vào file .env trên server:");
+  const store = reportPasswordHash(
+    "STORE_PASSWORD_HASH",
+    process.env.STORE_PASSWORD_HASH,
+    "không đăng nhập được",
+  );
+  const owner = reportPasswordHash(
+    "OWNER_PASSWORD_HASH",
+    process.env.OWNER_PASSWORD_HASH,
+    "không đổi được tài khoản nhận tiền",
+  );
+  if (store && owner && passwordHashKey(store) === passwordHashKey(owner)) {
     console.log(
-      '      STORE_PASSWORD_HASH="68bb3ab56e351d4e7e72bf8c511d76ab:cf3f01b0fa3356ff68c7d6856efc470e1b1031cb897f22ceed954207f0379db0"',
+      "   ❌ OWNER_PASSWORD_HASH: TRÙNG STORE_PASSWORD_HASH — mật khẩu chủ phải khác mật khẩu cửa hàng.",
     );
-  } else {
-    console.log(
-      `   ✅ STORE_PASSWORD_HASH: Đã cấu hình (${hash.slice(0, 16)}...)`,
-    );
-    const is123456Valid = await verifyPassword("123456", hash);
-    if (is123456Valid) {
-      console.log("   ✅ Mật khẩu '123456': HỢP LỆ VÀ KHỚP HASH");
-    } else {
-      console.log("   ⚠️ Mật khẩu '123456': KHÔNG KHỚP với hash hiện tại.");
-    }
   }
 
   // 1b. Kiểm tra Upstash Redis
@@ -76,16 +116,14 @@ async function main() {
 
   console.log("\n==========================================");
   console.log("💡 HƯỚNG DẪN KHẮC PHỤC NẾU VẪN KHÔNG ĐĂNG NHẬP ĐƯỢC:");
-  console.log("1. Kéo code mới nhất: git pull origin feat/pos-core");
-  console.log("2. Đảm bảo file .env trên server có dòng STORE_PASSWORD_HASH:");
+  console.log(`1. Tạo hash cho mật khẩu cửa hàng: ${HASH_COMMAND}`);
   console.log(
-    '   STORE_PASSWORD_HASH="68bb3ab56e351d4e7e72bf8c511d76ab:cf3f01b0fa3356ff68c7d6856efc470e1b1031cb897f22ceed954207f0379db0"',
+    "2. Đặt STORE_PASSWORD_HASH (và OWNER_PASSWORD_HASH bằng một mật khẩu KHÁC) trong biến môi trường của server.",
   );
   console.log(
-    "3. KHỞI ĐỘNG LẠI DEV SERVER: Tắt terminal chạy pnpm dev và chạy lại `pnpm dev`",
+    "3. KHỞI ĐỘNG LẠI SERVER: Next.js chỉ nạp biến môi trường lúc khởi động.",
   );
-  console.log("   (Next.js không tự nạp biến .env mới nếu không restart)");
-  console.log("4. Đăng nhập với mật khẩu: 123456");
+  console.log("4. Đăng nhập bằng mật khẩu cửa hàng vừa đặt.");
   console.log("==========================================\n");
 }
 

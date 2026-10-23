@@ -3,6 +3,8 @@ import { expect, test } from "@playwright/test";
 
 import { saveProduct } from "@/server/products/save-product";
 
+import { STORE_PASSWORD } from "./credentials";
+
 test("đặt giao hàng với địa chỉ Bắc Giang hai cấp, không cần huyện", async ({
   page,
 }) => {
@@ -63,7 +65,9 @@ test("tất cả trang quản trị trong sidebar mở được sau đăng nhậ
 }) => {
   await page.setExtraHTTPHeaders({ "X-Real-IP": "1.1.1.1" });
   await page.goto("/login");
-  await page.getByRole("textbox", { name: "Mật khẩu cửa hàng" }).fill("123456");
+  await page
+    .getByRole("textbox", { name: "Mật khẩu cửa hàng" })
+    .fill(STORE_PASSWORD);
   await page.getByRole("button", { name: /vào bán hàng/i }).click();
   await page.waitForURL("**/pos");
   await expect(

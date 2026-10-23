@@ -1,6 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { expect, test } from "@playwright/test";
 
+import { STORE_PASSWORD } from "./credentials";
+
 test("tổng quan hợp nhất biểu đồ và sản phẩm bán nhiều, lãi cao", async ({
   page,
 }, testInfo) => {
@@ -40,7 +42,7 @@ test("tổng quan hợp nhất biểu đồ và sản phẩm bán nhiều, lãi 
       });
     }
     await page.goto("/login?next=%2Fadmin");
-    await page.getByLabel("Mật khẩu cửa hàng").fill("123456");
+    await page.getByLabel("Mật khẩu cửa hàng").fill(STORE_PASSWORD);
     await page.getByRole("button", { name: "Vào bán hàng" }).click();
     await expect(page).toHaveURL(/\/admin$/, { timeout: 15_000 });
     await expect(

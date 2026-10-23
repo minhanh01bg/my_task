@@ -41,6 +41,7 @@ export type OwnerPasswordCheck =
         | "not_configured"
         | "missing"
         | "invalid"
+        | "same_as_store"
         | "rate_limited"
         | "limiter_unavailable";
       message: string;
@@ -50,6 +51,8 @@ export type OwnerPasswordCheck =
  * Xac minh mat khau chu cua hang (OWNER_PASSWORD_HASH) truoc thao tac doi tai
  * khoan nhan tien. Chua cau hinh thi luon tu choi. So sanh hash bang
  * `verifyPassword` (thoi gian hang so); khong bao gio ghi log mat khau.
+ * Mat khau chu trung mat khau cua hang (nhan vien deu biet) cung bi tu choi
+ * va tinh la mot lan sai.
  */
 export async function verifyOwnerPassword(
   password: string | undefined,
@@ -101,6 +104,14 @@ export async function verifyOwnerPassword(
       ok: false,
       reason: "invalid",
       message: "Mật khẩu chủ cửa hàng không đúng.",
+    };
+  }
+  if (await verifyPassword(password, env.STORE_PASSWORD_HASH)) {
+    return {
+      ok: false,
+      reason: "same_as_store",
+      message:
+        "Mật khẩu chủ cửa hàng đang trùng mật khẩu đăng nhập cửa hàng. Hãy đặt OWNER_PASSWORD_HASH bằng một mật khẩu khác.",
     };
   }
 

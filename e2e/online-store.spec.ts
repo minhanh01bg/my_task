@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { STORE_PASSWORD } from "./credentials";
+
 test("checkbox còn hàng đồng bộ URL và hỗ trợ bàn phím khi giảm chuyển động", async ({
   page,
 }) => {
@@ -253,7 +255,9 @@ test("admin session lifecycle: unauthenticated redirect and logout cookie revoca
   await page.goto("/admin/orders");
   await expect(page).toHaveURL(/.*\/login/);
 
-  await page.getByRole("textbox", { name: "Mật khẩu cửa hàng" }).fill("123456");
+  await page
+    .getByRole("textbox", { name: "Mật khẩu cửa hàng" })
+    .fill(STORE_PASSWORD);
   await page.getByRole("button", { name: /vào bán hàng/i }).click();
   await expect(page).toHaveURL(/\/admin\/orders$/);
 
