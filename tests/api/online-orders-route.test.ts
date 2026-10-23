@@ -4,7 +4,12 @@ import { POST } from "@/app/api/online/orders/route";
 import * as createOnlineOrderModule from "@/server/orders/create-online-order";
 import { OrderValidationError } from "@/server/orders/order-validation-error";
 import { setCheckoutAbuseLimiter } from "@/server/security/checkout-abuse";
-import type { RateLimiter } from "@/server/security/rate-limit";
+import {
+  createRateLimiter,
+  type RateLimiter,
+  type RateLimitStore,
+} from "@/server/security/rate-limit";
+import { setVoucherRateLimiter } from "@/server/vouchers/voucher-rate-limit";
 import { OnlineOrderError } from "@/types/online-order";
 
 const fakePassLimiter: RateLimiter = {
@@ -567,4 +572,122 @@ describe("POST /api/online/orders (Task 4 & Task 5: Hard limits and Anti-Abuse)"
       },
     );
   });
+
+  describe("BL-5: voucher failures at checkout share the voucher limiter", () => {
+    const GENERIC =
+      "Mã giảm giá không hợp lệ hoặc không áp dụng được cho đơn này";
+
+    let store: CountingStore;
+
+    beforeEach(() => {
+      store = new CountingStore();
+      setVoucherRateLimiter(
+        createRateLimiter({ store, secret: "v".repeat(32) }),
+      );
+    });
+
+    afterEach(() => {
+      setVoucherRateLimiter(null);
+    });
+
+    function post(voucherCode?: string) {
+      return POST(
+        new Request("https://example.com/api/online/orders", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            clientId: crypto.randomUUID(),
+            lines: [{ productId: "prod-1", quantity: 1 }],
+            contactName: "Khách Hàng A",
+            contactPhone: "0901234567",
+            fulfillmentType: "pickup",
+            paymentMethod: "cod",
+            voucherCode,
+          }),
+        }),
+      );
+    }
+
+    const created = {
+      order: {
+        id: "order-1",
+        code: "DH0001",
+        subtotal: 100_000,
+        discount: 0,
+        total: 100_000,
+        status: "pending",
+        hasStockWarning: false,
+      },
+      duplicated: false,
+    };
+
+    it("repeated voucher failures from one IP end in 429 with Retry-After", async () => {
+      const createSpy = vi
+        .spyOn(createOnlineOrderModule, "createOnlineOrder")
+        .mockRejectedValue(new OnlineOrderError("VOUCHER_INVALID", GENERIC));
+
+      for (let i = 0; i < 30; i++) {
+        const response = await post(`DOMA${i}`);
+        expect(response.status).toBe(409);
+      }
+
+      const limited = await post("DOMA30");
+      expect(limited.status).toBe(429);
+      expect(limited.headers.get("cache-control")).toBe("private, no-store");
+      expect(Number(limited.headers.get("retry-after"))).toBeGreaterThan(0);
+      expect((await limited.json()).message).toBe(
+        "Bạn thử mã quá nhiều lần. Vui lòng thử lại sau.",
+      );
+      expect(createSpy).toHaveBeenCalledTimes(30);
+
+      // Bị khoá dò mã vẫn đặt được đơn không kèm mã.
+      createSpy.mockResolvedValueOnce(created);
+      expect((await post()).status).toBe(201);
+    });
+
+    it("successful or unrelated outcomes do not use up the voucher budget", async () => {
+      const createSpy = vi.spyOn(createOnlineOrderModule, "createOnlineOrder");
+      createSpy.mockResolvedValue(created);
+      for (let i = 0; i < 35; i++) {
+        expect((await post("GIAM10")).status).toBe(201);
+      }
+
+      createSpy.mockRejectedValue(
+        new OnlineOrderError("OUT_OF_STOCK", "Hết hàng", ["prod-1"]),
+      );
+      for (let i = 0; i < 35; i++) {
+        expect((await post("GIAM10")).status).toBe(409);
+      }
+      expect([...store.counts.values()].every((count) => count === 0)).toBe(
+        true,
+      );
+    });
+
+    it("a checkout without a voucher code does not touch the voucher limiter", async () => {
+      vi.spyOn(createOnlineOrderModule, "createOnlineOrder").mockResolvedValue(
+        created,
+      );
+      expect((await post()).status).toBe(201);
+      expect((await post("   ")).status).toBe(201);
+      expect(store.counts.size).toBe(0);
+    });
+  });
 });
+
+class CountingStore implements RateLimitStore {
+  public counts = new Map<string, number>();
+
+  async incrementAndGetTtl(
+    key: string,
+    windowSeconds: number,
+  ): Promise<{ count: number; ttlSeconds: number }> {
+    const count = (this.counts.get(key) ?? 0) + 1;
+    this.counts.set(key, count);
+    return { count, ttlSeconds: windowSeconds };
+  }
+
+  async decrement(key: string): Promise<void> {
+    const count = this.counts.get(key);
+    if (count !== undefined) this.counts.set(key, Math.max(0, count - 1));
+  }
+}

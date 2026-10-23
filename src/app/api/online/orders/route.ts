@@ -21,6 +21,11 @@ import {
   checkPostParseAbuse,
   checkPreParseAbuse,
 } from "@/server/security/checkout-abuse";
+import {
+  checkVoucherRateLimit,
+  refundVoucherAttempt,
+  VOUCHER_RATE_LIMIT_MESSAGE,
+} from "@/server/vouchers/voucher-rate-limit";
 
 /** A cookie that does not decode cannot be a secret we issued. */
 function readCheckoutRecoverySecret(request: Request): string | null {
@@ -95,6 +100,27 @@ export async function POST(request: Request) {
       { status: postCheck.status, headers },
     );
   }
+
+  // Layer 4: checkout dung chung han muc do ma voi /api/online/vouchers/validate.
+  // Tinh truoc mot luot, hoan lai neu voucher khong bi tu choi: chi ma sai
+  // moi bi tru, va het han muc thi ca ma dung cung nhan 429 (khong lo ma nao dung).
+  const chargesVoucher = Boolean(parsed.data.voucherCode);
+  if (chargesVoucher) {
+    const retryAfter = await checkVoucherRateLimit(request);
+    if (retryAfter !== null) {
+      return NextResponse.json(
+        { message: VOUCHER_RATE_LIMIT_MESSAGE },
+        {
+          status: 429,
+          headers: {
+            "Cache-Control": "private, no-store",
+            "Retry-After": String(retryAfter),
+          },
+        },
+      );
+    }
+  }
+  let voucherRejected = false;
 
   try {
     const session = await resolveCustomerSessionToken(
@@ -179,6 +205,7 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     if (error instanceof OnlineOrderError) {
+      voucherRejected = error.code === "VOUCHER_INVALID";
       return NextResponse.json(
         {
           code: error.code,
@@ -229,5 +256,9 @@ export async function POST(request: Request) {
         headers: { "Cache-Control": "private, no-store" },
       },
     );
+  } finally {
+    if (chargesVoucher && !voucherRejected) {
+      await refundVoucherAttempt(request);
+    }
   }
 }

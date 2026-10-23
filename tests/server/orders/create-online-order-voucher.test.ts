@@ -12,6 +12,8 @@ const productId = "voucher-test-product";
 const PER_CUSTOMER_KEY = "voucher.maxUsesPerCustomer";
 const PER_CUSTOMER_MESSAGE =
   "Bạn đã dùng hết số lần cho phép của mã giảm giá này";
+const GENERIC_VOUCHER_MESSAGE =
+  "Mã giảm giá không hợp lệ hoặc không áp dụng được cho đơn này";
 
 async function cleanup() {
   await prisma.adminNotification.deleteMany();
@@ -190,6 +192,31 @@ describe("createOnlineOrder với voucher", () => {
     expect(await prisma.order.count({ where: { channel: "online" } })).toBe(0);
   });
 
+  it.each([
+    ["không tồn tại", null],
+    ["đã tắt", { isActive: false }],
+    ["chưa đến ngày", { startsAt: new Date(Date.now() + 86_400_000) }],
+    ["đã hết hạn", { endsAt: new Date(Date.now() - 86_400_000) }],
+    ["hết lượt", { maxUses: 2, usedCount: 2 }],
+    ["dưới đơn tối thiểu", { minOrderTotal: 500_000 }],
+  ])(
+    "BL-5: mã %s chỉ nhận một thông báo chung, không lộ ngưỡng",
+    async (_label, data) => {
+      if (data) await voucher(data);
+
+      const error = await createOnlineOrder(
+        checkout({ voucherCode: "GIAM10" }),
+      ).catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(OnlineOrderError);
+      expect(error).toMatchObject({
+        code: "VOUCHER_INVALID",
+        message: GENERIC_VOUCHER_MESSAGE,
+      });
+      expect((error as Error).message).not.toMatch(/\d/);
+    },
+  );
+
   it("gửi lại cùng clientId không tăng usedCount lần hai", async () => {
     await voucher();
     const payload = checkout({ voucherCode: "GIAM10" });
@@ -327,7 +354,10 @@ describe("createOrder với voucher (đường ghi đơn duy nhất)", () => {
           180_000,
         ),
       ),
-    ).rejects.toMatchObject({ code: "VOUCHER_INVALID" });
+    ).rejects.toMatchObject({
+      code: "VOUCHER_INVALID",
+      message: GENERIC_VOUCHER_MESSAGE,
+    });
 
     expect(await prisma.order.count({ where: { channel: "online" } })).toBe(0);
     expect(
@@ -505,7 +535,7 @@ describe("createOnlineOrder — phí giao hàng từ cài đặt", () => {
       createOnlineOrder(checkout({ voucherCode: "FREESHIP" })),
     ).rejects.toMatchObject({
       code: "VOUCHER_INVALID",
-      message: "Đơn này đã được miễn phí giao hàng",
+      message: GENERIC_VOUCHER_MESSAGE,
     });
     const saved = await prisma.voucher.findUniqueOrThrow({
       where: { code: "FREESHIP" },

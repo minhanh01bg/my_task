@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { MAX_INT_VND, multiplyMoney, roundVnd } from "@/lib/money";
 import { calculateCart } from "@/lib/pricing/calculate";
 import type { CartLine } from "@/lib/pricing/types";
+import { VOUCHER_UNAVAILABLE_MESSAGE } from "@/lib/vouchers/validate-voucher";
 import { revalidatePublic } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
 import { createCustomerOrderCreatedNotification } from "@/server/customer-notifications/create-customer-notification";
@@ -288,10 +289,7 @@ async function consumeVoucherUse(
       AND ("maxUses" IS NULL OR "usedCount" < "maxUses")
   `;
   if (updated === 0) {
-    throw new OnlineOrderError(
-      "VOUCHER_INVALID",
-      "Mã giảm giá đã hết lượt sử dụng hoặc ngừng áp dụng",
-    );
+    throw new OnlineOrderError("VOUCHER_INVALID", VOUCHER_UNAVAILABLE_MESSAGE);
   }
 }
 

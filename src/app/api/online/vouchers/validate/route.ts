@@ -3,7 +3,10 @@ import { NextResponse } from "next/server";
 import { errorLogFields, logger } from "@/lib/logger";
 import { readJsonBody } from "@/server/http/read-json-body";
 import { checkVoucherCode } from "@/server/vouchers/check-voucher-code";
-import { checkVoucherRateLimit } from "@/server/vouchers/voucher-rate-limit";
+import {
+  checkVoucherRateLimit,
+  VOUCHER_RATE_LIMIT_MESSAGE,
+} from "@/server/vouchers/voucher-rate-limit";
 import { voucherValidateRequestSchema } from "@/types/voucher";
 
 const NO_STORE = { "Cache-Control": "private, no-store" };
@@ -20,7 +23,7 @@ export async function POST(request: Request) {
   const retryAfter = await checkVoucherRateLimit(request);
   if (retryAfter !== null) {
     return NextResponse.json(
-      { message: "Bạn thử mã quá nhiều lần. Vui lòng thử lại sau." },
+      { message: VOUCHER_RATE_LIMIT_MESSAGE },
       {
         status: 429,
         headers: { ...NO_STORE, "Retry-After": String(retryAfter) },

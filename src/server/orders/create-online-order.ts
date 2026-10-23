@@ -1,7 +1,7 @@
 import {
   applyVoucher,
   normalizeVoucherCode,
-  voucherReasonMessage,
+  VOUCHER_UNAVAILABLE_MESSAGE,
 } from "@/lib/vouchers/validate-voucher";
 import { prisma } from "@/server/db/prisma";
 import {
@@ -198,10 +198,7 @@ async function resolveVoucher(
   const rule = await findVoucherByCode(code);
   const result = applyVoucher(rule, { subtotal, shippingFee, now: new Date() });
   if (!rule || !result.ok) {
-    throw new OnlineOrderError(
-      "VOUCHER_INVALID",
-      voucherReasonMessage(result.reason ?? "not_found", rule),
-    );
+    throw new OnlineOrderError("VOUCHER_INVALID", VOUCHER_UNAVAILABLE_MESSAGE);
   }
   return {
     code: rule.code,

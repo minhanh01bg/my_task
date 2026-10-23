@@ -69,3 +69,50 @@ describe("checkVoucherRateLimit khi không xác định được IP", () => {
     ).toBeGreaterThan(0);
   });
 });
+
+describe("BL-5: khoá theo rateLimitClientId", () => {
+  let originalProxyMode: unknown;
+
+  beforeEach(() => {
+    setVoucherRateLimiter(
+      createRateLimiter({ store: new FakeStore(), secret: "v".repeat(32) }),
+    );
+    originalProxyMode = env.TRUSTED_PROXY_MODE;
+    (env as Record<string, unknown>).TRUSTED_PROXY_MODE = "cloudflare";
+  });
+
+  afterEach(() => {
+    setVoucherRateLimiter(null);
+    (env as Record<string, unknown>).TRUSTED_PROXY_MODE = originalProxyMode;
+  });
+
+  function requestFrom(ip: string): Request {
+    return new Request("https://example.com/api/online/vouchers/validate", {
+      method: "POST",
+      headers: { "cf-connecting-ip": ip },
+    });
+  }
+
+  it("một host IPv6 không xoay địa chỉ trong /64 để có thêm lượt", async () => {
+    for (let i = 1; i <= 30; i++) {
+      expect(
+        await checkVoucherRateLimit(requestFrom(`2001:db8:1:2::${i}`)),
+      ).toBeNull();
+    }
+    expect(
+      await checkVoucherRateLimit(requestFrom("2001:db8:1:2::ffff")),
+    ).toBeGreaterThan(0);
+  });
+
+  it("IPv4 vẫn tính riêng từng địa chỉ", async () => {
+    for (let i = 0; i < 30; i++) {
+      expect(
+        await checkVoucherRateLimit(requestFrom("203.0.113.7")),
+      ).toBeNull();
+    }
+    expect(
+      await checkVoucherRateLimit(requestFrom("203.0.113.7")),
+    ).toBeGreaterThan(0);
+    expect(await checkVoucherRateLimit(requestFrom("203.0.113.8"))).toBeNull();
+  });
+});

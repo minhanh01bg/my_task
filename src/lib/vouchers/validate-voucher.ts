@@ -111,6 +111,14 @@ export function applyVoucher(
   };
 }
 
+/**
+ * Lỗi voucher khi đặt hàng: một câu chung cho mọi lý do (không tồn tại, hết
+ * hạn, hết lượt, dưới đơn tối thiểu...) để checkout không thành công cụ dò mã
+ * hay dò ngưỡng đơn tối thiểu.
+ */
+export const VOUCHER_UNAVAILABLE_MESSAGE =
+  "Mã giảm giá không hợp lệ hoặc không áp dụng được cho đơn này";
+
 /** Câu thông báo tiếng Việt cho lý do từ chối. */
 export function voucherReasonMessage(
   reason: VoucherRejectReason,
