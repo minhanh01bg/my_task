@@ -21,6 +21,15 @@ it("chỉ cho quay lại đường dẫn đơn của khách", () => {
   }
 });
 
+it("vẫn nhận token đơn khách thật (32 byte base64url, 43 ký tự)", () => {
+  const token = `${"aZ09_-".repeat(7)}x`;
+  expect(token).toHaveLength(43);
+
+  expect(customerReturnPath(`/orders/guest/${token}`)).toBe(
+    `/orders/guest/${token}`,
+  );
+});
+
 it("cho quay lại trang sản phẩm sau khi đăng nhập để nhận báo có hàng", () => {
   expect(customerReturnPath("/shop/p/sua-chua-uong")).toBe(
     "/shop/p/sua-chua-uong",
