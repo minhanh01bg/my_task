@@ -54,9 +54,9 @@
 
 **Files:** Modify `src/server/admin/list-products.ts`; Test `tests/app/admin-lists-pagination.test.ts`.
 
-- [ ] RED: thêm `waitingCount` vào bộ key; sản phẩm A có 2 đăng ký, B có 0.
-- [ ] GREEN: `_count.backInStockSubscriptions` → `waitingCount`.
-- [ ] Verify + commit `feat(admin): show back-in-stock waiting count per product`.
+- [x] RED: thêm `waitingCount` vào bộ key; sản phẩm A có 2 đăng ký, B có 0.
+- [x] GREEN: `_count.backInStockSubscriptions` → `waitingCount`.
+- [x] Verify + commit `feat(admin): show back-in-stock waiting count per product`.
 
 ## Task 6: Kiểm kê dữ liệu cá nhân
 

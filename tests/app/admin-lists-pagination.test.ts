@@ -227,8 +227,44 @@ describe("listProducts", () => {
         "sku",
         "stock",
         "unit",
+        "waitingCount",
       ].sort(),
     );
+  });
+
+  it("dem so khach dang cho bao co hang moi san pham", async () => {
+    await seedProducts(2);
+    const [first, second] = await prisma.product.findMany({
+      where: { searchText: { contains: TOKEN } },
+      orderBy: { name: "asc" },
+      select: { id: true },
+    });
+    const accounts = await Promise.all(
+      [0, 1].map((index) =>
+        prisma.customerAccount.create({
+          data: {
+            phoneNormalized: `+8490077710${index}`,
+            displayName: `Khách chờ ${TOKEN} ${index}`,
+            passwordHash: "secret-hash",
+          },
+        }),
+      ),
+    );
+    await prisma.backInStockSubscription.createMany({
+      data: accounts.map((account) => ({
+        accountId: account.id,
+        productId: first!.id,
+      })),
+    });
+
+    const result = await listProducts({ page: 1, q: TOKEN });
+
+    expect(
+      result.items.map(({ id, waitingCount }) => ({ id, waitingCount })),
+    ).toEqual([
+      { id: first!.id, waitingCount: 2 },
+      { id: second!.id, waitingCount: 0 },
+    ]);
   });
 });
 

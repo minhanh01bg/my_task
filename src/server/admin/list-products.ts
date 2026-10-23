@@ -56,11 +56,24 @@ const adminProductSelect = {
 const adminProductListSelect = {
   ...adminProductSelect,
   category: { select: { name: true } },
+  _count: { select: { backInStockSubscriptions: true } },
 } satisfies Prisma.ProductSelect;
 
-export type AdminProductListItem = Prisma.ProductGetPayload<{
+type AdminProductListRow = Prisma.ProductGetPayload<{
   select: typeof adminProductListSelect;
 }>;
+
+export type AdminProductListItem = Omit<AdminProductListRow, "_count"> & {
+  /** Khach dang cho bao co hang (dang ky chua gui). */
+  waitingCount: number;
+};
+
+function toAdminProductListItem({
+  _count,
+  ...product
+}: AdminProductListRow): AdminProductListItem {
+  return { ...product, waitingCount: _count.backInStockSubscriptions };
+}
 
 export type AdminEditableProduct = Prisma.ProductGetPayload<{
   select: typeof adminProductSelect;
@@ -123,13 +136,15 @@ export async function listProducts(
       },
       () => prisma.product.count({ where }),
       ({ skip, take }) =>
-        prisma.product.findMany({
-          where,
-          orderBy: [{ name: "asc" }, { id: "asc" }],
-          skip,
-          take,
-          select: adminProductListSelect,
-        }),
+        prisma.product
+          .findMany({
+            where,
+            orderBy: [{ name: "asc" }, { id: "asc" }],
+            skip,
+            take,
+            select: adminProductListSelect,
+          })
+          .then((rows) => rows.map(toAdminProductListItem)),
     ),
   ]);
 
