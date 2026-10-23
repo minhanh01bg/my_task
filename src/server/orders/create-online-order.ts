@@ -14,6 +14,7 @@ import {
 } from "@/server/orders/checkout-idempotency";
 import { createReceiptNonce } from "@/server/orders/public-receipt";
 import { findVoucherByCode } from "@/server/vouchers/get-voucher";
+import { canonicalizeVietnamesePhone } from "@/types/customer-auth";
 import {
   MAX_ONLINE_LINE_QUANTITY,
   ONLINE_LINE_QUANTITY_MESSAGE,
@@ -42,6 +43,59 @@ export interface CreateOnlineOrderResult extends CreateOrderResult {
   receiptNonce?: string;
 }
 
+const IDEMPOTENCY_CONFLICT_MESSAGE =
+  "Mã giao dịch đã được sử dụng cho đơn hàng khác";
+
+function lineKey(
+  lines: { productId: string | null; quantity: number }[],
+): string {
+  return lines
+    .map((line) => `${line.productId}:${line.quantity}`)
+    .sort()
+    .join("|");
+}
+
+/**
+ * Dong CheckoutIdempotency bi xoa sau RECOVERY_TTL_MS nen khong con fingerprint.
+ * Chi tra lai don cu khi yeu cau trung kenh online, SDT va cac dong hang — neu
+ * khong, ai biet clientId cung lay duoc ma/tong cua don nguoi khac.
+ */
+async function replayOrderWithoutIdempotency(
+  input: OnlineCheckoutInput,
+): Promise<CreateOnlineOrderResult | null> {
+  const order = await prisma.order.findUnique({
+    where: { clientId: input.clientId },
+    include: { items: { select: { productId: true, quantity: true } } },
+  });
+  if (!order) return null;
+
+  const matches =
+    order.channel === "online" &&
+    order.contactPhone !== null &&
+    canonicalizeVietnamesePhone(order.contactPhone) ===
+      canonicalizeVietnamesePhone(input.contactPhone) &&
+    lineKey(order.items) === lineKey(input.lines);
+  if (!matches) {
+    throw new OnlineOrderError(
+      "IDEMPOTENCY_CONFLICT",
+      IDEMPOTENCY_CONFLICT_MESSAGE,
+    );
+  }
+
+  return {
+    order: {
+      id: order.id,
+      code: order.code,
+      subtotal: order.subtotal,
+      discount: order.discount,
+      total: order.total,
+      status: order.status,
+      hasStockWarning: order.hasStockWarning,
+    },
+    duplicated: true,
+  };
+}
+
 async function replayIdempotentOrder(
   idempotency: {
     id: string;
@@ -67,7 +121,7 @@ async function replayIdempotentOrder(
   if (idempotency.requestFingerprint !== currentFingerprint) {
     throw new OnlineOrderError(
       "IDEMPOTENCY_CONFLICT",
-      "Mã giao dịch đã được sử dụng cho đơn hàng khác",
+      IDEMPOTENCY_CONFLICT_MESSAGE,
     );
   }
 
@@ -175,23 +229,8 @@ export async function createOnlineOrder(
     );
   }
 
-  const existingOrder = await prisma.order.findUnique({
-    where: { clientId: input.clientId },
-  });
-  if (existingOrder) {
-    return {
-      order: {
-        id: existingOrder.id,
-        code: existingOrder.code,
-        subtotal: existingOrder.subtotal,
-        discount: existingOrder.discount,
-        total: existingOrder.total,
-        status: existingOrder.status,
-        hasStockWarning: existingOrder.hasStockWarning,
-      },
-      duplicated: true,
-    };
-  }
+  const existingOrder = await replayOrderWithoutIdempotency(input);
+  if (existingOrder) return existingOrder;
 
   // Khong tin schema o route: moi caller deu phai gui so luong nguyen duong.
   const fractional = input.lines
@@ -366,6 +405,8 @@ export async function createOnlineOrder(
       if (committed) {
         return replayIdempotentOrder(committed, currentFingerprint, access);
       }
+      const replayed = await replayOrderWithoutIdempotency(input);
+      if (replayed) return replayed;
     }
 
     return {
@@ -381,23 +422,8 @@ export async function createOnlineOrder(
     if (committed) {
       return replayIdempotentOrder(committed, currentFingerprint, access);
     }
-    const orderFallback = await prisma.order.findUnique({
-      where: { clientId: input.clientId },
-    });
-    if (orderFallback) {
-      return {
-        order: {
-          id: orderFallback.id,
-          code: orderFallback.code,
-          subtotal: orderFallback.subtotal,
-          discount: orderFallback.discount,
-          total: orderFallback.total,
-          status: orderFallback.status,
-          hasStockWarning: orderFallback.hasStockWarning,
-        },
-        duplicated: true,
-      };
-    }
+    const orderFallback = await replayOrderWithoutIdempotency(input);
+    if (orderFallback) return orderFallback;
     throw error;
   }
 }

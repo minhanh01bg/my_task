@@ -12,6 +12,7 @@ import {
   encryptGuestToken,
 } from "@/server/orders/checkout-idempotency";
 import { createOnlineOrder } from "@/server/orders/create-online-order";
+import { createOrder } from "@/server/orders/create-order";
 import { OnlineOrderError } from "@/types/online-order";
 
 const testProductId = "idempotency-test-product";
@@ -324,6 +325,90 @@ describe("Online Order Idempotency and Guest Recovery (Task 11)", () => {
     await expect(createOnlineOrder(input2)).rejects.toThrow(OnlineOrderError);
     await expect(createOnlineOrder(input2)).rejects.toMatchObject({
       code: "IDEMPOTENCY_CONFLICT",
+    });
+  });
+
+  describe("BL-7: clientId replay after the idempotency row is purged", () => {
+    it("rejects a different body with IDEMPOTENCY_CONFLICT instead of returning the order", async () => {
+      const clientId = randomUUID();
+      const first = await createOnlineOrder(makeOrderInput(clientId));
+      await prisma.checkoutIdempotency.deleteMany({ where: { clientId } });
+
+      await expect(
+        createOnlineOrder(
+          makeOrderInput(clientId, { contactPhone: "0987654321" }),
+        ),
+      ).rejects.toMatchObject({
+        name: "OnlineOrderError",
+        code: "IDEMPOTENCY_CONFLICT",
+      });
+      await expect(
+        createOnlineOrder(
+          makeOrderInput(clientId, {
+            lines: [{ productId: testProductId, quantity: 2 }],
+          }),
+        ),
+      ).rejects.toMatchObject({ code: "IDEMPOTENCY_CONFLICT" });
+
+      expect(await prisma.order.count({ where: { clientId } })).toBe(1);
+      const product = await prisma.product.findUniqueOrThrow({
+        where: { id: testProductId },
+      });
+      expect(product.stock).toBe(9);
+      expect(
+        (
+          await prisma.order.findUniqueOrThrow({
+            where: { id: first.order.id },
+          })
+        ).contactPhone,
+      ).toBe("0901234567");
+    });
+
+    it("returns the existing order when the same body is resent (phone in either form)", async () => {
+      const clientId = randomUUID();
+      const first = await createOnlineOrder(makeOrderInput(clientId));
+      await prisma.checkoutIdempotency.deleteMany({ where: { clientId } });
+
+      const resent = await createOnlineOrder(makeOrderInput(clientId));
+      expect(resent).toMatchObject({
+        duplicated: true,
+        order: { id: first.order.id, code: first.order.code },
+      });
+
+      const resentCanonical = await createOnlineOrder(
+        makeOrderInput(clientId, { contactPhone: "+84901234567" }),
+      );
+      expect(resentCanonical.order.id).toBe(first.order.id);
+      expect(await prisma.order.count({ where: { clientId } })).toBe(1);
+    });
+
+    it("never hands out a POS order through the online clientId", async () => {
+      const clientId = randomUUID();
+      await createOrder({
+        clientId,
+        channel: "pos",
+        lines: [
+          {
+            productId: testProductId,
+            name: "Sản phẩm thử nghiệm Idempotency",
+            unitPrice: 50_000,
+            originalPrice: 50_000,
+            quantity: 1,
+            discount: 0,
+            unit: "cái",
+            isService: false,
+          },
+        ],
+        payments: [{ method: "cash", amount: 50_000 }],
+      });
+
+      try {
+        await expect(
+          createOnlineOrder(makeOrderInput(clientId)),
+        ).rejects.toMatchObject({ code: "IDEMPOTENCY_CONFLICT" });
+      } finally {
+        await prisma.order.deleteMany({ where: { clientId } });
+      }
     });
   });
 });
