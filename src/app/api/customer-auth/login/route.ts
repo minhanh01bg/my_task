@@ -9,13 +9,21 @@ import {
 import {
   checkCustomerAuthAccount,
   checkCustomerAuthPreCheck,
+  checkCustomerTrustedDevice,
   resetCustomerAuthAccount,
+  resetCustomerTrustedDevice,
 } from "@/server/customer-auth/rate-limit";
 import {
   createCustomerSession,
   CUSTOMER_SESSION_COOKIE,
   customerCookieOptions,
 } from "@/server/customer-auth/session";
+import {
+  createCustomerTrustedDeviceToken,
+  CUSTOMER_TRUSTED_DEVICE_COOKIE,
+  customerTrustedDeviceCookieOptions,
+  resolveCustomerTrustedDevice,
+} from "@/server/customer-auth/trusted-device";
 import { prisma } from "@/server/db/prisma";
 import { customerLoginSchema } from "@/types/customer-auth";
 
@@ -68,8 +76,26 @@ export async function POST(request: Request) {
     });
   }
 
-  // Layer 4: Velocity check on normalized phone number (cleared on success)
-  const accountCheck = await checkCustomerAuthAccount(parsed.data.phone);
+  const account = await prisma.customerAccount.findUnique({
+    where: { phoneNormalized: parsed.data.phone },
+    select: {
+      id: true,
+      displayName: true,
+      passwordHash: true,
+      disabledAt: true,
+    },
+  });
+
+  const usableAccount = account && !account.disabledAt ? account : null;
+
+  // Layer 4: Velocity check on normalized phone number (cleared on success).
+  // A device that logged in to this account before uses its own bucket.
+  const trustedDeviceId = usableAccount
+    ? resolveCustomerTrustedDevice(request, usableAccount.id)
+    : null;
+  const accountCheck = trustedDeviceId
+    ? await checkCustomerTrustedDevice(trustedDeviceId)
+    : await checkCustomerAuthAccount(parsed.data.phone);
   if (!accountCheck.ok) {
     const headers: Record<string, string> = {
       "Cache-Control": "private, no-store",
@@ -82,18 +108,6 @@ export async function POST(request: Request) {
       { status: accountCheck.status, headers },
     );
   }
-
-  const account = await prisma.customerAccount.findUnique({
-    where: { phoneNormalized: parsed.data.phone },
-    select: {
-      id: true,
-      displayName: true,
-      passwordHash: true,
-      disabledAt: true,
-    },
-  });
-
-  const usableAccount = account && !account.disabledAt ? account : null;
 
   // Always run exactly one scrypt verification, against a dummy hash when
   // there is no usable account, so timing does not reveal which phones exist.
@@ -111,6 +125,7 @@ export async function POST(request: Request) {
 
   // Reset the account-level failure counter on successful login
   await resetCustomerAuthAccount(parsed.data.phone);
+  if (trustedDeviceId) await resetCustomerTrustedDevice(trustedDeviceId);
 
   const session = await createCustomerSession(usableAccount.id);
   const response = NextResponse.json(
@@ -125,9 +140,18 @@ export async function POST(request: Request) {
     request.url.startsWith("https:");
 
   // HTTPS can only add Secure; it never relaxes the production default.
+  const secure = customerCookieOptions.secure || isHttps;
   response.cookies.set(CUSTOMER_SESSION_COOKIE, session.token, {
     ...customerCookieOptions,
-    secure: customerCookieOptions.secure || isHttps,
+    secure,
   });
+  const deviceToken = createCustomerTrustedDeviceToken(usableAccount.id);
+  if (deviceToken) {
+    response.cookies.set(
+      CUSTOMER_TRUSTED_DEVICE_COOKIE,
+      deviceToken,
+      customerTrustedDeviceCookieOptions(secure),
+    );
+  }
   return response;
 }

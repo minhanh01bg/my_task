@@ -47,6 +47,8 @@ export const POLICIES = {
       { name: "phone-attempts", limit: 5, windowSeconds: 900 },
       { name: "phone-register", limit: 5, windowSeconds: 900 },
       { name: "global-attempts", limit: 10000, windowSeconds: 900 },
+      // Replaces phone-attempts for a trusted device (see trusted-device.ts).
+      { name: "device-attempts", limit: 5, windowSeconds: 900 },
     ],
   },
   adminLogin: {

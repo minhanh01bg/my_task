@@ -1,12 +1,14 @@
 import { createHash } from "node:crypto";
 
 import {
+  rateLimitClientId,
   resolveTrustedClientIp,
   type TrustedProxyMode,
 } from "@/server/http/client-ip";
 import {
   createRateLimiter,
   type RateLimiter,
+  type RateLimitTarget,
 } from "@/server/security/rate-limit";
 import { POLICIES } from "@/server/security/rate-limit-policy";
 
@@ -68,7 +70,11 @@ export async function checkCustomerAuthPreCheck(
 
   const limiter = getLimiter(options.limiter);
   const decision = await limiter.check(POLICIES.customerAuth, [
-    { bucketName: "ip-attempts", dimension: "ip", identifier: ipResult.ip },
+    {
+      bucketName: "ip-attempts",
+      dimension: "ip",
+      identifier: rateLimitClientId(ipResult),
+    },
     {
       bucketName: "subnet-attempts",
       dimension: "subnet",
@@ -111,7 +117,45 @@ export async function checkCustomerAuthAccount(
   phoneNormalized: string,
   injectedLimiter?: RateLimiter,
 ): Promise<CustomerAuthCheckResult> {
-  return checkPhoneBucket("phone-attempts", phoneNormalized, injectedLimiter);
+  return checkAccountBucket(
+    {
+      bucketName: "phone-attempts",
+      dimension: "phone",
+      identifier: phoneNormalized,
+    },
+    injectedLimiter,
+  );
+}
+
+/**
+ * Replaces `checkCustomerAuthAccount()` for a device that already logged in
+ * to the account (see `resolveCustomerTrustedDevice()`): the phone bucket can
+ * be exhausted by anyone who knows the number, this one only by the device.
+ * A successful login clears it via `resetCustomerTrustedDevice()`.
+ */
+export async function checkCustomerTrustedDevice(
+  deviceId: string,
+  injectedLimiter?: RateLimiter,
+): Promise<CustomerAuthCheckResult> {
+  return checkAccountBucket(deviceTarget(deviceId), injectedLimiter);
+}
+
+export async function resetCustomerTrustedDevice(
+  deviceId: string,
+  injectedLimiter?: RateLimiter,
+): Promise<void> {
+  const limiter = getLimiter(injectedLimiter);
+  if (typeof limiter.reset === "function") {
+    await limiter.reset(POLICIES.customerAuth, deviceTarget(deviceId));
+  }
+}
+
+function deviceTarget(deviceId: string): RateLimitTarget {
+  return {
+    bucketName: "device-attempts",
+    dimension: "device",
+    identifier: deviceId,
+  };
 }
 
 /**
@@ -122,18 +166,22 @@ export async function checkCustomerRegisterAccount(
   phoneNormalized: string,
   injectedLimiter?: RateLimiter,
 ): Promise<CustomerAuthCheckResult> {
-  return checkPhoneBucket("phone-register", phoneNormalized, injectedLimiter);
+  return checkAccountBucket(
+    {
+      bucketName: "phone-register",
+      dimension: "phone",
+      identifier: phoneNormalized,
+    },
+    injectedLimiter,
+  );
 }
 
-async function checkPhoneBucket(
-  bucketName: "phone-attempts" | "phone-register",
-  phoneNormalized: string,
+async function checkAccountBucket(
+  target: RateLimitTarget,
   injectedLimiter?: RateLimiter,
 ): Promise<CustomerAuthCheckResult> {
   const limiter = getLimiter(injectedLimiter);
-  const decision = await limiter.check(POLICIES.customerAuth, [
-    { bucketName, dimension: "phone", identifier: phoneNormalized },
-  ]);
+  const decision = await limiter.check(POLICIES.customerAuth, [target]);
 
   if (!decision.allowed) {
     if (decision.reason === "limiter_unavailable") {

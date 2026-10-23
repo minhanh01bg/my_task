@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { env } from "@/config/env";
 import { POST } from "@/app/api/customer-auth/login/route";
 import { POST as register } from "@/app/api/customer-auth/register/route";
 import {
@@ -8,6 +9,10 @@ import {
 } from "@/server/customer-auth/password";
 import { setCustomerAuthLimiter } from "@/server/customer-auth/rate-limit";
 import { customerCookieOptions } from "@/server/customer-auth/session";
+import {
+  createCustomerTrustedDeviceToken,
+  CUSTOMER_TRUSTED_DEVICE_COOKIE,
+} from "@/server/customer-auth/trusted-device";
 import { prisma } from "@/server/db/prisma";
 import {
   createRateLimiter,
@@ -245,5 +250,78 @@ describe("POST /api/customer-auth/login", () => {
       makeRequest({ phone: testPhone, password: "wrong-password" }),
     );
     expect(wrong.status).toBe(401);
+  });
+
+  it("counts every address in one IPv6 /64 as one client", async () => {
+    const originalProxyMode = env.TRUSTED_PROXY_MODE;
+    (env as Record<string, unknown>).TRUSTED_PROXY_MODE = "cloudflare";
+    try {
+      // An invalid body fails after the IP pre-check, without a scrypt run.
+      const attempt = (ip: string) =>
+        POST(makeRequest({}, { "cf-connecting-ip": ip }));
+      for (let i = 1; i <= 20; i++) {
+        expect((await attempt(`2001:db8:1:2::${i.toString(16)}`)).status).toBe(
+          401,
+        );
+      }
+      expect((await attempt("2001:db8:1:2:ffff::1")).status).toBe(429);
+    } finally {
+      (env as Record<string, unknown>).TRUSTED_PROXY_MODE = originalProxyMode;
+    }
+  });
+
+  describe("trusted device", () => {
+    const login = (password: string, device?: string) =>
+      POST(
+        makeRequest(
+          { phone: testPhone, password },
+          device
+            ? { cookie: `${CUSTOMER_TRUSTED_DEVICE_COOKIE}=${device}` }
+            : {},
+        ),
+      );
+
+    async function trustDevice(): Promise<string> {
+      const res = await login("password123");
+      expect(res.status).toBe(200);
+      const device = res.cookies.get(CUSTOMER_TRUSTED_DEVICE_COOKIE);
+      expect(device?.httpOnly).toBe(true);
+      expect(device?.path).toBe("/api/customer-auth/login");
+      return device!.value;
+    }
+
+    async function lockPhone() {
+      for (let i = 0; i < 5; i++) {
+        expect((await login("wrong-password")).status).toBe(401);
+      }
+    }
+
+    it("lets the account's own device log in while its phone is locked out", async () => {
+      const device = await trustDevice();
+      await lockPhone();
+
+      expect((await login("password123")).status).toBe(429);
+      expect((await login("password123", device)).status).toBe(200);
+    });
+
+    it("ignores tampered device cookies and ones issued for another account", async () => {
+      const device = await trustDevice();
+      await lockPhone();
+
+      const tampered = `${device.slice(0, 5)}${device[5] === "A" ? "B" : "A"}${device.slice(6)}`;
+      const otherAccount = createCustomerTrustedDeviceToken("other-account-id");
+      for (const cookie of [tampered, otherAccount]) {
+        expect((await login("password123", cookie!)).status).toBe(429);
+      }
+    });
+
+    it("still limits wrong passwords from a trusted device", async () => {
+      const device = await trustDevice();
+      for (let i = 0; i < 5; i++) {
+        expect((await login("wrong-password", device)).status).toBe(401);
+      }
+
+      expect((await login("password123", device)).status).toBe(429);
+    });
   });
 });
