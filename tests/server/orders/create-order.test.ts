@@ -706,3 +706,53 @@ describe("createOrder — chan giam gia va khach hang", () => {
     expect(order.customerId).toBe(customer.id);
   });
 });
+
+describe("createOrder — tran cot Int cua so tien", () => {
+  it("tien hang cong lai vuot cot Int thi tu choi truoc khi ghi", async () => {
+    const product = await seedProduct({ price: 1_200_000_000 });
+    const line = cashLine(product.id, {
+      unitPrice: 1_200_000_000,
+      originalPrice: 1_200_000_000,
+      quantity: 1,
+    });
+
+    await expect(
+      createOrder({
+        clientId: "amount-too-large-subtotal",
+        lines: [line, line],
+        payments: [{ method: "transfer", amount: 2_400_000_000 }],
+      }),
+    ).rejects.toMatchObject({
+      name: "OrderValidationError",
+      code: "AMOUNT_TOO_LARGE",
+    });
+    expect(await prisma.order.count()).toBe(0);
+    expect(await prisma.payment.count()).toBe(0);
+    expect(await prisma.stockMovement.count()).toBe(0);
+    const after = await prisma.product.findUniqueOrThrow({
+      where: { id: product.id },
+    });
+    expect(after.stock).toBe(10);
+  });
+
+  it("don dung bang tran cot Int van ghi duoc", async () => {
+    const product = await seedProduct({ price: 2_147_483_647 });
+
+    const result = await createOrder({
+      clientId: "amount-at-int-cap",
+      lines: [
+        cashLine(product.id, {
+          unitPrice: 2_147_483_647,
+          originalPrice: 2_147_483_647,
+          quantity: 1,
+        }),
+      ],
+      payments: [{ method: "transfer", amount: 2_147_483_647 }],
+    });
+
+    expect(result.order).toMatchObject({
+      subtotal: 2_147_483_647,
+      total: 2_147_483_647,
+    });
+  });
+});

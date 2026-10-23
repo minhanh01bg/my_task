@@ -14,6 +14,7 @@ import {
 } from "@/server/orders/checkout-idempotency";
 import { createOnlineOrder } from "@/server/orders/create-online-order";
 import { GUEST_CAPABILITY_LIFETIME_MS } from "@/server/orders/order-access";
+import { OrderValidationError } from "@/server/orders/order-validation-error";
 import { OnlineOrderError, onlineCheckoutSchema } from "@/types/online-order";
 
 import {
@@ -180,6 +181,17 @@ export async function POST(request: Request) {
           message: error.message,
           productIds: error.productIds,
         },
+        { status: 409 },
+      );
+    }
+    // An order too large for the Int columns is a business rejection, not a
+    // server failure; other OrderValidationError codes stay 500 (server bug).
+    if (
+      error instanceof OrderValidationError &&
+      error.code === "AMOUNT_TOO_LARGE"
+    ) {
+      return NextResponse.json(
+        { code: error.code, message: error.message },
         { status: 409 },
       );
     }

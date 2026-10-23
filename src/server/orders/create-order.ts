@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 
 import { logger } from "@/lib/logger";
-import { multiplyMoney, roundVnd } from "@/lib/money";
+import { MAX_INT_VND, multiplyMoney, roundVnd } from "@/lib/money";
 import { calculateCart } from "@/lib/pricing/calculate";
 import type { CartLine } from "@/lib/pricing/types";
 import { revalidatePublic } from "@/server/cache/public-cache";
@@ -161,6 +161,20 @@ function settlePayments(
   return settled.filter(
     (payment, index) => payment.amount > 0 || payments[index]!.amount === 0,
   );
+}
+
+/**
+ * Moi so tien ghi vao cot `Int` phai <= MAX_INT_VND. Moi dong duoi tran van co
+ * the cong lai vuot tran, nen kiem tra tren so server tinh lai — tu choi bang
+ * loi nghiep vu truoc khi ghi thay vi de Prisma nem 500 (may ban gui lai mai).
+ */
+function assertAmountsFit(amounts: number[]): void {
+  if (amounts.some((amount) => amount > MAX_INT_VND)) {
+    throw new OrderValidationError(
+      "AMOUNT_TOO_LARGE",
+      "Số tiền của đơn quá lớn, vui lòng tách thành nhiều đơn nhỏ hơn",
+    );
+  }
 }
 
 function resolveStatus(payments: CreateOrderPayment[]): string {
@@ -339,7 +353,21 @@ export async function createOrder(
     input.voucher,
     input.online?.shippingFee ?? 0,
   );
+  assertAmountsFit([
+    ...totals.lines.flatMap((line) => [
+      line.unitPrice,
+      line.originalPrice,
+      line.discount,
+      line.lineTotal,
+    ]),
+    totals.subtotal,
+    money.discount,
+    money.voucherDiscount,
+    money.shippingFee,
+    money.total,
+  ]);
   const payments = settlePayments(input.payments, money.total);
+  assertAmountsFit(payments.map((payment) => payment.amount));
   const status = input.initialStatus ?? resolveStatus(payments);
 
   if (input.customerId) {

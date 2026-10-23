@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { MAX_INT_VND } from "@/lib/money";
 import { hasAdminSession } from "@/server/auth/require-admin-session";
 import { hasSafeMutationOrigin } from "@/server/http/origin";
 import { readJsonBody } from "@/server/http/read-json-body";
@@ -10,13 +11,10 @@ import { OrderValidationError } from "@/server/orders/order-validation-error";
 /** Đơn 200 dòng thực tế chỉ vài chục KB; quá mức này gần như chắc chắn là lạm dụng. */
 const MAX_ORDER_BODY_BYTES = 128_000;
 /**
- * Trần cho mọi số tiền VND: giới hạn cột Prisma `Int` (32-bit). Lớn hơn thì
- * không lưu được nên trả 400 (lỗi vĩnh viễn, giữ lại để xử lý tay) thay vì
- * để Prisma ném 500 khiến hàng đợi offline gửi lại mãi.
+ * Vượt cột `Int` thì trả 400 (lỗi vĩnh viễn, giữ lại để xử lý tay) thay vì để
+ * Prisma ném 500 khiến hàng đợi offline gửi lại mãi.
  */
-const MAX_VND = 2_147_483_647;
-
-const moneySchema = z.number().int().min(0).max(MAX_VND);
+const moneySchema = z.number().int().min(0).max(MAX_INT_VND);
 
 const lineSchema = z
   .object({
