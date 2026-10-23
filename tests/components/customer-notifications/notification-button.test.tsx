@@ -162,6 +162,15 @@ describe("CustomerNotificationButton", () => {
 
     const title = await screen.findByText("Chưa có thông báo");
     expect(title.closest('[data-slot="empty-state"]')).not.toBeNull();
+    // Hộp thư có cả tin báo có hàng, không chỉ đơn hàng.
+    expect(
+      screen.getByRole("region", { name: "Hộp thư thông báo" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Cập nhật đơn hàng và tin báo có hàng sẽ hiển thị tại đây.",
+      ),
+    ).toBeInTheDocument();
   });
   it("tải trang cursor và giữ thông báo cũ khi tải thêm lỗi", async () => {
     const first = { ...mockNotificationsResponse, nextCursor: "older-cursor" };
