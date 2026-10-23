@@ -10,6 +10,11 @@ describe("isInternalHost (WEB-7c)", () => {
   it.each([
     "localhost",
     "LOCALHOST.",
+    // More than one trailing dot
+    "localhost..",
+    "localhost...",
+    "127.0.0.1..",
+    "api.localhost..",
     "api.localhost",
     "printer.local",
     "0.0.0.0",
@@ -213,6 +218,8 @@ describe("isPublicHttpsUrl (WEB-7a)", () => {
     "data:image/png;base64,AAAA",
     "https://user:pass@example.com/a.png",
     "https://localhost./a.png",
+    "https://localhost../a.png",
+    "https://127.0.0.1../a.png",
     "https://127.0.0.1/a.png",
     "https://2130706433/a.png",
     "https://0x7f.1/a.png",

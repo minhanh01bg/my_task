@@ -159,7 +159,8 @@ export function isInternalHost(hostname: string): boolean {
   const host = hostname
     .toLowerCase()
     .replace(/^\[(.*)\]$/, "$1")
-    .replace(/\.$/, "");
+    // Every trailing dot: "localhost.." would otherwise pass as a dotted name.
+    .replace(/\.+$/, "");
 
   if (
     host === "" ||
