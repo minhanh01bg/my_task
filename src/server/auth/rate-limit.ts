@@ -1,10 +1,13 @@
 import {
+  rateLimitClientId,
   resolveTrustedClientIp,
+  type ClientIpResolution,
   type TrustedProxyMode,
 } from "@/server/http/client-ip";
 import {
   createRateLimiter,
   type RateLimiter,
+  type RateLimitTarget,
 } from "@/server/security/rate-limit";
 import { POLICIES } from "@/server/security/rate-limit-policy";
 
@@ -27,6 +30,46 @@ export interface AdminLoginGuardOptions {
   proxyMode?: TrustedProxyMode;
   customHeader?: string;
   isProduction?: boolean;
+  /** Id from a valid device cookie, see `resolveAdminTrustedDevice()`. */
+  trustedDeviceId?: string | null;
+}
+
+function ipTarget(
+  ipResult: Extract<ClientIpResolution, { ok: true }>,
+): RateLimitTarget {
+  return {
+    bucketName: "ip-attempts",
+    dimension: "ip",
+    identifier: rateLimitClientId(ipResult),
+  };
+}
+
+/**
+ * Buckets that only count failures and are refunded on success. A trusted
+ * device skips the subnet/global budgets, which anyone can exhaust to lock the
+ * owner out, and gets its own instead so a stolen cookie cannot brute force.
+ */
+function failureTargets(
+  ipResult: Extract<ClientIpResolution, { ok: true }>,
+  trustedDeviceId: string | null | undefined,
+): RateLimitTarget[] {
+  if (trustedDeviceId) {
+    return [
+      {
+        bucketName: "device-attempts",
+        dimension: "device",
+        identifier: trustedDeviceId,
+      },
+    ];
+  }
+  return [
+    {
+      bucketName: "subnet-attempts",
+      dimension: "subnet",
+      identifier: ipResult.subnet,
+    },
+    { bucketName: "global-attempts", dimension: "global", identifier: "all" },
+  ];
 }
 
 export type AdminLoginCheckResult =
@@ -74,13 +117,8 @@ export async function checkAdminLoginRateLimit(
 
   const limiter = getLimiter(options.limiter);
   const decision = await limiter.check(POLICIES.adminLogin, [
-    { bucketName: "ip-attempts", dimension: "ip", identifier: ipResult.ip },
-    {
-      bucketName: "subnet-attempts",
-      dimension: "subnet",
-      identifier: ipResult.subnet,
-    },
-    { bucketName: "global-attempts", dimension: "global", identifier: "all" },
+    ipTarget(ipResult),
+    ...failureTargets(ipResult, options.trustedDeviceId),
   ]);
 
   if (!decision.allowed) {
@@ -124,20 +162,12 @@ export async function resetAdminLoginRateLimit(
 
   const limiter = getLimiter(options.limiter);
   if (typeof limiter.reset === "function") {
-    await limiter.reset(POLICIES.adminLogin, {
-      bucketName: "ip-attempts",
-      dimension: "ip",
-      identifier: ipResult.ip,
-    });
+    await limiter.reset(POLICIES.adminLogin, ipTarget(ipResult));
   }
   if (typeof limiter.release === "function") {
-    await limiter.release(POLICIES.adminLogin, [
-      {
-        bucketName: "subnet-attempts",
-        dimension: "subnet",
-        identifier: ipResult.subnet,
-      },
-      { bucketName: "global-attempts", dimension: "global", identifier: "all" },
-    ]);
+    await limiter.release(
+      POLICIES.adminLogin,
+      failureTargets(ipResult, options.trustedDeviceId),
+    );
   }
 }

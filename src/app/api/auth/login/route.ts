@@ -17,6 +17,12 @@ import {
   SESSION_COOKIE,
   verifyPassword,
 } from "@/server/auth/session";
+import {
+  ADMIN_TRUSTED_DEVICE_COOKIE,
+  adminTrustedDeviceCookieOptions,
+  createAdminTrustedDeviceToken,
+  resolveAdminTrustedDevice,
+} from "@/server/auth/trusted-device";
 import { readJsonBody } from "@/server/http/read-json-body";
 import { hasSafeMutationOrigin } from "@/server/http/origin";
 
@@ -48,8 +54,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Layer 2: Pre-check IP, subnet, and global rate limits before password hashing/verification
-    const rateCheck = await checkAdminLoginRateLimit(request);
+    // Layer 2: Pre-check IP, subnet, and global rate limits before password hashing/verification.
+    // A device that logged in before swaps the shared subnet/global budgets for its own.
+    const storeHash = env.STORE_PASSWORD_HASH;
+    const trustedDeviceId = resolveAdminTrustedDevice(request, storeHash);
+    const rateCheck = await checkAdminLoginRateLimit(request, {
+      trustedDeviceId,
+    });
     if (!rateCheck.ok) {
       const headers: Record<string, string> = {
         "Cache-Control": "private, no-store",
@@ -76,7 +87,6 @@ export async function POST(request: Request) {
     }
 
     // Layer 4: Verify password
-    const storeHash = env.STORE_PASSWORD_HASH;
     if (!storeHash) {
       return NextResponse.json(
         { message: "Chưa cấu hình mật khẩu cửa hàng" },
@@ -107,7 +117,7 @@ export async function POST(request: Request) {
     );
 
     // Reset rate limit attempts for this client on successful login
-    await resetAdminLoginRateLimit(request);
+    await resetAdminLoginRateLimit(request, { trustedDeviceId });
 
     const adminIdentity = await ensureDefaultAdminIdentity();
     // The presented session is replaced below, so it must not stay valid.
@@ -121,6 +131,15 @@ export async function POST(request: Request) {
       token,
       adminCookieOptionsForRequest(request),
     );
+
+    const deviceToken = createAdminTrustedDeviceToken(storeHash);
+    if (deviceToken) {
+      response.cookies.set(
+        ADMIN_TRUSTED_DEVICE_COOKIE,
+        deviceToken,
+        adminTrustedDeviceCookieOptions(request),
+      );
+    }
 
     return response;
   } catch (error) {

@@ -10,6 +10,11 @@ import {
   SESSION_COOKIE,
   verifySession,
 } from "@/server/auth/session";
+import {
+  ADMIN_TRUSTED_DEVICE_COOKIE,
+  createAdminTrustedDeviceToken,
+  TRUSTED_DEVICE_MAX_AGE_SECONDS,
+} from "@/server/auth/trusted-device";
 import { prisma } from "@/server/db/prisma";
 import {
   createRateLimiter,
@@ -233,6 +238,100 @@ describe("POST /api/auth/login", () => {
 
       const res = await attempt("wrong-password", "203.0.113.20");
       expect(res.status).toBe(401);
+    });
+
+    it("counts every address in one IPv6 /64 as one client", async () => {
+      for (let i = 1; i <= 10; i++) {
+        const ip = `2001:db8:1:2::${i.toString(16)}`;
+        expect((await attempt("wrong-password", ip)).status).toBe(401);
+      }
+
+      const res = await attempt("wrong-password", "2001:db8:1:2:ffff::1");
+      expect(res.status).toBe(429);
+    });
+
+    describe("trusted device", () => {
+      const withDevice = (password: string, ip: string, device: string) =>
+        POST(
+          makeRequest(
+            { password },
+            {
+              "cf-connecting-ip": ip,
+              cookie: `${ADMIN_TRUSTED_DEVICE_COOKIE}=${device}`,
+            },
+          ),
+        );
+
+      async function trustDevice(): Promise<string> {
+        const res = await attempt("matkhau-cua-hang", "192.0.2.1");
+        expect(res.status).toBe(200);
+        const device = res.cookies.get(ADMIN_TRUSTED_DEVICE_COOKIE);
+        expect(device?.httpOnly).toBe(true);
+        expect(device?.path).toBe("/api/auth/login");
+        return device!.value;
+      }
+
+      async function exhaustSharedBudget() {
+        for (let i = 1; i <= 30; i++) {
+          expect(
+            (await attempt("wrong-password", `198.51.${i}.7`)).status,
+          ).toBe(401);
+        }
+      }
+
+      it("lets the owner's device log in after a brute force spread across many IPs", async () => {
+        const device = await trustDevice();
+        await exhaustSharedBudget();
+
+        expect((await attempt("matkhau-cua-hang", "203.0.113.20")).status).toBe(
+          429,
+        );
+        const res = await withDevice(
+          "matkhau-cua-hang",
+          "203.0.113.20",
+          device,
+        );
+        expect(res.status).toBe(200);
+      });
+
+      it("ignores tampered, expired and pre-rotation device cookies", async () => {
+        const device = await trustDevice();
+        await exhaustSharedBudget();
+
+        const tampered = `${device.slice(0, 5)}${device[5] === "A" ? "B" : "A"}${device.slice(6)}`;
+        const expired = createAdminTrustedDeviceToken(
+          env.STORE_PASSWORD_HASH,
+          Date.now() - (TRUSTED_DEVICE_MAX_AGE_SECONDS + 60) * 1000,
+        );
+        // Same password, fresh salt: a different STORE_PASSWORD_HASH.
+        const preRotation = createAdminTrustedDeviceToken(
+          await hashPassword("matkhau-cua-hang"),
+        );
+        for (const [i, cookie] of [tampered, expired, preRotation].entries()) {
+          const ip = `203.0.113.${20 + i}`;
+          const res = await withDevice("matkhau-cua-hang", ip, cookie!);
+          expect(res.status).toBe(429);
+        }
+      });
+
+      it("still limits wrong passwords from a trusted device", async () => {
+        const device = await trustDevice();
+        for (let i = 1; i <= 10; i++) {
+          const res = await withDevice(
+            "wrong-password",
+            `198.51.${i}.7`,
+            device,
+          );
+          expect(res.status).toBe(401);
+        }
+
+        const res = await withDevice(
+          "matkhau-cua-hang",
+          "203.0.113.20",
+          device,
+        );
+        expect(res.status).toBe(429);
+      });
     });
   });
 

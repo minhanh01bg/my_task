@@ -156,6 +156,17 @@ function classifyIpv6(hextets: number[]): ClientIpResolution {
 }
 
 /**
+ * Identifier for per-client rate-limit buckets. One IPv6 host usually holds a
+ * whole /64 and can rotate through it at will, so IPv6 clients are keyed by
+ * that prefix; IPv4 clients by their address.
+ */
+export function rateLimitClientId(
+  resolution: Extract<ClientIpResolution, { ok: true }>,
+): string {
+  return resolution.family === "ipv6" ? resolution.subnet : resolution.ip;
+}
+
+/**
  * Resolves trusted client IP according to server configuration.
  *
  * CRITICAL SECURITY INVARIANT:

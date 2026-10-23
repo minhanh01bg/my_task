@@ -17,7 +17,10 @@ export class AdminUnauthorizedError extends Error {
   }
 }
 
-function readCookie(cookieHeader: string | null, name: string): string | null {
+export function readCookie(
+  cookieHeader: string | null,
+  name: string,
+): string | null {
   const encoded = cookieHeader
     ?.split(";")
     .map((part) => part.trim())
