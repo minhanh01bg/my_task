@@ -34,10 +34,22 @@ vi.mock("next/cache", () => ({
 }));
 
 describe("Admin Settings Authorization & Protection", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     mockCookies.clear();
     mockRedirect.mockClear();
     vi.clearAllMocks();
+    // Giữ nguyên tài khoản nhận tiền mà các form dưới gửi lên: đổi ngân hàng
+    // cần mật khẩu chủ, đã kiểm thử riêng ở bank-account-owner-password.test.ts.
+    await prisma.setting.deleteMany({
+      where: { key: { startsWith: "bank." } },
+    });
+    await prisma.setting.createMany({
+      data: [
+        { key: "bank.bin", value: "970407" },
+        { key: "bank.accountNumber", value: "0123456789" },
+        { key: "bank.accountName", value: "CHỦ CỬA HÀNG" },
+      ],
+    });
   });
 
   it("saveSettingsAction: từ chối và trả về lỗi quyền khi chưa đăng nhập", async () => {

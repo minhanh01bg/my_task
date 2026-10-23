@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/kit";
+import { env } from "@/config/env";
 import { requireAdminSession } from "@/server/auth/require-admin-session";
 import {
   getAdminStoreProfile,
@@ -30,6 +31,7 @@ export default async function SettingsPage() {
         storeProfile={storeProfile}
         account={account}
         shipping={shipping}
+        ownerPasswordConfigured={Boolean(env.OWNER_PASSWORD_HASH)}
       />
     </div>
   );

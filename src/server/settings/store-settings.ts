@@ -111,6 +111,16 @@ export async function getStoreBankAccount(): Promise<BankAccount | null> {
   return { bankBin, accountNumber, accountName };
 }
 
+/** Doc truc tiep tung truong dang luu (khong cache) de so sanh truoc khi ghi. */
+export async function readStoreBankFields(): Promise<Partial<BankAccount>> {
+  const settings = await readSettings(BANK_SETTING_KEYS);
+  return {
+    bankBin: settings[KEY_BANK_BIN],
+    accountNumber: settings[KEY_BANK_ACCOUNT],
+    accountName: settings[KEY_BANK_NAME],
+  };
+}
+
 export async function saveStoreBankAccount(
   account: BankAccount,
   client: SettingsClient = prisma,

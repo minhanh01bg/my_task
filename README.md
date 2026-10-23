@@ -26,6 +26,28 @@ pnpm dev
 
 Open http://localhost:3000
 
+## Biến môi trường mật khẩu
+
+Biến môi trường được kiểm tra trong `src/config/env.ts`. Hai biến mật khẩu dùng
+cùng định dạng `salt:derived` (PBKDF2), sinh bằng:
+
+```bash
+pnpm tsx scripts/hash-password.ts '<mat khau>'
+```
+
+- `STORE_PASSWORD_HASH` — mật khẩu cửa hàng dùng để đăng nhập POS/quản trị.
+  Bắt buộc ở production.
+- `OWNER_PASSWORD_HASH` — mật khẩu chủ cửa hàng, tuỳ chọn. Phải nhập mật khẩu
+  này khi đổi tài khoản nhận tiền (mã ngân hàng, số tài khoản, tên chủ tài
+  khoản trong `/admin/settings`). Dùng mật khẩu khác `STORE_PASSWORD_HASH` và
+  không đưa cho nhân viên. Nếu không đặt, mọi thay đổi tài khoản nhận tiền đều
+  bị từ chối; các cài đặt khác vẫn lưu bình thường. Nhập sai 5 lần trong 15 phút
+  thì bị khoá tạm. Mỗi lần đổi thành công đều ghi audit log và tạo thông báo
+  admin, trong đó số tài khoản được che (`****1234`).
+
+Đặt hash trong file env của server (đặt trong dấu nháy), rồi khởi động lại ứng
+dụng. Không commit hash hay mật khẩu vào git.
+
 ## Scripts
 
 ```bash

@@ -1,12 +1,21 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 import { logger } from "@/lib/logger";
+import type { BankAccount } from "@/lib/vietqr/types";
 import { expirePublicNow } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
 import {
+  createBankAccountChangedNotification,
+  isBankAccountChanged,
+  maskAccountNumber,
+} from "@/server/settings/bank-account-change";
+import { verifyOwnerPassword } from "@/server/settings/owner-password";
+import {
+  readStoreBankFields,
   saveShippingSettings,
   saveStoreBankAccount,
   saveStoreProfile,
@@ -19,6 +28,8 @@ import {
 import { adminSettingsSchema, type AdminSettingsInput } from "@/types/settings";
 
 export type { AdminSettingsInput };
+
+const ownerPasswordSchema = z.string().max(256).optional();
 
 export type SaveSettingsResult =
   | { ok: true; message: string }
@@ -63,6 +74,13 @@ export async function saveSettingsAction(
     return { ok: false, error: errorMsg };
   }
 
+  const ownerPassword = ownerPasswordSchema.safeParse(
+    formData.get("ownerPassword") || undefined,
+  );
+  if (!ownerPassword.success) {
+    return { ok: false, error: "Mật khẩu chủ cửa hàng không hợp lệ." };
+  }
+
   // Hai o phi ship di cung nhau: thieu mot o thi khong luu gi ca.
   const { shippingFee, freeShippingThreshold } = parsed.data;
   if ((shippingFee === undefined) !== (freeShippingThreshold === undefined)) {
@@ -70,6 +88,35 @@ export async function saveSettingsAction(
       ok: false,
       error: "Nhập đủ cả phí giao hàng và ngưỡng miễn phí giao hàng",
     };
+  }
+
+  // Doi noi nhan tien (VietQR) can mat khau chu; giu nguyen thi khong ghi lai.
+  // Xac minh (PBKDF2) chay ngoai transaction de khong giu khoa SQLite.
+  const bankAccount: BankAccount = {
+    bankBin: parsed.data.bankBin,
+    accountNumber: parsed.data.accountNumber,
+    accountName: parsed.data.accountName,
+  };
+  const currentBankAccount = await readStoreBankFields();
+  const bankAccountChanged = isBankAccountChanged(
+    currentBankAccount,
+    bankAccount,
+  );
+  if (bankAccountChanged) {
+    const ownerCheck = await verifyOwnerPassword(
+      ownerPassword.data,
+      adminIdentity?.id,
+    );
+    if (!ownerCheck.ok) {
+      await logAdminAction({
+        identityId: adminIdentity?.id,
+        action: "settings.bank_account.denied",
+        entityType: "store_settings",
+        entityId: "store",
+        metadata: { reason: ownerCheck.reason },
+      });
+      return { ok: false, error: ownerCheck.message };
+    }
   }
 
   try {
@@ -85,14 +132,14 @@ export async function saveSettingsAction(
         tx,
       );
 
-      await saveStoreBankAccount(
-        {
-          bankBin: parsed.data.bankBin,
-          accountNumber: parsed.data.accountNumber,
-          accountName: parsed.data.accountName,
-        },
-        tx,
-      );
+      if (bankAccountChanged) {
+        await saveStoreBankAccount(bankAccount, tx);
+        await createBankAccountChangedNotification(
+          tx,
+          currentBankAccount,
+          bankAccount,
+        );
+      }
 
       if (shippingFee !== undefined && freeShippingThreshold !== undefined) {
         await saveShippingSettings({ shippingFee, freeShippingThreshold }, tx);
@@ -120,10 +167,28 @@ export async function saveSettingsAction(
       storeName: parsed.data.storeName,
       bankBin: parsed.data.bankBin,
       accountName: parsed.data.accountName,
+      bankAccountChanged,
       shippingFee,
       freeShippingThreshold,
     },
   });
+
+  if (bankAccountChanged) {
+    await logAdminAction({
+      identityId: adminIdentity?.id,
+      action: "settings.bank_account.update",
+      entityType: "store_settings",
+      entityId: "store",
+      metadata: {
+        bankBinBefore: currentBankAccount.bankBin ?? null,
+        bankBin: bankAccount.bankBin,
+        accountNumberBefore: maskAccountNumber(
+          currentBankAccount.accountNumber,
+        ),
+        accountNumber: maskAccountNumber(bankAccount.accountNumber),
+      },
+    });
+  }
 
   // save* da danh dau stale (SWR); trang cai dat doc lai profile qua loader
   // co cache nen het han ngay de form khong hien gia tri cu sau khi luu.

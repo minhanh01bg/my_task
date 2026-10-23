@@ -19,12 +19,15 @@ interface SettingsFormProps {
   storeProfile: PublicStoreProfile;
   account: BankAccount | null;
   shipping: ShippingSettings;
+  /** Đã có OWNER_PASSWORD_HASH: hiện ô mật khẩu chủ để đổi tài khoản nhận tiền. */
+  ownerPasswordConfigured?: boolean;
 }
 
 export function SettingsForm({
   storeProfile,
   account,
   shipping,
+  ownerPasswordConfigured = false,
 }: SettingsFormProps) {
   const toast = useToast();
   const [state, formAction, pending] = useActionState<
@@ -50,6 +53,10 @@ export function SettingsForm({
         event.preventDefault();
         if (pending) return;
         const formData = new FormData(event.currentTarget);
+        // Khong de mat khau chu nam lai tren may quay sau khi gui.
+        const ownerPassword =
+          event.currentTarget.elements.namedItem("ownerPassword");
+        if (ownerPassword instanceof HTMLInputElement) ownerPassword.value = "";
         // Goi action thu cong de React khong reset cac o khi server tra loi loi.
         startTransition(() => formAction(formData));
       }}
@@ -216,6 +223,31 @@ export function SettingsForm({
               placeholder="NGUYEN VAN A"
             />
           </div>
+
+          {ownerPasswordConfigured ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="owner-password">Mật khẩu chủ cửa hàng</Label>
+              <Input
+                id="owner-password"
+                name="ownerPassword"
+                type="password"
+                autoComplete="new-password"
+                aria-describedby="owner-password-hint"
+              />
+              <p
+                id="owner-password-hint"
+                className="text-muted-foreground text-xs"
+              >
+                Chỉ cần khi đổi mã ngân hàng, số tài khoản hoặc tên chủ tài
+                khoản.
+              </p>
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-xs">
+              Chưa cấu hình mật khẩu chủ cửa hàng (OWNER_PASSWORD_HASH) nên
+              không thể đổi tài khoản nhận tiền.
+            </p>
+          )}
         </CardContent>
       </Card>
 

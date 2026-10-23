@@ -25,6 +25,9 @@ export function isPublicUrl(value: string | undefined): value is string {
   }
 }
 
+/** Định dạng `salt:derived` (hex) mà scripts/hash-password.ts sinh ra. */
+const PASSWORD_HASH_PATTERN = /^[0-9a-fA-F]{32}:[0-9a-fA-F]{64}$/;
+
 export const envSchema = z
   .object({
     NODE_ENV: z
@@ -45,6 +48,18 @@ export const envSchema = z
       .min(32)
       .default("dev-only-secret-please-change-me!!"),
     STORE_PASSWORD_HASH: z.string().default(""),
+    // Mật khẩu chủ cửa hàng: bắt buộc khi đổi tài khoản nhận tiền. Không có
+    // mặc định/dummy — thiếu thì mọi thay đổi tài khoản ngân hàng bị từ chối.
+    OWNER_PASSWORD_HASH: z.preprocess(
+      (value) => (value === "" ? undefined : value),
+      z
+        .string()
+        .regex(
+          PASSWORD_HASH_PATTERN,
+          "OWNER_PASSWORD_HASH must be a valid salt:derived PBKDF2 hash",
+        )
+        .optional(),
+    ),
 
     // Distributed rate-limiting via Upstash Redis REST
     UPSTASH_REDIS_REST_URL: z.string().url().optional(),
@@ -140,7 +155,7 @@ export const envSchema = z
       }
       if (
         !data.STORE_PASSWORD_HASH ||
-        !/^[0-9a-fA-F]{32}:[0-9a-fA-F]{64}$/.test(data.STORE_PASSWORD_HASH)
+        !PASSWORD_HASH_PATTERN.test(data.STORE_PASSWORD_HASH)
       ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,

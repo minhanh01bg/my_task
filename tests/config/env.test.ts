@@ -242,6 +242,60 @@ describe("envSchema", () => {
     });
   });
 
+  describe("OWNER_PASSWORD_HASH", () => {
+    const ownerHash =
+      "0f1e2d3c4b5a69788796a5b4c3d2e1f0:1111111111111111111111111111111111111111111111111111111111111111";
+
+    it("is optional with no default, in production too", () => {
+      const result = envSchema.safeParse(validProd);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.OWNER_PASSWORD_HASH).toBeUndefined();
+      }
+    });
+
+    it("treats an empty value as unset", () => {
+      const result = envSchema.safeParse({
+        ...validProd,
+        OWNER_PASSWORD_HASH: "",
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.OWNER_PASSWORD_HASH).toBeUndefined();
+      }
+    });
+
+    it("accepts a salt:derived PBKDF2 hash", () => {
+      const result = envSchema.safeParse({
+        ...validProd,
+        OWNER_PASSWORD_HASH: ownerHash,
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.OWNER_PASSWORD_HASH).toBe(ownerHash);
+      }
+    });
+
+    it.each(["production", "development"])(
+      "rejects a malformed hash in %s",
+      (nodeEnv) => {
+        const result = envSchema.safeParse({
+          ...(nodeEnv === "production" ? validProd : validBase),
+          NODE_ENV: nodeEnv,
+          OWNER_PASSWORD_HASH: "plain-text-password",
+        });
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(
+            result.error.issues.some((i) =>
+              i.path.includes("OWNER_PASSWORD_HASH"),
+            ),
+          ).toBe(true);
+        }
+      },
+    );
+  });
+
   describe("development and test validation", () => {
     it("accepts minimal config in test environment without Redis/proxy values", () => {
       const result = envSchema.safeParse({
