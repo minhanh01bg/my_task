@@ -3,6 +3,7 @@
 import {
   IconArrowUpRight as ArrowUpRight,
   IconBell as Bell,
+  IconBellRinging as BellRinging,
   IconCheck as Check,
   IconPackage as Package,
   IconAlertTriangle as TriangleAlert,
@@ -23,6 +24,8 @@ export interface NotificationListItem {
 }
 
 function notificationAction(kind: string): string {
+  // Kiểm trước nhánh "stock" bên dưới: đó là cảnh báo tồn kho của admin.
+  if (kind === "back_in_stock") return "Xem sản phẩm";
   if (kind.includes("stock")) return "Kiểm tra tồn kho";
   if (kind === "order_payment_paid") return "Xem thanh toán";
   if (kind.startsWith("order_status_")) return "Theo dõi đơn hàng";
@@ -104,7 +107,12 @@ export function NotificationList({
       ) : (
         <ul className="space-y-2">
           {items.map((item, index) => {
-            const Icon = item.kind.includes("stock") ? TriangleAlert : Package;
+            const Icon =
+              item.kind === "back_in_stock"
+                ? BellRinging
+                : item.kind.includes("stock")
+                  ? TriangleAlert
+                  : Package;
             return (
               <li
                 key={item.id}
