@@ -14,6 +14,7 @@ import {
   saveCategoryAction,
 } from "@/app/(management)/admin/categories/actions";
 import { toggleCustomerAccountAction } from "@/app/(management)/admin/customers/actions";
+import { recordDebtPaymentAction } from "@/app/(management)/admin/debts/actions";
 import {
   cancelOrderAction,
   markOnlineOrderPaidAction,
@@ -22,6 +23,7 @@ import {
 import {
   deleteProductAction,
   quickUpdateProductAction,
+  saveProductAction,
 } from "@/app/(management)/admin/products/actions";
 import {
   deletePromotionAction,
@@ -118,6 +120,63 @@ describe("server action sản phẩm (API-14)", () => {
       message: "Không tìm thấy sản phẩm",
     });
     expect(revalidatePublic).not.toHaveBeenCalled();
+  });
+
+  it("sửa nhanh giá vượt cột Int trả { ok: false }, không ghi", async () => {
+    const product = await prisma.product.create({
+      data: { name: `${PREFIX}gia`, price: 1000 },
+    });
+    const formData = new FormData();
+    formData.set("id", product.id);
+    formData.set("price", "2147483648");
+    formData.set("stock", "1");
+
+    expect(await quickUpdateProductAction(formData)).toEqual({
+      ok: false,
+      message: "Giá bán quá lớn",
+    });
+    const row = await prisma.product.findUniqueOrThrow({
+      where: { id: product.id },
+    });
+    expect(row.price).toBe(1000);
+  });
+
+  it.each([
+    ["price", "Giá bán quá lớn"],
+    ["costPrice", "Giá vốn quá lớn"],
+  ])(
+    "lưu sản phẩm với %s vượt cột Int trả { ok: false }, không ghi",
+    async (field, message) => {
+      const formData = new FormData();
+      formData.set("name", `${PREFIX}luu-gia`);
+      formData.set("unit", "cái");
+      formData.set("price", "1000");
+      formData.set("costPrice", "500");
+      formData.set("stock", "1");
+      formData.set(field, "2147483648");
+
+      expect(await saveProductAction(formData)).toEqual({
+        ok: false,
+        message,
+      });
+      expect(
+        await prisma.product.count({ where: { name: `${PREFIX}luu-gia` } }),
+      ).toBe(0);
+    },
+  );
+});
+
+describe("server action công nợ", () => {
+  it("thu nợ vượt cột Int trả { ok: false } trước khi đọc đơn", async () => {
+    const formData = new FormData();
+    formData.set("orderId", `${PREFIX}don-no`);
+    formData.set("amount", "2147483648");
+    formData.set("method", "cash");
+
+    expect(await recordDebtPaymentAction(formData)).toEqual({
+      ok: false,
+      message: "Số tiền quá lớn",
+    });
   });
 });
 

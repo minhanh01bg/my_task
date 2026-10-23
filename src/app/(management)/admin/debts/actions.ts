@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { MAX_INT_VND } from "@/lib/money";
 import { prisma } from "@/server/db/prisma";
 import { logAdminAction } from "@/server/auth/admin-audit";
 import {
@@ -12,7 +13,11 @@ import {
 
 const paymentSchema = z.object({
   orderId: z.string().min(1),
-  amount: z.coerce.number().int().positive("Số tiền phải lớn hơn 0"),
+  amount: z.coerce
+    .number()
+    .int()
+    .positive("Số tiền phải lớn hơn 0")
+    .max(MAX_INT_VND, "Số tiền quá lớn"),
   method: z.enum(["cash", "transfer"]),
 });
 

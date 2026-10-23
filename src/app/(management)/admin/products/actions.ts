@@ -5,6 +5,7 @@ import { z } from "zod";
 
 z.config({ jitless: true });
 
+import { MAX_INT_VND } from "@/lib/money";
 import { isPublicHttpsUrl } from "@/lib/safe-url";
 import {
   ADMIN_UNAUTHORIZED_MESSAGE,
@@ -27,7 +28,11 @@ const PRODUCT_NOT_FOUND = {
 
 const quickUpdateSchema = z.object({
   id: z.string().min(1),
-  price: z.coerce.number().int().min(0, "Giá bán không được âm"),
+  price: z.coerce
+    .number()
+    .int()
+    .min(0, "Giá bán không được âm")
+    .max(MAX_INT_VND, "Giá bán quá lớn"),
   stock: z.coerce.number().finite("Tồn kho không hợp lệ"),
 });
 
@@ -37,8 +42,8 @@ const schema = z.object({
   sku: z.string().nullable(),
   categoryId: z.string().nullable(),
   unit: z.string().trim().min(1, "Đơn vị tính không được để trống"),
-  price: z.coerce.number().int().min(0),
-  costPrice: z.coerce.number().int().min(0),
+  price: z.coerce.number().int().min(0).max(MAX_INT_VND, "Giá bán quá lớn"),
+  costPrice: z.coerce.number().int().min(0).max(MAX_INT_VND, "Giá vốn quá lớn"),
   stock: z.coerce.number(),
   aliases: z.string().nullable(),
   imageUrl: z
