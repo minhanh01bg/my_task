@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   checkPreParseAbuse,
@@ -156,6 +156,117 @@ describe("Checkout Layered Anti-Abuse", () => {
         expect(blocked.status).toBe(429);
         expect(blocked.error).toBe("rate_limited");
       }
+    });
+  });
+
+  describe("Long-window per-IP caps (stock holds)", () => {
+    const START = new Date("2026-10-23T08:00:00Z").getTime();
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    /** Pre-parse + post-parse like the route, each order from a fresh phone. */
+    async function placeOrder(
+      limiter: RateLimiter,
+      ip: string,
+      index: number,
+      minutesFromStart: number,
+    ) {
+      vi.setSystemTime(START + minutesFromStart * 60_000);
+      const req = makeRequest({ "cf-connecting-ip": ip });
+      const pre = await checkPreParseAbuse(req, {
+        limiter,
+        proxyMode: "cloudflare",
+      });
+      if (!pre.ok) return pre;
+      return checkPostParseAbuse(
+        {
+          ...mockOrder,
+          contactPhone: `09${String(10_000_000 + index).padStart(8, "0")}`,
+        },
+        req,
+        { limiter },
+      );
+    }
+
+    it("blocks the 16th order from one IP within an hour, even with different phones", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      const limiter = createRateLimiter({ store: new FakeStore(), secret });
+
+      // 3 minutes apart: the 10/60s burst bucket never trips.
+      for (let i = 0; i < 15; i++) {
+        expect(await placeOrder(limiter, "198.51.100.7", i, i * 3)).toEqual({
+          ok: true,
+        });
+      }
+
+      const blocked = await placeOrder(limiter, "198.51.100.7", 15, 45);
+      expect(blocked).toMatchObject({
+        ok: false,
+        status: 429,
+        error: "rate_limited",
+      });
+      // Held until the hour window ends, not just the burst minute.
+      if (!blocked.ok) {
+        expect(blocked.retryAfterSeconds).toBeGreaterThan(60);
+      }
+
+      // Another client is unaffected.
+      expect(await placeOrder(limiter, "203.0.113.9", 99, 45)).toEqual({
+        ok: true,
+      });
+      // The hour window expires.
+      expect(await placeOrder(limiter, "198.51.100.7", 16, 61)).toEqual({
+        ok: true,
+      });
+    });
+
+    it("blocks the 41st order from one IP within a day", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      const limiter = createRateLimiter({ store: new FakeStore(), secret });
+
+      // 30 minutes apart: 2 per hour, far under the hourly cap.
+      for (let i = 0; i < 40; i++) {
+        expect(await placeOrder(limiter, "198.51.100.8", i, i * 30)).toEqual({
+          ok: true,
+        });
+      }
+
+      const blocked = await placeOrder(limiter, "198.51.100.8", 40, 40 * 30);
+      expect(blocked).toMatchObject({ ok: false, status: 429 });
+      if (!blocked.ok) {
+        expect(blocked.retryAfterSeconds).toBeGreaterThan(3600);
+      }
+    });
+
+    it("caps a /24 at 60 orders per hour across rotating addresses", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      const limiter = createRateLimiter({ store: new FakeStore(), secret });
+
+      // One order per address, 30 s apart: no ip or burst bucket trips.
+      for (let i = 0; i < 60; i++) {
+        expect(
+          await placeOrder(limiter, `198.51.100.${i + 1}`, i, i / 2),
+        ).toEqual({ ok: true });
+      }
+
+      const blocked = await placeOrder(limiter, "198.51.100.200", 60, 30);
+      expect(blocked).toMatchObject({ ok: false, status: 429 });
+    });
+
+    it("counts one IPv6 /64 as one client for the hourly cap", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      const limiter = createRateLimiter({ store: new FakeStore(), secret });
+
+      for (let i = 0; i < 15; i++) {
+        expect(
+          await placeOrder(limiter, `2001:db8:1:2::${i + 1}`, i, i * 3),
+        ).toEqual({ ok: true });
+      }
+
+      const blocked = await placeOrder(limiter, "2001:db8:1:2::ff", 15, 45);
+      expect(blocked).toMatchObject({ ok: false, status: 429 });
     });
   });
 

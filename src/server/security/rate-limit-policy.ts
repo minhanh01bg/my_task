@@ -21,7 +21,12 @@ export const POLICIES = {
     timeoutMs: 1500,
     buckets: [
       { name: "ip-burst", limit: 10, windowSeconds: 60 },
+      // SDT khach khong duoc xac minh: chi IP gioi han duoc so don giu kho
+      // (moi don giu hang toi 24h) — tran theo gio/ngay chan quet kho.
+      { name: "ip-hourly", limit: 15, windowSeconds: 3600 },
+      { name: "ip-daily", limit: 40, windowSeconds: 86_400 },
       { name: "subnet-burst", limit: 50, windowSeconds: 60 },
+      { name: "subnet-hourly", limit: 60, windowSeconds: 3600 },
       { name: "global-burst", limit: 6000, windowSeconds: 60 },
     ],
   },

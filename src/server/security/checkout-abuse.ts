@@ -1,4 +1,7 @@
-import { resolveTrustedClientIp } from "@/server/http/client-ip";
+import {
+  rateLimitClientId,
+  resolveTrustedClientIp,
+} from "@/server/http/client-ip";
 import {
   createRateLimiter,
   type RateLimiter,
@@ -57,6 +60,8 @@ function getLimiter(injected?: RateLimiter): RateLimiter {
 
 /**
  * Layer 1: Cheap IP/Subnet/Global burst check before body stream reading or JSON parsing.
+ * Also caps orders per client per hour/day: guest phones are unverified, so
+ * the IP is the only identity that bounds how much stock one source can hold.
  */
 export async function checkPreParseAbuse(
   request: Request,
@@ -78,6 +83,8 @@ export async function checkPreParseAbuse(
   }
 
   const limiter = getLimiter(options?.limiter);
+  // IPv6 theo /64: xoay dia chi trong prefix khong thoat tran gio/ngay.
+  const clientId = rateLimitClientId(ipResolution);
   const decision = await limiter.check(POLICIES.checkoutIp, [
     {
       bucketName: "ip-burst",
@@ -85,7 +92,22 @@ export async function checkPreParseAbuse(
       identifier: ipResolution.ip,
     },
     {
+      bucketName: "ip-hourly",
+      dimension: "ip",
+      identifier: clientId,
+    },
+    {
+      bucketName: "ip-daily",
+      dimension: "ip",
+      identifier: clientId,
+    },
+    {
       bucketName: "subnet-burst",
+      dimension: "subnet",
+      identifier: ipResolution.subnet,
+    },
+    {
+      bucketName: "subnet-hourly",
       dimension: "subnet",
       identifier: ipResolution.subnet,
     },
