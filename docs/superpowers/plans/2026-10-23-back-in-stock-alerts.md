@@ -46,9 +46,9 @@
 
 **Files:** Create `src/app/api/customer/back-in-stock/route.ts`, `src/server/back-in-stock/back-in-stock-rate-limit.ts`; Modify `src/server/security/rate-limit-policy.ts`; Test `tests/api/back-in-stock-route.test.ts`.
 
-- [ ] RED: GET 401/400/200 (hai trạng thái); POST 403 origin lạ, 401, 415, 400 (thừa key, thiếu `subscribed`), 404, 409 có `code`, 200 bật rồi tắt, 429 + `Retry-After`; mọi response `private, no-store`.
-- [ ] GREEN: policy `backInStock`, limiter, route theo thứ tự kiểm tra của spec §4.
-- [ ] Verify + commit `feat(back-in-stock): add customer subscription API`.
+- [x] RED: GET 401/400/200 (hai trạng thái); POST 403 origin lạ, 401, 415, 400 (thừa key, thiếu `subscribed`), 404, 409 có `code`, 200 bật rồi tắt, 429 + `Retry-After`; mọi response `private, no-store`.
+- [x] GREEN: policy `backInStock`, limiter, route theo thứ tự kiểm tra của spec §4.
+- [x] Verify + commit `feat(back-in-stock): add customer subscription API`.
 
 ## Task 5: Số khách chờ trong danh sách sản phẩm admin
 
