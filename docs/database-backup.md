@@ -77,7 +77,7 @@ kiểm tra nếu không dùng để phục hồi.
 
 ## Bản cũ trước khi chuyển sang script tham chiếu
 
-Bản cũ do `backup-sqlite-telegram.py` tạo có header `Salted__`, dùng OpenSSL
+Bản cũ do `backup-sqlite-telegram.py` (đã xóa khỏi repo) tạo có header `Salted__`, dùng OpenSSL
 AES-256-CBC/PBKDF2; không giải mã bằng script Node. Các bản này vẫn được giữ,
 bao gồm bản thử đầu tiên đã gửi Telegram. Phân biệt header bằng
 `head -c 8 TEN_FILE.enc`: `DQRBACK1` là bản mới, `Salted__` là bản cũ.
@@ -92,4 +92,4 @@ unset SHOP_RESTORE_PASSWORD
 gunzip /tmp/shop-restore-old.sqlite3.gz
 ```
 
-Script Python cũ chỉ giữ để tương thích/kiểm thử; timer gọi `backup-db.mjs`.
+Chỉ cần `openssl` để giải mã các bản này; timer chỉ gọi `backup-db.mjs`.
