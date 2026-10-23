@@ -267,7 +267,11 @@ describe("AdminNav", () => {
   });
 
   it("chỉ xoá cache service worker sau khi đăng xuất thành công (WEB-7h)", async () => {
-    const postMessage = vi.fn();
+    replace.mockClear();
+    // Trả lời trên cổng MessageChannel như public/sw.js để đăng xuất không phải chờ.
+    const postMessage = vi.fn((_message: unknown, transfer?: MessagePort[]) => {
+      transfer?.[0]?.postMessage({ ok: true });
+    });
     Object.defineProperty(navigator, "serviceWorker", {
       configurable: true,
       value: {
@@ -302,11 +306,49 @@ describe("AdminNav", () => {
       within(confirmation).getByRole("button", { name: "Đăng xuất" }),
     );
     await waitFor(() => {
-      expect(postMessage).toHaveBeenCalledWith({ type: "pos:clear-caches" });
+      expect(postMessage).toHaveBeenCalledWith(
+        { type: "pos:clear-caches" },
+        expect.any(Array),
+      );
+      expect(replace).toHaveBeenCalledWith("/login");
     });
 
     fetchMock.mockRestore();
     Reflect.deleteProperty(navigator, "serviceWorker");
+  });
+
+  it("xoá giỏ POS trên máy trước khi về đăng nhập, giữ đơn tạm giữ (WB-4)", async () => {
+    replace.mockClear();
+    localStorage.setItem("an-phat-pos-current-cart", '{"state":{"lines":[1]}}');
+    localStorage.setItem("an-phat-pos-held-orders", '{"state":{"held":[1]}}');
+    let cartAtRedirect: string | null = "chưa chuyển trang";
+    let heldAtRedirect: string | null = null;
+    replace.mockImplementationOnce(() => {
+      cartAtRedirect = localStorage.getItem("an-phat-pos-current-cart");
+      heldAtRedirect = localStorage.getItem("an-phat-pos-held-orders");
+    });
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(JSON.stringify({ ok: true })));
+    render(<AdminNav />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Mở toàn bộ menu quản lý" }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Menu quản lý" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Đăng xuất" }));
+    fireEvent.click(
+      within(
+        screen.getByRole("dialog", { name: "Đăng xuất khỏi quản lý?" }),
+      ).getByRole("button", { name: "Đăng xuất" }),
+    );
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/login"));
+    expect(cartAtRedirect).toBeNull();
+    expect(heldAtRedirect).toBe('{"state":{"held":[1]}}');
+
+    fetchMock.mockRestore();
+    localStorage.removeItem("an-phat-pos-held-orders");
   });
 
   it("menu đầy đủ là Sheet trượt lên từ cạnh dưới", () => {

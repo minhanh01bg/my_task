@@ -55,8 +55,16 @@ export function toggleWishlist(productId: string): boolean {
   return !exists;
 }
 
+/** Xoá hẳn khoá (không ghi "[]") để đăng xuất không để lại dấu vết. */
 export function clearWishlist(): void {
-  writeStorage([]);
+  memoryWishlist = [];
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(WISHLIST_STORAGE_KEY);
+    window.dispatchEvent(new CustomEvent(WISHLIST_EVENT));
+  } catch {
+    // ignore storage errors
+  }
 }
 
 function subscribeWishlist(callback: () => void): () => void {

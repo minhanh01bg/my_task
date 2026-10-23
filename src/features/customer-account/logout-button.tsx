@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { invalidateStorefrontSession } from "@/features/online-store/storefront-session";
+import { clearCustomerClientState } from "@/lib/client-state/clear-client-state";
 
 export function CustomerLogoutButton() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export function CustomerLogoutButton() {
       size="sm"
       onClick={async () => {
         await fetch("/api/customer-auth/logout", { method: "POST" });
+        clearCustomerClientState();
         invalidateStorefrontSession();
         router.replace("/shop");
         router.refresh();

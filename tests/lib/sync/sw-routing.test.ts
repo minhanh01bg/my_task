@@ -60,6 +60,7 @@ describe("vong doi cache giao dien", () => {
 type MessageListener = (event: {
   data: unknown;
   waitUntil: (promise: Promise<unknown>) => void;
+  ports?: Array<{ postMessage: (message: unknown) => void }>;
 }) => void;
 
 /** Chay ca sw.js voi self/caches/indexedDB gia de bat cac listener. */
@@ -107,6 +108,44 @@ describe("xoa cache khi dang xuat (WEB-7h)", () => {
     // Hang doi don offline nam trong IndexedDB: dang xuat khong duoc lam mat don.
     expect(indexedDB.open).not.toHaveBeenCalled();
     expect(indexedDB.deleteDatabase).not.toHaveBeenCalled();
+  });
+
+  it("chi tra loi tren ports[0] sau khi da xoa xong cache (WB-4)", async () => {
+    const { listeners, cacheStorage } = loadWorker();
+    const pendingDeletes: Array<(deleted: boolean) => void> = [];
+    cacheStorage.delete.mockImplementation(
+      () => new Promise<boolean>((resolve) => pendingDeletes.push(resolve)),
+    );
+    const reply = { postMessage: vi.fn() };
+    const waitUntil = vi.fn();
+
+    listeners.get("message")!({
+      data: { type: "pos:clear-caches" },
+      waitUntil,
+      ports: [reply],
+    });
+    await vi.waitFor(() => expect(pendingDeletes).toHaveLength(3));
+    expect(reply.postMessage).not.toHaveBeenCalled();
+
+    for (const resolve of pendingDeletes) resolve(true);
+    await waitUntil.mock.calls[0][0];
+    expect(reply.postMessage).toHaveBeenCalledWith({ ok: true });
+  });
+
+  it("van tra loi khi xoa cache loi de trang dang xuat khong phai doi (WB-4)", async () => {
+    const { listeners, cacheStorage } = loadWorker();
+    cacheStorage.keys.mockRejectedValue(new Error("quota"));
+    const reply = { postMessage: vi.fn() };
+    const waitUntil = vi.fn();
+
+    listeners.get("message")!({
+      data: { type: "pos:clear-caches" },
+      waitUntil,
+      ports: [reply],
+    });
+
+    await waitUntil.mock.calls[0][0];
+    expect(reply.postMessage).toHaveBeenCalledWith({ ok: false });
   });
 
   it.each([null, "pos:clear-caches", { type: "other" }])(

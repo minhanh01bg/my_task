@@ -4,7 +4,6 @@ import { IconLogout as SignOut } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
-import { clearServiceWorkerCaches } from "@/components/pos/service-worker-registrar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { invalidateStorefrontSession } from "@/features/online-store/storefront-session";
+import { clearAdminClientState } from "@/lib/client-state/clear-client-state";
 import { cn } from "@/lib/utils";
 
 export function AdminLogoutButton({
@@ -45,7 +45,7 @@ export function AdminLogoutButton({
       }
 
       setConfirmOpen(false);
-      await clearServiceWorkerCaches();
+      await clearAdminClientState();
       invalidateStorefrontSession();
       onLogout?.();
       router.replace("/login");

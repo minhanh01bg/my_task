@@ -100,7 +100,7 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
-// Khop voi CLEAR_SW_CACHES_MESSAGE trong service-worker-registrar.tsx.
+// Khop voi CLEAR_SW_CACHES_MESSAGE trong src/lib/client-state/clear-client-state.ts.
 const CLEAR_CACHES_MESSAGE = "pos:clear-caches";
 
 /**
@@ -125,5 +125,13 @@ function clearResponseCaches() {
 
 self.addEventListener("message", (event) => {
   if (event.data?.type !== CLEAR_CACHES_MESSAGE) return;
-  event.waitUntil(clearResponseCaches());
+  // Trang dang xuat gui kem MessageChannel va cho tra loi (toi da ~2 giay)
+  // truoc khi chuyen trang. Loi cung tra loi de trang khong phai doi het han.
+  const reply = event.ports?.[0];
+  event.waitUntil(
+    clearResponseCaches().then(
+      () => reply?.postMessage({ ok: true }),
+      () => reply?.postMessage({ ok: false }),
+    ),
+  );
 });
