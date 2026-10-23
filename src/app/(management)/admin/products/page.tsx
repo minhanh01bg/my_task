@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { NotePencil, Trash, Warning } from "@phosphor-icons/react/dist/ssr";
+import {
+  Bell,
+  NotePencil,
+  Trash,
+  Warning,
+} from "@phosphor-icons/react/dist/ssr";
 import { SearchX } from "lucide-react";
 
 import {
@@ -184,6 +189,7 @@ export default async function ProductsPage({
                   <TableHead>Danh mục</TableHead>
                   <TableHead className="text-right">Giá bán</TableHead>
                   <TableHead className="text-right">Tồn</TableHead>
+                  <TableHead className="text-right">Khách chờ</TableHead>
                   <TableHead className="text-right">
                     <span className="sr-only">Thao tác</span>
                   </TableHead>
@@ -219,6 +225,23 @@ export default async function ProductsPage({
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       <StockBadge stock={product.stock} unit={product.unit} />
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {product.waitingCount > 0 ? (
+                        <span
+                          title="Khách đang chờ báo khi có hàng"
+                          className="inline-flex items-center gap-1 font-bold"
+                        >
+                          <Bell aria-hidden="true" weight="bold" />
+                          {product.waitingCount}
+                          <span className="sr-only">
+                            {" "}
+                            khách chờ báo có hàng
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-2">
