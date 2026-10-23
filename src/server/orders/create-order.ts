@@ -9,6 +9,7 @@ import { CACHE_TAGS } from "@/server/cache/tags";
 import { createCustomerOrderCreatedNotification } from "@/server/customer-notifications/create-customer-notification";
 import { prisma } from "@/server/db/prisma";
 import { createOnlineOrderNotification } from "@/server/notifications/create-admin-notification";
+import { assertVoucherCustomerLimit } from "@/server/vouchers/customer-voucher-limit";
 import { OnlineOrderError } from "@/types/online-order";
 
 import { assertOpenOnlineOrderLimit } from "./open-online-orders";
@@ -449,6 +450,12 @@ export async function createOrder(
 
         if (money.voucherCode) {
           await consumeVoucherUse(tx, money.voucherCode);
+          if (input.channel === "online" && input.online) {
+            await assertVoucherCustomerLimit(tx, money.voucherCode, {
+              contactPhone: input.online.contactPhone,
+              customerAccountId: input.customerAccountId,
+            });
+          }
         }
 
         const order = await tx.order.create({

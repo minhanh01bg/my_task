@@ -9,12 +9,14 @@ import {
   authorizeAdminAction,
   INVALID_INPUT_MESSAGE,
 } from "@/server/admin/admin-action";
+import { maxUsesPerCustomerSchema } from "@/lib/vouchers/customer-limit";
 import {
   createVoucher,
   deleteVoucher,
   toggleVoucher,
   updateVoucher,
 } from "@/server/vouchers/admin-vouchers";
+import { saveMaxUsesPerCustomer } from "@/server/vouchers/customer-voucher-limit";
 import { voucherInputSchema, type VoucherActionResult } from "@/types/voucher";
 
 const VOUCHERS_PATH = "/admin/promotions/vouchers";
@@ -90,6 +92,31 @@ export async function saveVoucherAction(
     ? await updateVoucher(parsedId.data, parsed.data, actor)
     : await createVoucher(parsed.data, actor);
 
+  if (result.ok) safeRevalidatePath(VOUCHERS_PATH);
+  return result;
+}
+
+export async function saveVoucherCustomerLimitAction(
+  _prevState: unknown,
+  formData: FormData,
+): Promise<VoucherActionResult> {
+  const session = await authorizeAdminAction();
+  if (!session) return UNAUTHORIZED;
+  const { identity } = session;
+
+  const parsed = maxUsesPerCustomerSchema.safeParse(
+    formData.get("maxUsesPerCustomer"),
+  );
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? INVALID_INPUT_MESSAGE,
+    };
+  }
+
+  const result = await saveMaxUsesPerCustomer(parsed.data, {
+    identityId: identity?.id,
+  });
   if (result.ok) safeRevalidatePath(VOUCHERS_PATH);
   return result;
 }

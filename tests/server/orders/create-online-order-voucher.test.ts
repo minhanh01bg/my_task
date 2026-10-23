@@ -3,22 +3,37 @@ import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { prisma } from "@/server/db/prisma";
+import { cancelOrder } from "@/server/orders/cancel-order";
 import { createOnlineOrder } from "@/server/orders/create-online-order";
 import { createOrder } from "@/server/orders/create-order";
 import { OnlineOrderError } from "@/types/online-order";
 
 const productId = "voucher-test-product";
+const PER_CUSTOMER_KEY = "voucher.maxUsesPerCustomer";
+const PER_CUSTOMER_MESSAGE =
+  "Bạn đã dùng hết số lần cho phép của mã giảm giá này";
 
 async function cleanup() {
   await prisma.adminNotification.deleteMany();
   await prisma.customerNotification.deleteMany();
   await prisma.stockMovement.deleteMany({ where: { productId } });
   await prisma.orderItem.deleteMany({ where: { productId } });
-  await prisma.order.deleteMany({ where: { channel: "online" } });
+  await prisma.order.deleteMany({
+    where: { OR: [{ channel: "online" }, { voucherCode: { not: null } }] },
+  });
   await prisma.voucher.deleteMany();
+  await prisma.customerAccount.deleteMany({
+    where: { phoneNormalized: { startsWith: "+8490000009" } },
+  });
   await prisma.setting.deleteMany({
     where: {
-      key: { in: ["store.shippingFee", "store.freeShippingThreshold"] },
+      key: {
+        in: [
+          "store.shippingFee",
+          "store.freeShippingThreshold",
+          PER_CUSTOMER_KEY,
+        ],
+      },
     },
   });
 }
@@ -319,6 +334,119 @@ describe("createOrder với voucher (đường ghi đơn duy nhất)", () => {
       (await prisma.voucher.findUniqueOrThrow({ where: { code: "GIAM10" } }))
         .usedCount,
     ).toBe(1);
+  });
+});
+
+describe("BL-3: giới hạn số lần mỗi khách dùng một mã", () => {
+  function limitPerCustomer(value: string) {
+    return prisma.setting.create({
+      data: { key: PER_CUSTOMER_KEY, value },
+    });
+  }
+
+  async function usedCount() {
+    return (
+      await prisma.voucher.findUniqueOrThrow({ where: { code: "GIAM10" } })
+    ).usedCount;
+  }
+
+  it("giới hạn 1: đơn thứ hai cùng SĐT (cả dạng +84) bị từ chối, không tiêu lượt", async () => {
+    await voucher();
+    await limitPerCustomer("1");
+
+    await createOnlineOrder(checkout({ voucherCode: "GIAM10" }));
+    for (const contactPhone of ["0912345678", "+84912345678"]) {
+      await expect(
+        createOnlineOrder(checkout({ voucherCode: "GIAM10", contactPhone })),
+      ).rejects.toMatchObject({
+        code: "VOUCHER_INVALID",
+        message: PER_CUSTOMER_MESSAGE,
+      });
+    }
+
+    expect(await usedCount()).toBe(1);
+    expect(await prisma.order.count({ where: { voucherCode: "GIAM10" } })).toBe(
+      1,
+    );
+    // Khách khác vẫn dùng được mã.
+    await expect(
+      createOnlineOrder(
+        checkout({ voucherCode: "GIAM10", contactPhone: "0987654321" }),
+      ),
+    ).resolves.toMatchObject({ duplicated: false });
+  });
+
+  it("đếm theo tài khoản dù khách đổi SĐT", async () => {
+    await voucher();
+    await limitPerCustomer("1");
+    const account = await prisma.customerAccount.create({
+      data: {
+        phoneNormalized: "+84900000091",
+        displayName: "Khách voucher",
+        passwordHash: "x",
+      },
+    });
+
+    await createOnlineOrder(checkout({ voucherCode: "GIAM10" }), {
+      customerAccountId: account.id,
+    });
+    await expect(
+      createOnlineOrder(
+        checkout({ voucherCode: "GIAM10", contactPhone: "0987654321" }),
+        { customerAccountId: account.id },
+      ),
+    ).rejects.toMatchObject({ code: "VOUCHER_INVALID" });
+    expect(await usedCount()).toBe(1);
+  });
+
+  it("đơn đã huỷ không tính: huỷ đơn đầu thì khách dùng lại được", async () => {
+    await voucher();
+    await limitPerCustomer("1");
+
+    const first = await createOnlineOrder(checkout({ voucherCode: "GIAM10" }));
+    await cancelOrder(first.order.id);
+
+    await expect(
+      createOnlineOrder(checkout({ voucherCode: "GIAM10" })),
+    ).resolves.toMatchObject({ duplicated: false });
+    expect(await usedCount()).toBe(1);
+  });
+
+  it("chưa đặt giới hạn: cùng khách dùng mã nhiều lần như trước", async () => {
+    await voucher();
+
+    await createOnlineOrder(checkout({ voucherCode: "GIAM10" }));
+    await createOnlineOrder(checkout({ voucherCode: "GIAM10" }));
+
+    expect(await usedCount()).toBe(2);
+  });
+
+  it("đơn POS không có danh tính khách không bị giới hạn", async () => {
+    await voucher();
+    await limitPerCustomer("1");
+    const posOrder = () =>
+      createOrder({
+        clientId: randomUUID(),
+        lines: [
+          {
+            productId,
+            name: "Gạo ST25",
+            unitPrice: 100_000,
+            originalPrice: 100_000,
+            quantity: 1,
+            discount: 0,
+            unit: "túi",
+            isService: false,
+          },
+        ],
+        voucher: { code: "GIAM10", discount: 10_000, shippingDiscount: 0 },
+        payments: [{ method: "cash", amount: 90_000 }],
+      });
+
+    await posOrder();
+    await posOrder();
+
+    expect(await usedCount()).toBe(2);
   });
 });
 

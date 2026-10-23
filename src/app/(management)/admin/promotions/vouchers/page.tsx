@@ -13,6 +13,7 @@ import {
   VoucherForm,
   type VoucherFormValues,
 } from "@/features/admin-vouchers/voucher-form";
+import { VoucherCustomerLimitForm } from "@/features/admin-vouchers/voucher-customer-limit-form";
 import { VoucherRowActions } from "@/features/admin-vouchers/voucher-row-actions";
 import {
   describeVoucher,
@@ -25,6 +26,7 @@ import {
   listVouchers,
   VOUCHERS_PAGE_SIZE,
 } from "@/server/vouchers/admin-vouchers";
+import { getMaxUsesPerCustomer } from "@/server/vouchers/customer-voucher-limit";
 import { toVnDateInput } from "@/types/voucher";
 
 export const dynamic = "force-dynamic";
@@ -50,9 +52,10 @@ export default async function AdminVouchersPage({
   const params = await searchParams;
   const editId = typeof params.edit === "string" ? params.edit : null;
 
-  const [result, editing] = await Promise.all([
+  const [result, editing, maxUsesPerCustomer] = await Promise.all([
     listVouchers({ page: parsePageParam(params.page) }),
     editId ? getVoucherById(editId) : null,
+    getMaxUsesPerCustomer(),
   ]);
 
   const initialData: VoucherFormValues | null = editing
@@ -179,6 +182,15 @@ export default async function AdminVouchersPage({
             searchParams={params}
             label="Phân trang mã giảm giá"
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Giới hạn mỗi khách</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <VoucherCustomerLimitForm initialValue={maxUsesPerCustomer} />
         </CardContent>
       </Card>
     </div>

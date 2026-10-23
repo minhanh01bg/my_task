@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   deleteVoucherAction,
   saveVoucherAction,
+  saveVoucherCustomerLimitAction,
   toggleVoucherActiveAction,
 } from "@/app/(management)/admin/promotions/vouchers/actions";
 import * as requireAdminModule from "@/server/auth/require-admin-session";
@@ -14,6 +15,10 @@ import {
   toggleVoucher,
   updateVoucher,
 } from "@/server/vouchers/admin-vouchers";
+import {
+  getMaxUsesPerCustomer,
+  MAX_USES_PER_CUSTOMER_KEY,
+} from "@/server/vouchers/customer-voucher-limit";
 import { findVoucherByCode } from "@/server/vouchers/get-voucher";
 import { voucherInputSchema, type VoucherInput } from "@/types/voucher";
 
@@ -235,6 +240,20 @@ describe("voucher server actions", () => {
     });
   });
 
+  it("BL-3: không cho đổi giới hạn mỗi khách khi chưa đăng nhập admin", async () => {
+    vi.spyOn(requireAdminModule, "requireAdminSession").mockRejectedValueOnce(
+      new requireAdminModule.AdminUnauthorizedError(),
+    );
+    const upsert = vi.spyOn(prisma.setting, "upsert");
+    const formData = new FormData();
+    formData.set("maxUsesPerCustomer", "1");
+    expect(await saveVoucherCustomerLimitAction(null, formData)).toEqual({
+      ok: false,
+      error: "Yêu cầu quyền quản trị",
+    });
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
   describe("với quyền admin", () => {
     beforeEach(async () => {
       const admin =
@@ -313,6 +332,75 @@ describe("voucher server actions", () => {
       expect(transaction).not.toHaveBeenCalled();
       expect(updateMany).not.toHaveBeenCalled();
       expect(await prisma.voucher.count()).toBe(0);
+    });
+
+    describe("BL-3: giới hạn số lần mỗi khách", () => {
+      function limitForm(value: string) {
+        const formData = new FormData();
+        formData.set("maxUsesPerCustomer", value);
+        return formData;
+      }
+
+      beforeEach(async () => {
+        await prisma.setting.deleteMany({
+          where: { key: MAX_USES_PER_CUSTOMER_KEY },
+        });
+        await prisma.adminAuditEvent.deleteMany({
+          where: { entityId: MAX_USES_PER_CUSTOMER_KEY },
+        });
+      });
+
+      it("lưu số lần, ghi audit; để trống thì bỏ giới hạn", async () => {
+        expect(await getMaxUsesPerCustomer()).toBeNull();
+        expect(
+          await saveVoucherCustomerLimitAction(null, limitForm(" 2 ")),
+        ).toMatchObject({ ok: true });
+        expect(await getMaxUsesPerCustomer()).toBe(2);
+
+        expect(
+          await saveVoucherCustomerLimitAction(null, limitForm("")),
+        ).toMatchObject({ ok: true });
+        expect(await getMaxUsesPerCustomer()).toBeNull();
+        expect(
+          await prisma.setting.count({
+            where: { key: MAX_USES_PER_CUSTOMER_KEY },
+          }),
+        ).toBe(0);
+
+        const audit = await prisma.adminAuditEvent.findMany({
+          where: { entityId: MAX_USES_PER_CUSTOMER_KEY },
+          orderBy: { createdAt: "asc" },
+        });
+        expect(audit.map((event) => event.action)).toEqual([
+          "settings.voucher_limit.update",
+          "settings.voucher_limit.update",
+        ]);
+        expect(audit[0]?.identityId).toBeTruthy();
+        expect(JSON.parse(audit[0]!.metadata!)).toEqual({
+          maxUsesPerCustomer: 2,
+        });
+      });
+
+      it.each(["0", "101", "1.5", "-1", "abc"])(
+        "từ chối %s và giữ nguyên giá trị cũ",
+        async (value) => {
+          await saveVoucherCustomerLimitAction(null, limitForm("3"));
+          const result = await saveVoucherCustomerLimitAction(
+            null,
+            limitForm(value),
+          );
+          expect(result.ok).toBe(false);
+          if (!result.ok) expect(result.error).toMatch(/từ 1 đến 100/);
+          expect(await getMaxUsesPerCustomer()).toBe(3);
+        },
+      );
+
+      it("thiếu trường thì báo lỗi, không ghi", async () => {
+        expect(
+          (await saveVoucherCustomerLimitAction(null, new FormData())).ok,
+        ).toBe(false);
+        expect(await getMaxUsesPerCustomer()).toBeNull();
+      });
     });
 
     it("trả lỗi tiếng Việt khi dữ liệu sai", async () => {
