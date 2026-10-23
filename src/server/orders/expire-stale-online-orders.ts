@@ -108,16 +108,30 @@ export async function expireStaleOnlineOrders(
   return { cancelled: cancelledIds.length };
 }
 
+// Giu tren globalThis: HMR nap lai module hoac `register()` chay lai van thay
+// timer cu, khong hen them mot vong quet song song.
+const timerHost = globalThis as unknown as Record<
+  symbol,
+  NodeJS.Timeout | undefined
+>;
+const TIMER_KEY = Symbol.for("orders.staleOnlineOrderExpiryTimer");
+
 /**
  * Hen gio quet don qua han trong tien trinh server. Timer `unref` de khong giu
  * tien trinh song; luot truoc chua xong thi bo qua tick; loi chi ghi log.
+ * Moi tien trinh chi mot timer: goi lai tra timer dang chay. Khong hen gio (tra
+ * `null`) khi `DISABLE_BACKGROUND_JOBS=1` (e2e).
  */
 export function scheduleStaleOnlineOrderExpiry(
   options: {
     run?: () => Promise<unknown>;
     intervalMs?: number;
   } = {},
-): NodeJS.Timeout {
+): NodeJS.Timeout | null {
+  if (process.env.DISABLE_BACKGROUND_JOBS === "1") return null;
+  const existing = timerHost[TIMER_KEY];
+  if (existing) return existing;
+
   const run = options.run ?? (() => expireStaleOnlineOrders());
   let running = false;
   const tick = async () => {
@@ -136,5 +150,12 @@ export function scheduleStaleOnlineOrderExpiry(
     options.intervalMs ?? STALE_ORDER_SWEEP_INTERVAL_MS,
   );
   timer.unref();
+  timerHost[TIMER_KEY] = timer;
   return timer;
+}
+
+/** Huy timer va guard (test). */
+export function stopStaleOnlineOrderExpiry(): void {
+  clearInterval(timerHost[TIMER_KEY]);
+  timerHost[TIMER_KEY] = undefined;
 }

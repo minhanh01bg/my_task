@@ -10,6 +10,7 @@ import { createOrder } from "@/server/orders/create-order";
 import {
   expireStaleOnlineOrders,
   scheduleStaleOnlineOrderExpiry,
+  stopStaleOnlineOrderExpiry,
 } from "@/server/orders/expire-stale-online-orders";
 
 vi.mock("@/server/cache/public-cache", async (importOriginal) => ({
@@ -215,6 +216,8 @@ describe("expireStaleOnlineOrders (BL-1)", () => {
 
 describe("scheduleStaleOnlineOrderExpiry", () => {
   afterEach(() => {
+    stopStaleOnlineOrderExpiry();
+    vi.unstubAllEnvs();
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -230,22 +233,18 @@ describe("scheduleStaleOnlineOrderExpiry", () => {
     );
 
     const timer = scheduleStaleOnlineOrderExpiry({ run, intervalMs: 1_000 });
-    try {
-      expect(timer.hasRef()).toBe(false);
+    expect(timer?.hasRef()).toBe(false);
 
-      await vi.advanceTimersByTimeAsync(1_000);
-      expect(run).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(run).toHaveBeenCalledTimes(1);
 
-      // Lượt đầu chưa xong: tick tiếp theo bị bỏ qua.
-      await vi.advanceTimersByTimeAsync(2_000);
-      expect(run).toHaveBeenCalledTimes(1);
+    // Lượt đầu chưa xong: tick tiếp theo bị bỏ qua.
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(run).toHaveBeenCalledTimes(1);
 
-      release();
-      await vi.advanceTimersByTimeAsync(1_000);
-      expect(run).toHaveBeenCalledTimes(2);
-    } finally {
-      clearInterval(timer);
-    }
+    release();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(run).toHaveBeenCalledTimes(2);
   });
 
   it("bắt và ghi log lỗi của một lượt, lượt sau vẫn chạy", async () => {
@@ -262,22 +261,55 @@ describe("scheduleStaleOnlineOrderExpiry", () => {
       )
       .mockResolvedValue({ cancelled: 0 });
 
-    const timer = scheduleStaleOnlineOrderExpiry({ run, intervalMs: 1_000 });
-    try {
-      await vi.advanceTimersByTimeAsync(1_000);
-      expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
-      const logged = consoleErrorSpy.mock.calls[0]?.[0] as {
-        message: string;
-        meta: Record<string, unknown>;
-      };
-      expect(logged.message).toBe("stale_online_order_expiry_failed");
-      expect(logged.meta).toMatchObject({ errorCode: "P1008" });
-      expect(JSON.stringify(logged)).not.toContain("0900000001");
+    scheduleStaleOnlineOrderExpiry({ run, intervalMs: 1_000 });
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+    const logged = consoleErrorSpy.mock.calls[0]?.[0] as {
+      message: string;
+      meta: Record<string, unknown>;
+    };
+    expect(logged.message).toBe("stale_online_order_expiry_failed");
+    expect(logged.meta).toMatchObject({ errorCode: "P1008" });
+    expect(JSON.stringify(logged)).not.toContain("0900000001");
 
-      await vi.advanceTimersByTimeAsync(1_000);
-      expect(run).toHaveBeenCalledTimes(2);
-    } finally {
-      clearInterval(timer);
-    }
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(run).toHaveBeenCalledTimes(2);
+  });
+
+  it("gọi lần hai (HMR, register chạy lại) trả timer đang chạy, không quét chồng", async () => {
+    vi.useFakeTimers();
+    const first = vi.fn().mockResolvedValue({ cancelled: 0 });
+    const second = vi.fn().mockResolvedValue({ cancelled: 0 });
+
+    const timer = scheduleStaleOnlineOrderExpiry({
+      run: first,
+      intervalMs: 1_000,
+    });
+    expect(timer).not.toBeNull();
+    expect(
+      scheduleStaleOnlineOrderExpiry({ run: second, intervalMs: 1_000 }),
+    ).toBe(timer);
+
+    await vi.advanceTimersByTimeAsync(3_000);
+    expect(first).toHaveBeenCalledTimes(3);
+    expect(second).not.toHaveBeenCalled();
+  });
+
+  it("DISABLE_BACKGROUND_JOBS=1 thì không hẹn giờ", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("DISABLE_BACKGROUND_JOBS", "1");
+    const run = vi.fn().mockResolvedValue({ cancelled: 0 });
+
+    expect(scheduleStaleOnlineOrderExpiry({ run, intervalMs: 1_000 })).toBe(
+      null,
+    );
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(run).not.toHaveBeenCalled();
+
+    // Không để lại guard: bật lại thì hẹn giờ bình thường.
+    vi.unstubAllEnvs();
+    expect(
+      scheduleStaleOnlineOrderExpiry({ run, intervalMs: 1_000 }),
+    ).not.toBeNull();
   });
 });

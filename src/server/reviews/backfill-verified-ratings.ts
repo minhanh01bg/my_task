@@ -69,17 +69,31 @@ export async function backfillVerifiedRatings(): Promise<VerifiedRatingBackfillR
   return { ran: true, products: products.length };
 }
 
+// Giu tren globalThis: HMR nap lai module hoac `register()` chay lai van thay
+// timer cu, khong hen them mot lan backfill.
+const timerHost = globalThis as unknown as Record<
+  symbol,
+  NodeJS.Timeout | undefined
+>;
+const TIMER_KEY = Symbol.for("reviews.verifiedRatingBackfillTimer");
+
 /**
  * Hen chay backfill mot lan sau khi server khoi dong, khong chan boot. Timer
  * `unref` de khong giu tien trinh song; loi chi ghi log — Setting chua duoc
- * ghi nen lan khoi dong sau chay lai.
+ * ghi nen lan khoi dong sau chay lai. Moi tien trinh chi hen mot lan: goi lai
+ * tra timer da hen. Khong hen gio (tra `null`) khi `DISABLE_BACKGROUND_JOBS=1`
+ * (e2e).
  */
 export function scheduleVerifiedRatingBackfill(
   options: {
     run?: () => Promise<unknown>;
     delayMs?: number;
   } = {},
-): NodeJS.Timeout {
+): NodeJS.Timeout | null {
+  if (process.env.DISABLE_BACKGROUND_JOBS === "1") return null;
+  const existing = timerHost[TIMER_KEY];
+  if (existing) return existing;
+
   const run = options.run ?? (() => backfillVerifiedRatings());
   const timer = setTimeout(() => {
     void run().catch((error: unknown) => {
@@ -87,5 +101,12 @@ export function scheduleVerifiedRatingBackfill(
     });
   }, options.delayMs ?? VERIFIED_RATING_BACKFILL_DELAY_MS);
   timer.unref();
+  timerHost[TIMER_KEY] = timer;
   return timer;
+}
+
+/** Huy timer va guard (test). */
+export function stopVerifiedRatingBackfill(): void {
+  clearTimeout(timerHost[TIMER_KEY]);
+  timerHost[TIMER_KEY] = undefined;
 }

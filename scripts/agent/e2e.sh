@@ -106,6 +106,8 @@ export PLAYWRIGHT_JSON_OUTPUT_NAME="$json"
 # Dev cũng dùng distDir riêng: không ghi vào .next, không tranh lock với `next dev` khác.
 export NEXT_DIST_DIR="$dist"
 [[ -n "$prod_src" ]] && export PLAYWRIGHT_PRODUCTION_DIR="$dist"
+# Cả dev lẫn --prod: không chạy timer nền (tự hủy đơn, backfill) trên DB fixture.
+export DISABLE_BACKGROUND_JOBS=1
 
 # `next dev` với distDir tùy chỉnh tự chèn đường dẫn vào tsconfig.json/next-env.d.ts —
 # chụp lại để khôi phục sau khi chạy.

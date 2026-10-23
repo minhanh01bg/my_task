@@ -14,6 +14,7 @@ import { prisma } from "@/server/db/prisma";
 import {
   backfillVerifiedRatings,
   scheduleVerifiedRatingBackfill,
+  stopVerifiedRatingBackfill,
   VERIFIED_RATING_BACKFILL_KEY,
 } from "@/server/reviews/backfill-verified-ratings";
 
@@ -168,6 +169,8 @@ describe("backfillVerifiedRatings", () => {
 
 describe("scheduleVerifiedRatingBackfill", () => {
   afterEach(() => {
+    stopVerifiedRatingBackfill();
+    vi.unstubAllEnvs();
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -178,7 +181,7 @@ describe("scheduleVerifiedRatingBackfill", () => {
     const run = vi.fn().mockRejectedValue(new Error("db locked"));
 
     const timer = scheduleVerifiedRatingBackfill({ run, delayMs: 1_000 });
-    expect(timer.hasRef()).toBe(false);
+    expect(timer?.hasRef()).toBe(false);
     expect(run).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(1_000);
@@ -190,5 +193,39 @@ describe("scheduleVerifiedRatingBackfill", () => {
 
     await vi.advanceTimersByTimeAsync(10_000);
     expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it("gọi lần hai trả timer đã hẹn, backfill chỉ chạy một lần mỗi tiến trình", async () => {
+    vi.useFakeTimers();
+    const first = vi.fn().mockResolvedValue({ ran: true, products: 0 });
+    const second = vi.fn().mockResolvedValue({ ran: true, products: 0 });
+
+    const timer = scheduleVerifiedRatingBackfill({
+      run: first,
+      delayMs: 1_000,
+    });
+    expect(timer).not.toBeNull();
+    expect(
+      scheduleVerifiedRatingBackfill({ run: second, delayMs: 1_000 }),
+    ).toBe(timer);
+    await vi.advanceTimersByTimeAsync(1_000);
+    // Đã chạy xong vẫn không hẹn lại.
+    expect(
+      scheduleVerifiedRatingBackfill({ run: second, delayMs: 1_000 }),
+    ).toBe(timer);
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(second).not.toHaveBeenCalled();
+  });
+
+  it("DISABLE_BACKGROUND_JOBS=1 thì không hẹn giờ", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("DISABLE_BACKGROUND_JOBS", "1");
+    const run = vi.fn().mockResolvedValue({ ran: true, products: 0 });
+
+    expect(scheduleVerifiedRatingBackfill({ run, delayMs: 1_000 })).toBe(null);
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(run).not.toHaveBeenCalled();
   });
 });
