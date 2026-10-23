@@ -58,8 +58,8 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Authenticated backup tests
-        run: node --test scripts/backup-db.test.mjs
+      - name: Script tests
+        run: node --test scripts/backup-db.test.mjs scripts/db-reset-guard.test.mjs
 
       - name: Database backup tests
         run: python3 -m unittest discover -s tests/scripts -p "test_*.py"

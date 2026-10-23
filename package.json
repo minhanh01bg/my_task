@@ -19,7 +19,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma db push --force-reset && pnpm db:seed",
+    "db:reset": "node scripts/db-reset-guard.mjs",
     "prepare": "husky",
     "postinstall": "prisma generate",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
