@@ -2,12 +2,15 @@
 # Release production an toàn cho my-task.service (build thư mục mới → smoke → promote).
 #
 #   scripts/agent/release.sh status [--smoke]          # dist đang chạy, các release, marker
-#   scripts/agent/release.sh build [--label x]         # build .next-release-<label>-<ts>, start tạm, smoke
+#   scripts/agent/release.sh build [--label x] [--allow-stale-deps]
+#                                                      # build .next-release-<label>-<ts>, start tạm, smoke
 #   scripts/agent/release.sh promote <dir> [--schema-ok] [--dry-run]
 #   scripts/agent/release.sh rollback [dir] [--dry-run] # mặc định: release trước đó
 #   scripts/agent/release.sh prune [--keep N] [--yes]   # mặc định chỉ in (dry-run), keep 2
 #
 # build in "READY <dir>" khi thành công và ghi <dir>/.agent-smoke-ok (commit, schema hash).
+# build dừng nếu node_modules lệch pnpm-lock.yaml (next, react, Sentry, Prisma);
+# --allow-stale-deps bỏ qua kiểm tra, chỉ cảnh báo.
 # promote chỉ nhận dir có marker; smoke fail trên 3001 → tự rollback về dir cũ.
 # Log đầy đủ: .agent-logs/<run-id>/. Không bao giờ in giá trị env/secret.
 #
@@ -71,6 +74,37 @@ load_service_env() {
 schema_hash() {
   { cat prisma/schema.prisma; find prisma/migrations -type f 2>/dev/null | LC_ALL=C sort | xargs -r cat; } \
     | sha256sum | cut -c1-16
+}
+
+# Gói quyết định runtime: build bằng node_modules cũ là chạy code cũ dù lockfile đã nâng.
+LOCKED_PACKAGES=(next react react-dom @sentry/nextjs @prisma/client prisma)
+
+# Phiên bản pnpm-lock.yaml giải cho <pkg> ở importer gốc, bỏ hậu tố peer "(...)".
+lock_version() {
+  awk -v want="$1" '
+    /^importers:/ { inimp = 1; next }
+    inimp && /^[^ ]/ { exit }
+    inimp && /^  [^ ]/ { root = ($0 == "  .:"); next }
+    root && /^      [^ ]/ { name = $1; sub(/:$/, "", name); gsub(/\047/, "", name); cur = (name == want); next }
+    root && cur && /^        version:/ { v = $2; sub(/\(.*/, "", v); print v; exit }
+  ' pnpm-lock.yaml
+}
+
+installed_version() {
+  node -e 'try { process.stdout.write(String(require(process.argv[1]).version ?? "")) } catch {}' \
+    "$AGENT_ROOT/node_modules/$1/package.json" 2>/dev/null
+}
+
+# In gói lệch lockfile; return 1 nếu có gói lệch hoặc thiếu.
+deps_match_lock() {
+  local pkg want have bad=0
+  for pkg in "${LOCKED_PACKAGES[@]}"; do
+    want=$(lock_version "$pkg"); have=$(installed_version "$pkg")
+    [[ -n "$want" && "$want" == "$have" ]] && continue
+    say "  $pkg: node_modules=${have:-<thiếu>} pnpm-lock.yaml=${want:-<không thấy>}"
+    bad=1
+  done
+  return "$bad"
 }
 
 smoke_summary() { local l; l=$(grep -E 'checks, [0-9]+ failures' "$1" | tail -n1); [[ -n "$l" ]] && say "  $l"; return 0; }
@@ -179,13 +213,18 @@ stop_server() {
 }
 
 cmd_build() {
-  local label="" dir ts port live log rc
+  local label="" allow_stale=0 dir ts port live log rc
   while (($#)); do
     case "$1" in
       --label) label="${2:-}"; shift 2 ;;
+      --allow-stale-deps) allow_stale=1; shift ;;
       *) die "tham số lạ: $1" ;;
     esac
   done
+  if ! deps_match_lock; then
+    ((allow_stale)) || die "node_modules lệch pnpm-lock.yaml — chạy 'pnpm install --frozen-lockfile' trước (hoặc --allow-stale-deps nếu cố ý)"
+    say "⚠ --allow-stale-deps: build bằng node_modules lệch lockfile, production sẽ chạy phiên bản cũ"
+  fi
   label=$(printf '%s' "$label" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9-' '-' | sed -E 's/-+/-/g; s/^-|-$//g')
   ts=$(date -u +%Y%m%d-%H%M%S)
   dir=".next-release-${label:+$label-}$ts"
