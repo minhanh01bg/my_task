@@ -252,6 +252,34 @@ describe("deliverBackInStockAlerts", () => {
     expect(new Set(notifications.map((n) => n.eventKey)).size).toBe(2);
   });
 
+  it("hai lượt gửi và sweep chạy cùng lúc: mỗi đăng ký đúng một thông báo", async () => {
+    await seedProduct();
+    const accountIds = [
+      await seedAccount(1),
+      await seedAccount(2),
+      await seedAccount(3),
+    ];
+    for (const accountId of accountIds) {
+      await subscribeBackInStock(accountId, PRODUCT_ID);
+    }
+    await setStock(4);
+
+    const results = await Promise.all([
+      deliverBackInStockAlerts([PRODUCT_ID]),
+      deliverBackInStockAlerts([PRODUCT_ID]),
+      sweepBackInStockAlerts(),
+    ]);
+
+    expect(results.reduce((sum, { delivered }) => sum + delivered, 0)).toBe(
+      accountIds.length,
+    );
+    for (const accountId of accountIds) {
+      expect(await notifiedCount(accountId)).toBe(1);
+    }
+    expect(await prisma.customerNotification.count()).toBe(accountIds.length);
+    expect(await prisma.backInStockSubscription.count()).toBe(0);
+  });
+
   it("không ai chờ: chỉ một lần đọc, không mở transaction", async () => {
     await seedProduct({ stock: 5 });
     spyTransactions();
