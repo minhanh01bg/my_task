@@ -102,4 +102,16 @@ describe("scripts/check-auth.ts", () => {
 
     expect(output).toContain("OWNER_PASSWORD_HASH: TRÙNG STORE_PASSWORD_HASH");
   }, 60_000);
+
+  it("does not print the Upstash REST URL, only a masked host", async () => {
+    const output = await checkAuth({
+      UPSTASH_REDIS_REST_URL: `https://${FAKE_UPSTASH_HOST}/duong-dan-rieng`,
+    });
+
+    expect(output).toContain(
+      "UPSTASH_REDIS_REST_URL: Đã cấu hình (***.upstash.io)",
+    );
+    expect(output).not.toContain("check-auth-test-host");
+    expect(output).not.toContain("duong-dan-rieng");
+  }, 60_000);
 });

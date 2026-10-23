@@ -34,8 +34,15 @@ vòng); hash cũ dạng `salt:derived` (100 000 vòng) vẫn đăng nhập đư�
 sinh lại. Sinh hash bằng:
 
 ```bash
-pnpm tsx scripts/hash-password.ts '<mat khau>'
+pnpm tsx scripts/hash-password.ts
 ```
+
+Script hỏi mật khẩu hai lần, không hiện ký tự gõ, rồi in hash ra stdout. Mật
+khẩu phải có ít nhất 8 ký tự. Script không nhận mật khẩu qua tham số, vì tham số
+lộ trong lịch sử shell và danh sách tiến trình. Khi tự động hoá, đưa mật khẩu
+qua stdin (dòng đầu tiên):
+`printf '%s\n' "$MAT_KHAU" | pnpm tsx scripts/hash-password.ts`. Chạy script một
+lần cho mật khẩu cửa hàng, rồi một lần nữa với mật khẩu chủ **khác**.
 
 - `STORE_PASSWORD_HASH` — mật khẩu cửa hàng dùng để đăng nhập POS/quản trị.
   Bắt buộc ở production.

@@ -9,6 +9,16 @@ import { ensureDefaultAdminIdentity } from "../src/server/auth/session";
 
 const HASH_COMMAND = "pnpm tsx scripts/hash-password.ts";
 
+/** Chỉ hiện hai nhãn cuối của host (vd ***.upstash.io): tên database là bí mật. */
+function maskedHost(url: string): string {
+  try {
+    const labels = new URL(url).hostname.split(".");
+    return labels.length > 2 ? `***.${labels.slice(-2).join(".")}` : "***";
+  } catch {
+    return "***";
+  }
+}
+
 /** Chỉ báo trạng thái của hash; không in hash hay mật khẩu nào. */
 function reportPasswordHash(
   name: string,
@@ -89,7 +99,9 @@ async function main() {
         "      👉 Khuyên dùng: Hãy xóa hoặc comment lại dòng UPSTASH_REDIS_REST_URL trong .env để dùng bộ nhớ RAM.",
       );
     } else {
-      console.log(`   ✅ UPSTASH_REDIS_REST_URL: Đã cấu hình (${redisUrl})`);
+      console.log(
+        `   ✅ UPSTASH_REDIS_REST_URL: Đã cấu hình (${maskedHost(redisUrl)})`,
+      );
     }
   } else {
     console.log(
@@ -116,7 +128,9 @@ async function main() {
 
   console.log("\n==========================================");
   console.log("💡 HƯỚNG DẪN KHẮC PHỤC NẾU VẪN KHÔNG ĐĂNG NHẬP ĐƯỢC:");
-  console.log(`1. Tạo hash cho mật khẩu cửa hàng: ${HASH_COMMAND}`);
+  console.log(
+    `1. Tạo hash cho mật khẩu cửa hàng: ${HASH_COMMAND} (nhập mật khẩu khi được hỏi)`,
+  );
   console.log(
     "2. Đặt STORE_PASSWORD_HASH (và OWNER_PASSWORD_HASH bằng một mật khẩu KHÁC) trong biến môi trường của server.",
   );
