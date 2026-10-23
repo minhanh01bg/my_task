@@ -9,6 +9,27 @@ permissions:
   contents: read
 
 jobs:
+  # Quét secret trên các commit của push/PR. Repo cá nhân: không cần GITLEAKS_LICENSE.
+  secret-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Action đọc danh sách commit của PR qua API.
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Ghim bản gitleaks thay vì mặc định cũ của action; Dependabot không tự nâng.
+          GITLEAKS_VERSION: 8.30.1
+          # Không comment lên PR để job không cần quyền ghi.
+          GITLEAKS_ENABLE_COMMENTS: "false"
+
   quality:
     runs-on: ubuntu-latest
     steps:
