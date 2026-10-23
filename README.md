@@ -29,7 +29,9 @@ Open http://localhost:3000
 ## Biến môi trường mật khẩu
 
 Biến môi trường được kiểm tra trong `src/config/env.ts`. Hai biến mật khẩu dùng
-cùng định dạng `salt:derived` (PBKDF2), sinh bằng:
+cùng định dạng PBKDF2-SHA256 `pbkdf2-sha256:<số vòng>:<salt>:<derived>` (600 000
+vòng); hash cũ dạng `salt:derived` (100 000 vòng) vẫn đăng nhập được nhưng nên
+sinh lại. Sinh hash bằng:
 
 ```bash
 pnpm tsx scripts/hash-password.ts '<mat khau>'

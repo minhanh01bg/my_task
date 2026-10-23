@@ -25,8 +25,54 @@ export function isPublicUrl(value: string | undefined): value is string {
   }
 }
 
-/** Định dạng `salt:derived` (hex) mà scripts/hash-password.ts sinh ra. */
-const PASSWORD_HASH_PATTERN = /^[0-9a-fA-F]{32}:[0-9a-fA-F]{64}$/;
+/**
+ * Hash PBKDF2-SHA256 của mật khẩu quản trị. scripts/hash-password.ts sinh
+ * `pbkdf2-sha256:<số vòng>:<salt>:<derived>` (hex); định dạng cũ
+ * `salt:derived` (100k vòng) vẫn dùng được. Dùng `:` thay vì `$` vì Next nội
+ * suy `$...` trong file .env.
+ */
+const PASSWORD_HASH_PATTERN =
+  /^pbkdf2-sha256:([1-9][0-9]{0,6}):([0-9a-fA-F]{32}):([0-9a-fA-F]{64})$/;
+const LEGACY_PASSWORD_HASH_PATTERN = /^([0-9a-fA-F]{32}):([0-9a-fA-F]{64})$/;
+export const LEGACY_PBKDF2_ITERATIONS = 100_000;
+// Chặn số vòng quá lớn: hash lỗi không được làm treo mỗi lần đăng nhập.
+const MIN_PBKDF2_ITERATIONS = 100_000;
+const MAX_PBKDF2_ITERATIONS = 5_000_000;
+
+export interface ParsedPasswordHash {
+  iterations: number;
+  saltHex: string;
+  derivedHex: string;
+}
+
+/** Tách hash mật khẩu; `null` nếu sai định dạng hoặc số vòng ngoài khoảng. */
+export function parsePasswordHash(hash: string): ParsedPasswordHash | null {
+  const legacy = LEGACY_PASSWORD_HASH_PATTERN.exec(hash);
+  if (legacy) {
+    return {
+      iterations: LEGACY_PBKDF2_ITERATIONS,
+      saltHex: legacy[1],
+      derivedHex: legacy[2].toLowerCase(),
+    };
+  }
+  const match = PASSWORD_HASH_PATTERN.exec(hash);
+  if (!match) return null;
+  const iterations = Number(match[1]);
+  if (
+    iterations < MIN_PBKDF2_ITERATIONS ||
+    iterations > MAX_PBKDF2_ITERATIONS
+  ) {
+    return null;
+  }
+  return {
+    iterations,
+    saltHex: match[2],
+    derivedHex: match[3].toLowerCase(),
+  };
+}
+
+const PASSWORD_HASH_FORMAT =
+  "pbkdf2-sha256:<iterations>:<salt>:<derived> (or legacy salt:derived) PBKDF2 hash";
 
 export const envSchema = z
   .object({
@@ -54,9 +100,9 @@ export const envSchema = z
       (value) => (value === "" ? undefined : value),
       z
         .string()
-        .regex(
-          PASSWORD_HASH_PATTERN,
-          "OWNER_PASSWORD_HASH must be a valid salt:derived PBKDF2 hash",
+        .refine(
+          (value) => parsePasswordHash(value) !== null,
+          `OWNER_PASSWORD_HASH must be a valid ${PASSWORD_HASH_FORMAT}`,
         )
         .optional(),
     ),
@@ -153,14 +199,10 @@ export const envSchema = z
           path: ["NEXT_PUBLIC_APP_URL"],
         });
       }
-      if (
-        !data.STORE_PASSWORD_HASH ||
-        !PASSWORD_HASH_PATTERN.test(data.STORE_PASSWORD_HASH)
-      ) {
+      if (!parsePasswordHash(data.STORE_PASSWORD_HASH)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message:
-            "STORE_PASSWORD_HASH must be a valid salt:derived PBKDF2 hash in production",
+          message: `STORE_PASSWORD_HASH must be a valid ${PASSWORD_HASH_FORMAT} in production`,
           path: ["STORE_PASSWORD_HASH"],
         });
       }

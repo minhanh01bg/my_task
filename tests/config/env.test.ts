@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { envSchema } from "@/config/env";
 
+const SALT = "a1".repeat(16);
+const DERIVED = "b2".repeat(32);
+
 describe("envSchema", () => {
   const validBase = {
     DATABASE_URL: "file:./test.db",
@@ -240,6 +243,41 @@ describe("envSchema", () => {
         ).toBe(true);
       }
     });
+
+    it.each([100_000, 600_000, 5_000_000])(
+      "accepts a pbkdf2-sha256 hash with %i iterations in production",
+      (iterations) => {
+        const result = envSchema.safeParse({
+          ...validProd,
+          STORE_PASSWORD_HASH: `pbkdf2-sha256:${iterations}:${SALT}:${DERIVED}`,
+        });
+        expect(result.success).toBe(true);
+      },
+    );
+
+    it.each([
+      `pbkdf2-sha256:99999:${SALT}:${DERIVED}`,
+      `pbkdf2-sha256:5000001:${SALT}:${DERIVED}`,
+      `pbkdf2-sha256:0600000:${SALT}:${DERIVED}`,
+      `pbkdf2-sha256::${SALT}:${DERIVED}`,
+      `pbkdf2-sha512:600000:${SALT}:${DERIVED}`,
+      `pbkdf2-sha256$600000$${SALT}$${DERIVED}`,
+      `pbkdf2-sha256:600000:${SALT.slice(2)}:${DERIVED}`,
+      `pbkdf2-sha256:600000:${SALT}:${DERIVED}:extra`,
+    ])("rejects malformed or out-of-range hash %s in production", (hash) => {
+      const result = envSchema.safeParse({
+        ...validProd,
+        STORE_PASSWORD_HASH: hash,
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(
+          result.error.issues.some((i) =>
+            i.path.includes("STORE_PASSWORD_HASH"),
+          ),
+        ).toBe(true);
+      }
+    });
   });
 
   describe("OWNER_PASSWORD_HASH", () => {
@@ -274,6 +312,26 @@ describe("envSchema", () => {
       if (result.success) {
         expect(result.data.OWNER_PASSWORD_HASH).toBe(ownerHash);
       }
+    });
+
+    it("accepts a pbkdf2-sha256 hash", () => {
+      const hash = `pbkdf2-sha256:600000:${SALT}:${DERIVED}`;
+      const result = envSchema.safeParse({
+        ...validProd,
+        OWNER_PASSWORD_HASH: hash,
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.OWNER_PASSWORD_HASH).toBe(hash);
+      }
+    });
+
+    it("rejects an out-of-range iteration count", () => {
+      const result = envSchema.safeParse({
+        ...validProd,
+        OWNER_PASSWORD_HASH: `pbkdf2-sha256:99999:${SALT}:${DERIVED}`,
+      });
+      expect(result.success).toBe(false);
     });
 
     it.each(["production", "development"])(

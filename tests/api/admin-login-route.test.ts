@@ -1,3 +1,5 @@
+import { pbkdf2Sync, randomBytes } from "node:crypto";
+
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { env } from "@/config/env";
@@ -62,8 +64,11 @@ beforeEach(async () => {
   originalPasswordHash = env.STORE_PASSWORD_HASH;
   originalCanonicalOrigin = env.CANONICAL_ORIGIN;
   originalSecure = adminCookieOptions.secure;
+  // So vong toi thieu: cac vong brute force xac minh hash nay hang chuc lan.
+  const salt = randomBytes(16);
+  const derived = pbkdf2Sync("matkhau-cua-hang", salt, 100_000, 32, "sha256");
   (env as Record<string, unknown>).STORE_PASSWORD_HASH =
-    await hashPassword("matkhau-cua-hang");
+    `pbkdf2-sha256:100000:${salt.toString("hex")}:${derived.toString("hex")}`;
 });
 
 afterEach(async () => {

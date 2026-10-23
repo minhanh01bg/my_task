@@ -1,3 +1,5 @@
+import { pbkdf2Sync, randomBytes } from "node:crypto";
+
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
@@ -31,6 +33,63 @@ describe("Admin Password Hashing", () => {
 
   it("rejects empty hash", async () => {
     expect(await verifyPassword("bat ky", "")).toBe(false);
+  });
+
+  function pbkdf2Hex(password: string, salt: Buffer, iterations: number) {
+    return pbkdf2Sync(password, salt, iterations, 32, "sha256").toString("hex");
+  }
+
+  it("emits the self-describing format with 600k iterations", async () => {
+    const hash = await hashPassword("matkhau-cua-hang");
+    expect(hash).toMatch(/^pbkdf2-sha256:600000:[0-9a-f]{32}:[0-9a-f]{64}$/);
+    const [, , saltHex, derived] = hash.split(":");
+    expect(
+      pbkdf2Hex("matkhau-cua-hang", Buffer.from(saltHex, "hex"), 600_000),
+    ).toBe(derived);
+  });
+
+  it("keeps verifying legacy salt:derived hashes at 100k iterations", async () => {
+    const salt = randomBytes(16);
+    const legacy = `${salt.toString("hex")}:${pbkdf2Hex("mat-khau-cu", salt, 100_000)}`;
+    expect(await verifyPassword("mat-khau-cu", legacy)).toBe(true);
+    expect(await verifyPassword("sai-roi", legacy)).toBe(false);
+  });
+
+  it("honours the iteration count encoded in the hash", async () => {
+    const salt = randomBytes(16);
+    const derived = pbkdf2Hex("mat-khau-moi", salt, 150_000);
+    const hash = `pbkdf2-sha256:150000:${salt.toString("hex")}:${derived}`;
+    expect(await verifyPassword("mat-khau-moi", hash)).toBe(true);
+    expect(await verifyPassword("sai-roi", hash)).toBe(false);
+    // Cung salt/derived nhung khai bao sai so vong thi khong khop.
+    expect(
+      await verifyPassword(
+        "mat-khau-moi",
+        `pbkdf2-sha256:200000:${salt.toString("hex")}:${derived}`,
+      ),
+    ).toBe(false);
+  });
+
+  it.each([
+    [
+      "out-of-range iteration count",
+      `pbkdf2-sha256:5000001:${"a".repeat(32)}:${"b".repeat(64)}`,
+    ],
+    [
+      "too few iterations",
+      `pbkdf2-sha256:99999:${"a".repeat(32)}:${"b".repeat(64)}`,
+    ],
+    [
+      "unknown algorithm",
+      `pbkdf2-sha1:600000:${"a".repeat(32)}:${"b".repeat(64)}`,
+    ],
+    [
+      "truncated salt",
+      `pbkdf2-sha256:600000:${"a".repeat(30)}:${"b".repeat(64)}`,
+    ],
+    ["legacy with extra field", `${"a".repeat(32)}:${"b".repeat(64)}:x`],
+  ])("rejects a hash with %s without deriving", async (_label, hash) => {
+    expect(await verifyPassword("bat ky", hash)).toBe(false);
   });
 });
 

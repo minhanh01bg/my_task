@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 
-import { env } from "@/config/env";
+import { env, parsePasswordHash } from "@/config/env";
 import { prisma } from "@/server/db/prisma";
 
 export * from "@/server/auth/constants";
@@ -38,7 +38,8 @@ export function adminCookieOptionsForRequest(request: Request) {
   };
 }
 
-const PBKDF2_ITERATIONS = 100_000;
+/** OWASP cho PBKDF2-HMAC-SHA256; hash cũ `salt:derived` vẫn xác minh ở 100k. */
+const PBKDF2_ITERATIONS = 600_000;
 const encoder = new TextEncoder();
 
 function toHex(buffer: ArrayBuffer): string {
@@ -67,6 +68,7 @@ function safeEqual(a: string, b: string): boolean {
 async function derive(
   password: string,
   salt: Uint8Array<ArrayBuffer>,
+  iterations: number,
 ): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
@@ -76,27 +78,32 @@ async function derive(
     ["deriveBits"],
   );
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt, iterations: PBKDF2_ITERATIONS, hash: "SHA-256" },
+    { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
     key,
     256,
   );
   return toHex(bits);
 }
 
+/** Sinh `pbkdf2-sha256:<số vòng>:<salt>:<derived>` (xem parsePasswordHash). */
 export async function hashPassword(password: string): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
-  const derived = await derive(password, salt);
-  return `${toHex(salt.buffer)}:${derived}`;
+  const derived = await derive(password, salt, PBKDF2_ITERATIONS);
+  return `pbkdf2-sha256:${PBKDF2_ITERATIONS}:${toHex(salt.buffer)}:${derived}`;
 }
 
 export async function verifyPassword(
   password: string,
   hash: string,
 ): Promise<boolean> {
-  const [saltHex, expected] = hash.split(":");
-  if (!saltHex || !expected) return false;
-  const derived = await derive(password, fromHex(saltHex));
-  return safeEqual(derived, expected);
+  const parsed = parsePasswordHash(hash);
+  if (!parsed) return false;
+  const derived = await derive(
+    password,
+    fromHex(parsed.saltHex),
+    parsed.iterations,
+  );
+  return safeEqual(derived, parsed.derivedHex);
 }
 
 export function digestOpaqueToken(token: string): string {
