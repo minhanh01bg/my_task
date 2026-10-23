@@ -22,6 +22,7 @@ import type { CatalogResponse } from "@/types/catalog";
 
 const POS_CART_KEY = "an-phat-pos-current-cart";
 const HELD_ORDERS_KEY = "an-phat-pos-held-orders";
+const PRODUCT_DRAFT_KEY = "an-phat-product-draft";
 const CLEAR_MESSAGE = { type: "pos:clear-caches" };
 
 const catalog: CatalogResponse = {
@@ -165,6 +166,17 @@ describe("clearAdminClientState (WB-4)", () => {
 
     expect(localStorage.getItem(POS_CART_KEY)).toBeNull();
     expect(localStorage.getItem(HELD_ORDERS_KEY)).toBe(held);
+  });
+
+  it("xoá bản nháp sản phẩm đang nhập dở trong trang quản trị", async () => {
+    localStorage.setItem(
+      PRODUCT_DRAFT_KEY,
+      JSON.stringify({ name: "Lốp", costPrice: "90000" }),
+    );
+
+    await clearAdminClientState();
+
+    expect(localStorage.getItem(PRODUCT_DRAFT_KEY)).toBeNull();
   });
 
   it("xoá danh mục đã lưu nhưng không bao giờ đụng hàng đợi đơn offline", async () => {

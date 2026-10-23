@@ -26,13 +26,16 @@ const CUSTOMER_LOCAL_KEYS = [
 const CUSTOMER_SESSION_KEYS = ["an-phat-pending-claim"];
 
 /**
- * Giỏ đang bán dở trên máy POS (useCartStore). KHÔNG thêm
- * "an-phat-pos-held-orders": đơn tạm giữ là đơn bán dở của cửa hàng (khách
- * quên ví, đang tính dở cho khách khác), chưa lên server và chỉ nằm trên máy
- * này. Ca sau đăng nhập phải lấy lại được để tính tiền, nên đăng xuất giữ
- * nguyên.
+ * Giỏ đang bán dở trên máy POS (useCartStore) và bản nháp form thêm sản phẩm
+ * (có giá vốn). KHÔNG thêm "an-phat-pos-held-orders": đơn tạm giữ là đơn bán
+ * dở của cửa hàng (khách quên ví, đang tính dở cho khách khác), chưa lên
+ * server và chỉ nằm trên máy này. Ca sau đăng nhập phải lấy lại được để tính
+ * tiền, nên đăng xuất giữ nguyên.
  */
-const ADMIN_LOCAL_KEYS = ["an-phat-pos-current-cart"];
+const ADMIN_LOCAL_KEYS = [
+  "an-phat-pos-current-cart",
+  "an-phat-product-draft", // src/app/(management)/admin/products/product-form.tsx
+];
 
 // Kho "catalog" trong src/lib/sync/catalog-cache.ts. Kho "queued-orders" cùng
 // DB giữ đơn offline chưa gửi và tuyệt đối không được xoá.
@@ -114,8 +117,8 @@ export function clearCustomerClientState(): void {
 }
 
 /**
- * Đăng xuất quản trị: xoá giỏ đang bán, danh mục đã lưu trong IndexedDB và
- * cache của service worker. Giữ đơn tạm giữ và hàng đợi đơn offline.
+ * Đăng xuất quản trị: xoá giỏ đang bán, bản nháp sản phẩm, danh mục đã lưu
+ * trong IndexedDB và cache của service worker. Giữ đơn tạm giữ và hàng đợi đơn offline.
  */
 export async function clearAdminClientState(): Promise<void> {
   removeKeys(() => localStorage, ADMIN_LOCAL_KEYS);
