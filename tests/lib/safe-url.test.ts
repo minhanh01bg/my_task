@@ -105,6 +105,101 @@ describe("isInternalHost (WEB-7c)", () => {
   });
 });
 
+describe("isInternalHost reserved ranges and local names (WB-5)", () => {
+  it.each([
+    // Single-label names resolve through the local DNS search domain
+    "intranet",
+    "router",
+    "metadata",
+    // Private-use and special-use suffixes
+    "db.internal",
+    "metadata.google.internal",
+    "nas.lan",
+    "printer.home.arpa",
+    "printer.local",
+    "api.localhost",
+    "NAS.LAN.",
+    // IETF protocol assignments 192.0.0.0/24 and TEST-NETs
+    "192.0.0.1",
+    "192.0.0.170",
+    "192.0.2.1",
+    "198.51.100.7",
+    "203.0.113.255",
+    // Benchmarking 198.18.0.0/15, reserved 240.0.0.0/4 and broadcast
+    "198.18.5.5",
+    "240.1.2.3",
+    "255.255.255.255",
+    // IPv4-mapped ::ffff:0:0/96 (dotted and hex) and translated ::ffff:0:0:0/96
+    "::ffff:127.0.0.1",
+    "::ffff:7f00:1",
+    "[::ffff:c000:201]",
+    "::ffff:0:127.0.0.1",
+    "::ffff:0:7f00:1",
+    "::ffff:0:a9fe:a9fe",
+    "::ffff:0:8.8.8.8",
+    // NAT64 well-known 64:ff9b::/96 and local-use 64:ff9b:1::/48
+    "64:ff9b::7f00:1",
+    "64:ff9b::192.0.2.1",
+    "64:ff9b:1::1",
+    "64:ff9b:1:ffff::8.8.8.8",
+    // Site-local fec0::/10 (deprecated), discard-only 100::/64
+    "fec0::1",
+    "feff::1",
+    "100::",
+    "100::1:2:3:4",
+    // Documentation 2001:db8::/32 and 3fff::/20
+    "2001:db8::1",
+    "[2001:0db8:85a3::8a2e:370:7334]",
+    "3fff::1",
+    "3fff:fff::1",
+    // Anything outside global unicast 2000::/3 is not publicly routable
+    "4000::1",
+    "5f00::1",
+    "fe00::1",
+  ])("blocks %s", (host) => {
+    expect(isInternalHost(host)).toBe(true);
+  });
+
+  it.each([
+    "example.com",
+    "cdn.example.vn",
+    "internal.example.com",
+    "lan.example.com",
+    "local-images.example.com",
+    "8.8.8.8",
+    "134744072",
+    "192.0.1.255",
+    "192.0.3.1",
+    "198.51.99.1",
+    "198.51.101.1",
+    "203.0.112.1",
+    "203.0.114.1",
+    "64:ff9b::808:808",
+    "::ffff:8.8.8.8",
+    "2001:db9::1",
+    "2001:4860:4860::8888",
+    "3fff:1000::1",
+    "2606:4700::1111",
+  ])("allows public host %s", (host) => {
+    expect(isInternalHost(host)).toBe(false);
+  });
+
+  it.each([
+    "https://intranet/a.png",
+    "https://metadata.google.internal/computeMetadata/v1",
+    "https://nas.lan/a.png",
+    "https://printer.home.arpa/a.png",
+    "https://192.0.2.10/a.png",
+    "https://[::ffff:0:a9fe:a9fe]/latest/meta-data",
+    "https://[64:ff9b:1::a9fe:a9fe]/latest/meta-data",
+    "https://[fec0::1]/a.png",
+    "https://[100::1]/a.png",
+    "https://[2001:db8::1]/a.png",
+  ])("isPublicHttpsUrl rejects %s", (value) => {
+    expect(isPublicHttpsUrl(value)).toBe(false);
+  });
+});
+
 describe("isPublicHttpsUrl (WEB-7a)", () => {
   it("accepts a public https URL", () => {
     expect(isPublicHttpsUrl("https://images.unsplash.com/photo-1")).toBe(true);

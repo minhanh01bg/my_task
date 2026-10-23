@@ -12,8 +12,12 @@ const INTERNAL_IPV4_RANGES: ReadonlyArray<readonly [string, number]> = [
   ["127.0.0.0", 8],
   ["169.254.0.0", 16],
   ["172.16.0.0", 12],
+  ["192.0.0.0", 24], // IETF protocol assignments
+  ["192.0.2.0", 24], // TEST-NET-1
   ["192.168.0.0", 16],
   ["198.18.0.0", 15], // benchmarking
+  ["198.51.100.0", 24], // TEST-NET-2
+  ["203.0.113.0", 24], // TEST-NET-3
   ["224.0.0.0", 4], // multicast
   ["240.0.0.0", 4], // reserved, incl. broadcast 255.255.255.255
 ];
@@ -122,14 +126,34 @@ function isInternalIPv6(groups: number[]): boolean {
   ) {
     return isInternalIPv4(embeddedIPv4);
   }
-  return false;
+  // Documentation 2001:db8::/32 and 3fff::/20
+  if (
+    (first === 0x2001 && groups[1] === 0xdb8) ||
+    (first === 0x3fff && groups[1] < 0x1000)
+  ) {
+    return true;
+  }
+  // Only global unicast 2000::/3 is publicly routed. This also covers
+  // site-local fec0::/10, discard-only 100::/64, IPv4-translated
+  // ::ffff:0:0:0/96 and local-use NAT64 64:ff9b:1::/48.
+  return (first & 0xe000) !== 0x2000;
 }
+
+/** Private-use and special-use DNS suffixes that never resolve publicly. */
+const INTERNAL_HOST_SUFFIXES = [
+  ".localhost",
+  ".local",
+  ".internal",
+  ".lan",
+  ".home.arpa",
+];
 
 /**
  * True for loopback, private, link-local, carrier-grade NAT, benchmarking,
- * multicast, reserved and unspecified addresses (also behind NAT64 or 6to4),
- * for any Teredo address and for localhost-style names. An IPv6 literal that
- * cannot be parsed counts as internal (fail closed).
+ * documentation, multicast, reserved and unspecified addresses (also behind
+ * NAT64 or 6to4), for IPv6 outside global unicast, for any Teredo address,
+ * and for single-label or local-only names. An IPv6 literal that cannot be
+ * parsed counts as internal (fail closed).
  */
 export function isInternalHost(hostname: string): boolean {
   const host = hostname
@@ -140,8 +164,7 @@ export function isInternalHost(hostname: string): boolean {
   if (
     host === "" ||
     host === "localhost" ||
-    host.endsWith(".localhost") ||
-    host.endsWith(".local")
+    INTERNAL_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix))
   ) {
     return true;
   }
@@ -152,7 +175,9 @@ export function isInternalHost(hostname: string): boolean {
   }
 
   const ipv4 = parseIPv4(host);
-  return ipv4 !== null && isInternalIPv4(ipv4);
+  if (ipv4 !== null) return isInternalIPv4(ipv4);
+  // Single-label names ("intranet") resolve through the local search domain
+  return !host.includes(".");
 }
 
 /** An absolute https URL to a public host, without embedded credentials. */
