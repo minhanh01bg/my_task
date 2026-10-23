@@ -40,9 +40,11 @@ export async function saveSettingsAction(
   formData: FormData,
 ): Promise<SaveSettingsResult> {
   let adminIdentity: { id: string } | undefined;
+  let adminSessionId: string | undefined;
   try {
     const session = await requireAdminSession();
     adminIdentity = session.identity;
+    adminSessionId = session.sessionId;
   } catch (error) {
     if (error instanceof AdminUnauthorizedError) {
       return {
@@ -105,7 +107,7 @@ export async function saveSettingsAction(
   if (bankAccountChanged) {
     const ownerCheck = await verifyOwnerPassword(
       ownerPassword.data,
-      adminIdentity?.id,
+      adminSessionId,
     );
     if (!ownerCheck.ok) {
       await logAdminAction({

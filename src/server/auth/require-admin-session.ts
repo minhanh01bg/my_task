@@ -83,7 +83,12 @@ export async function hasAdminSession(request?: Request): Promise<boolean> {
  */
 export async function requireAdminSession(
   opts?: RequireAdminSessionOptions | Request,
-): Promise<{ authorized: true; identity?: AdminPrincipal }> {
+): Promise<{
+  authorized: true;
+  identity?: AdminPrincipal;
+  /** Phiên đăng nhập: mọi lần đăng nhập dùng chung một danh tính admin. */
+  sessionId?: string;
+}> {
   const options: RequireAdminSessionOptions =
     opts && "headers" in opts ? { request: opts } : (opts ?? {});
 
@@ -97,5 +102,9 @@ export async function requireAdminSession(
     throw new AdminUnauthorizedError();
   }
 
-  return { authorized: true, identity: resolved.identity };
+  return {
+    authorized: true,
+    identity: resolved.identity,
+    sessionId: resolved.session.id,
+  };
 }

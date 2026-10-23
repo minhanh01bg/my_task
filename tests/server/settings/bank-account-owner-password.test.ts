@@ -1,3 +1,5 @@
+import { pbkdf2Sync, randomBytes } from "node:crypto";
+
 import {
   afterAll,
   afterEach,
@@ -109,6 +111,32 @@ async function bankNotifications() {
 
 function setOwnerHash(value: string | undefined) {
   (env as Record<string, unknown>).OWNER_PASSWORD_HASH = value;
+}
+
+/** Hash 100k vòng (mức tối thiểu) cho các test cần nhiều lần nhập sai. */
+function quickHash(password: string) {
+  const salt = randomBytes(16);
+  const derived = pbkdf2Sync(password, salt, 100_000, 32, "sha256");
+  return `pbkdf2-sha256:100000:${salt.toString("hex")}:${derived.toString("hex")}`;
+}
+
+/** Mọi lần đăng nhập admin dùng chung một danh tính nhưng là phiên riêng. */
+async function loginAsNewSession() {
+  const { token } = await createAdminSession();
+  mockCookies.set(SESSION_COOKIE, token);
+}
+
+async function failOwnerPassword(times: number) {
+  for (let attempt = 0; attempt < times; attempt += 1) {
+    const wrong = await saveSettingsAction(
+      null,
+      settingsForm(ATTACKER_BANK, { ownerPassword: `sai-${attempt}` }),
+    );
+    expect(wrong).toEqual({
+      ok: false,
+      error: "Mật khẩu chủ cửa hàng không đúng.",
+    });
+  }
 }
 
 beforeAll(async () => {
@@ -285,6 +313,56 @@ describe("Đổi tài khoản nhận tiền cần mật khẩu chủ", () => {
     });
     expect(await readSettings()).toEqual(before);
   });
+
+  it("nhân viên nhập sai 5 lần chỉ khoá phiên của họ, chủ ở phiên khác vẫn đổi được", async () => {
+    setOwnerHash(quickHash(OWNER_PASSWORD));
+    await failOwnerPassword(5);
+    const staffLocked = await saveSettingsAction(
+      null,
+      settingsForm(ATTACKER_BANK, { ownerPassword: OWNER_PASSWORD }),
+    );
+    expect(staffLocked).toEqual({
+      ok: false,
+      error: "Nhập sai mật khẩu chủ quá nhiều lần. Vui lòng thử lại sau.",
+    });
+
+    await loginAsNewSession();
+    const owner = await saveSettingsAction(
+      null,
+      settingsForm(ATTACKER_BANK, { ownerPassword: OWNER_PASSWORD }),
+    );
+
+    expect(owner).toEqual({ ok: true, message: "Lưu cài đặt thành công" });
+    expect((await readSettings())["bank.accountNumber"]).toBe(
+      ATTACKER_BANK.accountNumber,
+    );
+  }, 30_000);
+
+  it("đăng nhập lại nhiều lần vẫn bị chặn ở 20 lần sai toàn hệ thống", async () => {
+    setOwnerHash(quickHash(OWNER_PASSWORD));
+    for (let session = 0; session < 4; session += 1) {
+      await loginAsNewSession();
+      await failOwnerPassword(5);
+    }
+    await loginAsNewSession();
+    const before = await readSettings();
+
+    const locked = await saveSettingsAction(
+      null,
+      settingsForm(ATTACKER_BANK, { ownerPassword: OWNER_PASSWORD }),
+    );
+
+    expect(locked).toEqual({
+      ok: false,
+      error: "Nhập sai mật khẩu chủ quá nhiều lần. Vui lòng thử lại sau.",
+    });
+    expect(await readSettings()).toEqual(before);
+    const denied = await prisma.adminAuditEvent.findFirst({
+      where: { action: "settings.bank_account.denied" },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(denied?.metadata).toContain("rate_limited");
+  }, 60_000);
 
   it("lần nhập đúng không tính vào hạn mức sai", async () => {
     for (let attempt = 0; attempt < 6; attempt += 1) {
