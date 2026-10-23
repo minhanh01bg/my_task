@@ -469,6 +469,43 @@ describe("BL-3: giới hạn số lần mỗi khách dùng một mã", () => {
     expect(await usedCount()).toBe(1);
   });
 
+  it("'đã dùng hết' chỉ nói về chính tài khoản, không lộ SĐT khác đã dùng mã", async () => {
+    await voucher();
+    await limitPerCustomer("1");
+    const owner = await customerAccount();
+    await createOnlineOrder(checkout({ voucherCode: "GIAM10" }), {
+      customerAccountId: owner.id,
+    });
+
+    // Cùng SĐT với đơn đã dùng mã: khách vãng lai chỉ được yêu cầu đăng nhập.
+    for (const contactPhone of ["0912345678", "+84912345678"]) {
+      await expect(
+        createOnlineOrder(checkout({ voucherCode: "GIAM10", contactPhone })),
+      ).rejects.toMatchObject({
+        code: "VOUCHER_INVALID",
+        message: LOGIN_REQUIRED_MESSAGE,
+      });
+    }
+    // Tài khoản khác cùng SĐT vẫn dùng được mã.
+    const other = await customerAccount("+84900000092");
+    await expect(
+      createOnlineOrder(checkout({ voucherCode: "GIAM10" }), {
+        customerAccountId: other.id,
+      }),
+    ).resolves.toMatchObject({ duplicated: false });
+
+    // Chỉ chính tài khoản đã dùng mã mới nhận thông báo này, dù đổi SĐT.
+    await expect(
+      createOnlineOrder(
+        checkout({ voucherCode: "GIAM10", contactPhone: "0987654321" }),
+        { customerAccountId: owner.id },
+      ),
+    ).rejects.toMatchObject({
+      code: "VOUCHER_INVALID",
+      message: PER_CUSTOMER_MESSAGE,
+    });
+  });
+
   it("đơn vãng lai mang SĐT của tài khoản không trừ lượt của tài khoản", async () => {
     await voucher();
     // Trước khi bật giới hạn, khách vãng lai dùng mã với SĐT 0912345678.

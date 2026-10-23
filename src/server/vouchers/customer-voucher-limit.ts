@@ -37,8 +37,10 @@ export const VOUCHER_LOGIN_REQUIRED_MESSAGE =
  *
  * SĐT khách vãng lai không được xác minh — đổi số là dùng lại được mã — nên khi
  * đang giới hạn chỉ tài khoản đã đăng nhập mới dùng được mã, và chỉ đếm đơn
- * chưa huỷ của chính tài khoản đó (chưa gồm đơn đang tạo). Lỗi luôn là
- * VOUCHER_INVALID để lượt thử bị tính vào hạn mức dò mã.
+ * chưa huỷ của chính tài khoản đó (chưa gồm đơn đang tạo). Không bao giờ đếm
+ * theo SĐT: câu "đã dùng hết" chỉ được nói về tài khoản của người gọi, không
+ * được lộ rằng một SĐT nào đó từng dùng mã. Lỗi luôn là VOUCHER_INVALID để
+ * lượt thử bị tính vào hạn mức dò mã.
  */
 export async function assertVoucherCustomerLimit(
   tx: Prisma.TransactionClient,
