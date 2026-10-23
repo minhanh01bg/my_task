@@ -12,6 +12,7 @@ import Link from "next/link";
 
 import { EmptyState } from "@/components/kit/empty-state";
 import { Skeleton } from "@/components/kit/skeleton-loader";
+import { BACK_IN_STOCK_NOTIFICATION_KIND } from "@/types/back-in-stock";
 
 export interface NotificationListItem {
   id: string;
@@ -25,7 +26,7 @@ export interface NotificationListItem {
 
 function notificationAction(kind: string): string {
   // Kiểm trước nhánh "stock" bên dưới: đó là cảnh báo tồn kho của admin.
-  if (kind === "back_in_stock") return "Xem sản phẩm";
+  if (kind === BACK_IN_STOCK_NOTIFICATION_KIND) return "Xem sản phẩm";
   if (kind.includes("stock")) return "Kiểm tra tồn kho";
   if (kind === "order_payment_paid") return "Xem thanh toán";
   if (kind.startsWith("order_status_")) return "Theo dõi đơn hàng";
@@ -108,7 +109,7 @@ export function NotificationList({
         <ul className="space-y-2">
           {items.map((item, index) => {
             const Icon =
-              item.kind === "back_in_stock"
+              item.kind === BACK_IN_STOCK_NOTIFICATION_KIND
                 ? BellRinging
                 : item.kind.includes("stock")
                   ? TriangleAlert
