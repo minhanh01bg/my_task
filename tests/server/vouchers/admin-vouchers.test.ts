@@ -289,6 +289,32 @@ describe("voucher server actions", () => {
       expect(await prisma.voucher.count()).toBe(0);
     });
 
+    it.each([
+      ["rỗng", ""],
+      ["toàn khoảng trắng", "   "],
+      ["quá dài", "x".repeat(65)],
+    ])("AZ-7: id %s bị từ chối trước khi chạm DB", async (_label, id) => {
+      const transaction = vi.spyOn(prisma, "$transaction");
+      const updateMany = vi.spyOn(prisma.voucher, "updateMany");
+      const formData = new FormData();
+      formData.set("id", id);
+      formData.set("code", "GIAM10");
+      formData.set("type", "percent");
+      formData.set("value", "10");
+
+      expect(await saveVoucherAction(null, formData)).toEqual({
+        ok: false,
+        error: "Dữ liệu không hợp lệ",
+      });
+      expect(await toggleVoucherActiveAction(id, true)).toMatchObject({
+        ok: false,
+      });
+      expect(await deleteVoucherAction(id)).toMatchObject({ ok: false });
+      expect(transaction).not.toHaveBeenCalled();
+      expect(updateMany).not.toHaveBeenCalled();
+      expect(await prisma.voucher.count()).toBe(0);
+    });
+
     it("trả lỗi tiếng Việt khi dữ liệu sai", async () => {
       const formData = new FormData();
       formData.set("code", "AB");

@@ -60,6 +60,11 @@ export async function saveVoucherAction(
   if (!session) return UNAUTHORIZED;
   const { identity } = session;
 
+  // Khong co truong id = tao moi; co id thi phai la id hop le.
+  const rawId = formData.get("id");
+  const parsedId = rawId === null ? null : adminEntityIdSchema.safeParse(rawId);
+  if (parsedId && !parsedId.success) return INVALID_INPUT;
+
   const isActive = field(formData, "isActive");
   const parsed = voucherInputSchema.safeParse({
     code: field(formData, "code") ?? "",
@@ -80,10 +85,9 @@ export async function saveVoucherAction(
     };
   }
 
-  const id = field(formData, "id")?.trim();
   const actor = { identityId: identity?.id };
-  const result = id
-    ? await updateVoucher(id, parsed.data, actor)
+  const result = parsedId
+    ? await updateVoucher(parsedId.data, parsed.data, actor)
     : await createVoucher(parsed.data, actor);
 
   if (result.ok) safeRevalidatePath(VOUCHERS_PATH);
