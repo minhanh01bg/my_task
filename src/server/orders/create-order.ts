@@ -449,10 +449,11 @@ export async function createOrder(
         if (money.voucherCode) {
           await consumeVoucherUse(tx, money.voucherCode);
           if (input.channel === "online" && input.online) {
-            await assertVoucherCustomerLimit(tx, money.voucherCode, {
-              contactPhone: input.online.contactPhone,
-              customerAccountId: input.customerAccountId,
-            });
+            await assertVoucherCustomerLimit(
+              tx,
+              money.voucherCode,
+              input.customerAccountId,
+            );
           }
         }
 

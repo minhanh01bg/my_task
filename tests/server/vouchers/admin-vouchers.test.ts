@@ -354,7 +354,10 @@ describe("voucher server actions", () => {
         expect(await getMaxUsesPerCustomer()).toBeNull();
         expect(
           await saveVoucherCustomerLimitAction(null, limitForm(" 2 ")),
-        ).toMatchObject({ ok: true });
+        ).toMatchObject({
+          ok: true,
+          message: expect.stringContaining("phải đăng nhập"),
+        });
         expect(await getMaxUsesPerCustomer()).toBe(2);
 
         expect(

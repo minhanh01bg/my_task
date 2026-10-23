@@ -61,8 +61,9 @@ export function VoucherCustomerLimitForm({
           className="h-12"
         />
         <p className="text-muted-foreground text-xs">
-          Tính theo số điện thoại hoặc tài khoản của khách, áp dụng cho mọi mã
-          khi đặt hàng online; đơn đã huỷ không tính.
+          Khi đặt giới hạn, khách phải đăng nhập tài khoản mới dùng được mã giảm
+          giá (khách vãng lai không dùng được mã). Tính theo tài khoản của
+          khách, áp dụng cho mọi mã khi đặt hàng online; đơn đã huỷ không tính.
         </p>
       </div>
 

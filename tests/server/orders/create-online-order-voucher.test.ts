@@ -12,6 +12,7 @@ const productId = "voucher-test-product";
 const PER_CUSTOMER_KEY = "voucher.maxUsesPerCustomer";
 const PER_CUSTOMER_MESSAGE =
   "Bạn đã dùng hết số lần cho phép của mã giảm giá này";
+const LOGIN_REQUIRED_MESSAGE = "Vui lòng đăng nhập để dùng mã giảm giá này";
 const GENERIC_VOUCHER_MESSAGE =
   "Mã giảm giá không hợp lệ hoặc không áp dụng được cho đơn này";
 
@@ -380,28 +381,73 @@ describe("BL-3: giới hạn số lần mỗi khách dùng một mã", () => {
     ).usedCount;
   }
 
-  it("giới hạn 1: đơn thứ hai cùng SĐT (cả dạng +84) bị từ chối, không tiêu lượt", async () => {
+  function customerAccount(phoneNormalized = "+84900000091") {
+    return prisma.customerAccount.create({
+      data: {
+        phoneNormalized,
+        displayName: "Khách voucher",
+        passwordHash: "x",
+      },
+    });
+  }
+
+  it("đang giới hạn: khách vãng lai phải đăng nhập, không tiêu lượt, không tạo đơn", async () => {
     await voucher();
     await limitPerCustomer("1");
 
-    await createOnlineOrder(checkout({ voucherCode: "GIAM10" }));
-    for (const contactPhone of ["0912345678", "+84912345678"]) {
+    // Đổi SĐT không còn là cách dùng lại mã: khách vãng lai không dùng được.
+    for (const contactPhone of ["0912345678", "0987654321"]) {
       await expect(
         createOnlineOrder(checkout({ voucherCode: "GIAM10", contactPhone })),
       ).rejects.toMatchObject({
         code: "VOUCHER_INVALID",
-        message: PER_CUSTOMER_MESSAGE,
+        message: LOGIN_REQUIRED_MESSAGE,
       });
     }
 
-    expect(await usedCount()).toBe(1);
+    expect(await usedCount()).toBe(0);
+    expect(await prisma.order.count({ where: { channel: "online" } })).toBe(0);
+    expect(
+      (await prisma.product.findUniqueOrThrow({ where: { id: productId } }))
+        .stock,
+    ).toBe(50);
+    // Không kèm mã thì khách vãng lai vẫn đặt được.
+    await expect(createOnlineOrder(checkout())).resolves.toMatchObject({
+      duplicated: false,
+    });
+  });
+
+  it("giới hạn 2: tài khoản dùng được 2 lần, lần thứ 3 bị từ chối, không tiêu lượt", async () => {
+    await voucher();
+    await limitPerCustomer("2");
+    const account = await customerAccount();
+
+    for (let index = 0; index < 2; index += 1) {
+      await expect(
+        createOnlineOrder(checkout({ voucherCode: "GIAM10" }), {
+          customerAccountId: account.id,
+        }),
+      ).resolves.toMatchObject({ duplicated: false });
+    }
+    await expect(
+      createOnlineOrder(checkout({ voucherCode: "GIAM10" }), {
+        customerAccountId: account.id,
+      }),
+    ).rejects.toMatchObject({
+      code: "VOUCHER_INVALID",
+      message: PER_CUSTOMER_MESSAGE,
+    });
+
+    expect(await usedCount()).toBe(2);
     expect(await prisma.order.count({ where: { voucherCode: "GIAM10" } })).toBe(
-      1,
+      2,
     );
-    // Khách khác vẫn dùng được mã.
+    // Tài khoản khác vẫn dùng được mã.
+    const other = await customerAccount("+84900000092");
     await expect(
       createOnlineOrder(
         checkout({ voucherCode: "GIAM10", contactPhone: "0987654321" }),
+        { customerAccountId: other.id },
       ),
     ).resolves.toMatchObject({ duplicated: false });
   });
@@ -409,13 +455,7 @@ describe("BL-3: giới hạn số lần mỗi khách dùng một mã", () => {
   it("đếm theo tài khoản dù khách đổi SĐT", async () => {
     await voucher();
     await limitPerCustomer("1");
-    const account = await prisma.customerAccount.create({
-      data: {
-        phoneNormalized: "+84900000091",
-        displayName: "Khách voucher",
-        passwordHash: "x",
-      },
-    });
+    const account = await customerAccount();
 
     await createOnlineOrder(checkout({ voucherCode: "GIAM10" }), {
       customerAccountId: account.id,
@@ -432,17 +472,22 @@ describe("BL-3: giới hạn số lần mỗi khách dùng một mã", () => {
   it("đơn đã huỷ không tính: huỷ đơn đầu thì khách dùng lại được", async () => {
     await voucher();
     await limitPerCustomer("1");
+    const { id: customerAccountId } = await customerAccount();
 
-    const first = await createOnlineOrder(checkout({ voucherCode: "GIAM10" }));
+    const first = await createOnlineOrder(checkout({ voucherCode: "GIAM10" }), {
+      customerAccountId,
+    });
     await cancelOrder(first.order.id);
 
     await expect(
-      createOnlineOrder(checkout({ voucherCode: "GIAM10" })),
+      createOnlineOrder(checkout({ voucherCode: "GIAM10" }), {
+        customerAccountId,
+      }),
     ).resolves.toMatchObject({ duplicated: false });
     expect(await usedCount()).toBe(1);
   });
 
-  it("chưa đặt giới hạn: cùng khách dùng mã nhiều lần như trước", async () => {
+  it("chưa đặt giới hạn: khách vãng lai dùng mã nhiều lần như trước", async () => {
     await voucher();
 
     await createOnlineOrder(checkout({ voucherCode: "GIAM10" }));
