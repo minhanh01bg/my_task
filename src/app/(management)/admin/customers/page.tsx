@@ -3,6 +3,7 @@ import {
   Lock,
   LockOpen,
   MagnifyingGlass,
+  PhoneX,
   ShoppingBag,
   User,
 } from "@phosphor-icons/react/dist/ssr";
@@ -34,7 +35,10 @@ import {
 import { parsePageParam } from "@/server/admin/pagination";
 import { requireAdminSession } from "@/server/auth/require-admin-session";
 
-import { toggleCustomerAccountAction } from "./actions";
+import {
+  releaseCustomerPhoneAction,
+  toggleCustomerAccountAction,
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -92,6 +96,32 @@ function ToggleAccount({ account }: { account: AdminCustomerListItem }) {
           : `Khóa tài khoản ${account.displayName}`
       }
     />
+  );
+}
+
+/** Chỉ tài khoản chưa có đơn mới xóa được; server kiểm tra lại. */
+function ReleasePhone({ account }: { account: AdminCustomerListItem }) {
+  return (
+    <ConfirmAction
+      action={releaseCustomerPhoneAction.bind(null, account.id)}
+      triggerLabel="Giải phóng số điện thoại"
+      triggerVariant="ghost"
+      triggerClassName="text-destructive"
+      title={`Giải phóng số ${account.phoneNormalized}?`}
+      description={`Tài khoản “${account.displayName}” chưa có đơn hàng sẽ bị xóa vĩnh viễn cùng phiên đăng nhập và thông báo. Đánh giá đã đăng vẫn giữ nhưng không còn gắn với tài khoản. Chủ số điện thoại có thể đăng ký lại.`}
+      confirmLabel="Xóa tài khoản"
+      triggerIcon={<PhoneX aria-hidden="true" className="size-4" />}
+      triggerAriaLabel={`Giải phóng số điện thoại ${account.phoneNormalized}`}
+    />
+  );
+}
+
+function AccountActions({ account }: { account: AdminCustomerListItem }) {
+  return (
+    <div className="flex items-center justify-end gap-1">
+      {account._count.orders === 0 ? <ReleasePhone account={account} /> : null}
+      <ToggleAccount account={account} />
+    </div>
   );
 }
 
@@ -192,7 +222,7 @@ export default async function CustomersPage({
               </dl>
               <div className="flex items-center justify-between gap-3">
                 <OrdersLink account={account} />
-                <ToggleAccount account={account} />
+                <AccountActions account={account} />
               </div>
             </li>
           ))}
@@ -232,7 +262,7 @@ export default async function CustomersPage({
                     />
                   </TableCell>
                   <TableCell className="pr-6 text-right">
-                    <ToggleAccount account={account} />
+                    <AccountActions account={account} />
                   </TableCell>
                 </TableRow>
               ))}
