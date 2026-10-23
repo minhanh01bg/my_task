@@ -41,35 +41,35 @@ describe("saveProductAction — xử lý lưu và bỏ ảnh sản phẩm", () =
     expect(saved?.imageUrl).toBe("/uploads/products/test-image-123.webp");
   });
 
-  it.each(["/uploads/0123abcd.webp", "https://cdn.example.com/a.webp"])(
-    "chấp nhận ảnh %s (WEB-7a)",
-    async (imageUrl) => {
-      vi.spyOn(requireAdminModule, "requireAdminSession").mockResolvedValue({
-        authorized: true,
-        identity: {
-          id: "admin-1",
-          username: "admin",
-          role: "admin",
-          version: 1,
-        },
-      });
-      const formData = new FormData();
-      Object.entries({
-        name: "Test Image Product Valid",
-        unit: "gói",
-        price: "1000",
-        costPrice: "0",
-        stock: "1",
-        imageUrl,
-      }).forEach(([key, value]) => formData.set(key, value));
+  it.each([
+    "/uploads/0123abcd.webp",
+    "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400",
+  ])("chấp nhận ảnh %s (WEB-7a, WB-7)", async (imageUrl) => {
+    vi.spyOn(requireAdminModule, "requireAdminSession").mockResolvedValue({
+      authorized: true,
+      identity: {
+        id: "admin-1",
+        username: "admin",
+        role: "admin",
+        version: 1,
+      },
+    });
+    const formData = new FormData();
+    Object.entries({
+      name: "Test Image Product Valid",
+      unit: "gói",
+      price: "1000",
+      costPrice: "0",
+      stock: "1",
+      imageUrl,
+    }).forEach(([key, value]) => formData.set(key, value));
 
-      expect(await saveProductAction(formData)).toEqual({ ok: true });
-      const saved = await prisma.product.findFirst({
-        where: { name: "Test Image Product Valid" },
-      });
-      expect(saved?.imageUrl).toBe(imageUrl);
-    },
-  );
+    expect(await saveProductAction(formData)).toEqual({ ok: true });
+    const saved = await prisma.product.findFirst({
+      where: { name: "Test Image Product Valid" },
+    });
+    expect(saved?.imageUrl).toBe(imageUrl);
+  });
 
   it("đổi danh mục sản phẩm có ảnh mặc định mà không làm mất ảnh", async () => {
     vi.spyOn(requireAdminModule, "requireAdminSession").mockResolvedValue({
@@ -127,6 +127,10 @@ describe("saveProductAction — xử lý lưu và bỏ ảnh sản phẩm", () =
     "https://127.0.0.1/a.webp",
     "https://[::1]/a.webp",
     "https://user:pass@example.com/a.webp",
+    // WB-7: next/image chỉ cho images.unsplash.com; POS tải thẳng URL ảnh
+    "https://example.com/a.jpg",
+    "https://cdn.example.com/a.webp",
+    "http://images.unsplash.com/x",
   ])(
     "từ chối đường dẫn ảnh không hợp lệ %s bằng thông báo tiếng Việt",
     async (imageUrl) => {
@@ -150,7 +154,8 @@ describe("saveProductAction — xử lý lưu và bỏ ảnh sản phẩm", () =
       }).forEach(([key, value]) => formData.set(key, value));
       expect(await saveProductAction(formData)).toEqual({
         ok: false,
-        message: "Đường dẫn ảnh sản phẩm không hợp lệ",
+        message:
+          "Ảnh sản phẩm chỉ được dùng ảnh tải lên hoặc ảnh từ images.unsplash.com",
       });
       expect(
         await prisma.product.count({

@@ -6,7 +6,7 @@ import { z } from "zod";
 z.config({ jitless: true });
 
 import { MAX_INT_VND } from "@/lib/money";
-import { isPublicHttpsUrl } from "@/lib/safe-url";
+import { isAllowedProductImageUrl } from "@/lib/product-image-url";
 import {
   ADMIN_UNAUTHORIZED_MESSAGE,
   adminEntityIdSchema,
@@ -54,20 +54,10 @@ const schema = z.object({
   originalStock: z.coerce.number().optional(),
   aliases: z.string().nullable(),
   imageUrl: z
-    .union(
-      [
-        z.literal(""),
-        // /products/<file> (anh mau) va /uploads/[products/]<file> (anh tai len)
-        z
-          .string()
-          .regex(
-            /^\/(?:products\/|uploads\/(?:products\/)?)[a-zA-Z0-9][a-zA-Z0-9.-]*$/,
-          ),
-        z
-          .string()
-          .refine(isPublicHttpsUrl, "Ảnh phải dùng đường dẫn https công khai"),
-      ],
-      { error: "Đường dẫn ảnh sản phẩm không hợp lệ" },
+    .string()
+    .refine(
+      isAllowedProductImageUrl,
+      "Ảnh sản phẩm chỉ được dùng ảnh tải lên hoặc ảnh từ images.unsplash.com",
     )
     .nullable(),
 });

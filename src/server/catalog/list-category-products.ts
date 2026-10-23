@@ -1,6 +1,7 @@
 import { cache } from "react";
 
 import type { OnlineProduct } from "@/features/online-store/types";
+import { withSafeProductImage } from "@/lib/product-image-url";
 import { cachedPublic } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
@@ -59,7 +60,7 @@ async function loadCategoryProducts(
 
   return {
     category: { id: category.id, name: category.name, slug: category.slug },
-    products,
+    products: products.map(withSafeProductImage),
     total,
     page,
     pageSize: CATEGORY_PAGE_SIZE,

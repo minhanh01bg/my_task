@@ -1,3 +1,4 @@
+import { withSafeProductImage } from "@/lib/product-image-url";
 import { prisma } from "@/server/db/prisma";
 import type { CatalogResponse } from "@/types/catalog";
 
@@ -31,7 +32,8 @@ export async function getPosCatalog(): Promise<CatalogResponse> {
 
   return {
     categories,
-    products,
+    // Máy POS tải thẳng URL ảnh: ảnh cũ ngoài danh sách cho phép thành null.
+    products: products.map(withSafeProductImage),
     fetchedAt: new Date().toISOString(),
   };
 }

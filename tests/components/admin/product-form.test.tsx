@@ -300,4 +300,34 @@ describe("ProductForm (Admin)", () => {
     const form = container.querySelector("form")!;
     expect(new FormData(form).get("originalStock")).toBeNull();
   });
+
+  it.each([
+    ["http://cdn.example.com/a.jpg", ""],
+    ["https://example.com/a.jpg", ""],
+    ["/uploads/products/abc123.webp", "/uploads/products/abc123.webp"],
+  ])(
+    "ảnh cũ %s không chặn lưu: form gửi imageUrl %j (WB-7)",
+    (imageUrl, expected) => {
+      const { container } = render(
+        <ProductForm
+          categories={mockCategories}
+          product={{
+            id: "prod-legacy-image",
+            name: "Đường trắng",
+            aliases: null,
+            sku: null,
+            categoryId: null,
+            unit: "kg",
+            stock: 1,
+            price: 25000,
+            costPrice: 20000,
+            imageUrl,
+          }}
+        />,
+      );
+
+      const form = container.querySelector("form")!;
+      expect(new FormData(form).get("imageUrl")).toBe(expected);
+    },
+  );
 });

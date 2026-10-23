@@ -1,4 +1,5 @@
 import type { OnlineProduct } from "@/features/online-store/types";
+import { withSafeProductImage } from "@/lib/product-image-url";
 import { prisma } from "@/server/db/prisma";
 
 /**
@@ -33,6 +34,6 @@ export async function getWishlistProducts(
   const byId = new Map(rows.map((row) => [row.id, row]));
   return ids.flatMap((id) => {
     const row = byId.get(id);
-    return row ? [row] : [];
+    return row ? [withSafeProductImage(row)] : [];
   });
 }

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
 import { ImageUploader } from "@/features/product-image/image-uploader";
+import { sanitizeProductImageUrl } from "@/lib/product-image-url";
 import type { CatalogCategory } from "@/types/catalog";
 
 import { saveProductAction } from "./actions";
@@ -42,7 +43,10 @@ export function ProductForm({
   const formRef = useRef<HTMLFormElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [imageUrl, setImageUrl] = useState(product?.imageUrl ?? "");
+  // Ảnh cũ ngoài danh sách cho phép coi như chưa có ảnh để không chặn lưu.
+  const [imageUrl, setImageUrl] = useState(
+    sanitizeProductImageUrl(product?.imageUrl) ?? "",
+  );
   const [categoryId, setCategoryId] = useState(product?.categoryId ?? "");
   const [unit, setUnit] = useState(product?.unit ?? "cái");
   const [isSaving, setIsSaving] = useState(false);
@@ -68,7 +72,7 @@ export function ProductForm({
       const restoreState = window.setTimeout(() => {
         setCategoryId(values.categoryId ?? "");
         setUnit(values.unit ?? "cái");
-        setImageUrl(values.imageUrl ?? "");
+        setImageUrl(sanitizeProductImageUrl(values.imageUrl) ?? "");
         setMessage("Đã khôi phục thông tin đang nhập dở");
       }, 0);
 

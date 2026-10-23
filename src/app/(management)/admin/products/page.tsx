@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatVnd } from "@/lib/money";
+import { sanitizeProductImageUrl } from "@/lib/product-image-url";
 import {
   findEditableProduct,
   isProductStockStatus,
@@ -194,7 +195,7 @@ export default async function ProductsPage({
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <ProductImage
-                          src={product.imageUrl}
+                          src={sanitizeProductImageUrl(product.imageUrl)}
                           name={product.name}
                           alt={`Ảnh ${product.name}`}
                           size={48}
