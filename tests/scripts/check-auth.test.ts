@@ -114,4 +114,54 @@ describe("scripts/check-auth.ts", () => {
     expect(output).not.toContain("check-auth-test-host");
     expect(output).not.toContain("duong-dan-rieng");
   }, 60_000);
+
+  it("still names the weak and the malformed hash when production would refuse to start", async () => {
+    const output = await checkAuth({
+      NODE_ENV: "production",
+      STORE_PASSWORD_HASH: FIXTURE_HASH,
+      OWNER_PASSWORD_HASH: "khong-phai-hash",
+    });
+
+    expect(output).toContain(
+      "STORE_PASSWORD_HASH: là hash mẫu đã công khai hoặc của mật khẩu dễ đoán",
+    );
+    expect(output).toContain("OWNER_PASSWORD_HASH: SAI ĐỊNH DẠNG");
+    expect(output).not.toContain(FIXTURE_HASH.slice(0, 16));
+    expect(output).not.toContain(FIXTURE_HASH.slice(-16));
+    expect(output).not.toContain("khong-phai-hash");
+    expect(output).not.toContain("123456");
+  }, 60_000);
+
+  it("prints only the scheme and host of a server DATABASE_URL", async () => {
+    const output = await checkAuth({
+      DATABASE_URL:
+        "postgresql://ten-dang-nhap:mat-khau-db@db.check-auth.example:5432/ten-db?sslmode=require",
+    });
+
+    expect(output).toContain(
+      "DATABASE_URL: postgresql://db.check-auth.example",
+    );
+    for (const secret of [
+      "ten-dang-nhap",
+      "mat-khau-db",
+      "ten-db",
+      "sslmode",
+      "5432",
+    ]) {
+      expect(output).not.toContain(secret);
+    }
+  }, 60_000);
+
+  it("prints the file path of a SQLite DATABASE_URL without its parameters", async () => {
+    // DB test (vitest.config.ts), de script khong tao file SQLite moi.
+    const dbFile = (process.env.DATABASE_URL ?? "file:./prisma/test.db").split(
+      "?",
+    )[0];
+    const output = await checkAuth({
+      DATABASE_URL: `${dbFile}?socket_timeout=10`,
+    });
+
+    expect(output).toContain(`DATABASE_URL: ${dbFile}\n`);
+    expect(output).not.toContain("socket_timeout");
+  }, 60_000);
 });

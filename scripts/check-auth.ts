@@ -1,11 +1,12 @@
+// Không import src/config/env (kiểm tra env ngay khi import): env sai, vd hash
+// yếu ở production, thì script phải vẫn chẩn đoán được.
 import {
   isWeakPasswordHash,
   type ParsedPasswordHash,
   parsePasswordHash,
   passwordHashKey,
-} from "../src/config/env";
+} from "../src/config/password-hash";
 import { prisma } from "../src/server/db/prisma";
-import { ensureDefaultAdminIdentity } from "../src/server/auth/session";
 
 const HASH_COMMAND = "pnpm tsx scripts/hash-password.ts";
 
@@ -14,6 +15,20 @@ function maskedHost(url: string): string {
   try {
     const labels = new URL(url).hostname.split(".");
     return labels.length > 2 ? `***.${labels.slice(-2).join(".")}` : "***";
+  } catch {
+    return "***";
+  }
+}
+
+/**
+ * SQLite: scheme và đường dẫn file (bỏ tham số). URL khác chỉ hiện scheme và
+ * host: user, mật khẩu, port, tên database và tham số đều có thể là bí mật.
+ */
+function maskedDatabaseUrl(url: string): string {
+  if (url.startsWith("file:")) return url.split("?")[0];
+  try {
+    const { protocol, hostname } = new URL(url);
+    return hostname ? `${protocol}//${hostname}` : `${protocol}//***`;
   } catch {
     return "***";
   }
@@ -67,7 +82,7 @@ async function main() {
   const dbUrl = process.env.DATABASE_URL;
 
   console.log(
-    `   - DATABASE_URL: ${dbUrl || "(Chưa đặt, mặc định file:./dev.db)"}`,
+    `   - DATABASE_URL: ${dbUrl ? maskedDatabaseUrl(dbUrl) : "(Chưa đặt, mặc định file:./dev.db)"}`,
   );
   const store = reportPasswordHash(
     "STORE_PASSWORD_HASH",
@@ -111,19 +126,30 @@ async function main() {
 
   // 2. Kiểm tra Database & Admin Identity
   console.log("\n2️⃣ Kiểm tra Database SQLite:");
+  // session.ts nạp src/config/env, nên nạp muộn: env sai thì báo rồi bỏ qua.
+  let session: typeof import("../src/server/auth/session") | null = null;
   try {
-    const admin = await ensureDefaultAdminIdentity();
-    console.log(`   ✅ Kết nối Database thành công!`);
+    session = await import("../src/server/auth/session");
+  } catch {
     console.log(
-      `   ✅ Tài khoản Admin: '${admin.username}' (id: ${admin.id}, role: ${admin.role})`,
+      "   ❌ Biến môi trường không hợp lệ nên server sẽ không khởi động (xem mục 1 và lỗi ở trên); bỏ qua kiểm tra database.",
     );
+  }
+  if (session) {
+    try {
+      const admin = await session.ensureDefaultAdminIdentity();
+      console.log(`   ✅ Kết nối Database thành công!`);
+      console.log(
+        `   ✅ Tài khoản Admin: '${admin.username}' (id: ${admin.id}, role: ${admin.role})`,
+      );
 
-    const sessionCount = await prisma.adminSession.count();
-    console.log(`   ✅ Số phiên đăng nhập hiện có trong DB: ${sessionCount}`);
-  } catch (err) {
-    console.error("   ❌ Lỗi kết nối hoặc bảng cơ sở dữ liệu chưa sẵn sàng:");
-    console.error(err);
-    console.log("   👉 Hãy chạy: pnpm db:push");
+      const sessionCount = await prisma.adminSession.count();
+      console.log(`   ✅ Số phiên đăng nhập hiện có trong DB: ${sessionCount}`);
+    } catch (err) {
+      console.error("   ❌ Lỗi kết nối hoặc bảng cơ sở dữ liệu chưa sẵn sàng:");
+      console.error(err);
+      console.log("   👉 Hãy chạy: pnpm db:push");
+    }
   }
 
   console.log("\n==========================================");
