@@ -115,6 +115,50 @@ describe("giỏ online chỉ giữ số lượng nguyên", () => {
     expect(result.current.lines).toEqual([]);
   });
 
+  describe("trần 50 mỗi dòng như server", () => {
+    const nuoc: OnlineProduct = { ...gao, id: "nuoc", stock: 500 };
+
+    it("thêm nhiều lần không vượt 50, báo đúng lý do", () => {
+      const { result } = renderCart();
+
+      let added!: ReturnType<typeof result.current.add>;
+      act(() => {
+        added = result.current.add(nuoc, 60);
+      });
+      expect(result.current.lines[0]?.quantity).toBe(50);
+      expect(added.quantity).toBe(50);
+
+      act(() => {
+        added = result.current.add(nuoc, 1);
+      });
+      expect(added).toMatchObject({
+        status: "capped",
+        quantity: 50,
+        maxAvailable: 50,
+        message: "Mỗi sản phẩm chỉ được đặt tối đa 50 trong một đơn",
+      });
+      expect(result.current.lines[0]?.quantity).toBe(50);
+    });
+
+    it("đặt số lượng lớn thì dừng ở 50", () => {
+      const { result } = renderCart();
+      act(() => {
+        result.current.add(nuoc);
+      });
+      act(() => result.current.setQuantity(nuoc.id, 99));
+      expect(result.current.lines[0]?.quantity).toBe(50);
+    });
+
+    it("giỏ cũ trong localStorage vượt 50 được hạ về 50", () => {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify([{ ...nuoc, quantity: 120 }]),
+      );
+      const { result } = renderCart();
+      expect(result.current.lines[0]?.quantity).toBe(50);
+    });
+  });
+
   it("nút tăng trong giỏ bị khoá khi đạt phần nguyên của tồn kho", () => {
     function Harness() {
       const { add, openDrawer } = useOnlineCart();

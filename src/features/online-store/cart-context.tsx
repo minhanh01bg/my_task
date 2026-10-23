@@ -11,6 +11,11 @@ import {
   useSyncExternalStore,
 } from "react";
 
+import {
+  MAX_ONLINE_LINE_QUANTITY,
+  ONLINE_LINE_QUANTITY_MESSAGE,
+} from "@/types/online-order";
+
 import type {
   CartMutationResult,
   OnlineCartLine,
@@ -21,10 +26,19 @@ const STORAGE_KEY = "online-cart-v1";
 
 /**
  * Don online chi nhan so luong nguyen (`z.number().int()`) nhung ton kho co
- * the le (2.5 kg), nen so luong toi da la phan nguyen cua ton kho.
+ * the le (2.5 kg), nen so luong toi da la phan nguyen cua ton kho — va khong
+ * qua tran moi dong ma server chap nhan.
  */
 function maxWholeQuantity(stock: number) {
-  return Number.isFinite(stock) ? Math.floor(stock) : 0;
+  return Number.isFinite(stock)
+    ? Math.min(MAX_ONLINE_LINE_QUANTITY, Math.floor(stock))
+    : 0;
+}
+
+function cappedMessage(stock: number) {
+  return Math.floor(stock) > MAX_ONLINE_LINE_QUANTITY
+    ? ONLINE_LINE_QUANTITY_MESSAGE
+    : "Đã đạt số lượng tối đa trong kho";
 }
 
 function clampWholeQuantity(quantity: number, stock: number) {
@@ -138,7 +152,7 @@ export function OnlineCartProvider({
             productName: product.name,
             quantity: found.quantity,
             maxAvailable: maxQuantity,
-            message: "Đã đạt số lượng tối đa trong kho",
+            message: cappedMessage(product.stock),
           };
           setFeedback(result);
           return result;
@@ -160,7 +174,7 @@ export function OnlineCartProvider({
           ...(isCapped
             ? {
                 maxAvailable: maxQuantity,
-                message: "Đã đạt số lượng tối đa trong kho",
+                message: cappedMessage(product.stock),
               }
             : {}),
         };
