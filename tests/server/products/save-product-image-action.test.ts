@@ -218,9 +218,10 @@ describe("saveProductAction — xử lý lưu và bỏ ảnh sản phẩm", () =
     formData.set("costPrice", "5000");
     formData.set("stock", "10");
 
-    const result = await saveProductAction(formData);
-    expect(result.ok).toBe(false);
-    expect(result.message).toMatch(/Tên sản phẩm không được để trống/i);
+    expect(await saveProductAction(formData)).toEqual({
+      ok: false,
+      message: expect.stringMatching(/Tên sản phẩm không được để trống/i),
+    });
   });
 
   it("tự động trim tên và đơn vị sản phẩm khi lưu", async () => {
