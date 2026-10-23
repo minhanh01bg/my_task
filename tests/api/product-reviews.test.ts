@@ -12,6 +12,8 @@ import {
 import {
   REVIEW_PRODUCT_ID,
   resetReviewFixtures,
+  seedOrder,
+  seedPurchase,
   seedReviewFixtures,
 } from "../server/reviews/fixtures";
 
@@ -39,6 +41,7 @@ const context = (id = REVIEW_PRODUCT_ID) => ({
 });
 
 let token: string;
+let otherAccountId: string;
 
 function postRequest(
   body: unknown,
@@ -62,8 +65,10 @@ beforeEach(async () => {
   setReviewRateLimiter(allow);
   await prisma.customerSession.deleteMany();
   await resetReviewFixtures();
-  const { accountId } = await seedReviewFixtures();
-  ({ token } = await createCustomerSession(accountId));
+  const fixtures = await seedReviewFixtures();
+  otherAccountId = fixtures.otherAccountId;
+  await seedPurchase(fixtures.accountId, REVIEW_PRODUCT_ID, "api-buyer");
+  ({ token } = await createCustomerSession(fixtures.accountId));
 });
 
 afterEach(() => setReviewRateLimiter(null));
@@ -143,6 +148,64 @@ describe("POST /api/online/products/[id]/reviews", () => {
     );
   });
 
+  it("403 khi khách chưa mua sản phẩm, không ghi đánh giá", async () => {
+    const other = await createCustomerSession(otherAccountId);
+    const response = await POST(
+      postRequest(
+        { rating: 1, content: "Chưa mua nhưng chê cho vui" },
+        `customer_session=${other.token}`,
+      ),
+      context(),
+    );
+    expect(response.status).toBe(403);
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    expect((await response.json()).message).toBe(
+      "Bạn chỉ có thể đánh giá sản phẩm đã mua",
+    );
+    expect(await prisma.productReview.count()).toBe(0);
+  });
+
+  it.each([
+    ["đơn online đã hủy", "online", "cancelled", "cancelled"],
+    ["đơn online đã thanh toán nhưng chưa giao", "online", "paid", "new"],
+  ] as const)(
+    "403 khi chỉ có %s",
+    async (_label, channel, status, fulfillmentStatus) => {
+      await seedOrder({
+        accountId: otherAccountId,
+        productId: REVIEW_PRODUCT_ID,
+        channel,
+        status,
+        fulfillmentStatus,
+        key: "api-not-eligible",
+      });
+      const other = await createCustomerSession(otherAccountId);
+      const response = await POST(
+        postRequest(validBody, `customer_session=${other.token}`),
+        context(),
+      );
+      expect(response.status).toBe(403);
+      expect(await prisma.productReview.count()).toBe(0);
+    },
+  );
+
+  it("201 cho khách mua tại quầy (đơn POS đã thanh toán)", async () => {
+    await seedOrder({
+      accountId: otherAccountId,
+      productId: REVIEW_PRODUCT_ID,
+      channel: "pos",
+      status: "paid",
+      key: "api-pos",
+    });
+    const other = await createCustomerSession(otherAccountId);
+    const response = await POST(
+      postRequest(validBody, `customer_session=${other.token}`),
+      context(),
+    );
+    expect(response.status).toBe(201);
+    expect((await response.json()).review.isVerifiedPurchase).toBe(true);
+  });
+
   it("400 khi dữ liệu không hợp lệ", async () => {
     const response = await POST(
       postRequest({ rating: 9, content: "x" }, `customer_session=${token}`),
@@ -218,14 +281,23 @@ describe("POST /api/online/products/[id]/reviews", () => {
 });
 
 describe("GET /api/online/products/[id]/reviews", () => {
-  it("trả trang đánh giá đã đăng, 10 mỗi trang", async () => {
+  it("trả trang đánh giá đã đăng, 10 mỗi trang, ẩn đánh giá chưa mua", async () => {
     await prisma.productReview.createMany({
-      data: Array.from({ length: 11 }, (_, index) => ({
-        productId: REVIEW_PRODUCT_ID,
-        authorName: `Khách ${index}`,
-        rating: 4,
-        content: "Nội dung đánh giá",
-      })),
+      data: [
+        ...Array.from({ length: 11 }, (_, index) => ({
+          productId: REVIEW_PRODUCT_ID,
+          authorName: `Khách ${index}`,
+          rating: 4,
+          content: "Nội dung đánh giá",
+          isVerifiedPurchase: true,
+        })),
+        {
+          productId: REVIEW_PRODUCT_ID,
+          authorName: "Chưa mua",
+          rating: 1,
+          content: "Đánh giá chưa xác minh",
+        },
+      ],
     });
     const first = await GET(new Request(`${URL_BASE}?page=1`), context());
     expect(first.status).toBe(200);
@@ -234,7 +306,13 @@ describe("GET /api/online/products/[id]/reviews", () => {
     expect(body.items).toHaveLength(10);
 
     const second = await GET(new Request(`${URL_BASE}?page=2`), context());
-    expect((await second.json()).items).toHaveLength(1);
+    const secondItems: { content: string }[] = (await second.json()).items;
+    expect(secondItems).toHaveLength(1);
+    expect(
+      [...body.items, ...secondItems].some(
+        (r: { content: string }) => r.content === "Đánh giá chưa xác minh",
+      ),
+    ).toBe(false);
 
     const noPage = await GET(new Request(URL_BASE), context());
     expect((await noPage.json()).page).toBe(1);

@@ -50,6 +50,7 @@ export async function seedReviewFixtures() {
 export async function seedOrder(options: {
   accountId: string;
   productId: string;
+  channel?: "online" | "pos";
   status?: string;
   fulfillmentStatus?: string | null;
   key: string;
@@ -58,7 +59,7 @@ export async function seedOrder(options: {
     data: {
       code: `TR-${options.key}`,
       clientId: `test-review-${options.key}`,
-      channel: "online",
+      channel: options.channel ?? "online",
       status: options.status ?? "pending",
       fulfillmentStatus: options.fulfillmentStatus ?? null,
       customerAccountId: options.accountId,
@@ -75,5 +76,20 @@ export async function seedOrder(options: {
         },
       },
     },
+  });
+}
+
+/** Don online da giao xong — du dieu kien danh gia san pham. */
+export function seedPurchase(
+  accountId: string,
+  productId: string,
+  key: string,
+) {
+  return seedOrder({
+    accountId,
+    productId,
+    status: "paid",
+    fulfillmentStatus: "completed",
+    key,
   });
 }

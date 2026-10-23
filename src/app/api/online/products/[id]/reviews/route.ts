@@ -8,12 +8,25 @@ import {
 } from "@/server/customer-auth/session";
 import { hasSafeMutationOrigin } from "@/server/http/origin";
 import { readJsonBody } from "@/server/http/read-json-body";
-import { createReview } from "@/server/reviews/create-review";
+import {
+  createReview,
+  type CreateReviewResult,
+} from "@/server/reviews/create-review";
 import { listProductReviews } from "@/server/reviews/list-reviews";
 import { checkReviewRateLimit } from "@/server/reviews/review-rate-limit";
 import { createReviewInputSchema } from "@/types/review";
 
 const NO_STORE = { "Cache-Control": "private, no-store" };
+
+/** Chua mua san pham → 403: da dang nhap nhung khong du quyen danh gia. */
+const REVIEW_FAILURE_STATUS = {
+  invalid: 400,
+  not_found: 404,
+  not_purchased: 403,
+} satisfies Record<
+  Extract<CreateReviewResult, { ok: false }>["reason"],
+  number
+>;
 
 /** `page` sai kieu → 400 thay vi am tham ve trang 1 (client luon gui so nguyen). */
 const pageQuerySchema = z.object({
@@ -95,10 +108,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     if (!result.ok) {
       return NextResponse.json(
         { message: result.message },
-        {
-          status: result.reason === "not_found" ? 404 : 400,
-          headers: NO_STORE,
-        },
+        { status: REVIEW_FAILURE_STATUS[result.reason], headers: NO_STORE },
       );
     }
     return NextResponse.json(

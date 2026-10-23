@@ -1,16 +1,14 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { prisma } from "@/server/db/prisma";
-import {
-  createReview,
-  hasVerifiedPurchase,
-} from "@/server/reviews/create-review";
+import { createReview } from "@/server/reviews/create-review";
 
 import {
   REVIEW_OTHER_PRODUCT_ID,
   REVIEW_PRODUCT_ID,
   resetReviewFixtures,
   seedOrder,
+  seedPurchase,
   seedReviewFixtures,
 } from "./fixtures";
 
@@ -53,6 +51,7 @@ describe("createReview", () => {
     "Shop đóng gói tốt :) giao nhanh; chất lượng 5/5.",
     "Mình thích bản print (in chữ rõ nét).",
   ])("giữ đánh giá tự nhiên có dấu câu: %s", async (content) => {
+    await seedPurchase(accountId, REVIEW_PRODUCT_ID, "punctuation");
     const result = await createReview({
       productId: REVIEW_PRODUCT_ID,
       accountId,
@@ -62,6 +61,8 @@ describe("createReview", () => {
   });
 
   it("tạo đánh giá với tên hiển thị của tài khoản và cập nhật điểm trung bình", async () => {
+    await seedPurchase(accountId, REVIEW_PRODUCT_ID, "buyer-1");
+    await seedPurchase(otherAccountId, REVIEW_PRODUCT_ID, "buyer-2");
     const first = await createReview({
       productId: REVIEW_PRODUCT_ID,
       accountId,
@@ -73,7 +74,7 @@ describe("createReview", () => {
       authorName: "Minh A.",
       rating: 5,
       content: "Cà phê thơm, đóng gói kỹ",
-      isVerifiedPurchase: false,
+      isVerifiedPurchase: true,
     });
     expect(typeof first.review.createdAt).toBe("string");
     // DB giữ tên đầy đủ cho trang admin; chỉ bản công khai bị che.
@@ -131,25 +132,108 @@ describe("createReview", () => {
     }
   });
 
-  it("đánh dấu đã mua khi có đơn đã giao hoặc đã thanh toán chứa sản phẩm", async () => {
-    await seedOrder({
-      accountId,
-      productId: REVIEW_PRODUCT_ID,
-      status: "pending",
-      fulfillmentStatus: "completed",
-      key: "completed",
-    });
-    const verified = await createReview({
+  it("từ chối khách chưa mua sản phẩm, không ghi gì vào DB", async () => {
+    const result = await createReview({
       productId: REVIEW_PRODUCT_ID,
       accountId,
-      input: { rating: 4, content: "Đã mua và dùng thử rồi" },
+      input: { rating: 1, content: "Chưa mua nhưng chê cho vui" },
     });
-    expect(verified.ok && verified.review.isVerifiedPurchase).toBe(true);
+    expect(result).toEqual({
+      ok: false,
+      reason: "not_purchased",
+      message: "Bạn chỉ có thể đánh giá sản phẩm đã mua",
+    });
+    expect(await prisma.productReview.count()).toBe(0);
+    const product = await prisma.product.findUniqueOrThrow({
+      where: { id: REVIEW_PRODUCT_ID },
+      select: { ratingAvg: true, ratingCount: true },
+    });
+    expect(product).toEqual({ ratingAvg: 0, ratingCount: 0 });
+  });
+
+  it.each([
+    [
+      "đơn online đã thanh toán nhưng chưa giao xong",
+      "online",
+      "paid",
+      "ready",
+    ],
+    ["đơn online đã hủy", "online", "cancelled", "cancelled"],
+    ["đơn POS còn nợ", "pos", "debt", null],
+    ["đơn POS đã hủy", "pos", "cancelled", null],
+  ] as const)(
+    "%s không đủ điều kiện đánh giá",
+    async (_label, channel, status, fulfillmentStatus) => {
+      await seedOrder({
+        accountId,
+        productId: REVIEW_PRODUCT_ID,
+        channel,
+        status,
+        fulfillmentStatus,
+        key: "not-eligible",
+      });
+      const result = await createReview({
+        productId: REVIEW_PRODUCT_ID,
+        accountId,
+        input: { rating: 4, content: "Nội dung hợp lệ đủ dài" },
+      });
+      expect(result).toMatchObject({ ok: false, reason: "not_purchased" });
+      expect(await prisma.productReview.count()).toBe(0);
+    },
+  );
+
+  it.each([
+    ["đơn online đã giao xong", "online", "paid", "completed"],
+    ["đơn POS đã thanh toán", "pos", "paid", null],
+  ] as const)(
+    "%s được đánh giá và đánh dấu đã mua",
+    async (_label, channel, status, fulfillmentStatus) => {
+      await seedOrder({
+        accountId,
+        productId: REVIEW_PRODUCT_ID,
+        channel,
+        status,
+        fulfillmentStatus,
+        key: "eligible",
+      });
+      const verified = await createReview({
+        productId: REVIEW_PRODUCT_ID,
+        accountId,
+        input: { rating: 4, content: "Đã mua và dùng thử rồi" },
+      });
+      expect(verified.ok && verified.review.isVerifiedPurchase).toBe(true);
+      expect(verified.ok && verified.summary).toEqual({ avg: 4, count: 1 });
+    },
+  );
+
+  it("điểm trung bình bỏ qua đánh giá chưa xác minh đã mua", async () => {
+    await prisma.productReview.create({
+      data: {
+        productId: REVIEW_PRODUCT_ID,
+        accountId: otherAccountId,
+        authorName: "Thu Trang",
+        rating: 1,
+        content: "Đánh giá cũ chưa mua hàng",
+      },
+    });
+    await seedPurchase(accountId, REVIEW_PRODUCT_ID, "rating");
+    const result = await createReview({
+      productId: REVIEW_PRODUCT_ID,
+      accountId,
+      input: { rating: 5, content: "Hàng chuẩn, giao nhanh" },
+    });
+    expect(result.ok && result.summary).toEqual({ avg: 5, count: 1 });
+    const product = await prisma.product.findUniqueOrThrow({
+      where: { id: REVIEW_PRODUCT_ID },
+      select: { ratingAvg: true, ratingCount: true },
+    });
+    expect(product).toEqual({ ratingAvg: 5, ratingCount: 1 });
   });
 });
 
 describe("createReview — mỗi tài khoản một đánh giá / sản phẩm", () => {
   it("gửi lần hai cập nhật đánh giá cũ thay vì tạo mới, ratingCount vẫn là 1", async () => {
+    await seedPurchase(accountId, REVIEW_PRODUCT_ID, "update");
     const first = await createReview({
       productId: REVIEW_PRODUCT_ID,
       accountId,
@@ -158,12 +242,6 @@ describe("createReview — mỗi tài khoản một đánh giá / sản phẩm",
     expect(first.ok && first.updated).toBe(false);
     if (!first.ok) return;
 
-    await seedOrder({
-      accountId,
-      productId: REVIEW_PRODUCT_ID,
-      status: "paid",
-      key: "paid-later",
-    });
     const second = await createReview({
       productId: REVIEW_PRODUCT_ID,
       accountId,
@@ -187,7 +265,49 @@ describe("createReview — mỗi tài khoản một đánh giá / sản phẩm",
     expect(product).toEqual({ ratingAvg: 5, ratingCount: 1 });
   });
 
+  it("đánh giá cũ chưa mua: cập nhật bị từ chối, mua rồi gửi lại thì được tính", async () => {
+    const legacy = await prisma.productReview.create({
+      data: {
+        productId: REVIEW_PRODUCT_ID,
+        accountId,
+        authorName: "Minh Anh",
+        rating: 1,
+        content: "Đánh giá cũ chưa mua hàng",
+      },
+    });
+
+    const rejected = await createReview({
+      productId: REVIEW_PRODUCT_ID,
+      accountId,
+      input: { rating: 1, content: "Sửa lại cho tệ hơn nữa" },
+    });
+    expect(rejected).toMatchObject({ ok: false, reason: "not_purchased" });
+    expect(
+      await prisma.productReview.findUniqueOrThrow({
+        where: { id: legacy.id },
+        select: { content: true, isVerifiedPurchase: true },
+      }),
+    ).toEqual({
+      content: "Đánh giá cũ chưa mua hàng",
+      isVerifiedPurchase: false,
+    });
+
+    await seedPurchase(accountId, REVIEW_PRODUCT_ID, "paid-later");
+    const updated = await createReview({
+      productId: REVIEW_PRODUCT_ID,
+      accountId,
+      input: { rating: 4, content: "Đã mua về dùng, khá ổn" },
+    });
+    expect(updated.ok && updated.updated).toBe(true);
+    expect(updated.ok && updated.review).toMatchObject({
+      id: legacy.id,
+      isVerifiedPurchase: true,
+    });
+    expect(updated.ok && updated.summary).toEqual({ avg: 4, count: 1 });
+  });
+
   it("đánh giá bị ẩn vẫn bị ẩn khi khách gửi lại", async () => {
+    await seedPurchase(accountId, REVIEW_PRODUCT_ID, "hidden");
     const first = await createReview({
       productId: REVIEW_PRODUCT_ID,
       accountId,
@@ -232,38 +352,5 @@ describe("createReview — mỗi tài khoản một đánh giá / sản phẩm",
     };
     await prisma.productReview.create({ data });
     await expect(prisma.productReview.create({ data })).rejects.toThrow();
-  });
-});
-
-describe("hasVerifiedPurchase", () => {
-  it("chỉ tính đơn của đúng tài khoản, đúng sản phẩm, đã giao hoặc đã thanh toán", async () => {
-    await seedOrder({
-      accountId,
-      productId: REVIEW_PRODUCT_ID,
-      status: "pending",
-      fulfillmentStatus: "ready",
-      key: "pending",
-    });
-    await seedOrder({
-      accountId: otherAccountId,
-      productId: REVIEW_PRODUCT_ID,
-      status: "paid",
-      key: "other-account",
-    });
-    await seedOrder({
-      accountId,
-      productId: REVIEW_OTHER_PRODUCT_ID,
-      status: "paid",
-      key: "other-product",
-    });
-    expect(
-      await hasVerifiedPurchase(prisma, accountId, REVIEW_PRODUCT_ID),
-    ).toBe(false);
-    expect(
-      await hasVerifiedPurchase(prisma, otherAccountId, REVIEW_PRODUCT_ID),
-    ).toBe(true);
-    expect(
-      await hasVerifiedPurchase(prisma, accountId, REVIEW_OTHER_PRODUCT_ID),
-    ).toBe(true);
   });
 });

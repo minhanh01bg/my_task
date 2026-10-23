@@ -8,6 +8,8 @@ import {
   type PublicReviewPage,
 } from "@/types/review";
 
+import { countedReviewWhere } from "./product-rating";
+
 export const publicReviewSelect = {
   id: true,
   authorName: true,
@@ -48,14 +50,16 @@ export function toPublicReview(row: PublicReviewRow): PublicReview {
 }
 
 /**
- * Mot trang (10) danh gia `published` cua san pham, moi nhat truoc. Khop index
- * [productId, status, createdAt]. Khong kiem tra san pham ton tai — tra rong.
+ * Mot trang (10) danh gia `published` da xac minh mua cua san pham, moi nhat
+ * truoc — cung bo loc voi diem trung binh nen `total` khop `ratingCount`. Khop
+ * index [productId, status, createdAt]. Khong kiem tra san pham ton tai — tra
+ * rong.
  */
 export async function listProductReviews(
   productId: string,
   page: number,
 ): Promise<PublicReviewPage> {
-  const where = { productId, status: "published" };
+  const where = countedReviewWhere(productId);
   const result = await paginate(
     { page, pageSize: REVIEW_PAGE_SIZE },
     () => prisma.productReview.count({ where }),

@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 
 import { logger } from "@/lib/logger";
+import { REVIEW_NOT_PURCHASED_MESSAGE } from "@/lib/reviews/review-eligibility";
 import { revalidatePublic } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
@@ -12,6 +13,7 @@ import {
 
 import { publicReviewSelect, toPublicReview } from "./list-reviews";
 import { recomputeProductRating } from "./product-rating";
+import { hasVerifiedPurchase } from "./verified-purchase";
 
 export type CreateReviewResult =
   | {
@@ -22,30 +24,8 @@ export type CreateReviewResult =
       updated: boolean;
     }
   | { ok: false; reason: "invalid"; message: string }
-  | { ok: false; reason: "not_found"; message: string };
-
-type DbClient = Prisma.TransactionClient | typeof prisma;
-
-/**
- * "Da mua": co don cua tai khoan chua san pham, da hoan tat
- * (`fulfillmentStatus = completed`, xem `online-order-status.ts`) hoac da
- * thanh toan (`status = paid`).
- */
-export async function hasVerifiedPurchase(
-  db: DbClient,
-  accountId: string,
-  productId: string,
-): Promise<boolean> {
-  const order = await db.order.findFirst({
-    where: {
-      customerAccountId: accountId,
-      items: { some: { productId } },
-      OR: [{ fulfillmentStatus: "completed" }, { status: "paid" }],
-    },
-    select: { id: true },
-  });
-  return order !== null;
-}
+  | { ok: false; reason: "not_found"; message: string }
+  | { ok: false; reason: "not_purchased"; message: string };
 
 function isUniqueViolation(error: unknown): boolean {
   return (
@@ -55,11 +35,12 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 /**
- * Tao danh gia cho khach da dang nhap. Moi tai khoan chi co mot danh gia cho
- * moi san pham (`@@unique([productId, accountId])`): neu da co thi CAP NHAT
- * (rating/noi dung/da mua; danh gia bi an van an) thay vi tao moi. Ten hien thi
- * lay tu tai khoan; ghi review + tinh lai aggregate trong cung transaction,
- * revalidate cache sau khi commit.
+ * Tao danh gia cho khach da dang nhap VA da mua san pham (`hasVerifiedPurchase`);
+ * chua mua thi tu choi, khong ghi gi — ke ca khi sua danh gia cu. Moi tai khoan
+ * chi co mot danh gia cho moi san pham (`@@unique([productId, accountId])`):
+ * neu da co thi CAP NHAT (rating/noi dung/da mua; danh gia bi an van an) thay
+ * vi tao moi. Ten hien thi lay tu tai khoan; ghi review + tinh lai aggregate
+ * trong cung transaction, revalidate cache sau khi commit.
  */
 export async function createReview(params: {
   productId: string;
@@ -87,18 +68,16 @@ export async function createReview(params: {
         },
         select: { id: true },
       });
-      if (!product) return null;
+      if (!product) return "not_found" as const;
       const account = await tx.customerAccount.findFirst({
         where: { id: accountId, disabledAt: null },
         select: { displayName: true },
       });
-      if (!account) return null;
+      if (!account) return "not_found" as const;
+      if (!(await hasVerifiedPurchase(tx, accountId, productId))) {
+        return "not_purchased" as const;
+      }
 
-      const isVerifiedPurchase = await hasVerifiedPurchase(
-        tx,
-        accountId,
-        productId,
-      );
       const existing = await tx.productReview.findUnique({
         where: { productId_accountId: { productId, accountId } },
         select: { id: true },
@@ -107,7 +86,7 @@ export async function createReview(params: {
         authorName: account.displayName,
         rating: parsed.data.rating,
         content: parsed.data.content,
-        isVerifiedPurchase,
+        isVerifiedPurchase: true,
       };
       // Giu nguyen `status`: danh gia admin da an khong duoc tu hien lai.
       const saved = existing
@@ -138,11 +117,18 @@ export async function createReview(params: {
     outcome = await write();
   }
 
-  if (!outcome) {
+  if (outcome === "not_found") {
     return {
       ok: false,
       reason: "not_found",
       message: "Không tìm thấy sản phẩm",
+    };
+  }
+  if (outcome === "not_purchased") {
+    return {
+      ok: false,
+      reason: "not_purchased",
+      message: REVIEW_NOT_PURCHASED_MESSAGE,
     };
   }
 

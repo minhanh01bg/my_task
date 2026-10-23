@@ -3,17 +3,27 @@ import type { Prisma } from "@prisma/client";
 import type { RatingSummary } from "@/types/review";
 
 /**
- * Tinh lai `ratingAvg/ratingCount` cua san pham tu cac review `published`.
- * Chi goi BEN TRONG `$transaction` cung lan ghi review (pool 1 ket noi: dung
- * `tx`, khong dung `prisma`). Ghi thang cot aggregate — khong qua
- * `saveProduct()` vi day khong phai sua thong tin san pham.
+ * Danh gia duoc tinh diem va hien cong khai: `published` VA da xac minh mua
+ * hang. Danh gia chua mua (tai khoan tao hang loat) khong keo diem san pham.
+ */
+export function countedReviewWhere(
+  productId: string,
+): Prisma.ProductReviewWhereInput {
+  return { productId, status: "published", isVerifiedPurchase: true };
+}
+
+/**
+ * Tinh lai `ratingAvg/ratingCount` cua san pham tu cac review duoc tinh diem
+ * (`countedReviewWhere`). Chi goi BEN TRONG `$transaction` cung lan ghi review
+ * (pool 1 ket noi: dung `tx`, khong dung `prisma`). Ghi thang cot aggregate —
+ * khong qua `saveProduct()` vi day khong phai sua thong tin san pham.
  */
 export async function recomputeProductRating(
   tx: Prisma.TransactionClient,
   productId: string,
 ): Promise<RatingSummary> {
   const aggregate = await tx.productReview.aggregate({
-    where: { productId, status: "published" },
+    where: countedReviewWhere(productId),
     _avg: { rating: true },
     _count: { _all: true },
   });

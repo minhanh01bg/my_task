@@ -16,6 +16,7 @@ import {
   containsReviewCode,
   REVIEW_CODE_MESSAGE,
 } from "@/lib/reviews/review-content";
+import { REVIEW_NOT_PURCHASED_MESSAGE } from "@/lib/reviews/review-eligibility";
 import { cn } from "@/lib/utils";
 import {
   REVIEW_CONTENT_MAX,
@@ -139,7 +140,9 @@ export function ProductReviews({
             response,
             response.status === 401
               ? "Vui lòng đăng nhập để gửi đánh giá"
-              : "Không gửi được đánh giá. Vui lòng thử lại.",
+              : response.status === 403
+                ? REVIEW_NOT_PURCHASED_MESSAGE
+                : "Không gửi được đánh giá. Vui lòng thử lại.",
           ),
         );
         return;
@@ -282,8 +285,9 @@ export function ProductReviews({
                 : "Chia sẻ cảm nhận của bạn về sản phẩm"}
             </h3>
             <p className="text-muted-foreground mt-1 text-xs">
-              Mỗi tài khoản có một đánh giá cho sản phẩm; gửi lại sẽ thay thế
-              đánh giá trước đó.
+              Chỉ tài khoản đã mua sản phẩm này mới gửi được đánh giá. Mỗi tài
+              khoản có một đánh giá cho sản phẩm; gửi lại sẽ thay thế đánh giá
+              trước đó.
             </p>
           </div>
 

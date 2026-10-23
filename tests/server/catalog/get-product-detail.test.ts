@@ -94,7 +94,13 @@ describe("getOnlineProductDetail", () => {
         ratingCount: 1,
         reviews: {
           create: [
-            { authorName: "Lan", rating: 4, content: "Cam ngọt, tươi" },
+            {
+              authorName: "Lan",
+              rating: 4,
+              content: "Cam ngọt, tươi",
+              isVerifiedPurchase: true,
+            },
+            { authorName: "Chưa mua", rating: 1, content: "Chưa xác minh" },
             {
               authorName: "Ẩn",
               rating: 1,

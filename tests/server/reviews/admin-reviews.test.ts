@@ -16,6 +16,7 @@ import { createReview } from "@/server/reviews/create-review";
 import {
   REVIEW_PRODUCT_ID,
   resetReviewFixtures,
+  seedPurchase,
   seedReviewFixtures,
 } from "./fixtures";
 
@@ -37,6 +38,7 @@ beforeEach(async () => {
     [accountId, 5],
     [otherAccountId, 3],
   ] as const) {
+    await seedPurchase(id, REVIEW_PRODUCT_ID, `admin-${rating}`);
     const result = await createReview({
       productId: REVIEW_PRODUCT_ID,
       accountId: id,
@@ -58,6 +60,26 @@ describe("admin reviews", () => {
 
     const hidden = await listAdminReviews({ page: 1, status: "hidden" });
     expect(hidden.items.map((r) => r.id)).toEqual([reviewIds[0]]);
+  });
+
+  it("vẫn liệt kê đánh giá chưa xác minh đã mua để admin kiểm duyệt", async () => {
+    const unverified = await prisma.productReview.create({
+      data: {
+        productId: REVIEW_PRODUCT_ID,
+        authorName: "Chưa mua",
+        rating: 1,
+        content: "Đánh giá cũ chưa mua hàng",
+      },
+    });
+    const page = await listAdminReviews({ page: 1 });
+    expect(page.total).toBe(3);
+    expect(page.items.find((r) => r.id === unverified.id)).toMatchObject({
+      isVerifiedPurchase: false,
+      status: "published",
+    });
+    // Admin hiện lại đánh giá: điểm tính lại vẫn bỏ qua đánh giá chưa mua.
+    await setReviewStatus(unverified.id, "published", {});
+    expect(await productRating()).toEqual({ ratingAvg: 4, ratingCount: 2 });
   });
 
   it("ẩn/hiện đánh giá cập nhật lại điểm trung bình và ghi audit", async () => {

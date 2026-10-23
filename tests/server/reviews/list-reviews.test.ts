@@ -28,6 +28,7 @@ beforeEach(async () => {
         authorName: `Khách ${index + 1}`,
         rating: 4,
         content: `Đánh giá số ${index + 1}`,
+        isVerifiedPurchase: true,
         createdAt: new Date(Date.UTC(2026, 8, 1, 0, index)),
       })),
       {
@@ -35,14 +36,23 @@ beforeEach(async () => {
         authorName: "Bị ẩn",
         rating: 1,
         content: "Nội dung vi phạm",
+        isVerifiedPurchase: true,
         status: "hidden",
         createdAt: new Date(Date.UTC(2026, 8, 2)),
+      },
+      {
+        productId: REVIEW_PRODUCT_ID,
+        authorName: "Chưa mua",
+        rating: 1,
+        content: "Đánh giá chưa xác minh đã mua",
+        createdAt: new Date(Date.UTC(2026, 8, 3)),
       },
       {
         productId: REVIEW_OTHER_PRODUCT_ID,
         authorName: "Khác",
         rating: 5,
         content: "Sản phẩm khác",
+        isVerifiedPurchase: true,
       },
     ],
   });
@@ -51,7 +61,7 @@ beforeEach(async () => {
 afterAll(resetReviewFixtures);
 
 describe("listProductReviews", () => {
-  it("phân trang 10 đánh giá đã đăng, mới nhất trước, bỏ đánh giá bị ẩn", async () => {
+  it("phân trang 10 đánh giá đã đăng, mới nhất trước, bỏ đánh giá bị ẩn hoặc chưa mua", async () => {
     const first = await listProductReviews(REVIEW_PRODUCT_ID, 1);
     expect(first.total).toBe(12);
     expect(first.pageSize).toBe(10);
@@ -60,12 +70,16 @@ describe("listProductReviews", () => {
     expect(first.items[0]).toMatchObject({
       content: "Đánh giá số 12",
       rating: 4,
-      isVerifiedPurchase: false,
+      isVerifiedPurchase: true,
     });
     expect(typeof first.items[0]?.createdAt).toBe("string");
-    expect(first.items.some((r) => r.content === "Nội dung vi phạm")).toBe(
-      false,
-    );
+    expect(
+      first.items.some((r) =>
+        ["Nội dung vi phạm", "Đánh giá chưa xác minh đã mua"].includes(
+          r.content,
+        ),
+      ),
+    ).toBe(false);
 
     const second = await listProductReviews(REVIEW_PRODUCT_ID, 2);
     expect(second.items.map((r) => r.content)).toEqual([
@@ -89,6 +103,7 @@ describe("listProductReviews", () => {
         authorName: "Nguyễn Văn An",
         rating: 5,
         content: "Hàng chuẩn, giao nhanh",
+        isVerifiedPurchase: true,
       },
     });
 
