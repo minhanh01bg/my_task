@@ -1,0 +1,37 @@
+[Unit]
+Description=my_task Next.js application (port 3001, sau Nginx)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/ccgram/my_task
+Environment=NODE_ENV=production
+# Giữ PATH của unit đang cài nếu khác; Node ở ExecStart phải nằm trong PATH.
+Environment=PATH=/home/ccgram/.nvm/versions/node/v22.23.3/bin:/usr/local/bin:/usr/bin:/bin
+# NEXT_DIST_DIR (thư mục build đã kiểm chứng) KHÔNG đặt ở đây: scripts/agent/release.sh
+# ghi nó vào drop-in ~/.config/systemd/user/my-task.service.d/release.conf khi promote.
+# CANONICAL_ORIGIN/TRUSTED_PROXY_MODE/TRUSTED_CLIENT_IP_HEADER nằm trong drop-in domain.conf.
+# Secret: Next tự nạp .env* trong WorkingDirectory (chmod 600). Nếu chuyển secret ra
+# ngoài repo, dùng file 600 không commit:
+# EnvironmentFile=/home/ccgram/.config/my-task/env
+# Chỉ nghe loopback: truy cập công khai phải qua Nginx (rate limit, xóa header nội bộ,
+# X-Real-IP đáng tin). Cài unit này sau khi Nginx đã proxy domain về 127.0.0.1:3001.
+ExecStart=/home/ccgram/.nvm/versions/node/v22.23.3/bin/node /home/ccgram/my_task/node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3001
+Restart=on-failure
+RestartSec=5
+# File app tạo (SQLite, ảnh tải lên, cache ISR) chỉ chủ sở hữu đọc được.
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+# Seccomp: chạy được trong user unit nhờ NoNewPrivileges (như my-task-backup.service).
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictNamespaces=true
+SystemCallArchitectures=native
+# Không dùng ProtectSystem=/ProtectHome=/ReadWritePaths=: user manager hiện tại bỏ qua
+# im lặng, và khi có hiệu lực sẽ chặn ghi cache ISR/ảnh trong NEXT_DIST_DIR nếu liệt
+# kê thiếu. Không bật MemoryDenyWriteExecute: Node (V8 JIT) cần W+X.
+
+[Install]
+WantedBy=default.target

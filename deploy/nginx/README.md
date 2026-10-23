@@ -87,11 +87,16 @@ TRUSTED_CLIENT_IP_HEADER=x-real-ip
 
 Giữ các secret và DATABASE_URL hiện tại. Build vào thư mục release mới theo
 README của repo để cập nhật metadata/client public URL; smoke-test bản đó rồi
-đổi NEXT_DIST_DIR của my-task.service và restart. Khi chuyển proxy, đổi
-ExecStart của user service sang `next start --hostname 127.0.0.1 --port 3001`
-để chỉ Nginx truy cập backend và không nhận header IP giả qua cổng công khai.
+đổi NEXT_DIST_DIR của my-task.service và restart. Khi Nginx đã proxy domain,
+cài `ops/systemd/my-task.service` (ExecStart nghe `127.0.0.1:3001`, có `UMask`,
+`NoNewPrivileges`, `PrivateTmp`) để chỉ Nginx truy cập backend và không nhận
+header IP giả qua cổng công khai. So sánh `Environment=` với unit đang cài trước
+khi ghi đè; drop-in `my-task.service.d/` (NEXT_DIST_DIR, domain) giữ nguyên:
 
 ```bash
+diff ~/.config/systemd/user/my-task.service ops/systemd/my-task.service
+install -m 600 ops/systemd/my-task.service ~/.config/systemd/user/my-task.service
+systemd-analyze --user verify ~/.config/systemd/user/my-task.service
 systemctl --user daemon-reload
 systemctl --user restart my-task.service
 node scripts/smoke-storefront.mjs https://taphoatuantoan.disciplineqrhht.com
