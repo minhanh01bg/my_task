@@ -26,6 +26,7 @@ import { categoryHref, productHref } from "@/lib/seo/product-href";
 import { recordRecentlyViewed } from "@/lib/storage/recently-viewed";
 import type { OnlineProductDetail } from "@/server/catalog/get-product-detail";
 
+import { BackInStockButton } from "./back-in-stock-button";
 import { useOnlineCart } from "./cart-context";
 import { CartFeedback } from "./cart-feedback";
 import { ProductReviews } from "./product-reviews";
@@ -223,6 +224,8 @@ export function ProductDetailView({ detail }: { detail: OnlineProductDetail }) {
                   {isOutOfStock ? "Tạm hết hàng" : "Thêm vào giỏ hàng"}
                 </span>
               </Button>
+
+              {isOutOfStock ? <BackInStockButton product={product} /> : null}
 
               {!isOutOfStock ? (
                 <Button

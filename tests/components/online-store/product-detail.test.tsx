@@ -1,10 +1,15 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OnlineCartProvider } from "@/features/online-store/cart-context";
 import { ProductDetailView } from "@/features/online-store/product-detail-view";
+import {
+  invalidateStorefrontSession,
+  STOREFRONT_SESSION_ENDPOINT,
+} from "@/features/online-store/storefront-session";
 import type { OnlineProductDetail } from "@/server/catalog/get-product-detail";
+import { BACK_IN_STOCK_ENDPOINT } from "@/types/back-in-stock";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -79,6 +84,35 @@ const mockOutOfStockDetail: OnlineProductDetail = {
   relatedProducts: [],
   reviews: { items: [], total: 0, page: 1, pageSize: 10 },
 };
+
+/** Khách đã đăng nhập; trạng thái báo có hàng là "chưa bật". */
+function stubCustomerFetch() {
+  const fetchMock = vi.fn((input: RequestInfo | URL) =>
+    Promise.resolve(
+      Response.json(
+        String(input) === STOREFRONT_SESSION_ENDPOINT
+          ? { isAdmin: false, isCustomer: true }
+          : { productId: mockOutOfStockDetail.product.id, subscribed: false },
+      ),
+    ),
+  );
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+function backInStockCalls(fetchMock: ReturnType<typeof stubCustomerFetch>) {
+  return fetchMock.mock.calls.filter(([input]) =>
+    String(input).startsWith(BACK_IN_STOCK_ENDPOINT),
+  );
+}
+
+beforeEach(() => {
+  invalidateStorefrontSession();
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("ProductDetailView", () => {
   it("hiển thị đầy đủ thông tin sản phẩm, mã SKU, danh mục và giá tiền", () => {
@@ -177,6 +211,61 @@ describe("ProductDetailView", () => {
     expect(
       screen.queryByRole("button", { name: "Mua ngay" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("hết hàng: khách chưa đăng nhập được mời đăng nhập để nhận báo có hàng", () => {
+    render(
+      <OnlineCartProvider>
+        <ProductDetailView detail={mockOutOfStockDetail} />
+      </OnlineCartProvider>,
+    );
+
+    expect(
+      screen.getByRole("link", {
+        name: "Đăng nhập để nhận thông báo khi có hàng",
+      }),
+    ).toHaveAttribute(
+      "href",
+      "/account/login?next=%2Fshop%2Fproducts%2Fprod-oos-01",
+    );
+  });
+
+  it("hết hàng: khách đã đăng nhập thấy nút Báo khi có hàng", async () => {
+    const fetchMock = stubCustomerFetch();
+    render(
+      <OnlineCartProvider>
+        <ProductDetailView detail={mockOutOfStockDetail} />
+      </OnlineCartProvider>,
+    );
+
+    const toggle = await screen.findByRole("button", {
+      name: "Báo khi có hàng",
+    });
+    await waitFor(() => expect(toggle).toBeEnabled());
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(backInStockCalls(fetchMock)).toHaveLength(1);
+  });
+
+  it("còn hàng: không có nút báo có hàng và không hỏi trạng thái", async () => {
+    const fetchMock = stubCustomerFetch();
+    render(
+      <OnlineCartProvider>
+        <ProductDetailView detail={mockDetail} />
+      </OnlineCartProvider>,
+    );
+
+    expect(
+      await screen.findByRole("button", { name: /viết đánh giá/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Báo khi có hàng" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", {
+        name: "Đăng nhập để nhận thông báo khi có hàng",
+      }),
+    ).not.toBeInTheDocument();
+    expect(backInStockCalls(fetchMock)).toHaveLength(0);
   });
 
   it("bấm Mua ngay chuyển hướng người dùng đến /checkout", async () => {
