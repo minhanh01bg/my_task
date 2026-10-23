@@ -27,13 +27,17 @@ async function createOrder(
   });
 }
 
-beforeEach(async () => {
+async function deleteOrders() {
   await prisma.payment.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
-});
+}
+
+beforeEach(deleteOrders);
 
 afterAll(async () => {
+  // Don khong khach con sot lai lam lech tong cong no cua file test sau.
+  await deleteOrders();
   await prisma.$disconnect();
 });
 
