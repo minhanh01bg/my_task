@@ -173,9 +173,9 @@ describe("deliverBackInStockAlerts", () => {
       delivered: 0,
     });
 
-    expect(await prisma.customerNotification.count({ where: { accountId } })).toBe(
-      1,
-    );
+    expect(
+      await prisma.customerNotification.count({ where: { accountId } }),
+    ).toBe(1);
   });
 
   it("sản phẩm còn hết hàng, bị ẩn hoặc đã xóa mềm: không gửi, giữ đăng ký", async () => {
@@ -256,7 +256,10 @@ describe("deliverBackInStockAlerts", () => {
       select: { id: true },
     });
     await prisma.backInStockSubscription.createMany({
-      data: accounts.map(({ id }) => ({ accountId: id, productId: PRODUCT_ID })),
+      data: accounts.map(({ id }) => ({
+        accountId: id,
+        productId: PRODUCT_ID,
+      })),
     });
     await setStock(10);
     spyTransactions();
@@ -525,7 +528,9 @@ describe("scheduleBackInStockSweep", () => {
       .mockImplementation(() => {});
     const run = vi
       .fn<() => Promise<unknown>>()
-      .mockRejectedValueOnce(Object.assign(new Error("busy"), { code: "P1008" }))
+      .mockRejectedValueOnce(
+        Object.assign(new Error("busy"), { code: "P1008" }),
+      )
       .mockResolvedValue({ delivered: 0 });
 
     scheduleBackInStockSweep({ run, intervalMs: 1_000 });

@@ -86,7 +86,9 @@ export async function expireStaleOnlineOrders(
       if (result) {
         cancelledIds.push(candidate.id);
         if (result.voucherCode) voucherRestored = true;
-        for (const id of result.restockedProductIds) restockedProductIds.add(id);
+        for (const id of result.restockedProductIds) {
+          restockedProductIds.add(id);
+        }
       }
     } catch (error: unknown) {
       logger.error("stale_online_order_cancel_failed", {
