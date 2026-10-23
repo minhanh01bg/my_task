@@ -501,6 +501,36 @@ describe("sweepBackInStockAlerts", () => {
     ).toEqual([{ productId: "bis-deliver-02" }]);
     expect(await sweepBackInStockAlerts()).toEqual({ delivered: 0 });
   });
+
+  it("quá 100 sản phẩm: ưu tiên sản phẩm có đăng ký chờ lâu nhất, không theo id", async () => {
+    const total = 101;
+    const ids = Array.from(
+      { length: total },
+      (_, index) => `bis-sweep-${String(index).padStart(3, "0")}`,
+    );
+    await prisma.product.createMany({
+      data: ids.map((id) => ({ id, name: id, price: 1_000, stock: 5 })),
+    });
+    const accountId = await seedAccount(1);
+    const base = Date.now() - 24 * 60 * 60 * 1000;
+    // id lớn nhất chờ lâu nhất; bis-sweep-000 chờ mới nhất.
+    await prisma.backInStockSubscription.createMany({
+      data: ids.map((productId, index) => ({
+        accountId,
+        productId,
+        createdAt: new Date(base + (total - index) * 1_000),
+      })),
+    });
+
+    expect(await sweepBackInStockAlerts()).toEqual({ delivered: 100 });
+
+    expect(
+      await prisma.backInStockSubscription.findMany({
+        select: { productId: true },
+      }),
+    ).toEqual([{ productId: "bis-sweep-000" }]);
+    expect(await sweepBackInStockAlerts()).toEqual({ delivered: 1 });
+  });
 });
 
 describe("scheduleBackInStockSweep", () => {

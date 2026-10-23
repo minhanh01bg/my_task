@@ -123,17 +123,22 @@ export async function deliverBackInStockAlerts(
   return { delivered };
 }
 
-/** Luoi an toan: gui bu dang ky con treo cua san pham da co hang. */
+/**
+ * Luoi an toan: gui bu dang ky con treo cua san pham da co hang. San pham co
+ * dang ky cho lau nhat di truoc, nen qua gioi han thi khong san pham nao bi bo
+ * doi mai. groupBy chay GROUP BY/LIMIT trong SQL (`distinct` cua Prisma loc
+ * trong bo nho sau khi doc het dong).
+ */
 export async function sweepBackInStockAlerts(): Promise<{
   delivered: number;
 }> {
-  const ready = await prisma.product.findMany({
-    where: { ...READY_PRODUCT_WHERE, backInStockSubscriptions: { some: {} } },
-    select: { id: true },
-    orderBy: { id: "asc" },
+  const ready = await prisma.backInStockSubscription.groupBy({
+    by: ["productId"],
+    where: { product: READY_PRODUCT_WHERE },
+    orderBy: [{ _min: { createdAt: "asc" } }, { productId: "asc" }],
     take: SWEEP_PRODUCT_LIMIT,
   });
-  return deliverBackInStockAlerts(ready.map(({ id }) => id));
+  return deliverBackInStockAlerts(ready.map(({ productId }) => productId));
 }
 
 // Giu tren globalThis: HMR nap lai module hoac `register()` chay lai van thay
