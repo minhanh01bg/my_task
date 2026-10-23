@@ -168,6 +168,12 @@ describe("Privacy Retention and PII Controls (Task 18)", () => {
     );
     expect(financial?.actionOnExpiry).toBe("retain");
 
+    const backInStock = DATA_INVENTORY.find(
+      (i) => i.field === "BackInStockSubscription.*",
+    );
+    expect(backInStock?.category).toBe("transient_session");
+    expect(backInStock?.actionOnExpiry).toBe("delete");
+
     expect(getRetentionCutoffDate(90, baseNow).getTime()).toBe(
       ninetyDaysAgo.getTime(),
     );

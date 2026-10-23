@@ -62,8 +62,8 @@
 
 **Files:** Modify `src/server/privacy/retention.ts`; Test `tests/server/privacy/retention.test.ts`.
 
-- [ ] GREEN: thêm `BackInStockSubscription.*` vào `DATA_INVENTORY` (xóa khi gửi thông báo, cascade khi xóa tài khoản/sản phẩm).
-- [ ] Verify + commit `docs(privacy): inventory back-in-stock subscriptions`.
+- [x] GREEN: thêm `BackInStockSubscription.*` vào `DATA_INVENTORY` (xóa khi gửi thông báo, cascade khi xóa tài khoản/sản phẩm).
+- [x] Verify + commit `docs(privacy): inventory back-in-stock subscriptions`.
 
 ## Task 7: Kiểm chứng cuối (bước sau, trên nhánh tích hợp)
 
