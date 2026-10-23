@@ -168,6 +168,22 @@ describe("clearAdminClientState (WB-4)", () => {
     expect(localStorage.getItem(HELD_ORDERS_KEY)).toBe(held);
   });
 
+  it("xoá cả giỏ đang bán trong bộ nhớ để ca sau không thấy và ghi lại", async () => {
+    useCartStore.getState().addService("Vá xe", 30_000);
+    useCartStore.getState().setOrderDiscount(5_000);
+
+    await clearAdminClientState();
+
+    expect(useCartStore.getState().lines).toEqual([]);
+    expect(useCartStore.getState().orderDiscount).toBe(0);
+    // Lần sửa đầu tiên của ca sau chỉ ghi giỏ mới, không hồi sinh giỏ cũ.
+    useCartStore.getState().addService("Thay dầu", 50_000);
+    const persisted = JSON.parse(localStorage.getItem(POS_CART_KEY)!);
+    expect(persisted.state.lines).toHaveLength(1);
+    expect(persisted.state.lines[0].name).toBe("Thay dầu");
+    expect(persisted.state.orderDiscount).toBe(0);
+  });
+
   it("xoá bản nháp sản phẩm đang nhập dở trong trang quản trị", async () => {
     localStorage.setItem(
       PRODUCT_DRAFT_KEY,

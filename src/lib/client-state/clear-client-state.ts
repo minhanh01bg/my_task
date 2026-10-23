@@ -1,6 +1,7 @@
 import { clearRecentlyViewed } from "@/lib/storage/recently-viewed";
 import { clearWishlist } from "@/lib/storage/wishlist";
 import { getSyncDb } from "@/lib/sync/queue";
+import { useCartStore } from "@/stores/cart-store";
 
 /**
  * Xoá dữ liệu phiên trên máy khi đăng xuất, để người dùng sau trên máy dùng
@@ -121,6 +122,14 @@ export function clearCustomerClientState(): void {
  * trong IndexedDB và cache của service worker. Giữ đơn tạm giữ và hàng đợi đơn offline.
  */
 export async function clearAdminClientState(): Promise<void> {
+  // Đăng xuất → /login → /pos là điều hướng phía client: store vẫn sống trong
+  // bộ nhớ, nên chỉ xoá khoá localStorage thì ca sau vẫn thấy giỏ cũ và lần
+  // sửa đầu tiên ghi nó trở lại. Xoá store trước rồi mới xoá khoá.
+  try {
+    useCartStore.getState().clear();
+  } catch {
+    // persist ghi localStorage bị chặn: bộ nhớ đã xoá, khoá xoá ở dưới.
+  }
   removeKeys(() => localStorage, ADMIN_LOCAL_KEYS);
   await Promise.all([
     settleWithin(clearCachedCatalog(), CLEAR_TIMEOUT_MS),
