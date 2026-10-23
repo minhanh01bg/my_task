@@ -93,7 +93,11 @@ export async function POST(request: Request) {
   // Layer 4: Velocity check on normalized phone number (cleared on success).
   // A device that logged in to this account before uses its own bucket.
   const trustedDeviceId = usableAccount
-    ? resolveCustomerTrustedDevice(request, usableAccount.id)
+    ? resolveCustomerTrustedDevice(
+        request,
+        usableAccount.id,
+        usableAccount.passwordHash,
+      )
     : null;
   const accountCheck = trustedDeviceId
     ? await checkCustomerTrustedDevice(trustedDeviceId)
@@ -131,11 +135,14 @@ export async function POST(request: Request) {
 
   // Upgrade hashes made with older scrypt parameters while the password is
   // known; the hash in `where` keeps a concurrent password change intact.
-  if (customerPasswordNeedsRehash(usableAccount.passwordHash)) {
-    await prisma.customerAccount.updateMany({
-      where: { id: usableAccount.id, passwordHash: usableAccount.passwordHash },
-      data: { passwordHash: await hashCustomerPassword(parsed.data.password) },
+  let passwordHash = usableAccount.passwordHash;
+  if (customerPasswordNeedsRehash(passwordHash)) {
+    const rehashed = await hashCustomerPassword(parsed.data.password);
+    const { count } = await prisma.customerAccount.updateMany({
+      where: { id: usableAccount.id, passwordHash },
+      data: { passwordHash: rehashed },
     });
+    if (count === 1) passwordHash = rehashed;
   }
 
   const session = await createCustomerSession(usableAccount.id);
@@ -156,7 +163,11 @@ export async function POST(request: Request) {
     ...customerCookieOptions,
     secure,
   });
-  const deviceToken = createCustomerTrustedDeviceToken(usableAccount.id);
+  // Bound to the hash stored after the upgrade above, so it survives it.
+  const deviceToken = createCustomerTrustedDeviceToken(
+    usableAccount.id,
+    passwordHash,
+  );
   if (deviceToken) {
     response.cookies.set(
       CUSTOMER_TRUSTED_DEVICE_COOKIE,

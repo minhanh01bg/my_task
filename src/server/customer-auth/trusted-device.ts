@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { readCookie } from "@/server/auth/require-admin-session";
 import {
   createTrustedDeviceToken,
@@ -14,14 +16,25 @@ import { customerCookieOptions } from "@/server/customer-auth/session";
 export const CUSTOMER_TRUSTED_DEVICE_COOKIE = "customer_trusted_device";
 const CUSTOMER_TRUSTED_DEVICE_LABEL = "customer-login";
 
-/** Bound to the account id, so a re-registered phone starts untrusted. */
+// Bound to the account id, so a re-registered phone starts untrusted, and to
+// its password hash, so changing the password forgets every trusted device.
+function customerBinding(accountId: string, passwordHash: string): string {
+  if (!accountId || !passwordHash) return "";
+  const digest = createHash("sha256")
+    .update(passwordHash, "utf8")
+    .digest("hex");
+  return `${accountId}.${digest}`;
+}
+
+/** `passwordHash` is the account's hash as stored after this login. */
 export function createCustomerTrustedDeviceToken(
   accountId: string,
+  passwordHash: string,
   now?: number,
 ): string | null {
   return createTrustedDeviceToken(
     CUSTOMER_TRUSTED_DEVICE_LABEL,
-    accountId,
+    customerBinding(accountId, passwordHash),
     now,
   );
 }
@@ -30,11 +43,12 @@ export function createCustomerTrustedDeviceToken(
 export function resolveCustomerTrustedDevice(
   request: Request,
   accountId: string,
+  passwordHash: string,
 ): string | null {
   return verifyTrustedDeviceToken(
     CUSTOMER_TRUSTED_DEVICE_LABEL,
     readCookie(request.headers.get("cookie"), CUSTOMER_TRUSTED_DEVICE_COOKIE),
-    accountId,
+    customerBinding(accountId, passwordHash),
   );
 }
 

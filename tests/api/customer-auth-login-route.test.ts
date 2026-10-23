@@ -109,6 +109,28 @@ function makeRequest(
   });
 }
 
+// Hashes stored before p was raised from 1 to 5.
+function legacyHash(password: string): string {
+  const salt = randomBytes(16);
+  const digest = scryptSync(password, salt, 64, { N: 16_384, r: 8, p: 1 });
+  return [
+    "scrypt-v1",
+    16_384,
+    8,
+    1,
+    salt.toString("base64url"),
+    digest.toString("base64url"),
+  ].join("$");
+}
+
+const storedHash = async () =>
+  (
+    await prisma.customerAccount.findUniqueOrThrow({
+      where: { phoneNormalized: normalizedPhone },
+      select: { passwordHash: true },
+    })
+  ).passwordHash;
+
 describe("POST /api/customer-auth/login", () => {
   it("authenticates valid credentials and sets session cookie with no-store", async () => {
     const req = makeRequest({ phone: testPhone, password: "password123" });
@@ -275,28 +297,6 @@ describe("POST /api/customer-auth/login", () => {
   describe("password hash parameters", () => {
     const CURRENT_PARAMS = ["scrypt-v1", "16384", "8", "5"];
 
-    // Hashes stored before p was raised from 1 to 5.
-    function legacyHash(password: string): string {
-      const salt = randomBytes(16);
-      const digest = scryptSync(password, salt, 64, { N: 16_384, r: 8, p: 1 });
-      return [
-        "scrypt-v1",
-        16_384,
-        8,
-        1,
-        salt.toString("base64url"),
-        digest.toString("base64url"),
-      ].join("$");
-    }
-
-    const storedHash = async () =>
-      (
-        await prisma.customerAccount.findUniqueOrThrow({
-          where: { phoneNormalized: normalizedPhone },
-          select: { passwordHash: true },
-        })
-      ).passwordHash;
-
     it("hashes new passwords with scrypt N=2^14, r=8, p=5", async () => {
       const hash = await hashCustomerPassword("password123");
       expect(hash.split("$").slice(0, 4)).toEqual(CURRENT_PARAMS);
@@ -373,10 +373,35 @@ describe("POST /api/customer-auth/login", () => {
       await lockPhone();
 
       const tampered = `${device.slice(0, 5)}${device[5] === "A" ? "B" : "A"}${device.slice(6)}`;
-      const otherAccount = createCustomerTrustedDeviceToken("other-account-id");
+      const otherAccount = createCustomerTrustedDeviceToken(
+        "other-account-id",
+        await storedHash(),
+      );
       for (const cookie of [tampered, otherAccount]) {
         expect((await login("password123", cookie!)).status).toBe(429);
       }
+    });
+
+    it("forgets the device once the account's password changes", async () => {
+      const device = await trustDevice();
+      await prisma.customerAccount.update({
+        where: { phoneNormalized: normalizedPhone },
+        data: { passwordHash: await hashCustomerPassword("new-password-456") },
+      });
+      await lockPhone();
+
+      expect((await login("new-password-456", device)).status).toBe(429);
+    });
+
+    it("trusts the device issued by a login that upgraded an old hash", async () => {
+      await prisma.customerAccount.update({
+        where: { phoneNormalized: normalizedPhone },
+        data: { passwordHash: legacyHash("password123") },
+      });
+      const device = await trustDevice();
+      await lockPhone();
+
+      expect((await login("password123", device)).status).toBe(200);
     });
 
     it("still limits wrong passwords from a trusted device", async () => {
