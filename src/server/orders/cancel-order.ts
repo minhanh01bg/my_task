@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { revalidatePublic } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
+import { revokeCancelledPurchaseReviews } from "@/server/reviews/verified-purchase";
 
 import { OrderStatusError } from "./order-status-error";
 
@@ -88,6 +89,9 @@ export async function cancelOrder(
         WHERE "code" = ${order.voucherCode}
       `;
     }
+
+    // Don vua huy khong con la bang chung "da mua" cho danh gia cua chu don.
+    await revokeCancelledPurchaseReviews(tx, order);
 
     return { cancelled: true, voucherCode: order.voucherCode };
   };
