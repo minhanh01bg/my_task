@@ -30,9 +30,9 @@
 
 **Files:** Create `src/server/back-in-stock/deliver-alerts.ts`; Modify `src/server/customer-notifications/create-customer-notification.ts`, `src/instrumentation.ts`; Test `tests/server/back-in-stock/deliver-alerts.test.ts`.
 
-- [ ] RED: mỗi khách đúng một thông báo (kind/title/eventKey/href slug và `/shop/products/<id>`), xóa dòng; gọi hai lần không trùng; còn hết hàng/ẩn thì không gửi; đăng ký lại → thông báo thứ hai khác eventKey; lỗi tạo thông báo không ném, giữ đăng ký, ghi log; không đăng ký thì không mở transaction; sweep gửi phần còn treo; `scheduleBackInStockSweep` (null khi `DISABLE_BACKGROUND_JOBS=1`, gọi hai lần cùng timer, `stop` xóa).
-- [ ] GREEN: `createBackInStockNotification`, `deliverBackInStockAlerts` (đọc không transaction, lô 50 mỗi transaction), `sweepBackInStockAlerts`, `schedule/stopBackInStockSweep`, đăng ký trong `instrumentation.ts`.
-- [ ] Verify + commit `feat(back-in-stock): deliver alerts and sweep pending subscriptions`.
+- [x] RED: mỗi khách đúng một thông báo (kind/title/eventKey/href slug và `/shop/products/<id>`), xóa dòng; gọi hai lần không trùng; còn hết hàng/ẩn thì không gửi; đăng ký lại → thông báo thứ hai khác eventKey; lỗi tạo thông báo không ném, giữ đăng ký, ghi log; không đăng ký thì không mở transaction; sweep gửi phần còn treo; `scheduleBackInStockSweep` (null khi `DISABLE_BACKGROUND_JOBS=1`, gọi hai lần cùng timer, `stop` xóa).
+- [x] GREEN: `createBackInStockNotification`, `deliverBackInStockAlerts` (đọc không transaction, lô 50 mỗi transaction), `sweepBackInStockAlerts`, `schedule/stopBackInStockSweep`, đăng ký trong `instrumentation.ts`.
+- [x] Verify + commit `feat(back-in-stock): deliver alerts and sweep pending subscriptions`.
 
 ## Task 3: Gắn vào các đường tăng tồn kho, dọn khi xóa mềm
 

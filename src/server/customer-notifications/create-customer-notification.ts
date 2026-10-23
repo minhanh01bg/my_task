@@ -1,5 +1,8 @@
 import type { Prisma } from "@prisma/client";
 
+import { productHref } from "@/lib/seo/product-href";
+import { BACK_IN_STOCK_NOTIFICATION_KIND } from "@/types/back-in-stock";
+
 type TransactionClient = Prisma.TransactionClient;
 
 export interface CreateCustomerNotificationInput {
@@ -158,5 +161,28 @@ export async function createCustomerOrderPaymentNotification(
     body: `Đơn hàng #${order.code} đã được xác nhận thanh toán.`,
     orderId: order.id,
     href: `/account/orders/${encodeURIComponent(order.id)}`,
+  });
+}
+
+/**
+ * Bao co hang cho mot dang ky. Goi trong cung transaction xoa dong dang ky:
+ * moi dang ky (id dung mot lan) ra dung mot thong bao.
+ */
+export async function createBackInStockNotification(
+  tx: TransactionClient,
+  input: {
+    subscriptionId: string;
+    accountId: string;
+    product: { id: string; name: string; slug: string | null };
+  },
+) {
+  return createCustomerNotification(tx, {
+    accountId: input.accountId,
+    eventKey: `back-in-stock:${input.subscriptionId}`,
+    kind: BACK_IN_STOCK_NOTIFICATION_KIND,
+    title: "Sản phẩm bạn chờ đã có hàng",
+    body: `${input.product.name} đã có hàng trở lại. Đặt mua ngay trước khi hết nhé.`,
+    orderId: null,
+    href: productHref({ id: input.product.id, slug: input.product.slug }),
   });
 }
