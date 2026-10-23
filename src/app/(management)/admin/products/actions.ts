@@ -5,6 +5,7 @@ import { z } from "zod";
 
 z.config({ jitless: true });
 
+import { errorLogFields, logger } from "@/lib/logger";
 import { MAX_INT_VND } from "@/lib/money";
 import { isAllowedProductImageUrl } from "@/lib/product-image-url";
 import {
@@ -15,7 +16,10 @@ import {
   isRecordNotFound,
 } from "@/server/admin/admin-action";
 import { logAdminAction } from "@/server/auth/admin-audit";
-import { saveProductImage } from "@/server/products/save-image";
+import {
+  deleteProductImage,
+  saveProductImage,
+} from "@/server/products/save-image";
 import {
   ProductStockConflictError,
   quickUpdateProduct,
@@ -71,6 +75,22 @@ function productSaveFailure(error: unknown) {
   throw error;
 }
 
+/**
+ * Lưu sản phẩm lỗi thì không gì tham chiếu ảnh vừa tải lên: xoá để uploads
+ * không phình. Lỗi xoá chỉ ghi log, không che lỗi lưu gốc.
+ */
+async function discardUploadedImage(imageUrl: string | null) {
+  if (!imageUrl) return;
+  try {
+    await deleteProductImage(imageUrl);
+  } catch (error) {
+    logger.warn("product_image_cleanup_failed", {
+      imageUrl,
+      ...errorLogFields(error),
+    });
+  }
+}
+
 async function logStockAdjustment(
   identityId: string | undefined,
   productId: string,
@@ -121,6 +141,8 @@ export async function saveProductAction(formData: FormData) {
 
   const image = formData.get("image");
   let effectiveImageUrl: string | null = parsed.data.imageUrl || null;
+  // Chỉ ảnh ghi ra đĩa trong request này; ảnh cũ từ form không bao giờ bị xoá.
+  let uploadedImageUrl: string | null = null;
 
   if (image instanceof File && image.size > 0) {
     const saved = await saveProductImage(image);
@@ -128,6 +150,7 @@ export async function saveProductAction(formData: FormData) {
       return { ok: false as const, message: saved.message };
     }
     effectiveImageUrl = saved.imageUrl;
+    uploadedImageUrl = saved.imageUrl;
   }
 
   let saved: Awaited<ReturnType<typeof saveProduct>>;
@@ -138,6 +161,7 @@ export async function saveProductAction(formData: FormData) {
       imageUrl: effectiveImageUrl,
     });
   } catch (error) {
+    await discardUploadedImage(uploadedImageUrl);
     return productSaveFailure(error);
   }
   await logStockAdjustment(session.identity?.id, saved.id, saved.stockChange);

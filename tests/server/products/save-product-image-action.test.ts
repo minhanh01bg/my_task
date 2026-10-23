@@ -1,8 +1,49 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { access, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
 
+import sharp from "sharp";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from "vitest";
+
+import { logger } from "@/lib/logger";
 import { prisma } from "@/server/db/prisma";
 import * as requireAdminModule from "@/server/auth/require-admin-session";
+import * as saveImageModule from "@/server/products/save-image";
+import * as saveProductModule from "@/server/products/save-product";
+import {
+  PRODUCT_STOCK_CONFLICT_MESSAGE,
+  ProductStockConflictError,
+} from "@/server/products/save-product";
 import { saveProductAction } from "@/app/(management)/admin/products/actions";
+
+const UPLOAD_DIR = path.resolve(process.cwd(), "public/uploads");
+
+function uploadPath(imageUrl: string): string {
+  return path.join(UPLOAD_DIR, path.basename(imageUrl));
+}
+
+async function exists(file: string): Promise<boolean> {
+  return access(file).then(
+    () => true,
+    () => false,
+  );
+}
+
+async function pngFile(): Promise<File> {
+  const buffer = await sharp({
+    create: { width: 40, height: 40, channels: 3, background: "#c82828" },
+  })
+    .png()
+    .toBuffer();
+  return new File([new Uint8Array(buffer)], "anh.png", { type: "image/png" });
+}
 
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
@@ -246,5 +287,121 @@ describe("saveProductAction — xử lý lưu và bỏ ảnh sản phẩm", () =
     expect(saved).not.toBeNull();
     expect(saved?.name).toBe("Test Image Product Trimmed");
     expect(saved?.unit).toBe("gói");
+  });
+
+  describe("lưu sản phẩm lỗi sau khi đã tải ảnh lên", () => {
+    const written: string[] = [];
+    let upload: MockInstance<typeof saveImageModule.saveProductImage>;
+
+    beforeEach(() => {
+      vi.spyOn(requireAdminModule, "requireAdminSession").mockResolvedValue({
+        authorized: true,
+        identity: {
+          id: "admin-1",
+          username: "admin",
+          role: "admin",
+          version: 1,
+        },
+      });
+      upload = vi.spyOn(saveImageModule, "saveProductImage");
+    });
+
+    afterEach(async () => {
+      for (const file of written.splice(0)) await rm(file, { force: true });
+    });
+
+    /** Ảnh action vừa ghi ra public/uploads (spy vẫn gọi hàm thật). */
+    function uploadedImageUrl(): string {
+      expect(upload).toHaveBeenCalledOnce();
+      const settled = upload.mock.settledResults[0];
+      if (settled?.type !== "fulfilled" || !settled.value.ok) {
+        throw new Error("Action không tải được ảnh lên");
+      }
+      written.push(uploadPath(settled.value.imageUrl));
+      return settled.value.imageUrl;
+    }
+
+    async function formWithUpload(values: Record<string, string> = {}) {
+      const formData = new FormData();
+      Object.entries({
+        name: "Test Image Product Upload",
+        unit: "gói",
+        price: "1000",
+        costPrice: "0",
+        stock: "1",
+        ...values,
+      }).forEach(([key, value]) => formData.set(key, value));
+      formData.set("image", await pngFile());
+      return formData;
+    }
+
+    it("xoá ảnh vừa tải, giữ ảnh cũ của sản phẩm (tồn kho xung đột)", async () => {
+      const keptUrl = "/uploads/test-image-product-kept.webp";
+      written.push(uploadPath(keptUrl));
+      await writeFile(uploadPath(keptUrl), "anh cu");
+      // Form mở lúc tồn kho 10, sau đó đã bán 5.
+      const existing = await prisma.product.create({
+        data: {
+          name: "Test Image Product Upload",
+          unit: "gói",
+          price: 1000,
+          costPrice: 0,
+          stock: 5,
+          imageUrl: keptUrl,
+          isActive: true,
+          searchText: "test image product upload",
+        },
+      });
+
+      const result = await saveProductAction(
+        await formWithUpload({
+          id: existing.id,
+          stock: "8",
+          originalStock: "10",
+          imageUrl: keptUrl,
+        }),
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        message: PRODUCT_STOCK_CONFLICT_MESSAGE,
+      });
+      expect(await exists(uploadPath(uploadedImageUrl()))).toBe(false);
+      expect(await exists(uploadPath(keptUrl))).toBe(true);
+      const saved = await prisma.product.findUniqueOrThrow({
+        where: { id: existing.id },
+      });
+      expect(saved.imageUrl).toBe(keptUrl);
+    });
+
+    it("lỗi lạ vẫn ném lại sau khi xoá ảnh vừa tải", async () => {
+      vi.spyOn(saveProductModule, "saveProduct").mockRejectedValue(
+        new Error("db down"),
+      );
+
+      await expect(saveProductAction(await formWithUpload())).rejects.toThrow(
+        "db down",
+      );
+      expect(await exists(uploadPath(uploadedImageUrl()))).toBe(false);
+    });
+
+    it("xoá ảnh lỗi thì ghi log và vẫn trả lỗi lưu sản phẩm gốc", async () => {
+      vi.spyOn(saveProductModule, "saveProduct").mockRejectedValue(
+        new ProductStockConflictError(),
+      );
+      vi.spyOn(saveImageModule, "deleteProductImage").mockRejectedValue(
+        new Error("EBUSY"),
+      );
+      const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
+
+      expect(await saveProductAction(await formWithUpload())).toEqual({
+        ok: false,
+        message: PRODUCT_STOCK_CONFLICT_MESSAGE,
+      });
+      expect(warn).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ imageUrl: uploadedImageUrl() }),
+      );
+    });
   });
 });
