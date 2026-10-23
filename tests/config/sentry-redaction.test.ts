@@ -140,6 +140,68 @@ describe("Sentry Telemetry Redaction (Task 13)", () => {
     expect(sanitized?.data?.token).toBe("[REDACTED]");
     expect(sanitized?.data?.address).toBe("[REDACTED]");
   });
+
+  it("keeps guest tokens and query strings out of navigation breadcrumbs (WB-1)", () => {
+    const breadcrumb: Breadcrumb = {
+      category: "navigation",
+      message: "/account/login?next=%2Forders%2Fguest%2Fsecret-tok_123",
+      data: {
+        from: "/orders/guest/secret-tok_123",
+        to: "/account/login?next=%2Forders%2Fguest%2Fsecret-tok_123",
+      },
+    };
+
+    const sanitized = sanitizeSentryBreadcrumb(breadcrumb);
+
+    expect(JSON.stringify(sanitized)).not.toContain("secret-tok_123");
+    expect(sanitized?.data).toEqual({
+      from: "/orders/guest/[REDACTED]",
+      to: "/account/login",
+    });
+  });
+
+  it("strips query strings from fetch breadcrumbs (WB-1)", () => {
+    const breadcrumb: Breadcrumb = {
+      type: "http",
+      category: "fetch",
+      data: {
+        method: "GET",
+        url: "https://shop.example.com/api/orders/lookup?phone=0901234567#x",
+        "http.query": "phone=0901234567",
+        "http.fragment": "x",
+        status_code: 200,
+      },
+    };
+
+    const sanitized = sanitizeSentryBreadcrumb(breadcrumb);
+
+    expect(sanitized?.data).toEqual({
+      method: "GET",
+      url: "https://shop.example.com/api/orders/lookup",
+      status_code: 200,
+    });
+  });
+
+  it("strips query strings from breadcrumbs attached to an event (WB-1)", () => {
+    const event: ErrorEvent = {
+      type: undefined,
+      event_id: "test-event-wb1",
+      breadcrumbs: [
+        {
+          category: "navigation",
+          data: {
+            from: "/orders/guest/secret-tok_123",
+            to: "/account/login?next=%2Forders%2Fguest%2Fsecret-tok_123",
+          },
+        },
+      ],
+    };
+
+    const sanitized = sanitizeSentryEvent(event);
+
+    expect(JSON.stringify(sanitized)).not.toContain("secret-tok_123");
+    expect(sanitized?.breadcrumbs?.[0]?.data?.to).toBe("/account/login");
+  });
 });
 
 describe("sanitizeSentryTransaction (WEB-6)", () => {

@@ -41,13 +41,10 @@ test("lưu đơn giữ đường dẫn qua login/register và đơn xuất hiệ
     await page
       .getByRole("button", { name: "Lưu đơn hàng vào tài khoản của bạn" })
       .click();
-    await expect(page).toHaveURL(
-      `/account/login?next=${encodeURIComponent(`/orders/guest/${token}`)}`,
-    );
+    // The guest token stays in sessionStorage, never in ?next= (WB-1).
+    await expect(page).toHaveURL("/account/login");
     await page.getByRole("link", { name: "Đăng ký", exact: true }).click();
-    await expect(page).toHaveURL(
-      `/account/register?next=${encodeURIComponent(`/orders/guest/${token}`)}`,
-    );
+    await expect(page).toHaveURL("/account/register");
     await page.getByRole("link", { name: "Đăng nhập", exact: true }).click();
     await page.getByLabel("Số điện thoại").fill(phone);
     await page.getByLabel("Mật khẩu", { exact: true }).fill("matkhau123456");

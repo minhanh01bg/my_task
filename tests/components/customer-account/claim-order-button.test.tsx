@@ -2,18 +2,35 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { ClaimOrderButton } from "@/features/customer-account/claim-order-button";
+import { takePendingClaimPath } from "@/features/customer-account/pending-claim";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 afterEach(() => {
   vi.restoreAllMocks();
   push.mockReset();
+  sessionStorage.clear();
 });
 
-it("chưa đăng nhập chuyển tới login và giữ đường dẫn đơn cần lưu", async () => {
+it("chưa đăng nhập chuyển tới login, giữ đơn cần lưu ngoài URL (WB-1)", async () => {
   vi.spyOn(globalThis, "fetch").mockResolvedValue(
     new Response("{}", { status: 401 }),
   );
+  render(<ClaimOrderButton guestToken="fixture-token" />);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Lưu đơn hàng vào tài khoản của bạn" }),
+  );
+  await waitFor(() => expect(push).toHaveBeenCalledWith("/account/login"));
+  expect(takePendingClaimPath()).toBe("/orders/guest/fixture-token");
+});
+
+it("vẫn quay lại đơn qua ?next= khi trình duyệt chặn sessionStorage", async () => {
+  vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response("{}", { status: 401 }),
+  );
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    throw new DOMException("blocked", "SecurityError");
+  });
   render(<ClaimOrderButton guestToken="fixture-token" />);
   fireEvent.click(
     screen.getByRole("button", { name: "Lưu đơn hàng vào tài khoản của bạn" }),

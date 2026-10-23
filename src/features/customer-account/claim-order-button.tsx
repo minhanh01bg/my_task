@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 
+import { rememberPendingClaim } from "./pending-claim";
+
 export function ClaimOrderButton({
   guestToken,
   phoneVerified,
@@ -29,7 +31,9 @@ export function ClaimOrderButton({
 
       if (res.status === 401) {
         router.push(
-          `/account/login?next=${encodeURIComponent(`/orders/guest/${guestToken}`)}`,
+          rememberPendingClaim(guestToken)
+            ? "/account/login"
+            : `/account/login?next=${encodeURIComponent(`/orders/guest/${guestToken}`)}`,
         );
         return;
       }

@@ -198,3 +198,47 @@ describe("WEB-6: log redaction covers PII keys and whole values", () => {
     expect(redacted.customer).toEqual({ id: "c1", fullName: "[REDACTED]" });
   });
 });
+
+describe("percent-encoded capability paths (WB-1)", () => {
+  const TOKEN = "Secret_Guest-Token123";
+
+  it.each([
+    `/account/login?next=%2Forders%2Fguest%2F${TOKEN}`,
+    `/account/login?next=%2forders%2fguest%2f${TOKEN}&ref=mail`,
+    `/login?returnTo=%252Forders%252Fguest%252F${TOKEN}`,
+    `/login?redirect=https%3A%2F%2Fshop.vn%2Forders%2Fguest%2F${TOKEN}`,
+    `/login?callbackUrl=%2Forder-success%2F${TOKEN}`,
+    `/login?next=/orders/guest/${TOKEN}`,
+    `/x?ref=%2Forders%2Fguest%2F${TOKEN}#top`,
+    `GET /orders%2Fguest%2F${TOKEN} 500`,
+  ])("keeps the token out of %s", (input) => {
+    const output = normalizeSafePath(input);
+
+    expect(output).not.toContain(TOKEN);
+    expect(output).toContain("[REDACTED]");
+  });
+
+  it.each(["next", "returnTo", "return_to", "redirect", "callbackUrl"])(
+    "drops the value of the redirect-style ?%s= param",
+    (param) => {
+      expect(
+        normalizeSafePath(`/account/login?${param}=%2Faccount%2Forders&x=1`),
+      ).toBe(`/account/login?${param}=[REDACTED]&x=1`);
+    },
+  );
+
+  it("still keeps ordinary query params readable", () => {
+    expect(normalizeSafePath("/shop?query=banh-mi&page=2")).toBe(
+      "/shop?query=banh-mi&page=2",
+    );
+  });
+
+  it("redacts the encoded token in logged strings and nested data", () => {
+    const redacted = redactLogData({
+      message: `redirect to /account/login?next=%2Forders%2Fguest%2F${TOKEN}`,
+      urls: [`/x?next=%2Forders%2Fguest%2F${TOKEN}`],
+    });
+
+    expect(JSON.stringify(redacted)).not.toContain(TOKEN);
+  });
+});

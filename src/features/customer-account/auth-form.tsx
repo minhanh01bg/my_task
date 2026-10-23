@@ -14,6 +14,8 @@ import {
   customerRegisterSchema,
 } from "@/types/customer-auth";
 
+import { takePendingClaimPath } from "./pending-claim";
+
 type Field = "phone" | "password" | "displayName";
 
 export function CustomerAuthForm({
@@ -100,7 +102,12 @@ export function CustomerAuthForm({
         return;
       }
       invalidateStorefrontSession();
-      router.replace(destination);
+      const pendingClaim = takePendingClaimPath();
+      router.replace(
+        destination === "/account/orders"
+          ? (pendingClaim ?? destination)
+          : destination,
+      );
       router.refresh();
     } catch {
       setError("Không thể kết nối. Vui lòng thử lại.");

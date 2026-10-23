@@ -1,6 +1,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CustomerAuthForm } from "@/features/customer-account/auth-form";
+import {
+  rememberPendingClaim,
+  takePendingClaimPath,
+} from "@/features/customer-account/pending-claim";
 
 const replace = vi.fn();
 const refresh = vi.fn();
@@ -90,4 +94,58 @@ it("login quay lại đơn đang lưu và link đăng ký giữ next", async () 
   await waitFor(() =>
     expect(replace).toHaveBeenCalledWith("/orders/guest/fixture-token"),
   );
+});
+
+describe("đơn khách chờ lưu sau đăng nhập (WB-1)", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    replace.mockReset();
+    sessionStorage.clear();
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("{}", { status: 200 }),
+    );
+  });
+
+  async function login() {
+    render(<CustomerAuthForm mode="login" />);
+    fireEvent.change(screen.getByLabelText("Số điện thoại"), {
+      target: { value: "0901234567" },
+    });
+    fireEvent.change(screen.getByLabelText("Mật khẩu"), {
+      target: { value: "a-secure-password" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
+    await waitFor(() => expect(replace).toHaveBeenCalled());
+  }
+
+  it("quay lại đơn đã giữ trong sessionStorage rồi xoá nó", async () => {
+    rememberPendingClaim("fixture-token");
+
+    await login();
+
+    expect(replace).toHaveBeenCalledWith("/orders/guest/fixture-token");
+    expect(takePendingClaimPath()).toBeNull();
+  });
+
+  it("bỏ qua đơn chờ đã quá hạn", async () => {
+    const now = Date.now();
+    vi.spyOn(Date, "now").mockReturnValue(now - 31 * 60_000);
+    rememberPendingClaim("fixture-token");
+    vi.mocked(Date.now).mockReturnValue(now);
+
+    await login();
+
+    expect(replace).toHaveBeenCalledWith("/account/orders");
+  });
+
+  it("từ chối token sai định dạng trong sessionStorage", async () => {
+    sessionStorage.setItem(
+      "an-phat-pending-claim",
+      JSON.stringify({ token: "../../admin", savedAt: Date.now() }),
+    );
+
+    await login();
+
+    expect(replace).toHaveBeenCalledWith("/account/orders");
+  });
 });

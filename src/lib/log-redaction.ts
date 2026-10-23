@@ -52,6 +52,12 @@ const SPAN_URL_ATTRIBUTES = new Set([
   "http.target",
 ]);
 
+/** Breadcrumb data fields holding a URL (fetch/xhr `url`, navigation `from`/`to`). */
+const BREADCRUMB_URL_KEYS = new Set([...SPAN_URL_ATTRIBUTES, "from", "to"]);
+
+/** "/" raw or percent-encoded any number of times (%2F, %252F...). */
+const SLASH = String.raw`(?:\/|%(?:25)*2F)`;
+
 const SENSITIVE_PATH_PATTERNS = [
   {
     pattern: /\/orders\/guest\/[^\s?#]+(?:\?[^\s#]*)?/g,
@@ -61,8 +67,20 @@ const SENSITIVE_PATH_PATTERNS = [
     pattern: /\/order-success\/[^\s?#]+(?:\?[^\s#]*)?/g,
     replacement: "/order-success/[REDACTED]",
   },
+  // Same paths percent-encoded inside a query value, e.g. ?next=%2Forders%2F...
+  {
+    pattern: new RegExp(
+      `(${SLASH}orders${SLASH}guest${SLASH}|${SLASH}order-success${SLASH})[^\\s?&#]+`,
+      "gi",
+    ),
+    replacement: "$1[REDACTED]",
+  },
   { pattern: /Bearer\s+[A-Za-z0-9._-]+/gi, replacement: "Bearer [REDACTED]" },
 ];
+
+/** Query params whose value is a return URL that may carry a capability path. */
+const REDIRECT_PARAM_REGEX =
+  /([?&](?:next|continue|dest(?:ination)?|return[_-]?(?:to|url)|redirect(?:[_-]?(?:to|uri|url))?|callback(?:[_-]?url)?)=)[^&#\s]+/gi;
 
 /**
  * Normalizes sensitive guest capability and receipt paths in URLs and strings.
@@ -78,7 +96,7 @@ export function normalizeSafePath(input: string): string {
     /([?&](?:token|secret|recovery|key|code)=)[^&]+/gi,
     "$1[REDACTED]",
   );
-  return result;
+  return result.replace(REDIRECT_PARAM_REGEX, "$1[REDACTED]");
 }
 
 export function isSensitiveKey(key: string): boolean {
@@ -181,13 +199,22 @@ export function redactLogData(
 }
 
 /**
- * Sanitizes Sentry breadcrumbs before they are added to telemetry.
+ * Sanitizes Sentry breadcrumbs before they are added to telemetry. URL fields
+ * lose their query string and fragment, like request URLs on events.
  */
 export function sanitizeSentryBreadcrumb(
   breadcrumb: Breadcrumb,
 ): Breadcrumb | null {
   if (breadcrumb.data && typeof breadcrumb.data === "object") {
-    breadcrumb.data = redactLogData(breadcrumb.data) as Record<string, unknown>;
+    const data = redactLogData(breadcrumb.data) as Record<string, unknown>;
+    for (const [key, value] of Object.entries(data)) {
+      if (SPAN_QUERY_ATTRIBUTES.has(key)) {
+        delete data[key];
+      } else if (BREADCRUMB_URL_KEYS.has(key) && typeof value === "string") {
+        data[key] = stripQueryAndHash(value);
+      }
+    }
+    breadcrumb.data = data;
   }
   if (breadcrumb.message) {
     breadcrumb.message = normalizeSafePath(breadcrumb.message);
