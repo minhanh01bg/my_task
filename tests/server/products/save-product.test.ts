@@ -246,6 +246,39 @@ describe("softDeleteProduct", () => {
     expect(saved.deletedAt).not.toBeNull();
     expect(saved.isActive).toBe(false);
   });
+
+  it("xóa luôn các đăng ký báo có hàng của sản phẩm đó", async () => {
+    const input = {
+      unit: "kg",
+      price: 25000,
+      costPrice: 21000,
+      stock: 0,
+      isActive: true,
+    };
+    const { id } = await saveProduct({ ...input, name: "Đường trắng" });
+    const other = await saveProduct({ ...input, name: "Muối hột" });
+    const phoneNormalized = "+84900000811";
+    await prisma.customerAccount.deleteMany({ where: { phoneNormalized } });
+    const account = await prisma.customerAccount.create({
+      data: { phoneNormalized, displayName: "Khách chờ", passwordHash: "x" },
+    });
+    await prisma.backInStockSubscription.createMany({
+      data: [
+        { accountId: account.id, productId: id },
+        { accountId: account.id, productId: other.id },
+      ],
+    });
+
+    await softDeleteProduct(id);
+
+    expect(
+      await prisma.backInStockSubscription.findMany({
+        where: { accountId: account.id },
+        select: { productId: true },
+      }),
+    ).toEqual([{ productId: other.id }]);
+    await prisma.customerAccount.delete({ where: { id: account.id } });
+  });
 });
 
 describe("saveProduct — anh", () => {

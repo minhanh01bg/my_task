@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
 import { errorLogFields, logger } from "@/lib/logger";
+import { deliverBackInStockAlerts } from "@/server/back-in-stock/deliver-alerts";
 import { revalidatePublic } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
 import { createCustomerOrderStatusNotification } from "@/server/customer-notifications/create-customer-notification";
@@ -50,6 +51,7 @@ export async function expireStaleOnlineOrders(
 
   const cancelledIds: string[] = [];
   let voucherRestored = false;
+  const restockedProductIds = new Set<string>();
   for (const candidate of candidates) {
     try {
       const result = await prisma.$transaction(async (tx) => {
@@ -84,6 +86,7 @@ export async function expireStaleOnlineOrders(
       if (result) {
         cancelledIds.push(candidate.id);
         if (result.voucherCode) voucherRestored = true;
+        for (const id of result.restockedProductIds) restockedProductIds.add(id);
       }
     } catch (error: unknown) {
       logger.error("stale_online_order_cancel_failed", {
@@ -104,6 +107,7 @@ export async function expireStaleOnlineOrders(
       count: cancelledIds.length,
       orderIds: cancelledIds,
     });
+    await deliverBackInStockAlerts(restockedProductIds);
   }
   return { cancelled: cancelledIds.length };
 }

@@ -38,9 +38,9 @@
 
 **Files:** Modify `src/server/products/save-product.ts`, `src/server/orders/cancel-order.ts`, `src/server/orders/update-online-order.ts`, `src/server/orders/expire-stale-online-orders.ts`; Test `tests/server/back-in-stock/deliver-alerts.test.ts`, `tests/server/orders/cancel-order.test.ts`, `tests/server/products/save-product.test.ts`.
 
-- [ ] RED: `quickUpdateProduct`, sửa qua `saveProduct`, `cancelOrder` độc lập, `transitionOnlineOrder(…, "cancelled")`, `expireStaleOnlineOrders` đều gửi thông báo; thứ tự sự kiện `tx:begin, tx:end, revalidate:catalog, tx:begin, tx:end`; `cancelOrder` trả `restockedProductIds`; `softDeleteProduct` xóa đăng ký của sản phẩm.
-- [ ] GREEN: gọi `deliverBackInStockAlerts` sau commit + revalidate ở 5 chỗ; `CancelOrderResult.restockedProductIds`; `softDeleteProduct` gói update + `deleteMany` đăng ký trong một transaction (chỉ `tx`).
-- [ ] Verify (`cancel-order`, `write-path-invalidation`, `save-product`, `update-online-order`, `expire-stale-online-orders`, `product-stock-edit`) + commit `feat(back-in-stock): send alerts after every stock increase`.
+- [x] RED: `quickUpdateProduct`, sửa qua `saveProduct`, `cancelOrder` độc lập, `transitionOnlineOrder(…, "cancelled")`, `expireStaleOnlineOrders` đều gửi thông báo; thứ tự sự kiện `tx:begin, tx:end, revalidate:catalog, tx:begin, tx:end`; `cancelOrder` trả `restockedProductIds`; `softDeleteProduct` xóa đăng ký của sản phẩm.
+- [x] GREEN: gọi `deliverBackInStockAlerts` sau commit + revalidate ở 5 chỗ; `CancelOrderResult.restockedProductIds`; `softDeleteProduct` gói update + `deleteMany` đăng ký trong một transaction (chỉ `tx`).
+- [x] Verify (`cancel-order`, `write-path-invalidation`, `save-product`, `update-online-order`, `expire-stale-online-orders`, `product-stock-edit`) + commit `feat(back-in-stock): send alerts after every stock increase`.
 
 ## Task 4: API khách + rate limit
 

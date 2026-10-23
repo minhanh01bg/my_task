@@ -11,6 +11,16 @@ import { subscribeBackInStock } from "@/server/back-in-stock/subscriptions";
 import { revalidatePublic } from "@/server/cache/public-cache";
 import { createBackInStockNotification } from "@/server/customer-notifications/create-customer-notification";
 import { prisma } from "@/server/db/prisma";
+import { cancelOrder } from "@/server/orders/cancel-order";
+import {
+  expireStaleOnlineOrders,
+  STALE_ONLINE_ORDER_TTL_MS,
+} from "@/server/orders/expire-stale-online-orders";
+import { transitionOnlineOrder } from "@/server/orders/update-online-order";
+import {
+  quickUpdateProduct,
+  saveProduct,
+} from "@/server/products/save-product";
 import { BACK_IN_STOCK_NOTIFICATION_KIND } from "@/types/back-in-stock";
 
 const events: string[] = [];
@@ -298,6 +308,153 @@ describe("deliverBackInStockAlerts", () => {
     expect(await deliverBackInStockAlerts([PRODUCT_ID])).toEqual({
       delivered: 1,
     });
+  });
+});
+
+/** Don giu 2 san pham (ton kho da tru) — huy don thi hoan ton kho. */
+async function seedOrder(
+  key: string,
+  channel: "pos" | "online",
+  createdAt?: Date,
+) {
+  return prisma.order.create({
+    data: {
+      code: `BIS-${key}`,
+      clientId: `bis-${key}`,
+      channel,
+      status: channel === "pos" ? "paid" : "pending",
+      fulfillmentStatus: channel === "online" ? "new" : null,
+      fulfillmentType: channel === "online" ? "pickup" : null,
+      subtotal: 50_000,
+      total: 50_000,
+      ...(createdAt ? { createdAt } : {}),
+      items: {
+        create: {
+          productId: PRODUCT_ID,
+          nameSnapshot: "Cà phê sữa đá",
+          unitPrice: 25_000,
+          originalPrice: 25_000,
+          quantity: 2,
+          lineTotal: 50_000,
+        },
+      },
+    },
+  });
+}
+
+async function notifiedCount(accountId: string) {
+  return prisma.customerNotification.count({
+    where: { accountId, kind: BACK_IN_STOCK_NOTIFICATION_KIND },
+  });
+}
+
+describe("Đường tăng tồn kho gửi báo có hàng sau commit", () => {
+  let accountId: string;
+
+  beforeEach(async () => {
+    await seedProduct();
+    accountId = await seedAccount(1);
+    await subscribeBackInStock(accountId, PRODUCT_ID);
+  });
+
+  it("quickUpdateProduct nhập hàng: gửi; vẫn 0 thì không", async () => {
+    await quickUpdateProduct({
+      id: PRODUCT_ID,
+      price: 26_000,
+      stock: 0,
+      originalStock: 0,
+    });
+    expect(await notifiedCount(accountId)).toBe(0);
+
+    await quickUpdateProduct({
+      id: PRODUCT_ID,
+      price: 26_000,
+      stock: 12,
+      originalStock: 0,
+    });
+
+    expect(await notifiedCount(accountId)).toBe(1);
+    expect(await prisma.backInStockSubscription.count()).toBe(0);
+  });
+
+  it("saveProduct sửa tồn kho: gửi", async () => {
+    await saveProduct({
+      id: PRODUCT_ID,
+      name: "Cà phê sữa đá",
+      unit: "ly",
+      price: 25_000,
+      costPrice: 15_000,
+      stock: 4,
+      originalStock: 0,
+    });
+
+    expect(await notifiedCount(accountId)).toBe(1);
+  });
+
+  it("saveProduct bật bán lại sản phẩm đang có hàng: gửi", async () => {
+    await prisma.product.update({
+      where: { id: PRODUCT_ID },
+      data: { stock: 7, isActive: false },
+    });
+
+    await saveProduct({
+      id: PRODUCT_ID,
+      name: "Cà phê sữa đá",
+      unit: "ly",
+      price: 25_000,
+      costPrice: 15_000,
+      stock: 7,
+      originalStock: 7,
+      isActive: true,
+    });
+
+    expect(await notifiedCount(accountId)).toBe(1);
+  });
+
+  it("cancelOrder độc lập: transaction hủy → revalidate → transaction gửi", async () => {
+    const order = await seedOrder("pos", "pos");
+    spyTransactions();
+
+    const result = await cancelOrder(order.id);
+
+    expect(result.restockedProductIds).toEqual([PRODUCT_ID]);
+    expect(events).toEqual([
+      "tx:begin",
+      "tx:end",
+      "revalidate:catalog",
+      "tx:begin",
+      "tx:end",
+    ]);
+    expect(await notifiedCount(accountId)).toBe(1);
+  });
+
+  it("transitionOnlineOrder(…, cancelled): gửi sau revalidate", async () => {
+    const order = await seedOrder("online-cancel", "online");
+    spyTransactions();
+
+    await transitionOnlineOrder(order.id, "cancelled");
+
+    expect(events).toEqual([
+      "tx:begin",
+      "tx:end",
+      "revalidate:catalog",
+      "tx:begin",
+      "tx:end",
+    ]);
+    expect(await notifiedCount(accountId)).toBe(1);
+  });
+
+  it("expireStaleOnlineOrders hoàn tồn kho đơn quá hạn: gửi", async () => {
+    await seedOrder(
+      "online-stale",
+      "online",
+      new Date(Date.now() - STALE_ONLINE_ORDER_TTL_MS - 60_000),
+    );
+
+    expect(await expireStaleOnlineOrders()).toEqual({ cancelled: 1 });
+
+    expect(vi.mocked(revalidatePublic)).toHaveBeenCalledWith("catalog");
+    expect(await notifiedCount(accountId)).toBe(1);
   });
 });
 

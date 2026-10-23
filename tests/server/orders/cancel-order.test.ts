@@ -281,7 +281,11 @@ describe("cancelOrder", () => {
 
     const result = await prisma.$transaction((tx) => cancelOrder(order.id, tx));
 
-    expect(result).toEqual({ cancelled: true, voucherCode: "GIAM10" });
+    expect(result).toEqual({
+      cancelled: true,
+      voucherCode: "GIAM10",
+      restockedProductIds: [],
+    });
     expect(await usedCountOf("GIAM10")).toBe(0);
     expect(revalidatePublic).not.toHaveBeenCalled();
   });
