@@ -192,6 +192,63 @@ describe("createOnlineOrder", () => {
     }
   });
 
+  it("BL-1: 3 đơn khách vãng lai mang SĐT nạn nhân không chặn tài khoản của họ", async () => {
+    const account = await prisma.customerAccount.create({
+      data: {
+        phoneNormalized: "+84901234567",
+        displayName: "Nạn nhân",
+        passwordHash: "x",
+        phoneVerifiedAt: new Date(),
+      },
+    });
+    try {
+      for (let index = 0; index < 3; index += 1) {
+        await createOnlineOrder(input(1));
+      }
+      // Khách vãng lai thứ 4 cùng SĐT vẫn bị chặn.
+      await expect(createOnlineOrder(input(1))).rejects.toMatchObject({
+        code: "TOO_MANY_OPEN_ORDERS",
+      });
+
+      await expect(
+        createOnlineOrder(input(1), { customerAccountId: account.id }),
+      ).resolves.toMatchObject({ duplicated: false });
+    } finally {
+      await prisma.order.deleteMany({
+        where: { customerAccountId: account.id },
+      });
+      await prisma.customerAccount.delete({ where: { id: account.id } });
+    }
+  });
+
+  it("BL-1: đơn của tài khoản không tính vào giới hạn của khách vãng lai cùng SĐT", async () => {
+    const account = await prisma.customerAccount.create({
+      data: {
+        phoneNormalized: "+84900000078",
+        displayName: "Khách tài khoản",
+        passwordHash: "x",
+        phoneVerifiedAt: new Date(),
+      },
+    });
+    try {
+      for (let index = 0; index < 3; index += 1) {
+        await createOnlineOrder(input(1), { customerAccountId: account.id });
+      }
+      await expect(
+        createOnlineOrder(input(1), { customerAccountId: account.id }),
+      ).rejects.toMatchObject({ code: "TOO_MANY_OPEN_ORDERS" });
+
+      await expect(createOnlineOrder(input(1))).resolves.toMatchObject({
+        duplicated: false,
+      });
+    } finally {
+      await prisma.order.deleteMany({
+        where: { customerAccountId: account.id },
+      });
+      await prisma.customerAccount.delete({ where: { id: account.id } });
+    }
+  });
+
   it("từ chối số lượng lẻ ngay cả khi bỏ qua schema", async () => {
     await expect(createOnlineOrder(input(1.5))).rejects.toMatchObject({
       name: "OnlineOrderError",

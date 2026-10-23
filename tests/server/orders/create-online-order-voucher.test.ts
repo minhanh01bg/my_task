@@ -469,6 +469,22 @@ describe("BL-3: giới hạn số lần mỗi khách dùng một mã", () => {
     expect(await usedCount()).toBe(1);
   });
 
+  it("đơn vãng lai mang SĐT của tài khoản không trừ lượt của tài khoản", async () => {
+    await voucher();
+    // Trước khi bật giới hạn, khách vãng lai dùng mã với SĐT 0912345678.
+    await createOnlineOrder(checkout({ voucherCode: "GIAM10" }));
+    await limitPerCustomer("1");
+    const account = await customerAccount();
+
+    // Tài khoản đặt với chính SĐT đó vẫn còn nguyên lượt của mình.
+    await expect(
+      createOnlineOrder(checkout({ voucherCode: "GIAM10" }), {
+        customerAccountId: account.id,
+      }),
+    ).resolves.toMatchObject({ duplicated: false });
+    expect(await usedCount()).toBe(2);
+  });
+
   it("đơn đã huỷ không tính: huỷ đơn đầu thì khách dùng lại được", async () => {
     await voucher();
     await limitPerCustomer("1");

@@ -4,8 +4,9 @@ import { canonicalizeVietnamesePhone } from "@/types/customer-auth";
 import { OnlineOrderError } from "@/types/online-order";
 
 /**
- * So don online dang mo (cua hang chua xu ly, chua huy) toi da cho moi SDT va
- * moi tai khoan — chan giu kho bang nhieu don chua thanh toan.
+ * So don online dang mo (cua hang chua xu ly, chua huy) toi da cho moi tai
+ * khoan, hoac moi SDT voi khach vang lai — chan giu kho bang nhieu don chua
+ * thanh toan.
  */
 export const MAX_OPEN_ONLINE_ORDERS = 3;
 
@@ -26,30 +27,28 @@ const OPEN_ONLINE_ORDER = {
 /**
  * Goi TRONG transaction tao don, sau lenh ghi dau tien: SQLite da giu khoa ghi
  * nen hai checkout dong thoi khong cung lot qua gioi han.
+ *
+ * Tai khoan chi dem don cua chinh no; khach vang lai dem don vang lai cung SDT.
+ * SDT khach vang lai khong duoc xac minh: dem moi don mang SDT thi ai cung khoa
+ * duoc tai khoan cua nguoi khac bang 3 don vang lai dung SDT cua ho.
  */
 export async function assertOpenOnlineOrderLimit(
   tx: Prisma.TransactionClient,
   owner: { contactPhone: string; customerAccountId?: string | null },
 ): Promise<void> {
-  const byPhone = await tx.order.count({
+  const open = await tx.order.count({
     where: {
       ...OPEN_ONLINE_ORDER,
-      contactPhone: { in: contactPhoneVariants(owner.contactPhone) },
+      ...(owner.customerAccountId
+        ? { customerAccountId: owner.customerAccountId }
+        : {
+            customerAccountId: null,
+            contactPhone: { in: contactPhoneVariants(owner.contactPhone) },
+          }),
     },
   });
-  const byAccount = owner.customerAccountId
-    ? await tx.order.count({
-        where: {
-          ...OPEN_ONLINE_ORDER,
-          customerAccountId: owner.customerAccountId,
-        },
-      })
-    : 0;
 
-  if (
-    byPhone >= MAX_OPEN_ONLINE_ORDERS ||
-    byAccount >= MAX_OPEN_ONLINE_ORDERS
-  ) {
+  if (open >= MAX_OPEN_ONLINE_ORDERS) {
     throw new OnlineOrderError(
       "TOO_MANY_OPEN_ORDERS",
       `Bạn đang có ${MAX_OPEN_ONLINE_ORDERS} đơn hàng chờ cửa hàng xử lý. Vui lòng chờ xác nhận hoặc liên hệ cửa hàng trước khi đặt thêm.`,
