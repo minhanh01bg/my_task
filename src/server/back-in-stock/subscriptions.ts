@@ -12,6 +12,12 @@ export const ONLINE_SELLABLE_PRODUCT_WHERE = {
   deletedAt: null,
 } satisfies Prisma.ProductWhereInput;
 
+/**
+ * Don online chi dat so luong nguyen >= 1 nen ton kho le duoi muc nay (vd. 0.5)
+ * van la het hang: van cho dang ky, chua gui bao.
+ */
+export const MIN_BACK_IN_STOCK_READY_STOCK = 1;
+
 export type BackInStockFailureCode =
   | "product_not_found"
   | "product_in_stock"
@@ -24,7 +30,7 @@ export type BackInStockResult =
 /**
  * Bat bao co hang cho san pham dang het hang. Idempotent: da dang ky thi tra
  * ok. Mot transaction ngan (chi `tx`) de kiem tra ton kho, tran va ghi cung
- * luc — dot nhap hang commit truoc thi thay `stock > 0` va tra 409.
+ * luc — dot nhap hang commit truoc thi thay du hang va tra 409.
  */
 export async function subscribeBackInStock(
   accountId: string,
@@ -36,7 +42,9 @@ export async function subscribeBackInStock(
       select: { stock: true },
     });
     if (!product) return { ok: false, code: "product_not_found" };
-    if (product.stock > 0) return { ok: false, code: "product_in_stock" };
+    if (product.stock >= MIN_BACK_IN_STOCK_READY_STOCK) {
+      return { ok: false, code: "product_in_stock" };
+    }
 
     const existing = await tx.backInStockSubscription.findUnique({
       where: { accountId_productId: { accountId, productId } },

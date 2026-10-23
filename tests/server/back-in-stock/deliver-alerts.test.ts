@@ -178,6 +178,27 @@ describe("deliverBackInStockAlerts", () => {
     ).toBe(1);
   });
 
+  it("tồn kho lẻ dưới 1 chưa đặt online được: không gửi, giữ đăng ký; đủ 1 thì gửi", async () => {
+    await seedProduct();
+    const accountId = await seedAccount(1);
+    await subscribeBackInStock(accountId, PRODUCT_ID);
+
+    await setStock(0.5);
+    expect(await deliverBackInStockAlerts([PRODUCT_ID])).toEqual({
+      delivered: 0,
+    });
+    expect(await sweepBackInStockAlerts()).toEqual({ delivered: 0 });
+    expect(await prisma.customerNotification.count()).toBe(0);
+    expect(await prisma.backInStockSubscription.count()).toBe(1);
+
+    await setStock(1);
+    expect(await deliverBackInStockAlerts([PRODUCT_ID])).toEqual({
+      delivered: 1,
+    });
+    expect(await notifiedCount(accountId)).toBe(1);
+    expect(await prisma.backInStockSubscription.count()).toBe(0);
+  });
+
   it("sản phẩm còn hết hàng, bị ẩn hoặc đã xóa mềm: không gửi, giữ đăng ký", async () => {
     await seedProduct();
     const accountId = await seedAccount(1);

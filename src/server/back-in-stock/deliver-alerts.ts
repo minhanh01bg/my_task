@@ -4,7 +4,10 @@ import { errorLogFields, logger } from "@/lib/logger";
 import { createBackInStockNotification } from "@/server/customer-notifications/create-customer-notification";
 import { prisma } from "@/server/db/prisma";
 
-import { ONLINE_SELLABLE_PRODUCT_WHERE } from "./subscriptions";
+import {
+  MIN_BACK_IN_STOCK_READY_STOCK,
+  ONLINE_SELLABLE_PRODUCT_WHERE,
+} from "./subscriptions";
 
 export const BACK_IN_STOCK_SWEEP_INTERVAL_MS = 15 * 60 * 1000;
 /** Moi transaction gui toi da chung nay dang ky — transaction van ngan. */
@@ -12,10 +15,10 @@ const DELIVERY_BATCH_SIZE = 50;
 /** Moi luot sweep xu ly chung nay san pham — luot sau lam tiep. */
 const SWEEP_PRODUCT_LIMIT = 100;
 
-/** San pham bao duoc: dang ban online va con hang. */
+/** San pham bao duoc: dang ban online va du hang cho mot don online. */
 const READY_PRODUCT_WHERE = {
   ...ONLINE_SELLABLE_PRODUCT_WHERE,
-  stock: { gt: 0 },
+  stock: { gte: MIN_BACK_IN_STOCK_READY_STOCK },
 } satisfies Prisma.ProductWhereInput;
 
 /**

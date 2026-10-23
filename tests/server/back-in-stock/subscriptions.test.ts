@@ -69,6 +69,23 @@ describe("subscribeBackInStock", () => {
     });
   });
 
+  it("tồn kho lẻ dưới 1 (không đặt online được) vẫn cho đăng ký", async () => {
+    await seedProduct("bis-fraction", { stock: 0.5 });
+
+    expect(await subscribeBackInStock(accountId, "bis-fraction")).toEqual({
+      ok: true,
+    });
+  });
+
+  it("tồn kho đúng 1 → product_in_stock", async () => {
+    await seedProduct("bis-one", { stock: 1 });
+
+    expect(await subscribeBackInStock(accountId, "bis-one")).toEqual({
+      ok: false,
+      code: "product_in_stock",
+    });
+  });
+
   it("sản phẩm còn hàng → product_in_stock, không ghi gì", async () => {
     await seedProduct("bis-in", { stock: 3 });
 
