@@ -45,6 +45,19 @@ function state(body: BackInStockState) {
   return NextResponse.json(body, { headers: NO_STORE });
 }
 
+function unexpectedError(
+  event: string,
+  text: string,
+  fields: Record<string, unknown>,
+) {
+  const correlationId = crypto.randomUUID();
+  logger.error(event, { correlationId, ...fields });
+  return NextResponse.json(
+    { message: text, correlationId },
+    { status: 500, headers: NO_STORE },
+  );
+}
+
 /** Trang san pham la trang tinh: nut "Bao khi co hang" hoi trang thai o day. */
 export async function GET(request: Request) {
   const session = await resolveCustomerSessionToken(
@@ -64,11 +77,11 @@ export async function GET(request: Request) {
     );
     return state({ productId: productId.data, subscribed });
   } catch (error: unknown) {
-    logger.error("back_in_stock_state_failed", {
-      productId: productId.data,
-      ...errorLogFields(error),
-    });
-    return message("Không tải được trạng thái. Vui lòng thử lại.", 500);
+    return unexpectedError(
+      "back_in_stock_state_failed",
+      "Không tải được trạng thái. Vui lòng thử lại.",
+      { productId: productId.data, ...errorLogFields(error) },
+    );
   }
 }
 
@@ -117,10 +130,10 @@ export async function POST(request: Request) {
     }
     return state({ productId, subscribed });
   } catch (error: unknown) {
-    logger.error("back_in_stock_update_failed", {
-      productId,
-      ...errorLogFields(error),
-    });
-    return message("Không cập nhật được đăng ký. Vui lòng thử lại.", 500);
+    return unexpectedError(
+      "back_in_stock_update_failed",
+      "Không cập nhật được đăng ký. Vui lòng thử lại.",
+      { productId, ...errorLogFields(error) },
+    );
   }
 }

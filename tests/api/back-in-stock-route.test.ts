@@ -9,6 +9,7 @@ import {
 } from "vitest";
 
 import { GET, POST } from "@/app/api/customer/back-in-stock/route";
+import { logger } from "@/lib/logger";
 import { setBackInStockRateLimiter } from "@/server/back-in-stock/back-in-stock-rate-limit";
 import { createCustomerSession } from "@/server/customer-auth/session";
 import { prisma } from "@/server/db/prisma";
@@ -36,6 +37,7 @@ const URL_BASE = "https://example.com/api/customer/back-in-stock";
 const OUT_OF_STOCK_ID = "bis-api-out";
 const IN_STOCK_ID = "bis-api-in";
 const PHONE = "+84900000921";
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 let accountId: string;
 let cookie: string;
@@ -57,6 +59,10 @@ function postRequest(
     headers: { "content-type": "application/json", ...headers },
     body: JSON.stringify(body),
   });
+}
+
+function piiError() {
+  return Object.assign(new Error(`lỗi với ${PHONE}`), { code: "P1008" });
 }
 
 async function subscriptionCount() {
@@ -141,6 +147,30 @@ describe("GET /api/customer/back-in-stock", () => {
       productId: OUT_OF_STOCK_ID,
       subscribed: true,
     });
+  });
+
+  it("500 kèm correlationId và ghi log khi lỗi bất ngờ", async () => {
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    vi.spyOn(
+      prisma.backInStockSubscription,
+      "findUnique",
+    ).mockRejectedValueOnce(piiError());
+    const response = await GET(getRequest(OUT_OF_STOCK_ID));
+    expect(response.status).toBe(500);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    const body = (await response.json()) as { correlationId: string };
+    expect(body).toEqual({
+      message: "Không tải được trạng thái. Vui lòng thử lại.",
+      correlationId: expect.stringMatching(UUID),
+    });
+    expect(errorSpy).toHaveBeenCalledWith("back_in_stock_state_failed", {
+      correlationId: body.correlationId,
+      productId: OUT_OF_STOCK_ID,
+      errorClass: "Error",
+      errorCode: "P1008",
+    });
+    expect(JSON.stringify(body)).not.toContain(PHONE);
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain(PHONE);
   });
 });
 
@@ -276,24 +306,26 @@ describe("POST /api/customer/back-in-stock", () => {
     expect(await subscriptionCount()).toBe(0);
   });
 
-  it("500 với thông báo chung và ghi log khi lỗi bất ngờ", async () => {
-    const consoleError = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
-    vi.spyOn(prisma, "$transaction").mockRejectedValueOnce(
-      Object.assign(new Error(`lỗi với ${PHONE}`), { code: "P1008" }),
-    );
+  it("500 kèm correlationId và ghi log khi lỗi bất ngờ", async () => {
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    vi.spyOn(prisma, "$transaction").mockRejectedValueOnce(piiError());
     const response = await POST(
       postRequest({ productId: OUT_OF_STOCK_ID, subscribed: true }),
     );
     expect(response.status).toBe(500);
     expect(response.headers.get("cache-control")).toBe("private, no-store");
-    expect(await response.json()).toEqual({
+    const body = (await response.json()) as { correlationId: string };
+    expect(body).toEqual({
       message: "Không cập nhật được đăng ký. Vui lòng thử lại.",
+      correlationId: expect.stringMatching(UUID),
     });
-    const logged = JSON.stringify(consoleError.mock.calls);
-    expect(logged).toContain("back_in_stock_update_failed");
-    expect(logged).toContain(OUT_OF_STOCK_ID);
-    expect(logged).not.toContain(PHONE);
+    expect(errorSpy).toHaveBeenCalledWith("back_in_stock_update_failed", {
+      correlationId: body.correlationId,
+      productId: OUT_OF_STOCK_ID,
+      errorClass: "Error",
+      errorCode: "P1008",
+    });
+    expect(JSON.stringify(body)).not.toContain(PHONE);
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain(PHONE);
   });
 });
