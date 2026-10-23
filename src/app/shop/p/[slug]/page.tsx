@@ -5,6 +5,7 @@ import {
   ProductPage,
   productPageMetadata,
 } from "@/features/online-store/product-page";
+import { shopSlug } from "@/app/shop/route-params";
 import { getOnlineProductDetailBySlug } from "@/server/catalog/get-product-detail";
 import {
   getPublicStoreProfile,
@@ -24,7 +25,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
+  const slug = shopSlug((await params).slug);
   const [detail, storeProfile] = await Promise.all([
     getOnlineProductDetailBySlug(slug),
     getPublicStoreProfile(),
@@ -38,7 +39,7 @@ export default async function ProductBySlugPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const { slug } = await params;
+  const slug = shopSlug((await params).slug);
   const [detail, storeProfile, shipping] = await Promise.all([
     getOnlineProductDetailBySlug(slug),
     getPublicStoreProfile(),

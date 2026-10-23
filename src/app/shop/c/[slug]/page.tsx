@@ -1,3 +1,4 @@
+import { shopSlug } from "@/app/shop/route-params";
 import {
   generateCategoryMetadata,
   renderCategoryPage,
@@ -15,10 +16,10 @@ interface CategoryPageProps {
 
 export async function generateMetadata({ params }: CategoryPageProps) {
   const { slug } = await params;
-  return generateCategoryMetadata(slug, 1);
+  return generateCategoryMetadata(shopSlug(slug), 1);
 }
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { slug } = await params;
-  return renderCategoryPage(slug, 1);
+  return renderCategoryPage(shopSlug(slug), 1);
 }

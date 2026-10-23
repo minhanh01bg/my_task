@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { shopSlug } from "@/app/shop/route-params";
 import {
   generateCategoryMetadata,
   renderCategoryPage,
@@ -23,10 +24,10 @@ function pageNumber(value: string): number {
 
 export async function generateMetadata({ params }: CategoryPageProps) {
   const { slug, page } = await params;
-  return generateCategoryMetadata(slug, pageNumber(page));
+  return generateCategoryMetadata(shopSlug(slug), pageNumber(page));
 }
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { slug, page } = await params;
-  return renderCategoryPage(slug, pageNumber(page));
+  return renderCategoryPage(shopSlug(slug), pageNumber(page));
 }

@@ -5,6 +5,7 @@ import {
   ProductPage,
   productPageMetadata,
 } from "@/features/online-store/product-page";
+import { shopProductId } from "@/app/shop/route-params";
 import { productHref } from "@/lib/seo/product-href";
 import { getOnlineProductDetail } from "@/server/catalog/get-product-detail";
 import {
@@ -25,7 +26,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  const { id } = await params;
+  const id = shopProductId((await params).id);
   const [detail, storeProfile] = await Promise.all([
     getOnlineProductDetail(id),
     getPublicStoreProfile(),
@@ -42,7 +43,7 @@ export default async function ProductDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const id = shopProductId((await params).id);
   // Cùng loader `cache()` với generateMetadata → một truy vấn mỗi request.
   const [detail, storeProfile, shipping] = await Promise.all([
     getOnlineProductDetail(id),
