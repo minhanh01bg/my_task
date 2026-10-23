@@ -128,7 +128,13 @@ export function ProductForm({
       onChange={(event) => saveDraft(event.currentTarget)}
       className="grid grid-cols-1 gap-5 sm:grid-cols-2"
     >
-      {product ? <input type="hidden" name="id" value={product.id} /> : null}
+      {product ? (
+        <>
+          <input type="hidden" name="id" value={product.id} />
+          {/* Server chỉ ghi tồn kho khi admin đổi số so với lúc mở form. */}
+          <input type="hidden" name="originalStock" value={product.stock} />
+        </>
+      ) : null}
       <div className="col-span-full space-y-1.5">
         <Label htmlFor="product-name">Tên sản phẩm</Label>
         <Input

@@ -114,6 +114,7 @@ describe("server action sản phẩm (API-14)", () => {
     formData.set("id", `${PREFIX}khong-co`);
     formData.set("price", "1000");
     formData.set("stock", "1");
+    formData.set("originalStock", "1");
 
     expect(await quickUpdateProductAction(formData)).toEqual({
       ok: false,

@@ -14,11 +14,15 @@ import {
   INVALID_INPUT_MESSAGE,
   isRecordNotFound,
 } from "@/server/admin/admin-action";
-import { revalidatePublic } from "@/server/cache/public-cache";
-import { CACHE_TAGS } from "@/server/cache/tags";
-import { prisma } from "@/server/db/prisma";
+import { logAdminAction } from "@/server/auth/admin-audit";
 import { saveProductImage } from "@/server/products/save-image";
-import { saveProduct, softDeleteProduct } from "@/server/products/save-product";
+import {
+  ProductStockConflictError,
+  quickUpdateProduct,
+  saveProduct,
+  softDeleteProduct,
+  type StockChange,
+} from "@/server/products/save-product";
 import type { AdminActionResult } from "@/types/admin-action";
 
 const PRODUCT_NOT_FOUND = {
@@ -34,6 +38,7 @@ const quickUpdateSchema = z.object({
     .min(0, "Giá bán không được âm")
     .max(MAX_INT_VND, "Giá bán quá lớn"),
   stock: z.coerce.number().finite("Tồn kho không hợp lệ"),
+  originalStock: z.coerce.number().finite("Tồn kho không hợp lệ"),
 });
 
 const schema = z.object({
@@ -45,6 +50,8 @@ const schema = z.object({
   price: z.coerce.number().int().min(0).max(MAX_INT_VND, "Giá bán quá lớn"),
   costPrice: z.coerce.number().int().min(0).max(MAX_INT_VND, "Giá vốn quá lớn"),
   stock: z.coerce.number(),
+  // Tồn kho lúc mở form sửa: chỉ ghi tồn kho khi admin thực sự đổi số.
+  originalStock: z.coerce.number().optional(),
   aliases: z.string().nullable(),
   imageUrl: z
     .union(
@@ -65,8 +72,33 @@ const schema = z.object({
     .nullable(),
 });
 
+/** Lỗi nghiệp vụ khi lưu sản phẩm thành `{ ok: false }`; lỗi lạ ném lại. */
+function productSaveFailure(error: unknown) {
+  if (error instanceof ProductStockConflictError) {
+    return { ok: false as const, message: error.message };
+  }
+  if (isRecordNotFound(error)) return PRODUCT_NOT_FOUND;
+  throw error;
+}
+
+async function logStockAdjustment(
+  identityId: string | undefined,
+  productId: string,
+  stockChange: StockChange | null,
+) {
+  if (!stockChange) return;
+  await logAdminAction({
+    identityId,
+    action: "product.stock_adjust",
+    entityType: "product",
+    entityId: productId,
+    metadata: { ...stockChange },
+  });
+}
+
 export async function saveProductAction(formData: FormData) {
-  if (!(await authorizeAdminAction())) {
+  const session = await authorizeAdminAction();
+  if (!session) {
     return { ok: false as const, message: ADMIN_UNAUTHORIZED_MESSAGE };
   }
 
@@ -79,6 +111,7 @@ export async function saveProductAction(formData: FormData) {
     price: formData.get("price"),
     costPrice: formData.get("costPrice"),
     stock: formData.get("stock"),
+    originalStock: (formData.get("originalStock") as string) || undefined,
     aliases: (formData.get("aliases") as string) || null,
     imageUrl: (formData.get("imageUrl") as string) || null,
   };
@@ -90,6 +123,10 @@ export async function saveProductAction(formData: FormData) {
       ok: false as const,
       message: parsed.error.issues[0]?.message ?? INVALID_INPUT_MESSAGE,
     };
+  }
+  // Form sửa luôn gửi tồn kho gốc; thiếu thì không biết admin có đổi số không.
+  if (parsed.data.id && parsed.data.originalStock === undefined) {
+    return { ok: false as const, message: INVALID_INPUT_MESSAGE };
   }
 
   const image = formData.get("image");
@@ -103,11 +140,17 @@ export async function saveProductAction(formData: FormData) {
     effectiveImageUrl = saved.imageUrl;
   }
 
-  await saveProduct({
-    ...parsed.data,
-    isActive: true,
-    imageUrl: effectiveImageUrl,
-  });
+  let saved: Awaited<ReturnType<typeof saveProduct>>;
+  try {
+    // Tạo mới mặc định đang bán; sửa thì giữ trạng thái ẩn/hiện đang có.
+    saved = await saveProduct({
+      ...parsed.data,
+      imageUrl: effectiveImageUrl,
+    });
+  } catch (error) {
+    return productSaveFailure(error);
+  }
+  await logStockAdjustment(session.identity?.id, saved.id, saved.stockChange);
 
   revalidatePath("/admin/products");
   revalidatePath("/pos");
@@ -116,7 +159,8 @@ export async function saveProductAction(formData: FormData) {
 }
 
 export async function quickUpdateProductAction(formData: FormData) {
-  if (!(await authorizeAdminAction())) {
+  const session = await authorizeAdminAction();
+  if (!session) {
     return { ok: false as const, message: ADMIN_UNAUTHORIZED_MESSAGE };
   }
 
@@ -124,6 +168,7 @@ export async function quickUpdateProductAction(formData: FormData) {
     id: formData.get("id"),
     price: formData.get("price"),
     stock: formData.get("stock"),
+    originalStock: formData.get("originalStock") ?? undefined,
   });
 
   if (!parsed.success) {
@@ -133,16 +178,13 @@ export async function quickUpdateProductAction(formData: FormData) {
     };
   }
 
+  let stockChange: StockChange | null;
   try {
-    await prisma.product.update({
-      where: { id: parsed.data.id, deletedAt: null },
-      data: { price: parsed.data.price, stock: parsed.data.stock },
-    });
+    ({ stockChange } = await quickUpdateProduct(parsed.data));
   } catch (error) {
-    if (isRecordNotFound(error)) return PRODUCT_NOT_FOUND;
-    throw error;
+    return productSaveFailure(error);
   }
-  revalidatePublic(CACHE_TAGS.catalog, CACHE_TAGS.product(parsed.data.id));
+  await logStockAdjustment(session.identity?.id, parsed.data.id, stockChange);
 
   revalidatePath("/admin/products");
   revalidatePath("/pos");

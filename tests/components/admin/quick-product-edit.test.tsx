@@ -72,4 +72,29 @@ describe("QuickProductEdit (Admin)", () => {
     // Không bị lỗi underflow hay chặn số âm
     expect(stockInput.validity.rangeUnderflow).toBe(false);
   });
+
+  it("gửi kèm tồn kho lúc mở để server không ghi đè số đã bán (BL-2)", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <QuickProductEdit
+        product={{
+          id: "prod-3",
+          name: "Gạo ST25",
+          price: 30000,
+          stock: 7.5,
+          unit: "kg",
+        }}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /sửa nhanh giá và tồn kho của gạo st25/i,
+      }),
+    );
+
+    const form = screen.getByLabelText("Tồn kho kg").closest("form")!;
+    expect(new FormData(form).get("originalStock")).toBe("7.5");
+  });
 });

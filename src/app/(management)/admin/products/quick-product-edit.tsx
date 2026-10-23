@@ -87,6 +87,8 @@ export function QuickProductEdit({ product }: QuickProductEditProps) {
           }}
         >
           <input type="hidden" name="id" value={product.id} />
+          {/* Server chỉ ghi tồn kho khi admin đổi số so với lúc mở form. */}
+          <input type="hidden" name="originalStock" value={product.stock} />
           <div className="grid gap-1.5">
             <span className="text-sm font-bold">Giá bán (VND)</span>
             <NumberStepper

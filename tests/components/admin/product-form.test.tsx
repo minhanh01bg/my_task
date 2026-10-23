@@ -270,4 +270,34 @@ describe("ProductForm (Admin)", () => {
     expect(stockInput.value).toBe("-4.5");
     expect(stockInput.validity.rangeUnderflow).toBe(false);
   });
+
+  it("form sửa gửi kèm tồn kho lúc mở để server không ghi đè số đã bán (BL-2)", () => {
+    const { container } = render(
+      <ProductForm
+        categories={mockCategories}
+        product={{
+          id: "prod-original-stock",
+          name: "Đường trắng",
+          aliases: null,
+          sku: null,
+          categoryId: null,
+          unit: "kg",
+          stock: 5.5,
+          price: 25000,
+          costPrice: 20000,
+          imageUrl: null,
+        }}
+      />,
+    );
+
+    const form = container.querySelector("form")!;
+    expect(new FormData(form).get("originalStock")).toBe("5.5");
+  });
+
+  it("form thêm mới không gửi tồn kho gốc", () => {
+    const { container } = render(<ProductForm categories={mockCategories} />);
+
+    const form = container.querySelector("form")!;
+    expect(new FormData(form).get("originalStock")).toBeNull();
+  });
 });

@@ -101,6 +101,7 @@ describe("saveProductAction — xử lý lưu và bỏ ảnh sản phẩm", () =
       price: String(existing.price),
       costPrice: String(existing.costPrice),
       stock: String(existing.stock),
+      originalStock: String(existing.stock),
       imageUrl: existing.imageUrl!,
       categoryId: category.id,
     }).forEach(([key, value]) => formData.set(key, value));
@@ -187,6 +188,7 @@ describe("saveProductAction — xử lý lưu và bỏ ảnh sản phẩm", () =
     formData.set("price", "25000");
     formData.set("costPrice", "15000");
     formData.set("stock", "50");
+    formData.set("originalStock", "50");
     formData.set("imageUrl", "");
 
     const result = await saveProductAction(formData);
