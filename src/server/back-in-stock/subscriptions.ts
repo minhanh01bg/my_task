@@ -44,8 +44,9 @@ export async function subscribeBackInStock(
     });
     if (existing) return { ok: true };
 
+    // Chi dem san pham khach con thay (va huy duoc) tren trang san pham.
     const pending = await tx.backInStockSubscription.count({
-      where: { accountId },
+      where: { accountId, product: ONLINE_SELLABLE_PRODUCT_WHERE },
     });
     if (pending >= MAX_PENDING_BACK_IN_STOCK_PER_ACCOUNT) {
       return { ok: false, code: "too_many_subscriptions" };

@@ -119,6 +119,29 @@ describe("subscribeBackInStock", () => {
       await prisma.backInStockSubscription.count({ where: { accountId } }),
     ).toBe(MAX_PENDING_BACK_IN_STOCK_PER_ACCOUNT);
   });
+
+  it("đăng ký của sản phẩm không còn bán online (khách không hủy được) không tính vào trần", async () => {
+    const ids = Array.from(
+      { length: MAX_PENDING_BACK_IN_STOCK_PER_ACCOUNT + 1 },
+      (_, index) => `bis-cap-hidden-${index}`,
+    );
+    await prisma.product.createMany({
+      data: ids.map((id) => ({ id, name: id, price: 1_000, stock: 0 })),
+    });
+    await prisma.backInStockSubscription.createMany({
+      data: ids
+        .slice(0, MAX_PENDING_BACK_IN_STOCK_PER_ACCOUNT)
+        .map((productId) => ({ accountId, productId })),
+    });
+    await prisma.product.update({
+      where: { id: ids[0] },
+      data: { isActive: false },
+    });
+
+    expect(await subscribeBackInStock(accountId, ids.at(-1)!)).toEqual({
+      ok: true,
+    });
+  });
 });
 
 describe("unsubscribeBackInStock / isSubscribedBackInStock", () => {
