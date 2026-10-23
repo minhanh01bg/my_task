@@ -1,0 +1,25 @@
+version: 2
+updates:
+  # Action được pin theo SHA kèm comment phiên bản; Dependabot cập nhật cả hai.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    # Không lấy bản vừa phát hành: chừa thời gian để gói độc bị gỡ khỏi registry.
+    cooldown:
+      default-days: 7
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]

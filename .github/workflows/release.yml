@@ -4,8 +4,7 @@ on:
   push:
     branches: [main]
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   release:
@@ -15,24 +14,29 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      # Giữ credential mặc định: job này push nhánh release.
-      - uses: actions/checkout@v4
+      # Không lưu token vào .git/config: changesets/action tự cấu hình credential
+      # từ GITHUB_TOKEN khi push, các bước khác không cần credential.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
         with:
           version: 10.28.2
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: "pnpm"
 
+      # Job chỉ chạy `changeset version` (JS thuần): không cần prisma generate,
+      # husky hay script cài đặt của dependency nào đang có quyền ghi repo.
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       # Ứng dụng private: chỉ tạo Version PR, không npm publish.
       - name: Create Release PR
-        uses: changesets/action@v1
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
           version: pnpm changeset version
         env:
