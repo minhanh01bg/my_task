@@ -7,6 +7,18 @@ export async function register() {
     // Ap pragma SQLite (WAL, busy_timeout...) mot lan luc boot.
     await import("@/server/db/prisma").then((m) => m.prismaReady);
 
+    // Tu huy don online chua thanh toan qua 24h de tra ton kho bi giu.
+    // Khong hen gio khi `next build` hay khi chay test.
+    if (
+      process.env.NEXT_PHASE !== "phase-production-build" &&
+      process.env.NODE_ENV !== "test" &&
+      !process.env.VITEST
+    ) {
+      const { scheduleStaleOnlineOrderExpiry } =
+        await import("@/server/orders/expire-stale-online-orders");
+      scheduleStaleOnlineOrderExpiry();
+    }
+
     // Tren Windows/dev, cache file cua libvips gay canh bao khi hot-reload.
     // Production giu cache de next/image resize nhanh hon.
     if (process.env.NODE_ENV !== "production" || process.platform === "win32") {

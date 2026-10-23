@@ -11,12 +11,23 @@ export function normalizePhone(value: string): string {
   return value.replace(/[\s.()-]/g, "");
 }
 
+/**
+ * Tran so luong moi dong cua don online: khach an danh khong dat truoc duoc ca
+ * kho. POS (/api/orders) khong bi gioi han nay.
+ */
+export const MAX_ONLINE_LINE_QUANTITY = 50;
+export const ONLINE_LINE_QUANTITY_MESSAGE = `Mỗi sản phẩm chỉ được đặt tối đa ${MAX_ONLINE_LINE_QUANTITY} trong một đơn`;
+
 export const onlineCartLineSchema = z
   .object({
     productId: z.string().trim().min(1).max(100),
     // Product.unit la text tu do, khong co co "ban le" — online chi ban so nguyen
     // (POS van ban duoc so luong le qua /api/orders).
-    quantity: z.number().int("Số lượng phải là số nguyên").positive().max(999),
+    quantity: z
+      .number()
+      .int("Số lượng phải là số nguyên")
+      .positive()
+      .max(MAX_ONLINE_LINE_QUANTITY, ONLINE_LINE_QUANTITY_MESSAGE),
   })
   .strict();
 
@@ -124,7 +135,8 @@ export class OnlineOrderError extends Error {
       | "PRODUCT_UNAVAILABLE"
       | "IDEMPOTENCY_CONFLICT"
       | "VOUCHER_INVALID"
-      | "INVALID_QUANTITY",
+      | "INVALID_QUANTITY"
+      | "TOO_MANY_OPEN_ORDERS",
     message: string,
     public readonly productIds: string[] = [],
   ) {

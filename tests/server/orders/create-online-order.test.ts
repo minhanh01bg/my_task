@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { prisma } from "@/server/db/prisma";
 import { createOnlineOrder } from "@/server/orders/create-online-order";
-import { OnlineOrderError } from "@/types/online-order";
+import { OnlineOrderError, onlineCheckoutSchema } from "@/types/online-order";
 
 const productId = "online-test-product";
 
@@ -94,6 +94,102 @@ describe("createOnlineOrder", () => {
     );
     expect(await prisma.order.count({ where: { channel: "online" } })).toBe(0);
     expect(await prisma.adminNotification.count()).toBe(0);
+  });
+
+  it("BL-1: schema và server đều chặn quá 50 đơn vị mỗi dòng", async () => {
+    await prisma.product.update({
+      where: { id: productId },
+      data: { stock: 200 },
+    });
+    expect(onlineCheckoutSchema.safeParse(input(51)).success).toBe(false);
+    expect(onlineCheckoutSchema.safeParse(input(50)).success).toBe(true);
+
+    await expect(createOnlineOrder(input(51))).rejects.toMatchObject({
+      code: "INVALID_QUANTITY",
+      productIds: [productId],
+    });
+    expect(await prisma.order.count({ where: { channel: "online" } })).toBe(0);
+
+    await expect(createOnlineOrder(input(50))).resolves.toMatchObject({
+      duplicated: false,
+    });
+  });
+
+  it("BL-1: từ chối đơn mở thứ 4 của cùng SĐT, kể cả khi gửi dạng +84", async () => {
+    for (let index = 0; index < 3; index += 1) {
+      await createOnlineOrder(input(1));
+    }
+
+    const fourth = { ...input(1), contactPhone: "+84901234567" };
+    await expect(createOnlineOrder(fourth)).rejects.toMatchObject({
+      name: "OnlineOrderError",
+      code: "TOO_MANY_OPEN_ORDERS",
+    });
+    expect(await prisma.order.count({ where: { channel: "online" } })).toBe(3);
+    const product = await prisma.product.findUniqueOrThrow({
+      where: { id: productId },
+    });
+    expect(product.stock).toBe(7);
+  });
+
+  it("BL-1: đơn đã hủy hoặc đã xác nhận không tính vào giới hạn đơn mở", async () => {
+    const ids: string[] = [];
+    for (let index = 0; index < 3; index += 1) {
+      ids.push((await createOnlineOrder(input(1))).order.id);
+    }
+    await prisma.order.update({
+      where: { id: ids[0] },
+      data: { status: "cancelled", fulfillmentStatus: "cancelled" },
+    });
+    await prisma.order.update({
+      where: { id: ids[1] },
+      data: { fulfillmentStatus: "confirmed" },
+    });
+
+    await expect(createOnlineOrder(input(1))).resolves.toMatchObject({
+      duplicated: false,
+    });
+    await expect(createOnlineOrder(input(1))).resolves.toMatchObject({
+      duplicated: false,
+    });
+    await expect(createOnlineOrder(input(1))).rejects.toMatchObject({
+      code: "TOO_MANY_OPEN_ORDERS",
+    });
+  });
+
+  it("BL-1: giới hạn 3 đơn mở theo tài khoản dù đổi SĐT", async () => {
+    const account = await prisma.customerAccount.create({
+      data: {
+        phoneNormalized: "+84900000077",
+        displayName: "Khách giới hạn",
+        passwordHash: "x",
+        phoneVerifiedAt: new Date(),
+      },
+    });
+    try {
+      const phones = ["0911111111", "0922222222", "0933333333"];
+      for (const contactPhone of phones) {
+        await createOnlineOrder(
+          { ...input(1), contactPhone },
+          { customerAccountId: account.id },
+        );
+      }
+
+      await expect(
+        createOnlineOrder(
+          { ...input(1), contactPhone: "0944444444" },
+          { customerAccountId: account.id },
+        ),
+      ).rejects.toMatchObject({ code: "TOO_MANY_OPEN_ORDERS" });
+      expect(
+        await prisma.order.count({ where: { customerAccountId: account.id } }),
+      ).toBe(3);
+    } finally {
+      await prisma.order.deleteMany({
+        where: { customerAccountId: account.id },
+      });
+      await prisma.customerAccount.delete({ where: { id: account.id } });
+    }
   });
 
   it("từ chối số lượng lẻ ngay cả khi bỏ qua schema", async () => {

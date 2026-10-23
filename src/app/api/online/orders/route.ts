@@ -65,9 +65,13 @@ export async function POST(request: Request) {
 
   const parsed = onlineCheckoutSchema.safeParse(bodyResult.data);
   if (!parsed.success) {
+    // Gio hang chi chan theo ton kho: noi ro tran so luong de khach sua duoc.
+    const quantityIssue = parsed.error.issues.find(
+      (issue) => issue.code === "too_big" && issue.path.at(-1) === "quantity",
+    );
     return NextResponse.json(
       {
-        message: "Thông tin đặt hàng không hợp lệ",
+        message: quantityIssue?.message ?? "Thông tin đặt hàng không hợp lệ",
         issues: parsed.error.issues,
       },
       {

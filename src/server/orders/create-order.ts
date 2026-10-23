@@ -11,6 +11,7 @@ import { prisma } from "@/server/db/prisma";
 import { createOnlineOrderNotification } from "@/server/notifications/create-admin-notification";
 import { OnlineOrderError } from "@/types/online-order";
 
+import { assertOpenOnlineOrderLimit } from "./open-online-orders";
 import { generateOrderCode } from "./order-code";
 import { nextOrderSequence } from "./order-sequence";
 import { OrderValidationError } from "./order-validation-error";
@@ -402,6 +403,12 @@ export async function createOrder(
       const result = await prisma.$transaction(async (tx) => {
         // Lenh GHI dau tien: giu khoa ghi ngay, khong doc-roi-nang-cap khoa.
         const sequence = await nextOrderSequence(tx);
+        if (input.channel === "online" && input.online) {
+          await assertOpenOnlineOrderLimit(tx, {
+            contactPhone: input.online.contactPhone,
+            customerAccountId: input.customerAccountId,
+          });
+        }
         const code = await resolveOrderCode(tx, sequence, input.preferredCode);
 
         // Sau khóa ghi, chụp cả giá vốn dịch vụ bằng chính transaction client.

@@ -15,6 +15,8 @@ import {
 import { createReceiptNonce } from "@/server/orders/public-receipt";
 import { findVoucherByCode } from "@/server/vouchers/get-voucher";
 import {
+  MAX_ONLINE_LINE_QUANTITY,
+  ONLINE_LINE_QUANTITY_MESSAGE,
   OnlineOrderError,
   type OnlineCheckoutInput,
 } from "@/types/online-order";
@@ -202,6 +204,16 @@ export async function createOnlineOrder(
       "INVALID_QUANTITY",
       "Số lượng phải là số nguyên",
       fractional,
+    );
+  }
+  const oversized = input.lines
+    .filter((line) => line.quantity > MAX_ONLINE_LINE_QUANTITY)
+    .map((line) => line.productId);
+  if (oversized.length) {
+    throw new OnlineOrderError(
+      "INVALID_QUANTITY",
+      ONLINE_LINE_QUANTITY_MESSAGE,
+      oversized,
     );
   }
 

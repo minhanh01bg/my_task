@@ -440,4 +440,84 @@ describe("POST /api/online/orders (Task 4 & Task 5: Hard limits and Anti-Abuse)"
       expect(JSON.stringify(logged)).not.toContain("0901234567");
     });
   });
+
+  describe("BL-1: stock hoarding limits at the HTTP boundary", () => {
+    const payload = {
+      lines: [{ productId: "prod-1", quantity: 1 }],
+      contactName: "Khách Hàng A",
+      contactPhone: "0901234567",
+      fulfillmentType: "pickup",
+      paymentMethod: "cod",
+    };
+
+    function post(body: Record<string, unknown>) {
+      return POST(
+        new Request("https://example.com/api/online/orders", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        }),
+      );
+    }
+
+    it("rejects more than 50 units of a line with a Vietnamese 400 message", async () => {
+      const createSpy = vi.spyOn(createOnlineOrderModule, "createOnlineOrder");
+
+      const response = await post({
+        ...payload,
+        clientId: "1b0f1f0e-6a51-4d8c-9a55-3f1f5f4a0c01",
+        lines: [{ productId: "prod-1", quantity: 51 }],
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.headers.get("cache-control")).toContain("no-store");
+      const body = await response.json();
+      expect(body.message).toBe(
+        "Mỗi sản phẩm chỉ được đặt tối đa 50 trong một đơn",
+      );
+      expect(createSpy).not.toHaveBeenCalled();
+    });
+
+    it("counts the 0xxx and +84xxx forms of a phone in one rate-limit bucket", async () => {
+      const phoneKeys: string[] = [];
+      setCheckoutAbuseLimiter({
+        async check(_policy, buckets) {
+          for (const bucket of buckets) {
+            if (bucket.dimension === "phone") phoneKeys.push(bucket.identifier);
+          }
+          return {
+            allowed: true as const,
+            remaining: 10,
+            limit: 10,
+            resetInSeconds: 60,
+          };
+        },
+      });
+      vi.spyOn(createOnlineOrderModule, "createOnlineOrder").mockResolvedValue({
+        order: {
+          id: "order-1",
+          code: "DH0001",
+          subtotal: 100_000,
+          discount: 0,
+          total: 100_000,
+          status: "pending",
+          hasStockWarning: false,
+        },
+        duplicated: false,
+      });
+
+      await post({
+        ...payload,
+        clientId: "1b0f1f0e-6a51-4d8c-9a55-3f1f5f4a0c02",
+        contactPhone: "0901234567",
+      });
+      await post({
+        ...payload,
+        clientId: "1b0f1f0e-6a51-4d8c-9a55-3f1f5f4a0c03",
+        contactPhone: "+84901234567",
+      });
+
+      expect(phoneKeys).toEqual(["+84901234567", "+84901234567"]);
+    });
+  });
 });

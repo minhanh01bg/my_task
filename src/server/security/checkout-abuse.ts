@@ -4,6 +4,7 @@ import {
   type RateLimiter,
 } from "@/server/security/rate-limit";
 import { POLICIES } from "@/server/security/rate-limit-policy";
+import { canonicalizeVietnamesePhone } from "@/types/customer-auth";
 import type { OnlineCheckoutInput } from "@/types/online-order";
 
 import type { TrustedProxyMode } from "@/server/http/client-ip";
@@ -168,7 +169,8 @@ export async function checkPostParseAbuse(
     {
       bucketName: "phone-hourly",
       dimension: "phone",
-      identifier: orderData.contactPhone,
+      // 0901... va +84901... la mot so: chung mot bucket.
+      identifier: canonicalizeVietnamesePhone(orderData.contactPhone),
     },
   ]);
 
