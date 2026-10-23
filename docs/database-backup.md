@@ -30,7 +30,9 @@ Giữ mật khẩu ở nơi an toàn để khôi phục.
 Timer chạy lúc **02:00 giờ Việt Nam mỗi ngày**, có chạy bù sau khi máy hoạt động lại.
 Giữ trên máy 7 ngày đối với bản đã gửi thành công (có marker `.sent`).
 Khi backup lỗi, script gửi cảnh báo Telegram; bản mã hóa hoàn chỉnh chưa gửi được
-vẫn giữ trên máy. Không tự gửi lại khi HTTP lỗi vì Telegram có thể đã nhận file.
+vẫn giữ trên máy 14 ngày. Chỉ dọn bản cũ sau khi vừa tạo được bản mã hóa mới, nên
+snapshot lỗi không xóa bản tốt cuối cùng. Không tự gửi lại khi HTTP lỗi vì Telegram
+có thể đã nhận file. Gửi lỗi quá 14 ngày thì chép bản cần giữ ra nơi khác.
 Backup chỉ gồm database, không gồm ảnh/uploads hay cấu hình ứng dụng.
 
 Cài service/timer trên máy hiện tại (Node 22, Python 3, `flock`):

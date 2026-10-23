@@ -223,25 +223,108 @@ test("snapshot lỗi thì không gửi file hoặc giữ archive không hoàn ch
   });
 });
 
-test("chỉ xóa backup quá 7 ngày đã gửi thành công", async () => {
+const DAY = 86_400_000;
+
+async function writeAged(directory, name, ageDays, now = Date.now()) {
+  const path = join(directory, name);
+  await writeFile(path, "data");
+  const seconds = (now - ageDays * DAY) / 1000;
+  await utimes(path, seconds, seconds);
+}
+
+test("xóa bản đã gửi quá 7 ngày và bản gửi lỗi quá 14 ngày", async () => {
   await fixture(async ({ directory }) => {
     const { mkdir } = await import("node:fs/promises");
     await mkdir(directory);
-    for (const name of [
-      "shop-backup-old.sqlite3.gz.enc",
-      "shop-backup-unsent.sqlite3.gz.enc",
-      "other.enc",
-    ]) {
-      const path = join(directory, name);
-      await writeFile(path, "data");
-      await utimes(path, 1, 1);
+    const now = Date.now();
+    await writeAged(directory, "shop-backup-sent-old.sqlite3.gz.enc", 8, now);
+    await writeAged(directory, "shop-backup-sent-new.sqlite3.gz.enc", 6, now);
+    await writeAged(
+      directory,
+      "shop-backup-unsent-old.sqlite3.gz.enc",
+      15,
+      now,
+    );
+    await writeAged(
+      directory,
+      "shop-backup-unsent-new.sqlite3.gz.enc",
+      13,
+      now,
+    );
+    await writeAged(directory, "other.enc", 365, now);
+    for (const name of ["sent-old", "sent-new"]) {
+      await writeFile(
+        join(directory, `shop-backup-${name}.sqlite3.gz.enc.sent`),
+        "",
+      );
     }
-    await writeFile(join(directory, "shop-backup-old.sqlite3.gz.enc.sent"), "");
-    await pruneBackups(directory);
+    await pruneBackups(directory, now);
     assert.deepEqual((await readdir(directory)).sort(), [
       "other.enc",
-      "shop-backup-unsent.sqlite3.gz.enc",
+      "shop-backup-sent-new.sqlite3.gz.enc",
+      "shop-backup-sent-new.sqlite3.gz.enc.sent",
+      "shop-backup-unsent-new.sqlite3.gz.enc",
     ]);
+  });
+});
+
+test("gửi lỗi nhiều ngày vẫn dọn bản gửi lỗi cũ, giữ bản mới", async () => {
+  await fixture(async (options) => {
+    const { mkdir } = await import("node:fs/promises");
+    await mkdir(options.directory);
+    await writeAged(options.directory, "shop-backup-stale.sqlite3.gz.enc", 15);
+    await assert.rejects(
+      backup({
+        ...options,
+        fetchImpl: async (url) => {
+          if (url.endsWith("/sendDocument")) throw new Error("offline");
+          return { ok: true, json: async () => ({ ok: true }) };
+        },
+      }),
+    );
+    const files = await readdir(options.directory);
+    assert.equal(files.length, 1);
+    assert.notEqual(files[0], "shop-backup-stale.sqlite3.gz.enc");
+  });
+});
+
+test("snapshot lỗi thì không xóa bản gửi lỗi cũ (có thể là bản tốt cuối cùng)", async () => {
+  await fixture(async (options) => {
+    const { mkdir } = await import("node:fs/promises");
+    await mkdir(options.directory);
+    await writeAged(options.directory, "shop-backup-stale.sqlite3.gz.enc", 15);
+    await assert.rejects(
+      backup({
+        ...options,
+        databaseUrl: `file:${join(options.dir, "missing.db")}`,
+        fetchImpl: async () => ({ ok: true, json: async () => ({ ok: true }) }),
+      }),
+    );
+    assert.deepEqual(await readdir(options.directory), [
+      "shop-backup-stale.sqlite3.gz.enc",
+    ]);
+  });
+});
+
+test("python snapshot chạy cô lập, bỏ qua PYTHONPATH", async () => {
+  await fixture(async (options) => {
+    const planted = join(options.dir, "planted");
+    const { mkdir } = await import("node:fs/promises");
+    await mkdir(planted);
+    const marker = join(options.dir, "planted-ran");
+    await writeFile(
+      join(planted, "gzip.py"),
+      `open(${JSON.stringify(marker)}, "w").close()\nraise SystemExit(3)\n`,
+    );
+    const previous = process.env.PYTHONPATH;
+    process.env.PYTHONPATH = planted;
+    try {
+      await backup({ ...options, noSend: true });
+    } finally {
+      if (previous === undefined) delete process.env.PYTHONPATH;
+      else process.env.PYTHONPATH = previous;
+    }
+    await assert.rejects(readFile(marker), { code: "ENOENT" });
   });
 });
 

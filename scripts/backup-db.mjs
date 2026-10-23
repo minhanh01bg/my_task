@@ -88,24 +88,33 @@ async function notify(token, chatId, message, fetchImpl = fetch) {
   await telegram("sendMessage", form, token, fetchImpl);
 }
 
-export async function pruneBackups(directory) {
-  const cutoff = Date.now() - 7 * 86400 * 1000;
+const DAY_MS = 86_400_000;
+const SENT_RETENTION_DAYS = 7;
+// Bản gửi lỗi chỉ có trên máy nên giữ lâu hơn, nhưng không để thư mục phình mãi
+// khi Telegram lỗi kéo dài.
+const UNSENT_RETENTION_DAYS = 14;
+
+async function modifiedAt(path) {
+  try {
+    const info = await stat(path);
+    return info.isFile() ? info.mtimeMs : null;
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+export async function pruneBackups(directory, now = Date.now()) {
   for (const name of await readdir(directory)) {
     if (!/^shop-backup-.*\.sqlite3\.gz\.enc$/.test(name)) continue;
     const path = join(directory, name);
     const marker = `${path}.sent`;
-    try {
-      if (
-        !(await stat(marker)).isFile() ||
-        (await stat(path)).mtimeMs >= cutoff
-      )
-        continue;
-    } catch (error) {
-      if (error.code === "ENOENT") continue;
-      throw error;
-    }
+    const sent = (await modifiedAt(marker)) !== null;
+    const modified = await modifiedAt(path);
+    const days = sent ? SENT_RETENTION_DAYS : UNSENT_RETENTION_DAYS;
+    if (modified === null || modified >= now - days * DAY_MS) continue;
     await rm(path);
-    await rm(marker);
+    if (sent) await rm(marker);
   }
 }
 
@@ -129,9 +138,10 @@ export async function backup({
     await chmod(directory, 0o700);
     const filename = `shop-backup-${new Date().toISOString().replace(/[:.]/g, "-")}-${randomBytes(4).toString("hex")}.sqlite3.gz.enc`;
     output = join(directory, filename);
+    // -I: bỏ qua PYTHONPATH, user site và thư mục hiện tại khi import.
     const dump = spawn(
       "/usr/bin/python3",
-      [join(ROOT, "scripts/sqlite-snapshot.py"), source],
+      ["-I", join(ROOT, "scripts/sqlite-snapshot.py"), source],
       {
         stdio: ["ignore", "pipe", "ignore"],
       },
@@ -190,6 +200,15 @@ export async function backup({
     return output;
   } catch {
     if (output && !encrypted) await rm(output, { force: true });
+    // Chỉ dọn khi vừa có bản mã hóa mới; snapshot lỗi thì bản cũ có thể là bản
+    // tốt cuối cùng.
+    if (encrypted) {
+      try {
+        await pruneBackups(directory);
+      } catch {
+        console.error("Không dọn được bản sao lưu cũ.");
+      }
+    }
     try {
       if (!noSend)
         await notify(
