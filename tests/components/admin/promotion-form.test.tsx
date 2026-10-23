@@ -124,6 +124,46 @@ describe("PromotionForm feedback", () => {
     );
   });
 
+  it("treats a stored legacy image outside the allowlist as empty so the edit still saves", async () => {
+    vi.mocked(savePromotionAction).mockResolvedValueOnce({
+      ok: true,
+      message: "Đã cập nhật chiến dịch",
+    });
+    const now = new Date();
+    render(
+      <ToastProvider>
+        <PromotionForm
+          initialData={{
+            id: "promo-legacy",
+            title: "Banner cũ",
+            body: null,
+            imageUrl: "https://cdn.example.com/old-banner.png",
+            ctaLabel: null,
+            ctaHref: null,
+            placement: "banner",
+            startsAt: null,
+            endsAt: null,
+            priority: 0,
+            isActive: true,
+            createdAt: now,
+            updatedAt: now,
+          }}
+        />
+      </ToastProvider>,
+    );
+    const user = userEvent.setup();
+    expect(screen.getByLabelText(/Đường dẫn hình ảnh/)).toHaveValue("");
+
+    await user.click(
+      screen.getByRole("button", { name: "Cập nhật chiến dịch" }),
+    );
+
+    await waitFor(() => expect(savePromotionAction).toHaveBeenCalledTimes(1));
+    const sent = vi.mocked(savePromotionAction).mock.calls[0][1];
+    expect(sent.get("id")).toBe("promo-legacy");
+    expect(sent.get("imageUrl")).toBe("");
+  });
+
   it("focuses the end date when it precedes the start date", async () => {
     const user = setup();
     await user.type(screen.getByLabelText(/Tiêu đề khuyến mãi/), "Ưu đãi");

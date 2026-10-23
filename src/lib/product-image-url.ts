@@ -1,9 +1,11 @@
 /**
- * Which product image URLs may be stored and served. Shop pages render them
- * through next/image, which only allows images.unsplash.com (next.config),
- * while POS loads the URL directly, so any other host both breaks the shop
- * image and leaks every POS terminal's IP/User-Agent to that host.
- * Isomorphic: used by the admin action and by the catalog read mappers.
+ * Which product and storefront promotion image URLs may be stored and served.
+ * Shop pages render them through next/image, which only allows
+ * images.unsplash.com (next.config), while POS loads the URL directly, so any
+ * other host both breaks the shop image and leaks every POS terminal's (or,
+ * for promotion banners, every shop visitor's) IP/User-Agent to that host.
+ * Isomorphic: used by the admin actions and forms (products, promotions), the
+ * promotion schemas in types/storefront and the catalog/promotion read mappers.
  */
 
 const MAX_PRODUCT_IMAGE_URL_LENGTH = 2048;

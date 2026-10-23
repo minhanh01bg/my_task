@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
+import { sanitizeProductImageUrl } from "@/lib/product-image-url";
 import { promotionActionSchema } from "@/types/storefront";
 
 import { PROMOTION_PLACEMENTS } from "./promotion-placement";
@@ -28,7 +29,8 @@ function initialValues(data?: StorefrontPromotion | null) {
   return {
     title: data?.title ?? "",
     body: data?.body ?? "",
-    imageUrl: data?.imageUrl ?? "",
+    // Ảnh cũ ngoài danh sách cho phép coi như chưa có ảnh để không chặn lưu.
+    imageUrl: sanitizeProductImageUrl(data?.imageUrl) ?? "",
     ctaLabel: data?.ctaLabel ?? "",
     ctaHref: data?.ctaHref ?? "",
     placement: data?.placement ?? "announcement",
@@ -244,8 +246,8 @@ export function PromotionForm({
               <InputField
                 {...textProps("imageUrl", "Đường dẫn hình ảnh")}
                 inputMode="url"
-                placeholder="/uploads/uu-dai.jpg hoặc https://…"
-                hint="Ảnh dùng cho banner. Chấp nhận ảnh nội bộ hoặc URL HTTPS công khai."
+                placeholder="/uploads/uu-dai.jpg hoặc https://images.unsplash.com/…"
+                hint="Ảnh dùng cho banner. Chấp nhận ảnh đã tải lên (/uploads/…) hoặc ảnh từ images.unsplash.com."
               />
               <div className="grid gap-4 sm:grid-cols-2">
                 <InputField

@@ -151,6 +151,25 @@ describe("Admin Promotion Management Actions", () => {
       ).toBe(false);
     });
 
+    it("chỉ nhận ảnh trong danh sách ảnh sản phẩm, không nhận mọi host HTTPS", () => {
+      const parsed = promotionActionSchema.safeParse({
+        title: "Ảnh host lạ",
+        imageUrl: "https://cdn.example.com/banner.png",
+      });
+      expect(parsed.success).toBe(false);
+      if (!parsed.success)
+        expect(parsed.error.flatten().fieldErrors.imageUrl?.[0]).toContain(
+          "images.unsplash.com",
+        );
+
+      expect(
+        promotionActionSchema.safeParse({
+          title: "Ảnh mẫu",
+          imageUrl: "/products/banh-mi.jpg",
+        }).success,
+      ).toBe(true);
+    });
+
     it.each(["//evil.com", "/\\evil.com", "///evil.com"])(
       "từ chối ctaHref %s trỏ ra domain ngoài (WEB-7b)",
       (ctaHref) => {

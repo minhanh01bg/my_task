@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { isAllowedProductImageUrl } from "@/lib/product-image-url";
 import { isPublicHttpsUrl, isSafeRelativePath } from "@/lib/safe-url";
 
 z.config({ jitless: true });
@@ -8,6 +9,13 @@ z.config({ jitless: true });
 function isSafePromotionUrl(value: string): boolean {
   return isSafeRelativePath(value) || isPublicHttpsUrl(value);
 }
+
+/**
+ * Anh khuyen mai dung chung danh sach anh san pham: host la nhan IP/User-Agent
+ * cua moi khach mo trang shop.
+ */
+const PROMOTION_IMAGE_MESSAGE =
+  "Ảnh phải là ảnh đã tải lên (/uploads/…) hoặc ảnh từ https://images.unsplash.com";
 
 export const catalogSortEnum = z.enum([
   "relevance",
@@ -117,10 +125,7 @@ export const publicPromotionSchema = z
       .string()
       .trim()
       .max(500)
-      .refine(isSafePromotionUrl, {
-        message:
-          "imageUrl phải là đường dẫn nội bộ (bắt đầu bằng /) hoặc URL HTTPS công khai",
-      })
+      .refine(isAllowedProductImageUrl, { message: PROMOTION_IMAGE_MESSAGE })
       .optional(),
     ctaLabel: z.string().trim().max(50).optional(),
     ctaHref: z
@@ -159,9 +164,8 @@ export const promotionActionSchema = z
       .max(500, "Đường dẫn hình ảnh tối đa 500 ký tự")
       .optional()
       .transform((v) => v || null)
-      .refine((url) => !url || isSafePromotionUrl(url), {
-        message:
-          "Đường dẫn hình ảnh phải là đường dẫn nội bộ (bắt đầu bằng /) hoặc URL HTTPS công khai",
+      .refine((url) => !url || isAllowedProductImageUrl(url), {
+        message: PROMOTION_IMAGE_MESSAGE,
       }),
     ctaLabel: z
       .string()

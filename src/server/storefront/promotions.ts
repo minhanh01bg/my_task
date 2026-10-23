@@ -1,3 +1,4 @@
+import { sanitizeProductImageUrl } from "@/lib/product-image-url";
 import { cachedPublic } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
@@ -84,7 +85,8 @@ async function loadActivePromotions(
     const parsed = publicPromotionSchema.safeParse({
       ...row,
       body: row.body ?? undefined,
-      imageUrl: row.imageUrl ?? undefined,
+      // Anh cu ngoai danh sach cho phep: hien thi nhu khong co anh, giu chien dich.
+      imageUrl: sanitizeProductImageUrl(row.imageUrl) ?? undefined,
       ctaLabel: row.ctaLabel ?? undefined,
       ctaHref: row.ctaHref ?? undefined,
     });

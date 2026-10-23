@@ -241,6 +241,37 @@ describe("publicPromotionSchema", () => {
     ).toBe(false);
   });
 
+  it.each([
+    "https://cdn.example.com/banner.png",
+    "https://images.unsplash.com.evil.com/banner.png",
+    "https://tracker.example/pixel.gif",
+  ])("từ chối ảnh banner HTTPS ngoài danh sách ảnh sản phẩm %s", (imageUrl) => {
+    expect(
+      publicPromotionSchema.safeParse({
+        id: "promo-other-host",
+        title: "Ảnh host lạ",
+        imageUrl,
+        placement: "banner",
+        priority: 0,
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each(["https://images.unsplash.com/photo-1", "/products/banh-mi.jpg"])(
+    "chấp nhận ảnh banner trong danh sách ảnh sản phẩm %s",
+    (imageUrl) => {
+      expect(
+        publicPromotionSchema.safeParse({
+          id: "promo-allowed-image",
+          title: "Ảnh hợp lệ",
+          imageUrl,
+          placement: "banner",
+          priority: 0,
+        }).success,
+      ).toBe(true);
+    },
+  );
+
   it("chấp nhận CTA nội bộ dạng /shop/... và ảnh /uploads/...", () => {
     expect(
       publicPromotionSchema.safeParse({

@@ -108,6 +108,40 @@ describe("Storefront Promotions Server Service", () => {
     expect(active[0].title).toBe("Safe link");
   });
 
+  it("ảnh cũ ngoài danh sách cho phép hiển thị như không có ảnh, vẫn giữ chiến dịch", async () => {
+    const now = new Date("2026-09-08T12:00:00Z");
+    await prisma.storefrontPromotion.create({
+      data: {
+        title: "Banner ảnh cũ",
+        placement: "banner",
+        isActive: true,
+        imageUrl: "https://cdn.example.com/old-banner.png",
+        ctaHref: "https://facebook.com/anphat",
+        priority: 10,
+      },
+    });
+    await prisma.storefrontPromotion.create({
+      data: {
+        title: "Banner ảnh nội bộ",
+        placement: "banner",
+        isActive: true,
+        imageUrl: "/uploads/promo.jpg",
+        priority: 5,
+      },
+    });
+
+    const active = await getActivePromotions({ placement: "banner", now });
+
+    expect(active.map((promo) => promo.title)).toEqual([
+      "Banner ảnh cũ",
+      "Banner ảnh nội bộ",
+    ]);
+    expect(active[0].imageUrl).toBeUndefined();
+    // Không đụng tới liên kết CTA.
+    expect(active[0].ctaHref).toBe("https://facebook.com/anphat");
+    expect(active[1].imageUrl).toBe("/uploads/promo.jpg");
+  });
+
   it("trả về mảng rỗng khi không có promotion nào thỏa mãn", async () => {
     const active = await getActivePromotions();
     expect(active).toEqual([]);
