@@ -66,10 +66,14 @@ const nextConfig: NextConfig = {
     formats: ["image/avif", "image/webp"],
     // 30 ngày: ảnh sản phẩm đổi thì đổi tên file (UUID) nên không sợ ảnh cũ.
     minimumCacheTTL: 2592000,
+    // Mặc định Next lấy 50% dung lượng đĩa còn trống; vượt mức thì xóa ảnh ít dùng nhất.
+    maximumDiskCacheSize: 200_000_000,
     remotePatterns: [
       {
         protocol: "https",
         hostname: "images.unsplash.com",
+        // Chỉ URL ảnh Unsplash (/photo-<id>); thiếu pathname thì Next cho mọi đường dẫn.
+        pathname: "/photo-*",
       },
     ],
   },
