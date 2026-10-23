@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
 import { buildSearchText } from "@/lib/search/search-text";
+import { deliverBackInStockAlerts } from "@/server/back-in-stock/deliver-alerts";
 import { revalidatePublic } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
@@ -139,6 +140,9 @@ export async function saveProduct(
   });
 
   revalidatePublic(CACHE_TAGS.catalog, CACHE_TAGS.product(saved.id));
+  // Sua co the vua nhap hang hoac bat ban lai: bao khach dang cho (sau commit;
+  // khong ai cho thi chi mot lan doc).
+  if (id) await deliverBackInStockAlerts([saved.id]);
   return saved;
 }
 
@@ -164,16 +168,23 @@ export async function quickUpdateProduct(input: {
   });
 
   revalidatePublic(CACHE_TAGS.catalog, CACHE_TAGS.product(input.id));
+  if (stockChange && stockChange.stock > 0) {
+    await deliverBackInStockAlerts([input.id]);
+  }
   return { stockChange };
 }
 
 /**
  * Xoa mem — don cu van tham chieu duoc san pham, nhung POS khong hien nua.
+ * Dang ky bao co hang cua san pham bi xoa cung luc: khong bao gio gui duoc nua.
  */
 export async function softDeleteProduct(id: string): Promise<void> {
-  await prisma.product.update({
-    where: { id },
-    data: { deletedAt: new Date(), isActive: false },
+  await prisma.$transaction(async (tx) => {
+    await tx.product.update({
+      where: { id },
+      data: { deletedAt: new Date(), isActive: false },
+    });
+    await tx.backInStockSubscription.deleteMany({ where: { productId: id } });
   });
   revalidatePublic(CACHE_TAGS.catalog, CACHE_TAGS.product(id));
 }

@@ -19,8 +19,9 @@ export async function register() {
     // Ap pragma SQLite (WAL, busy_timeout...) mot lan luc boot.
     await import("@/server/db/prisma").then((m) => m.prismaReady);
 
-    // Tu huy don online chua thanh toan qua 24h de tra ton kho bi giu, va tinh
-    // lai diem san pham chi tu danh gia da mua (mot lan, sau boot).
+    // Tu huy don online chua thanh toan qua 24h de tra ton kho bi giu, tinh
+    // lai diem san pham chi tu danh gia da mua (mot lan, sau boot), va gui bu
+    // bao co hang con treo (lan gui ngay sau nhap hang bi loi).
     if (isServing) {
       const { scheduleStaleOnlineOrderExpiry } =
         await import("@/server/orders/expire-stale-online-orders");
@@ -28,6 +29,9 @@ export async function register() {
       const { scheduleVerifiedRatingBackfill } =
         await import("@/server/reviews/backfill-verified-ratings");
       scheduleVerifiedRatingBackfill();
+      const { scheduleBackInStockSweep } =
+        await import("@/server/back-in-stock/deliver-alerts");
+      scheduleBackInStockSweep();
     }
 
     // Tren Windows/dev, cache file cua libvips gay canh bao khi hot-reload.

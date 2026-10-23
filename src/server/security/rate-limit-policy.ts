@@ -115,4 +115,14 @@ export const POLICIES = {
       { name: "ip-burst", limit: 10, windowSeconds: 60 },
     ],
   },
+  /** Bat/tat bao co hang: chan bam lien tuc / quet hang loat. Fail-open: da bat buoc dang nhap. */
+  backInStock: {
+    name: "back-in-stock",
+    failClosed: false,
+    timeoutMs: 1000,
+    buckets: [
+      { name: "account-burst", limit: 20, windowSeconds: 60 },
+      { name: "ip-burst", limit: 30, windowSeconds: 60 },
+    ],
+  },
 } as const satisfies Record<string, RateLimitPolicy>;

@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 
+import { deliverBackInStockAlerts } from "@/server/back-in-stock/deliver-alerts";
 import { revalidatePublic } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
@@ -12,6 +13,8 @@ export interface CancelOrderResult {
   cancelled: boolean;
   /** Ma voucher vua duoc hoan mot luot — nguoi goi can revalidate tag vouchers. */
   voucherCode: string | null;
+  /** San pham vua duoc hoan ton kho — nguoi goi bao "co hang" sau commit. */
+  restockedProductIds: string[];
 }
 
 /**
@@ -21,7 +24,8 @@ export interface CancelOrderResult {
  *
  * Khi truyen `txClient`, transaction thuoc ve nguoi goi: sau khi transaction
  * cua ho commit, nguoi goi PHAI goi `revalidatePublic(CACHE_TAGS.catalog)` va,
- * neu ket qua co `voucherCode`, ca `CACHE_TAGS.vouchers`
+ * neu ket qua co `voucherCode`, ca `CACHE_TAGS.vouchers`; roi
+ * `deliverBackInStockAlerts(restockedProductIds)`
  * (xem `transitionOnlineOrder` trong update-online-order.ts).
  */
 export async function cancelOrder(
@@ -37,7 +41,7 @@ export async function cancelOrder(
     });
 
     if (!order || order.status === "cancelled") {
-      return { cancelled: false, voucherCode: null };
+      return { cancelled: false, voucherCode: null, restockedProductIds: [] };
     }
 
     if (order.fulfillmentStatus === "completed") {
@@ -57,9 +61,11 @@ export async function cancelOrder(
       },
     });
 
+    const restocked = new Set<string>();
     for (const item of order.items) {
       if (item.isService || !item.productId) continue;
 
+      restocked.add(item.productId);
       await tx.product.update({
         where: { id: item.productId },
         data: { stock: { increment: item.quantity } },
@@ -93,7 +99,11 @@ export async function cancelOrder(
     // Don vua huy khong con la bang chung "da mua" cho danh gia cua chu don.
     await revokeCancelledPurchaseReviews(tx, order);
 
-    return { cancelled: true, voucherCode: order.voucherCode };
+    return {
+      cancelled: true,
+      voucherCode: order.voucherCode,
+      restockedProductIds: [...restocked],
+    };
   };
 
   if (txClient) {
@@ -107,5 +117,6 @@ export async function cancelOrder(
   } else {
     revalidatePublic(CACHE_TAGS.catalog);
   }
+  await deliverBackInStockAlerts(result.restockedProductIds);
   return result;
 }

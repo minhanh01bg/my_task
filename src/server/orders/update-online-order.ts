@@ -2,6 +2,7 @@ import {
   createCustomerOrderPaymentNotification,
   createCustomerOrderStatusNotification,
 } from "@/server/customer-notifications/create-customer-notification";
+import { deliverBackInStockAlerts } from "@/server/back-in-stock/deliver-alerts";
 import { revalidatePublic } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
 import { prisma } from "@/server/db/prisma";
@@ -19,6 +20,7 @@ export async function transitionOnlineOrder(
   next: OnlineOrderStatus,
 ) {
   let restoredVoucher = false;
+  let restockedProductIds: string[] = [];
   const updated = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
       where: { id: orderId },
@@ -50,6 +52,7 @@ export async function transitionOnlineOrder(
     if (next === "cancelled") {
       const cancelled = await cancelOrder(orderId, tx);
       restoredVoucher = cancelled.voucherCode !== null;
+      restockedProductIds = cancelled.restockedProductIds;
       const updated = await tx.order.update({
         where: { id: orderId },
         data: { fulfillmentStatus: "cancelled" },
@@ -65,13 +68,14 @@ export async function transitionOnlineOrder(
     return updated;
   });
   // Huy don da hoan ton kho (va luot voucher) trong transaction tren — cancelOrder
-  // voi txClient khong tu revalidate nen lam moi cache o day, sau commit.
+  // voi txClient khong tu revalidate/bao co hang nen lam o day, sau commit.
   if (next === "cancelled") {
     if (restoredVoucher) {
       revalidatePublic(CACHE_TAGS.catalog, CACHE_TAGS.vouchers);
     } else {
       revalidatePublic(CACHE_TAGS.catalog);
     }
+    await deliverBackInStockAlerts(restockedProductIds);
   }
   return updated;
 }

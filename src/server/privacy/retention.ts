@@ -50,6 +50,15 @@ export const DATA_INVENTORY: DataInventoryItem[] = [
     actionOnExpiry: "delete",
   },
   {
+    field: "BackInStockSubscription.*",
+    category: "transient_session",
+    owner: "Customer Communication & Inbox",
+    purpose:
+      "Back-in-stock alert requests; deleted when the alert is sent, on unsubscribe, on product soft-delete, or with the account/product",
+    retentionDays: 0, // event-driven: no age-based purge
+    actionOnExpiry: "delete",
+  },
+  {
     field: "GuestOrderAccess.tokenHash, CheckoutIdempotency.recoveryDigest",
     category: "transient_capability",
     owner: "Online Checkout & Fulfillment",
