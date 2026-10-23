@@ -48,9 +48,10 @@ model Product {
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
 
-  orderItems     OrderItem[]
-  stockMovements StockMovement[]
-  reviews        ProductReview[]
+  orderItems               OrderItem[]
+  stockMovements           StockMovement[]
+  reviews                  ProductReview[]
+  backInStockSubscriptions BackInStockSubscription[]
 
   @@index([isActive])
   @@index([categoryId])
@@ -79,10 +80,11 @@ model CustomerAccount {
   updatedAt       DateTime  @updatedAt
   disabledAt      DateTime?
 
-  sessions      CustomerSession[]
-  orders        Order[]
-  notifications CustomerNotification[]
-  reviews       ProductReview[]
+  sessions                 CustomerSession[]
+  orders                   Order[]
+  notifications            CustomerNotification[]
+  reviews                  ProductReview[]
+  backInStockSubscriptions BackInStockSubscription[]
 }
 
 model CustomerSession {
@@ -219,6 +221,20 @@ model CustomerNotification {
   @@index([accountId, readAt, createdAt])
   @@index([accountId, createdAt, id])
   @@index([createdAt])
+}
+
+/// Khach dang nhap cho san pham het hang. Gui thong bao xong thi XOA dong nay
+/// (thong bao la ban ghi); dang ky lai sau khi het hang lan nua tao dong moi.
+model BackInStockSubscription {
+  id        String          @id @default(cuid())
+  accountId String
+  account   CustomerAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime        @default(now())
+
+  @@unique([accountId, productId])
+  @@index([productId, createdAt])
 }
 
 model OrderItem {
