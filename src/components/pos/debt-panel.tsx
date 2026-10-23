@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import type { CustomerOption } from "@/types/catalog";
 
+const CREATE_FAILED_MESSAGE = "Không tạo được khách, vui lòng thử lại.";
+
 interface DebtPanelProps {
   selected: CustomerOption | null;
   onSelect: (customer: CustomerOption | null) => void;
@@ -16,6 +18,7 @@ export function DebtPanel({ selected, onSelect }: DebtPanelProps) {
   const [query, setQuery] = useState("");
   const [fetchedOptions, setFetchedOptions] = useState<CustomerOption[]>([]);
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
 
   const options = query.trim().length === 0 ? [] : fetchedOptions;
 
@@ -41,6 +44,7 @@ export function DebtPanel({ selected, onSelect }: DebtPanelProps) {
 
   async function createCustomer() {
     setCreating(true);
+    setCreateError("");
     const response = await fetch("/api/customers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -48,7 +52,19 @@ export function DebtPanel({ selected, onSelect }: DebtPanelProps) {
     }).catch(() => null);
     setCreating(false);
 
-    if (!response?.ok) return;
+    if (!response?.ok) {
+      // Server tra { message } tieng Viet (het phien, ten/SDT sai); mat mang
+      // hoac body khong phai JSON thi bao chung.
+      const body = (await response?.json().catch(() => null)) as {
+        message?: unknown;
+      } | null;
+      setCreateError(
+        typeof body?.message === "string" && body.message
+          ? body.message
+          : CREATE_FAILED_MESSAGE,
+      );
+      return;
+    }
 
     const body = (await response.json()) as { customer: CustomerOption };
     onSelect(body.customer);
@@ -73,8 +89,12 @@ export function DebtPanel({ selected, onSelect }: DebtPanelProps) {
         aria-label="Tên khách nợ"
         value={query}
         autoFocus
+        maxLength={100}
         placeholder="Tên khách nợ"
-        onChange={(event) => setQuery(event.target.value)}
+        onChange={(event) => {
+          setQuery(event.target.value);
+          setCreateError("");
+        }}
         className="h-11 text-lg"
       />
 
@@ -105,6 +125,12 @@ export function DebtPanel({ selected, onSelect }: DebtPanelProps) {
         >
           {creating ? "Đang tạo..." : `Tạo khách mới "${query.trim()}"`}
         </TouchButton>
+      ) : null}
+
+      {createError ? (
+        <p role="alert" className="text-destructive text-sm font-medium">
+          {createError}
+        </p>
       ) : null}
     </div>
   );

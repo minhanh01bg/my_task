@@ -1,9 +1,14 @@
-import { render, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PosScreen } from "@/components/pos/pos-screen";
 import { reportClientError } from "@/lib/client-log";
-import { loadCatalog, saveCatalog } from "@/lib/sync/catalog-cache";
+import {
+  isCatalogStale,
+  loadCatalog,
+  saveCatalog,
+} from "@/lib/sync/catalog-cache";
 
 vi.mock("next-themes", () => ({
   useTheme: () => ({
@@ -18,7 +23,7 @@ vi.mock("@/lib/client-log", () => ({ reportClientError: vi.fn() }));
 vi.mock("@/lib/sync/catalog-cache", () => ({
   saveCatalog: vi.fn(),
   loadCatalog: vi.fn(),
-  isCatalogStale: () => false,
+  isCatalogStale: vi.fn(() => false),
 }));
 
 const EMPTY_CATALOG = {
@@ -48,6 +53,11 @@ const CATALOG = {
 describe("PosScreen catalog cache", () => {
   beforeEach(() => {
     vi.mocked(reportClientError).mockClear();
+    vi.mocked(isCatalogStale).mockReturnValue(false);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("bao loi khi khong luu duoc danh muc vao IndexedDB thay vi nuot loi", async () => {
@@ -91,6 +101,32 @@ describe("PosScreen catalog cache", () => {
     );
 
     await waitFor(() => expect(loadCatalog).toHaveBeenCalled());
+    expect(saveCatalog).not.toHaveBeenCalled();
+  });
+
+  it("hết phiên khi tải lại hàng hóa thì báo thu ngân đăng nhập lại", async () => {
+    const user = userEvent.setup();
+    vi.mocked(saveCatalog).mockClear().mockResolvedValue(undefined);
+    vi.mocked(loadCatalog).mockResolvedValue(CATALOG);
+    vi.mocked(isCatalogStale).mockReturnValue(true);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        Response.json({ message: "Chưa đăng nhập" }, { status: 401 }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <PosScreen catalog={EMPTY_CATALOG} bankAccount={null} storeName="Tiệm" />,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /Tải lại hàng hóa/ }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Phiên đăng nhập đã hết hạn",
+    );
+    expect(fetchMock).toHaveBeenCalledWith("/api/catalog", expect.anything());
     expect(saveCatalog).not.toHaveBeenCalled();
   });
 });

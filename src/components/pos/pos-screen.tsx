@@ -135,6 +135,7 @@ export function PosScreen({
   const [saleOpen, setSaleOpen] = useState(false);
   const newOrderRef = useRef<HTMLButtonElement>(null);
   const [refreshingCatalog, setRefreshingCatalog] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
   // Ma dat truoc de QR mang dung ma don. Sinh lai sau moi lan ban xong.
@@ -179,10 +180,16 @@ export function PosScreen({
     setRefreshingCatalog(true);
     try {
       const response = await fetch("/api/catalog", { cache: "no-store" });
+      // Het phien admin: bao thu ngan dang nhap lai thay vi im lang giu ban cu.
+      if (response.status === 401) {
+        setSessionExpired(true);
+        return;
+      }
       if (!response.ok) return;
       const fresh = (await response.json()) as CatalogResponse;
       setCatalog(fresh);
       setStale(false);
+      setSessionExpired(false);
       await saveCatalog(fresh);
     } catch (error) {
       // Mat mang hoac IndexedDB loi: giu danh muc dang co, chi bao ve Sentry.
@@ -295,6 +302,12 @@ export function PosScreen({
               Không thể lưu đơn trên máy chủ hoặc thiết bị. Đơn vẫn ở trong giỏ;
               kiểm tra kết nối và thử thanh toán lại. Không thu tiền lần nữa nếu
               khách đã trả.
+            </p>
+          ) : null}
+          {sessionExpired ? (
+            <p role="alert" className="text-destructive font-semibold">
+              Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để tải hàng hóa
+              mới.
             </p>
           ) : null}
           {stale ? (
