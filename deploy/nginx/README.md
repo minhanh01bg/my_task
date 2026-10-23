@@ -30,15 +30,28 @@ cập nhật file, làm theo mục "Cập nhật cấu hình đã cài" bên dư
 
 ## Rate limit và hardening
 
-Ba dòng `limit_req_zone`/`limit_conn_zone` nằm ở đầu file, ngoài khối `server`.
-Nginx (Debian/Ubuntu) `include /etc/nginx/sites-enabled/*` bên trong `http {}`
-nên chúng thuộc http context. Nếu include file ở chỗ khác, chuyển ba dòng đó vào
-`http {}`. Tên zone có tiền tố `taphoatuantoan_` để không trùng virtual host khác.
+Các dòng `limit_req_zone`/`limit_conn_zone` và khối `map` nằm ở đầu file, ngoài
+khối `server`. Nginx (Debian/Ubuntu) `include /etc/nginx/sites-enabled/*` bên
+trong `http {}` nên chúng thuộc http context. Nếu include file ở chỗ khác, chuyển
+phần đó vào `http {}`. Tên zone và biến `map` có tiền tố `taphoatuantoan_` để
+không trùng virtual host khác.
 
 - `/api/auth/`, `/api/customer-auth/` (đăng nhập, đăng ký, đăng xuất):
   10 request/phút/IP, burst 10. App vẫn giữ rate limit riêng phía server.
-- `/api/`: 20 request/giây/IP, burst 100. Mọi đường dẫn: tối đa 100 kết nối
-  đồng thời/IP. Vượt giới hạn trả 429.
+- `/api/`: 20 request/giây/IP, burst 100.
+- `/_next/image` (image optimizer dùng sharp, ghi cache đĩa): 10 request/giây/IP,
+  burst 80 để một trang danh sách tải đủ ảnh cùng lúc.
+- `/shop` (trang ISR; slug lạ cũng được render và ghi cache 404 xuống đĩa):
+  10 request/giây/IP, burst 100 cho Link prefetch của một trang.
+- Request ghi (mọi method trừ GET/HEAD, gồm Server Action của admin) ngoài
+  `/api/`: 5 request/giây/IP, burst 20. Khối `map` theo `$request_method` cho
+  GET/HEAD key rỗng nên duyệt trang không bị zone này giới hạn.
+- Mọi đường dẫn: tối đa 100 kết nối đồng thời/IP. Vượt giới hạn trả 429.
+- Cửa hàng dùng chung một IP NAT cho nhiều máy: nếu nhân viên gặp 429 khi duyệt
+  `/shop` hay xem ảnh, tăng `burst` trước, rồi mới tăng `rate`.
+- HSTS không đặt ở Nginx: ứng dụng gửi `Strict-Transport-Security` (next.config.ts),
+  trình duyệt chỉ áp dụng qua HTTPS, và khối cổng 80 sau Certbot `--redirect` chỉ
+  chuyển hướng 301.
 - `client_max_body_size 10m` khớp giới hạn ảnh 8 MB của
   `/api/products/images` cộng overhead multipart; đổi một bên thì đổi cả hai.
 - Chặn dotfile trừ `/.well-known/`, tắt `server_tokens`, đặt timeout client.
