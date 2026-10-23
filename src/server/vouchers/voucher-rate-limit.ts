@@ -25,8 +25,9 @@ export function setVoucherRateLimiter(next: RateLimiter | null): void {
 
 /**
  * Chống dò mã theo client (`rateLimitClientId`: IPv4 theo địa chỉ, IPv6 theo
- * /64): dùng lại policy tra cứu công khai `receiptLookup` (fail-open — đơn
- * hàng vẫn kiểm tra lại voucher phía server). Không xác định được IP thì mọi
+ * /64) bằng policy riêng `voucherCheck` (fail-open — đơn hàng vẫn kiểm tra lại
+ * voucher phía server), không chung bộ đếm với tra cứu biên nhận nên dò hết
+ * lượt mã không khoá khách xem biên nhận. Không xác định được IP thì mọi
  * request dùng chung bucket dự phòng `voucherUnresolvedIp` (fail-closed) thay
  * vì bỏ qua giới hạn.
  */
@@ -48,7 +49,7 @@ function voucherBuckets(request: Request): {
     };
   }
   return {
-    policy: POLICIES.receiptLookup,
+    policy: POLICIES.voucherCheck,
     targets: [
       {
         bucketName: "ip-misses",

@@ -78,6 +78,20 @@ export const POLICIES = {
     ],
   },
   /**
+   * Chong do ma voucher (API kiem tra ma + checkout). Cung han muc voi
+   * receiptLookup nhung bo dem rieng: do het luot ma khong chan tra bien nhan.
+   * Fail-open — don hang van kiem tra lai voucher phia server.
+   */
+  voucherCheck: {
+    name: "voucher-check",
+    failClosed: false,
+    timeoutMs: 1000,
+    buckets: [
+      { name: "ip-misses", limit: 30, windowSeconds: 300 },
+      { name: "subnet-misses", limit: 150, windowSeconds: 300 },
+    ],
+  },
+  /**
    * Tra voucher khi khong xac dinh duoc IP (proxy cau hinh sai): moi request
    * dung chung mot bucket co ngan sach bang mot subnet. Fail-closed de cau
    * hinh sai khong mo duong do ma.

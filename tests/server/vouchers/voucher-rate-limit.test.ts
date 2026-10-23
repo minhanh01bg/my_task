@@ -2,6 +2,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { env } from "@/config/env";
 import {
+  getPublicReceipt,
+  setReceiptRateLimiter,
+} from "@/server/orders/public-receipt";
+import {
   createRateLimiter,
   type RateLimitStore,
 } from "@/server/security/rate-limit";
@@ -114,5 +118,52 @@ describe("BL-5: khoá theo rateLimitClientId", () => {
       await checkVoucherRateLimit(requestFrom("203.0.113.7")),
     ).toBeGreaterThan(0);
     expect(await checkVoucherRateLimit(requestFrom("203.0.113.8"))).toBeNull();
+  });
+});
+
+describe("BL-5: bộ đếm dò mã tách khỏi tra cứu biên nhận", () => {
+  let store: FakeStore;
+  let originalProxyMode: unknown;
+
+  beforeEach(() => {
+    // Cùng store và secret như một tiến trình thật: chỉ tên policy tách khoá.
+    store = new FakeStore();
+    setVoucherRateLimiter(createRateLimiter({ store, secret: "v".repeat(32) }));
+    setReceiptRateLimiter(createRateLimiter({ store, secret: "v".repeat(32) }));
+    originalProxyMode = env.TRUSTED_PROXY_MODE;
+    (env as Record<string, unknown>).TRUSTED_PROXY_MODE = "cloudflare";
+  });
+
+  afterEach(() => {
+    setVoucherRateLimiter(null);
+    setReceiptRateLimiter(null);
+    (env as Record<string, unknown>).TRUSTED_PROXY_MODE = originalProxyMode;
+  });
+
+  function requestFrom(ip: string): Request {
+    return new Request("https://example.com/api/online/vouchers/validate", {
+      method: "POST",
+      headers: { "cf-connecting-ip": ip },
+    });
+  }
+
+  it("dò hết lượt mã không chặn tra cứu biên nhận của cùng IP", async () => {
+    for (let i = 0; i < 30; i++) {
+      expect(
+        await checkVoucherRateLimit(requestFrom("203.0.113.7")),
+      ).toBeNull();
+    }
+    expect(
+      await checkVoucherRateLimit(requestFrom("203.0.113.7")),
+    ).toBeGreaterThan(0);
+    expect(
+      [...store.counts.keys()].every((key) =>
+        key.startsWith("rl:v1:voucher-check:"),
+      ),
+    ).toBe(true);
+
+    await expect(
+      getPublicReceipt("a".repeat(64), requestFrom("203.0.113.7")),
+    ).resolves.toBeNull();
   });
 });
