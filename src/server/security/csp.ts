@@ -7,6 +7,13 @@ export interface CspOptions {
   sentryDsn?: string;
   extraImageOrigins?: string[];
   reportUri?: string;
+  /** Allow the Vercel Analytics/Speed Insights origins; defaults to running on Vercel. */
+  vercel?: boolean;
+}
+
+/** Same check as ObservabilityProvider, which only renders the scripts on Vercel. */
+function isVercelDeployment(): boolean {
+  return Boolean(process.env.NEXT_PUBLIC_VERCEL_ENV || process.env.VERCEL);
 }
 
 export interface CspHeaderResult {
@@ -66,6 +73,7 @@ export function buildCspHeader(options?: CspOptions): CspHeaderResult {
       : "Content-Security-Policy-Report-Only";
 
   const isDev = options?.isDev ?? process.env.NODE_ENV === "development";
+  const vercel = options?.vercel ?? isVercelDeployment();
 
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],
@@ -76,7 +84,10 @@ export function buildCspHeader(options?: CspOptions): CspHeaderResult {
   };
 
   // 1. Script sources
-  const scriptSrc: string[] = ["'self'", "https://va.vercel-scripts.com"];
+  const scriptSrc: string[] = ["'self'"];
+  if (vercel) {
+    scriptSrc.push("https://va.vercel-scripts.com");
+  }
   if (options?.nonce) {
     scriptSrc.push(`'nonce-${options.nonce}'`);
   }
@@ -107,12 +118,14 @@ export function buildCspHeader(options?: CspOptions): CspHeaderResult {
   // 4. Font sources
   directives["font-src"] = ["'self'", "data:"];
 
-  // 5. Connect sources (telemetry, Vercel insights, allowlisted Sentry origin)
-  const connectSrc: string[] = [
-    "'self'",
-    "https://vitals.vercel-insights.com",
-    "https://va.vercel-scripts.com",
-  ];
+  // 5. Connect sources (telemetry, Vercel insights on Vercel, allowlisted Sentry origin)
+  const connectSrc: string[] = ["'self'"];
+  if (vercel) {
+    connectSrc.push(
+      "https://vitals.vercel-insights.com",
+      "https://va.vercel-scripts.com",
+    );
+  }
 
   const dsn = options?.sentryDsn ?? process.env.NEXT_PUBLIC_SENTRY_DSN;
   if (dsn) {

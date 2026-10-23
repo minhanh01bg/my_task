@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildCspHeader,
@@ -124,19 +124,60 @@ describe("Content Security Policy (Task 14)", () => {
       );
     });
 
-    it("allowlists Vercel analytics and script origins", () => {
-      const { headerValue } = buildCspHeader({});
-      const directives = parseCspDirectives(headerValue);
-
-      expect(directives["script-src"]).toContain(
+    describe("Vercel analytics origins", () => {
+      const VERCEL_ORIGINS = [
         "https://va.vercel-scripts.com",
-      );
-      expect(directives["connect-src"]).toContain(
         "https://vitals.vercel-insights.com",
-      );
-      expect(directives["connect-src"]).toContain(
-        "https://va.vercel-scripts.com",
-      );
+      ];
+
+      function vercelOrigins(options: Parameters<typeof buildCspHeader>[0]) {
+        const directives = parseCspDirectives(
+          buildCspHeader(options).headerValue,
+        );
+        return [
+          ...directives["script-src"],
+          ...directives["connect-src"],
+        ].filter((value) => VERCEL_ORIGINS.includes(value));
+      }
+
+      afterEach(() => {
+        vi.unstubAllEnvs();
+      });
+
+      it("leaves them out when self-hosted", () => {
+        vi.stubEnv("VERCEL", "");
+        vi.stubEnv("NEXT_PUBLIC_VERCEL_ENV", "");
+        expect(vercelOrigins({})).toEqual([]);
+        expect(vercelOrigins({ isDev: true })).toEqual([]);
+      });
+
+      it.each([
+        ["VERCEL", "1"],
+        ["NEXT_PUBLIC_VERCEL_ENV", "production"],
+      ])("allowlists them when %s is set", (name, value) => {
+        vi.stubEnv("VERCEL", "");
+        vi.stubEnv("NEXT_PUBLIC_VERCEL_ENV", "");
+        vi.stubEnv(name, value);
+        const { headerValue } = buildCspHeader({});
+        const directives = parseCspDirectives(headerValue);
+
+        expect(directives["script-src"]).toContain(
+          "https://va.vercel-scripts.com",
+        );
+        expect(directives["connect-src"]).toContain(
+          "https://vitals.vercel-insights.com",
+        );
+        expect(directives["connect-src"]).toContain(
+          "https://va.vercel-scripts.com",
+        );
+      });
+
+      it("follows the vercel option over the environment", () => {
+        vi.stubEnv("VERCEL", "1");
+        expect(vercelOrigins({ vercel: false })).toEqual([]);
+        vi.stubEnv("VERCEL", "");
+        expect(vercelOrigins({ vercel: true })).toHaveLength(3);
+      });
     });
 
     it("includes safe report-uri directive", () => {
