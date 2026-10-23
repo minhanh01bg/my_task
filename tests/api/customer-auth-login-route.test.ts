@@ -1,3 +1,5 @@
+import { randomBytes, scryptSync } from "node:crypto";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { env } from "@/config/env";
@@ -268,6 +270,68 @@ describe("POST /api/customer-auth/login", () => {
     } finally {
       (env as Record<string, unknown>).TRUSTED_PROXY_MODE = originalProxyMode;
     }
+  });
+
+  describe("password hash parameters", () => {
+    const CURRENT_PARAMS = ["scrypt-v1", "16384", "8", "5"];
+
+    // Hashes stored before p was raised from 1 to 5.
+    function legacyHash(password: string): string {
+      const salt = randomBytes(16);
+      const digest = scryptSync(password, salt, 64, { N: 16_384, r: 8, p: 1 });
+      return [
+        "scrypt-v1",
+        16_384,
+        8,
+        1,
+        salt.toString("base64url"),
+        digest.toString("base64url"),
+      ].join("$");
+    }
+
+    const storedHash = async () =>
+      (
+        await prisma.customerAccount.findUniqueOrThrow({
+          where: { phoneNormalized: normalizedPhone },
+          select: { passwordHash: true },
+        })
+      ).passwordHash;
+
+    it("hashes new passwords with scrypt N=2^14, r=8, p=5", async () => {
+      const hash = await hashCustomerPassword("password123");
+      expect(hash.split("$").slice(0, 4)).toEqual(CURRENT_PARAMS);
+    });
+
+    it("accepts an old p=1 hash and upgrades it on successful login", async () => {
+      await prisma.customerAccount.update({
+        where: { phoneNormalized: normalizedPhone },
+        data: { passwordHash: legacyHash("password123") },
+      });
+
+      const res = await POST(
+        makeRequest({ phone: testPhone, password: "password123" }),
+      );
+
+      expect(res.status).toBe(200);
+      const upgraded = await storedHash();
+      expect(upgraded.split("$").slice(0, 4)).toEqual(CURRENT_PARAMS);
+      expect(await verifyCustomerPassword("password123", upgraded)).toBe(true);
+    });
+
+    it("keeps an old hash after a wrong password", async () => {
+      const legacy = legacyHash("password123");
+      await prisma.customerAccount.update({
+        where: { phoneNormalized: normalizedPhone },
+        data: { passwordHash: legacy },
+      });
+
+      const res = await POST(
+        makeRequest({ phone: testPhone, password: "wrong-password" }),
+      );
+
+      expect(res.status).toBe(401);
+      expect(await storedHash()).toBe(legacy);
+    });
   });
 
   describe("trusted device", () => {

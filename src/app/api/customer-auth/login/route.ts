@@ -3,7 +3,9 @@ import { NextResponse } from "next/server";
 import { hasSafeMutationOrigin } from "@/server/http/origin";
 import { readJsonBody } from "@/server/http/read-json-body";
 import {
+  customerPasswordNeedsRehash,
   DUMMY_CUSTOMER_PASSWORD_HASH,
+  hashCustomerPassword,
   verifyCustomerPassword,
 } from "@/server/customer-auth/password";
 import {
@@ -126,6 +128,15 @@ export async function POST(request: Request) {
   // Reset the account-level failure counter on successful login
   await resetCustomerAuthAccount(parsed.data.phone);
   if (trustedDeviceId) await resetCustomerTrustedDevice(trustedDeviceId);
+
+  // Upgrade hashes made with older scrypt parameters while the password is
+  // known; the hash in `where` keeps a concurrent password change intact.
+  if (customerPasswordNeedsRehash(usableAccount.passwordHash)) {
+    await prisma.customerAccount.updateMany({
+      where: { id: usableAccount.id, passwordHash: usableAccount.passwordHash },
+      data: { passwordHash: await hashCustomerPassword(parsed.data.password) },
+    });
+  }
 
   const session = await createCustomerSession(usableAccount.id);
   const response = NextResponse.json(
