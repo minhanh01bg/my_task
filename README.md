@@ -26,6 +26,12 @@ pnpm dev
 
 Open http://localhost:3000
 
+`pnpm dev` chỉ nghe trên `127.0.0.1`. Cần mở cho máy khác trong LAN thì đặt
+`DEV_HOST=0.0.0.0` và khai hostname truy cập trong `DEV_ALLOWED_ORIGINS` (cách
+nhau bằng dấu phẩy, không kèm scheme/cổng), ví dụ
+`DEV_HOST=0.0.0.0 DEV_ALLOWED_ORIGINS=192.168.1.10 pnpm dev`. Không mở dev
+server ra IP công khai: nó không có hardening của bản production.
+
 ## Biến môi trường mật khẩu
 
 Biến môi trường được kiểm tra trong `src/config/env.ts`. Hai biến mật khẩu dùng

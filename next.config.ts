@@ -36,11 +36,18 @@ const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
   reactStrictMode: true,
   /*
-   * Playwright goi qua 127.0.0.1 con `next dev` phuc vu localhost, nen Next
-   * coi la cross-origin va chan tai nguyen dev — trang khong hydrate duoc va
-   * form submit kieu native.
+   * Playwright goi qua 127.0.0.1; host khac localhost/127.0.0.1 bi Next chan tai
+   * nguyen dev (trang khong hydrate). Host khac (IP LAN, tunnel) phai tu khai
+   * trong DEV_ALLOWED_ORIGINS, cach nhau dau phay — khong mo san IP cong khai.
    */
-  allowedDevOrigins: ["127.0.0.1", "160.250.247.137"],
+  allowedDevOrigins: [
+    "127.0.0.1",
+    "localhost",
+    ...(process.env.DEV_ALLOWED_ORIGINS ?? "")
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+  ],
   poweredByHeader: false,
   async rewrites() {
     return {
