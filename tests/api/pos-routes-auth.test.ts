@@ -225,6 +225,41 @@ describe("POS API yêu cầu phiên quản trị đã xác minh", () => {
     );
   });
 
+  it("đơn POS trên 1 tỷ (tới trần cột Int) vẫn được nhận", async () => {
+    mockedCreateOrder.mockResolvedValue({
+      order: {
+        id: "o2",
+        code: "DH0002",
+        subtotal: 2_147_483_647,
+        discount: 0,
+        total: 2_147_483_647,
+        status: "paid",
+        hasStockWarning: false,
+      },
+      duplicated: false,
+    });
+    const big = orderPayload("pos-auth-big");
+    big.lines[0] = {
+      ...big.lines[0]!,
+      unitPrice: 2_147_483_647,
+      originalPrice: 2_147_483_647,
+    };
+    big.payments = [{ method: "transfer", amount: 2_147_483_647 }];
+
+    const response = await createPosOrder(
+      new Request(`${ORIGIN}/api/orders`, {
+        method: "POST",
+        headers: jsonHeaders(adminCookie()),
+        body: JSON.stringify(big),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(mockedCreateOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ clientId: "pos-auth-big" }),
+    );
+  });
+
   it("thanh toán không khớp tổng đơn trả 422 kèm thông báo tiếng Việt", async () => {
     mockedCreateOrder.mockRejectedValueOnce(
       new OrderValidationError(
@@ -322,14 +357,18 @@ describe("POS API yêu cầu phiên quản trị đã xác minh", () => {
       ),
     ],
     ["số lượng quá 100000", withLine({ quantity: 100_001 })],
-    ["đơn giá quá 1 tỷ", withLine({ unitPrice: 1_000_000_001 })],
-    ["giá gốc quá 1 tỷ", withLine({ originalPrice: 1_000_000_001 })],
-    ["giảm giá dòng quá 1 tỷ", withLine({ discount: 1_000_000_001 })],
+    ["đơn giá vượt cột Int", withLine({ unitPrice: 2_147_483_648 })],
+    ["giá gốc vượt cột Int", withLine({ originalPrice: 2_147_483_648 })],
+    ["giảm giá dòng vượt cột Int", withLine({ discount: 2_147_483_648 })],
     [
-      "tiền thanh toán quá 1 tỷ",
+      "giảm giá đơn vượt cột Int",
+      JSON.stringify({ ...orderPayload(), orderDiscount: 2_147_483_648 }),
+    ],
+    [
+      "tiền thanh toán vượt cột Int",
       JSON.stringify({
         ...orderPayload(),
-        payments: [{ ...payment, amount: 1_000_000_001 }],
+        payments: [{ ...payment, amount: 2_147_483_648 }],
       }),
     ],
     ["tên hàng quá dài", withLine({ name: "x".repeat(301) })],

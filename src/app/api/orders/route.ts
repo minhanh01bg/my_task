@@ -9,8 +9,12 @@ import { OrderValidationError } from "@/server/orders/order-validation-error";
 
 /** Đơn 200 dòng thực tế chỉ vài chục KB; quá mức này gần như chắc chắn là lạm dụng. */
 const MAX_ORDER_BODY_BYTES = 128_000;
-/** Trần cho mọi số tiền VND (1 tỷ) — chặn số khổng lồ làm tràn tổng/báo cáo. */
-const MAX_VND = 1_000_000_000;
+/**
+ * Trần cho mọi số tiền VND: giới hạn cột Prisma `Int` (32-bit). Lớn hơn thì
+ * không lưu được nên trả 400 (lỗi vĩnh viễn, giữ lại để xử lý tay) thay vì
+ * để Prisma ném 500 khiến hàng đợi offline gửi lại mãi.
+ */
+const MAX_VND = 2_147_483_647;
 
 const moneySchema = z.number().int().min(0).max(MAX_VND);
 
