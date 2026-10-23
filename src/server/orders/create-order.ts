@@ -330,7 +330,31 @@ export async function createOrder(
     };
   }
 
-  const cartLines: CartLine[] = input.lines.map((line, index) => ({
+  // isService lay tu bang Product, khong tin client: hang that gui kem
+  // isService=true van phai tru ton. Dong tu do (khong productId) giu co client.
+  const products = await prisma.product.findMany({
+    where: {
+      id: {
+        in: [
+          ...new Set(
+            input.lines.flatMap((line) =>
+              line.productId ? [line.productId] : [],
+            ),
+          ),
+        ],
+      },
+    },
+    select: { id: true, stock: true, isService: true },
+  });
+  const productById = new Map(products.map((product) => [product.id, product]));
+  const lines = input.lines.map((line) => ({
+    ...line,
+    isService: line.productId
+      ? (productById.get(line.productId)?.isService ?? line.isService)
+      : line.isService,
+  }));
+
+  const cartLines: CartLine[] = lines.map((line, index) => ({
     id: String(index),
     productId: line.productId,
     name: line.name,
@@ -384,18 +408,11 @@ export async function createOrder(
     }
   }
 
-  const stockLines = input.lines.filter(
-    (line) => !line.isService && line.productId,
-  );
-  const productIds = stockLines.map((line) => line.productId as string);
-  const products = await prisma.product.findMany({
-    where: { id: { in: productIds } },
-    select: { id: true, stock: true },
-  });
-  const stockById = new Map(products.map((p) => [p.id, p.stock]));
+  const stockLines = lines.filter((line) => !line.isService && line.productId);
 
   const hasStockWarning = stockLines.some(
-    (line) => (stockById.get(line.productId as string) ?? 0) < line.quantity,
+    (line) =>
+      (productById.get(line.productId as string)?.stock ?? 0) < line.quantity,
   );
 
   for (let attempt = 1; ; attempt += 1) {

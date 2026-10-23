@@ -225,6 +225,82 @@ describe("POS API yêu cầu phiên quản trị đã xác minh", () => {
     );
   });
 
+  it("BL-6: route POS luôn ghi kênh pos, kể cả khi client bỏ trống", async () => {
+    mockedCreateOrder.mockResolvedValue({
+      order: {
+        id: "o-bl6",
+        code: "DH0003",
+        subtotal: 50000,
+        discount: 0,
+        total: 50000,
+        status: "paid",
+        hasStockWarning: false,
+      },
+      duplicated: false,
+    });
+    const withoutChannel: Partial<ReturnType<typeof orderPayload>> =
+      orderPayload("pos-bl6-channel");
+    delete withoutChannel.channel;
+
+    const response = await createPosOrder(
+      new Request(`${ORIGIN}/api/orders`, {
+        method: "POST",
+        headers: jsonHeaders(adminCookie()),
+        body: JSON.stringify(withoutChannel),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(mockedCreateOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ clientId: "pos-bl6-channel", channel: "pos" }),
+    );
+  });
+
+  it("BL-6: receivedAt quá 5 phút tương lai bị kẹp về giờ server, quá khứ giữ nguyên", async () => {
+    mockedCreateOrder.mockResolvedValue({
+      order: {
+        id: "o-bl6-time",
+        code: "DH0004",
+        subtotal: 50000,
+        discount: 0,
+        total: 50000,
+        status: "paid",
+        hasStockWarning: false,
+      },
+      duplicated: false,
+    });
+    const past = new Date(Date.now() - 3 * 24 * 60 * 60_000);
+    const slightSkew = new Date(Date.now() + 2 * 60_000);
+    const farFuture = new Date(Date.now() + 365 * 24 * 60 * 60_000);
+    const payload = {
+      ...orderPayload("pos-bl6-time"),
+      payments: [past, slightSkew, farFuture].map((receivedAt) => ({
+        method: "transfer",
+        amount: 50000,
+        receivedAt: receivedAt.toISOString(),
+      })),
+    };
+
+    const before = Date.now();
+    const response = await createPosOrder(
+      new Request(`${ORIGIN}/api/orders`, {
+        method: "POST",
+        headers: jsonHeaders(adminCookie()),
+        body: JSON.stringify(payload),
+      }),
+    );
+    const after = Date.now();
+
+    expect(response.status).toBe(201);
+    const received = mockedCreateOrder.mock.calls[0]![0].payments.map((item) =>
+      item.receivedAt?.getTime(),
+    );
+    expect(received[0]).toBe(past.getTime());
+    expect(received[1]).toBe(slightSkew.getTime());
+    expect(received[2]).toBeGreaterThanOrEqual(before);
+    expect(received[2]).toBeLessThanOrEqual(after);
+  });
+
   it("đơn POS trên 1 tỷ (tới trần cột Int) vẫn được nhận", async () => {
     mockedCreateOrder.mockResolvedValue({
       order: {
@@ -327,6 +403,10 @@ describe("POS API yêu cầu phiên quản trị đã xác minh", () => {
   it.each([
     ["giỏ rỗng", JSON.stringify({ ...orderPayload(), lines: [] })],
     ["có trường lạ", JSON.stringify({ ...orderPayload(), total: 1 })],
+    [
+      "giả kênh online",
+      JSON.stringify({ ...orderPayload(), channel: "online" }),
+    ],
     ["dòng hàng có trường lạ", withLine({ costPrice: 1 })],
     [
       "thanh toán có trường lạ",

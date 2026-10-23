@@ -15,6 +15,8 @@ const MAX_ORDER_BODY_BYTES = 128_000;
  * Prisma ném 500 khiến hàng đợi offline gửi lại mãi.
  */
 const moneySchema = z.number().int().min(0).max(MAX_INT_VND);
+/** Đồng hồ máy bán lệch vài phút là thường; xa hơn thì dùng giờ server. */
+const MAX_RECEIVED_AT_SKEW_MS = 5 * 60_000;
 
 const lineSchema = z
   .object({
@@ -47,7 +49,8 @@ const bodySchema = z
       .regex(/^DH\d+$/)
       .nullable()
       .optional(),
-    channel: z.enum(["pos", "online"]).default("pos"),
+    // Máy POS vẫn gửi "pos"; đơn online chỉ đi qua /api/online/orders.
+    channel: z.literal("pos").optional(),
     lines: z.array(lineSchema).min(1).max(200),
     orderDiscount: moneySchema.default(0),
     payments: z.array(paymentSchema).min(1).max(10),
@@ -85,9 +88,19 @@ export async function POST(request: Request) {
     );
   }
 
+  // Giờ nhận tiền quá khứ vẫn hợp lệ (đơn xếp hàng offline gửi muộn); giờ
+  // tương lai xa thì kẹp về hiện tại thay vì từ chối, để không mất đơn đã thu.
+  const now = new Date();
+  const payments = parsed.data.payments.map((payment) =>
+    payment.receivedAt &&
+    payment.receivedAt.getTime() > now.getTime() + MAX_RECEIVED_AT_SKEW_MS
+      ? { ...payment, receivedAt: now }
+      : payment,
+  );
+
   let result: Awaited<ReturnType<typeof createOrder>>;
   try {
-    result = await createOrder(parsed.data);
+    result = await createOrder({ ...parsed.data, channel: "pos", payments });
   } catch (error: unknown) {
     if (error instanceof OrderValidationError) {
       return NextResponse.json(

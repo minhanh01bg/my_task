@@ -176,6 +176,59 @@ describe("createOrder", () => {
     expect(await prisma.stockMovement.count()).toBe(0);
   });
 
+  it("BL-6: san pham that gui isService=true van tru ton va ghi StockMovement", async () => {
+    const product = await seedProduct({ stock: 10 });
+
+    const result = await createOrder({
+      clientId: "bl6-fake-service",
+      lines: [cashLine(product.id, { quantity: 3, isService: true })],
+      payments: [{ method: "cash", amount: 45000 }],
+    });
+
+    const after = await prisma.product.findUniqueOrThrow({
+      where: { id: product.id },
+    });
+    expect(after.stock).toBe(7);
+    expect(after.soldCount).toBe(1);
+    const movements = await prisma.stockMovement.findMany({
+      where: { refId: result.order.id },
+    });
+    expect(movements.map((movement) => movement.delta)).toEqual([-3]);
+    const items = await prisma.orderItem.findMany({
+      where: { orderId: result.order.id },
+    });
+    expect(items.map((item) => item.isService)).toEqual([false]);
+  });
+
+  it("BL-6: dich vu that gui isService=false khong tru ton", async () => {
+    const service = await prisma.product.create({
+      data: {
+        name: "Công lắp",
+        price: 20000,
+        stock: 0,
+        isService: true,
+        searchText: "cong lap",
+      },
+    });
+
+    const result = await createOrder({
+      clientId: "bl6-real-service",
+      lines: [cashLine(service.id, { unitPrice: 20000, quantity: 1 })],
+      payments: [{ method: "cash", amount: 20000 }],
+    });
+
+    expect(result.order.hasStockWarning).toBe(false);
+    const after = await prisma.product.findUniqueOrThrow({
+      where: { id: service.id },
+    });
+    expect(after.stock).toBe(0);
+    expect(await prisma.stockMovement.count()).toBe(0);
+    const items = await prisma.orderItem.findMany({
+      where: { orderId: result.order.id },
+    });
+    expect(items.map((item) => item.isService)).toEqual([true]);
+  });
+
   it("cho ton am nhung danh dau canh bao", async () => {
     const product = await seedProduct({ stock: 1 });
 
