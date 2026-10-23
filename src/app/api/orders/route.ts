@@ -17,6 +17,8 @@ const MAX_ORDER_BODY_BYTES = 128_000;
 const moneySchema = z.number().int().min(0).max(MAX_INT_VND);
 /** Đồng hồ máy bán lệch vài phút là thường; xa hơn thì dùng giờ server. */
 const MAX_RECEIVED_AT_SKEW_MS = 5 * 60_000;
+/** Phản hồi chứa mã/tổng đơn: không cho proxy hay trình duyệt lưu lại. */
+const NO_STORE = { "Cache-Control": "private, no-store" };
 
 const lineSchema = z
   .object({
@@ -61,13 +63,16 @@ const bodySchema = z
 
 export async function POST(request: Request) {
   if (!(await hasAdminSession(request))) {
-    return NextResponse.json({ message: "Chưa đăng nhập" }, { status: 401 });
+    return NextResponse.json(
+      { message: "Chưa đăng nhập" },
+      { status: 401, headers: NO_STORE },
+    );
   }
 
   if (!hasSafeMutationOrigin(request)) {
     return NextResponse.json(
       { message: "Nguồn gốc yêu cầu không hợp lệ" },
-      { status: 403 },
+      { status: 403, headers: NO_STORE },
     );
   }
 
@@ -75,7 +80,7 @@ export async function POST(request: Request) {
   if (!body.ok) {
     return NextResponse.json(
       { message: body.message },
-      { status: body.status },
+      { status: body.status, headers: NO_STORE },
     );
   }
 
@@ -84,7 +89,7 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json(
       { message: "Dữ liệu đơn hàng không hợp lệ" },
-      { status: 400 },
+      { status: 400, headers: NO_STORE },
     );
   }
 
@@ -105,11 +110,14 @@ export async function POST(request: Request) {
     if (error instanceof OrderValidationError) {
       return NextResponse.json(
         { code: error.code, message: error.message },
-        { status: 422 },
+        { status: 422, headers: NO_STORE },
       );
     }
     throw error;
   }
 
-  return NextResponse.json(result, { status: result.duplicated ? 200 : 201 });
+  return NextResponse.json(result, {
+    status: result.duplicated ? 200 : 201,
+    headers: NO_STORE,
+  });
 }

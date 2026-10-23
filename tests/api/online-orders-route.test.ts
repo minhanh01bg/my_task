@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST } from "@/app/api/online/orders/route";
 import * as createOnlineOrderModule from "@/server/orders/create-online-order";
+import { OrderValidationError } from "@/server/orders/order-validation-error";
 import { setCheckoutAbuseLimiter } from "@/server/security/checkout-abuse";
 import type { RateLimiter } from "@/server/security/rate-limit";
 import { OnlineOrderError } from "@/types/online-order";
@@ -519,5 +520,51 @@ describe("POST /api/online/orders (Task 4 & Task 5: Hard limits and Anti-Abuse)"
 
       expect(phoneKeys).toEqual(["+84901234567", "+84901234567"]);
     });
+  });
+
+  describe("WB-6: error responses are never cached", () => {
+    it.each([
+      [
+        "OnlineOrderError 409",
+        new OnlineOrderError(
+          "TOO_MANY_OPEN_ORDERS",
+          "Bạn đang có 3 đơn hàng chờ cửa hàng xử lý.",
+        ),
+        409,
+      ],
+      [
+        "AMOUNT_TOO_LARGE 409",
+        new OrderValidationError("AMOUNT_TOO_LARGE", "Đơn hàng quá lớn"),
+        409,
+      ],
+      ["unexpected 500", new Error("db down"), 500],
+    ])(
+      "%s carries Cache-Control: private, no-store",
+      async (_, error, status) => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(
+          createOnlineOrderModule,
+          "createOnlineOrder",
+        ).mockRejectedValueOnce(error);
+
+        const response = await POST(
+          new Request("https://example.com/api/online/orders", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              clientId: "1b0f1f0e-6a51-4d8c-9a55-3f1f5f4a0c10",
+              lines: [{ productId: "prod-1", quantity: 1 }],
+              contactName: "Khách Hàng A",
+              contactPhone: "0901234567",
+              fulfillmentType: "pickup",
+              paymentMethod: "cod",
+            }),
+          }),
+        );
+
+        expect(response.status).toBe(status);
+        expect(response.headers.get("cache-control")).toBe("private, no-store");
+      },
+    );
   });
 });

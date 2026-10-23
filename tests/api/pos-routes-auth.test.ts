@@ -526,4 +526,60 @@ describe("POS API yêu cầu phiên quản trị đã xác minh", () => {
     expect(response.status).toBe(413);
     expect(mockedCreateOrder).not.toHaveBeenCalled();
   });
+
+  it("WB-6: mọi phản hồi /api/orders đều private, no-store", async () => {
+    const created = {
+      order: {
+        id: "o-wb6",
+        code: "DH0005",
+        subtotal: 50000,
+        discount: 0,
+        total: 50000,
+        status: "paid",
+        hasStockWarning: false,
+      },
+      duplicated: false,
+    };
+    mockedCreateOrder
+      .mockResolvedValueOnce(created)
+      .mockResolvedValueOnce({ ...created, duplicated: true })
+      .mockRejectedValueOnce(
+        new OrderValidationError(
+          "PAYMENT_SHORT",
+          "Số tiền thanh toán chưa đủ tổng đơn",
+        ),
+      );
+    const post = (body: string, cookie?: string, origin?: string) =>
+      createPosOrder(
+        new Request(`${ORIGIN}/api/orders`, {
+          method: "POST",
+          headers: jsonHeaders(cookie, origin),
+          body,
+        }),
+      );
+    const valid = JSON.stringify(orderPayload("pos-wb6"));
+
+    const responses = [
+      await post(valid),
+      await post(valid, adminCookie(), "https://evil.example"),
+      await post(
+        JSON.stringify({ ...orderPayload(), note: "x".repeat(300_000) }),
+        adminCookie(),
+      ),
+      await post(
+        JSON.stringify({ ...orderPayload(), total: 1 }),
+        adminCookie(),
+      ),
+      await post(valid, adminCookie()),
+      await post(valid, adminCookie()),
+      await post(valid, adminCookie()),
+    ];
+
+    expect(responses.map((response) => response.status)).toEqual([
+      401, 403, 413, 400, 201, 200, 422,
+    ]);
+    expect(
+      responses.map((response) => response.headers.get("cache-control")),
+    ).toEqual(Array(responses.length).fill("private, no-store"));
+  });
 });

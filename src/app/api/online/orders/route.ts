@@ -185,7 +185,10 @@ export async function POST(request: Request) {
           message: error.message,
           productIds: error.productIds,
         },
-        { status: 409 },
+        {
+          status: 409,
+          headers: { "Cache-Control": "private, no-store" },
+        },
       );
     }
     // An order too large for the Int columns is a business rejection, not a
@@ -196,7 +199,10 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json(
         { code: error.code, message: error.message },
-        { status: 409 },
+        {
+          status: 409,
+          headers: { "Cache-Control": "private, no-store" },
+        },
       );
     }
     const correlationId = crypto.randomUUID();
@@ -218,7 +224,10 @@ export async function POST(request: Request) {
         message: "Không thể tạo đơn lúc này. Vui lòng thử lại.",
         correlationId,
       },
-      { status: 500 },
+      {
+        status: 500,
+        headers: { "Cache-Control": "private, no-store" },
+      },
     );
   }
 }
