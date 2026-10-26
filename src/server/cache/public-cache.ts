@@ -1,4 +1,9 @@
-import { revalidateTag, unstable_cache, updateTag } from "next/cache";
+import {
+  revalidatePath,
+  revalidateTag,
+  unstable_cache,
+  updateTag,
+} from "next/cache";
 
 import { errorLogFields, logger } from "@/lib/logger";
 
@@ -131,4 +136,29 @@ export function revalidatePublic(...tags: string[]): void {
  */
 export function expirePublicNow(...tags: string[]): void {
   runForEachTag(tags, "updateTag", (tag) => updateTag(tag));
+}
+
+/**
+ * Het han ngay trang cong khai theo duong dan that (vd. `/shop/p/<slug>`):
+ * `revalidatePath(path)` bo ca entry ISR cua trang lan du lieu `unstable_cache`
+ * doc trong trang, lan tai sau doc lai DB (khong nhan ban cu). Dung khi khach
+ * sap mo dung trang do (vd. bam thong bao co hang). Khong het han theo tag vi
+ * moi `revalidatePublic` ("max") sau do day han het cua tag lui mot nam; tag
+ * duong dan thi khong ai danh dau stale lai. Chay trong Server Action va Route
+ * Handler; job nen (setInterval) khong co store cua Next nen lenh nem — chi
+ * ghi log. Goi SAU commit. Khong bao gio nem.
+ */
+export function expirePublicPathsNow(...paths: string[]): void {
+  if (isTestRuntime()) return;
+
+  for (const path of paths) {
+    try {
+      revalidatePath(path);
+    } catch (error: unknown) {
+      logger.warn("revalidatePath thất bại", {
+        path,
+        ...errorLogFields(error),
+      });
+    }
+  }
 }

@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { logger } from "@/lib/logger";
 import {
   deliverBackInStockAlerts,
   scheduleBackInStockSweep,
@@ -24,6 +25,15 @@ import {
 import { BACK_IN_STOCK_NOTIFICATION_KIND } from "@/types/back-in-stock";
 
 const events: string[] = [];
+
+const nextCache = vi.hoisted(() => ({
+  revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
+  unstable_cache: vi.fn(),
+  updateTag: vi.fn(),
+}));
+
+vi.mock("next/cache", () => nextCache);
 
 vi.mock("@/server/cache/public-cache", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/server/cache/public-cache")>()),
@@ -108,6 +118,9 @@ beforeEach(async () => {
   events.length = 0;
   vi.mocked(revalidatePublic).mockClear();
   vi.mocked(createBackInStockNotification).mockClear();
+  nextCache.revalidatePath.mockReset();
+  nextCache.revalidateTag.mockReset();
+  nextCache.updateTag.mockReset();
 });
 
 afterEach(() => {
@@ -507,6 +520,182 @@ describe("Đường tăng tồn kho gửi báo có hàng sau commit", () => {
 
     expect(vi.mocked(revalidatePublic)).toHaveBeenCalledWith("catalog");
     expect(await notifiedCount(accountId)).toBe(1);
+  });
+});
+
+/**
+ * Moi lan het han trang (revalidatePath) chay truoc moi lan tao thong bao.
+ * invocationCallOrder dem chung cho moi mock nen so sanh duoc giua hai mock.
+ */
+function expectPageExpiredBeforeNotifications() {
+  const expired = nextCache.revalidatePath.mock.invocationCallOrder;
+  const notified = vi.mocked(createBackInStockNotification).mock
+    .invocationCallOrder;
+  expect(expired.length).toBeGreaterThan(0);
+  expect(notified.length).toBeGreaterThan(0);
+  expect(Math.max(...expired)).toBeLessThan(Math.min(...notified));
+}
+
+/** Het han tung trang, khong het han tag (khong doi "max" cua ghi khac). */
+function expectOnlyPathsExpired(paths: string[]) {
+  expect(nextCache.revalidatePath.mock.calls).toEqual(
+    paths.map((path) => [path]),
+  );
+  expect(nextCache.revalidateTag).not.toHaveBeenCalled();
+  expect(nextCache.updateTag).not.toHaveBeenCalled();
+}
+
+const PRODUCT_PAGE = `/shop/p/${PRODUCT_SLUG}`;
+
+describe("Hết hạn ngay trang sản phẩm trước khi báo có hàng", () => {
+  let accountId: string;
+
+  beforeEach(async () => {
+    // Ngoài Vitest public-cache mới thực sự gọi next/cache.
+    vi.stubEnv("VITEST", "");
+    await seedProduct();
+    accountId = await seedAccount(1);
+    await subscribeBackInStock(accountId, PRODUCT_ID);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("revalidatePath đúng trang thông báo mở, trước khi tạo thông báo", async () => {
+    await setStock(5);
+
+    expect(await deliverBackInStockAlerts([PRODUCT_ID])).toEqual({
+      delivered: 1,
+    });
+
+    expectOnlyPathsExpired([PRODUCT_PAGE]);
+    expectPageExpiredBeforeNotifications();
+    const notification = await prisma.customerNotification.findFirstOrThrow({
+      where: { accountId },
+    });
+    expect(notification.href).toBe(PRODUCT_PAGE);
+  });
+
+  it("sản phẩm chưa có slug: hết hạn /shop/products/<id>", async () => {
+    await prisma.product.update({
+      where: { id: PRODUCT_ID },
+      data: { slug: null, stock: 2 },
+    });
+
+    expect(await deliverBackInStockAlerts([PRODUCT_ID])).toEqual({
+      delivered: 1,
+    });
+
+    expectOnlyPathsExpired([`/shop/products/${PRODUCT_ID}`]);
+    expectPageExpiredBeforeNotifications();
+  });
+
+  it("quickUpdateProduct nhập hàng: revalidatePublic → hết hạn trang → thông báo", async () => {
+    await quickUpdateProduct({
+      id: PRODUCT_ID,
+      price: 25_000,
+      stock: 9,
+      originalStock: 0,
+    });
+
+    expect(events).toEqual([`revalidate:catalog,product:${PRODUCT_ID}`]);
+    expectOnlyPathsExpired([PRODUCT_PAGE]);
+    expect(
+      vi.mocked(revalidatePublic).mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      Math.min(...nextCache.revalidatePath.mock.invocationCallOrder),
+    );
+    expectPageExpiredBeforeNotifications();
+    expect(await notifiedCount(accountId)).toBe(1);
+  });
+
+  // Cac duong nhap hang con lai va luot quet: deu qua deliverBackInStockAlerts.
+  it.each<[string, () => Promise<unknown>]>([
+    [
+      "saveProduct sửa tồn kho",
+      () =>
+        saveProduct({
+          id: PRODUCT_ID,
+          name: "Cà phê sữa đá",
+          unit: "ly",
+          price: 25_000,
+          costPrice: 15_000,
+          stock: 4,
+          originalStock: 0,
+        }),
+    ],
+    [
+      "cancelOrder",
+      async () => cancelOrder((await seedOrder("expire-pos", "pos")).id),
+    ],
+    [
+      "transitionOnlineOrder(…, cancelled)",
+      async () =>
+        transitionOnlineOrder(
+          (await seedOrder("expire-online", "online")).id,
+          "cancelled",
+        ),
+    ],
+    [
+      "expireStaleOnlineOrders",
+      async () => {
+        await seedOrder(
+          "expire-stale",
+          "online",
+          new Date(Date.now() - STALE_ONLINE_ORDER_TTL_MS - 60_000),
+        );
+        return expireStaleOnlineOrders();
+      },
+    ],
+    [
+      "lượt quét",
+      async () => {
+        await setStock(8);
+        return sweepBackInStockAlerts();
+      },
+    ],
+  ])("%s: hết hạn trang trước khi gửi", async (_path, restock) => {
+    await restock();
+
+    expectOnlyPathsExpired([PRODUCT_PAGE]);
+    expectPageExpiredBeforeNotifications();
+    expect(await notifiedCount(accountId)).toBe(1);
+  });
+
+  it("không ai chờ hoặc chưa đủ hàng: không đụng cache", async () => {
+    await setStock(0.5);
+    expect(await deliverBackInStockAlerts([PRODUCT_ID])).toEqual({
+      delivered: 0,
+    });
+
+    await prisma.backInStockSubscription.deleteMany();
+    await setStock(5);
+    expect(await deliverBackInStockAlerts([PRODUCT_ID])).toEqual({
+      delivered: 0,
+    });
+
+    expect(nextCache.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("hết hạn trang lỗi (job nền không có store của Next): vẫn gửi, chỉ logger.warn", async () => {
+    nextCache.revalidatePath.mockImplementation((path: string) => {
+      throw new Error(
+        `Invariant: static generation store missing in revalidatePath ${path}`,
+      );
+    });
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    await setStock(3);
+
+    await expect(deliverBackInStockAlerts([PRODUCT_ID])).resolves.toEqual({
+      delivered: 1,
+    });
+
+    expect(await notifiedCount(accountId)).toBe(1);
+    expect(await prisma.backInStockSubscription.count()).toBe(0);
+    expect(warnSpy.mock.calls).toEqual([
+      ["revalidatePath thất bại", { path: PRODUCT_PAGE, errorClass: "Error" }],
+    ]);
   });
 });
 

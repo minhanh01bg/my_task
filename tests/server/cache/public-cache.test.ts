@@ -4,11 +4,13 @@ import { logger } from "@/lib/logger";
 import {
   cachedPublic,
   expirePublicNow,
+  expirePublicPathsNow,
   revalidatePublic,
 } from "@/server/cache/public-cache";
 import { CACHE_TAGS } from "@/server/cache/tags";
 
 const nextCache = vi.hoisted(() => ({
+  revalidatePath: vi.fn(),
   revalidateTag: vi.fn(),
   unstable_cache: vi.fn(),
   updateTag: vi.fn(),
@@ -20,6 +22,7 @@ describe("public-cache", () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    nextCache.revalidatePath.mockReset();
     nextCache.revalidateTag.mockReset();
     nextCache.unstable_cache.mockReset();
     nextCache.updateTag.mockReset();
@@ -101,6 +104,40 @@ describe("public-cache", () => {
       expect(nextCache.updateTag).toHaveBeenNthCalledWith(1, "settings");
       expect(nextCache.updateTag).toHaveBeenNthCalledWith(2, "x");
       expect(warnSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("expirePublicPathsNow", () => {
+    it("gọi revalidatePath cho từng đường dẫn, không ném khi lỗi", () => {
+      vi.stubEnv("VITEST", "");
+      nextCache.revalidatePath.mockImplementationOnce(() => {
+        throw new Error("Invariant: static generation store missing");
+      });
+
+      expect(() =>
+        expirePublicPathsNow("/shop/p/ca-phe", "/shop/products/p1"),
+      ).not.toThrow();
+
+      expect(nextCache.revalidatePath.mock.calls).toEqual([
+        ["/shop/p/ca-phe"],
+        ["/shop/products/p1"],
+      ]);
+      // Hết hạn theo trang, không đụng tag ("max" của các ghi khác giữ nguyên).
+      expect(nextCache.revalidateTag).not.toHaveBeenCalled();
+      expect(nextCache.updateTag).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy.mock.calls[0]?.[1]).toEqual({
+        path: "/shop/p/ca-phe",
+        errorClass: "Error",
+      });
+    });
+
+    it("bỏ qua next/cache trong Vitest", () => {
+      vi.stubEnv("VITEST", "true");
+
+      expirePublicPathsNow("/shop/p/ca-phe");
+
+      expect(nextCache.revalidatePath).not.toHaveBeenCalled();
     });
   });
 

@@ -1,6 +1,8 @@
 import type { Prisma } from "@prisma/client";
 
 import { errorLogFields, logger } from "@/lib/logger";
+import { productHref } from "@/lib/seo/product-href";
+import { expirePublicPathsNow } from "@/server/cache/public-cache";
 import { createBackInStockNotification } from "@/server/customer-notifications/create-customer-notification";
 import { prisma } from "@/server/db/prisma";
 
@@ -61,8 +63,10 @@ async function deliverBatch(
 /**
  * Gui bao co hang cho cac san pham vua tang ton kho. Khong bao gio nem: loi
  * chi ghi log, dang ky con lai de sweep gui bu. Chi goi SAU khi transaction ghi
- * ton kho da commit (va sau `revalidatePublic`). Khong ai cho thi chi mot lan
- * doc, khong mo transaction nao.
+ * ton kho da commit. `revalidatePublic` ("max") chi danh dau stale — lan tai
+ * dau tien (chinh la luc khach bam thong bao) van nhan ban "het hang" — nen
+ * truoc khi tao thong bao, ham nay tu het han ngay cache trang san pham. Khong
+ * ai cho thi chi mot lan doc, khong mo transaction, khong dung cache.
  */
 export async function deliverBackInStockAlerts(
   productIds: Iterable<string>,
@@ -70,7 +74,7 @@ export async function deliverBackInStockAlerts(
   const ids = [...new Set(productIds)];
   if (ids.length === 0) return { delivered: 0 };
 
-  let ready: { id: string }[];
+  let ready: { id: string; slug: string | null }[];
   try {
     ready = await prisma.product.findMany({
       where: {
@@ -78,7 +82,7 @@ export async function deliverBackInStockAlerts(
         ...READY_PRODUCT_WHERE,
         backInStockSubscriptions: { some: {} },
       },
-      select: { id: true },
+      select: { id: true, slug: true },
     });
   } catch (error: unknown) {
     logger.error("back_in_stock_delivery_failed", {
@@ -86,6 +90,14 @@ export async function deliverBackInStockAlerts(
       ...errorLogFields(error),
     });
     return { delivered: 0 };
+  }
+
+  // Thong bao dua khach toi dung trang nay: het han ngay (khong
+  // stale-while-revalidate) truoc khi tao thong bao nao, de lan bam dau tien
+  // doc ton kho moi. `/shop/p/<slug>` chi gan tag catalog nen het han theo duong
+  // dan, khong theo tag.
+  if (ready.length > 0) {
+    expirePublicPathsNow(...ready.map((product) => productHref(product)));
   }
 
   let delivered = 0;
