@@ -1,0 +1,96 @@
+name: E2E
+
+# Playwright cả bộ trên dev server (cấu hình mặc định của playwright.config.ts).
+# Chạy khi PR có nhãn `e2e`, hoặc khi push lên nhánh `e2e/**` (vd. chạy mốc so
+# sánh trên code của main).
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  push:
+    branches: ["e2e/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  playwright:
+    # Sự kiện `labeled` chỉ chạy khi nhãn vừa gắn là `e2e`: gắn nhãn khác lên PR
+    # đã có `e2e` không chạy lại cả bộ.
+    if: >-
+      github.event_name == 'push' ||
+      (github.event.action == 'labeled' && github.event.label.name == 'e2e') ||
+      (github.event.action != 'labeled' &&
+      contains(github.event.pull_request.labels.*.name, 'e2e'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # Đặt ở job (không ở workflow) để lượt bị bỏ qua không hủy lượt đang chạy.
+    concurrency:
+      group: e2e-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    env:
+      # DB fixture riêng, đường dẫn tuyệt đối: prisma db push, global-setup, spec
+      # và `next dev` (playwright.config.ts chuyển tiếp) cùng trỏ một file.
+      # Các biến còn lại (SESSION_SECRET, RATE_LIMIT_KEY_SECRET, hash mật khẩu,
+      # CANONICAL_ORIGIN, DISABLE_BACKGROUND_JOBS) do playwright.config.ts đặt.
+      DATABASE_URL: file:${{ github.workspace }}/prisma/e2e-ci.db
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          version: 10.28.2
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
+      # `pnpm exec playwright` có thể trỏ nhầm gói (cả `playwright` lẫn
+      # `@playwright/test` đều khai bin `playwright`), nên gọi thẳng CLI của
+      # `@playwright/test` và kiểm nó cùng bản với CLI mà `pnpm test:e2e` chạy.
+      - name: Install Chromium for @playwright/test
+        run: |
+          runner_cli="node_modules/@playwright/test/cli.js"
+          test_cli_version="$(node "$runner_cli" --version)"
+          script_cli_version="$(node_modules/.bin/playwright --version)"
+          echo "@playwright/test: $test_cli_version; pnpm test:e2e: $script_cli_version"
+          if [ "$test_cli_version" != "$script_cli_version" ]; then
+            echo "::error::@playwright/test ($test_cli_version) khác CLI của pnpm test:e2e ($script_cli_version)"
+            exit 1
+          fi
+          node "$runner_cli" install --with-deps chromium
+          node -e '
+            const fs = require("node:fs");
+            const path = require("@playwright/test").chromium.executablePath();
+            if (!fs.existsSync(path)) {
+              console.error(`Không thấy Chromium mà @playwright/test cần: ${path}`);
+              process.exit(1);
+            }
+            console.log(`Chromium: ${path}`);
+          '
+
+      - name: Prepare e2e database
+        run: pnpm exec prisma db push --skip-generate
+
+      - name: E2E tests
+        run: pnpm test:e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-report-${{ github.run_attempt }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 14
