@@ -38,7 +38,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
-    "@hookform/resolvers": "^5.2.2",
+    "@hookform/resolvers": "^6.0.0",
     "@phosphor-icons/react": "^2.1.10",
     "@prisma/client": "^6.19.3",
     "@sentry/nextjs": "^10.76.2",
